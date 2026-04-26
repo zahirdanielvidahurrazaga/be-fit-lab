@@ -1,7 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, DollarSign, Calendar, TrendingUp, Search, Bell, Menu } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 function Admin() {
+  const [metrics, setMetrics] = useState({ activeUsers: 0, pendingRenewals: 0, loading: true });
+  const [classesToday, setClassesToday] = useState([]);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const { data: users } = await supabase.from('users').select('*');
+        if (users) {
+          const clients = users.filter(u => u.role === 'CLIENT');
+          const pending = clients.filter(u => u.subscription_status === 'PENDING');
+          setMetrics(prev => ({ ...prev, activeUsers: clients.length, pendingRenewals: pending.length, loading: false }));
+        }
+
+        const { data: classes } = await supabase.from('classes').select('*');
+        if (classes) {
+          setClassesToday(classes);
+        }
+      } catch (error) {
+        console.error("Error fetching de Supabase:", error);
+      }
+    }
+    fetchData();
+  }, []);
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', minWidth: '1200px', background: '#F4F7F6', color: '#1A1C1E', fontFamily: 'var(--font-body)' }}>
       
@@ -48,9 +73,9 @@ function Admin() {
           {/* Top Metrics Vitals */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '3rem' }}>
             <MetricBox title="Ingresos Mensuales" value="$145,200" trend="+12% vs mes anterior" icon={<DollarSign color="var(--primary)"/>} />
-            <MetricBox title="Alumnas Activas" value="184" trend="+5 nuevas esta semana" icon={<Users color="#3B82F6"/>} />
+            <MetricBox title="Alumnas Activas" value={metrics.loading ? "..." : metrics.activeUsers} trend="Datos en Vivo (Supabase)" icon={<Users color="#3B82F6"/>} />
             <MetricBox title="Aforo Promedio" value="92%" trend="Clases casi llenas" icon={<TrendingUp color="#10B981"/>} />
-            <MetricBox title="Renovaciones Pendientes" value="12" trend="Requieren atención hoy" icon={<Calendar color="#EF4444"/>} />
+            <MetricBox title="Renovaciones Pendientes" value={metrics.loading ? "..." : metrics.pendingRenewals} trend="Requieren atención hoy" icon={<Calendar color="#EF4444"/>} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
@@ -71,11 +96,17 @@ function Admin() {
             {/* Alertas y Feed */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
               <div style={{ background: 'white', padding: '2rem', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)' }}>
-                <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.1rem' }}>Estado de Clases Hoy</h3>
+                <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.1rem' }}>Estado de Clases (Vivo)</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <ClassStatus time="07:00 AM" name="Reformer Avanzado" status="100% Lleno" />
-                  <ClassStatus time="09:30 AM" name="Yoga Flow" status="2 Lugares" />
-                  <ClassStatus time="06:00 PM" name="Glúteo 101" status="100% Lleno" />
+                  {classesToday.length > 0 ? classesToday.map(c => (
+                    <ClassStatus key={c.id} time={new Date(c.scheduled_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} name={c.title} status={`${c.capacity} Lugares Max`} />
+                  )) : (
+                    <>
+                      <ClassStatus time="07:00 AM" name="Reformer Avanzado (Demo)" status="100% Lleno" />
+                      <ClassStatus time="09:30 AM" name="Yoga Flow (Demo)" status="2 Lugares" />
+                      <ClassStatus time="06:00 PM" name="Glúteo 101 (Demo)" status="100% Lleno" />
+                    </>
+                  )}
                 </div>
               </div>
             </div>
