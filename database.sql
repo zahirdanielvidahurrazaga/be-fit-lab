@@ -24,7 +24,19 @@ CREATE TABLE classes (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 3. Tabla de Reservas (Bookings)
+-- 3. Tabla de Paquetes/Suscripciones (Catálogo HARBIZ)
+CREATE TABLE memberships (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  type TEXT CHECK (type IN ('PRESENCIAL', 'ONLINE', 'SEMI-ONLINE')),
+  price DECIMAL(10, 2) NOT NULL,
+  duration_months INT DEFAULT 1,
+  class_limit INT, -- NULL para online puro
+  features JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 4. Tabla de Reservas (Bookings)
 CREATE TABLE bookings (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -59,6 +71,14 @@ INSERT INTO classes (id, title, instructor, capacity, scheduled_at, type) VALUES
 ('aaaa1111-1111-1111-1111-111111111111', 'Reformer Avanzado', 'Coach Mariana', 8, NOW() + INTERVAL '1 day', 'Reformer'),
 ('aaaa2222-2222-2222-2222-222222222222', 'Power Yoga Flow', 'Coach Luis', 15, NOW() + INTERVAL '2 days', 'Yoga'),
 ('aaaa3333-3333-3333-3333-333333333333', 'Glúteo + Core', 'Coach Daniela', 12, NOW() + INTERVAL '1 day 5 hours', 'Strength');
+
+-- Insertar Catálogo Real de Membresías (Basado en Capturas)
+INSERT INTO memberships (name, type, price, duration_months, class_limit, features) VALUES 
+('Plan Premium Presencial', 'PRESENCIAL', 1800.00, 1, 30, '["Acceso a 30 clases", "Recetario", "Métricas", "3 invitadas al mes"]'),
+('Plan FIT Presencial', 'PRESENCIAL', 1200.00, 1, 20, '["Acceso a 20 clases", "Recetario", "Métricas"]'),
+('Plan Básico Presencial', 'PRESENCIAL', 950.00, 1, 15, '["Acceso a 15 clases", "Recetario", "Métricas"]'),
+('Asesoría Pro Online', 'ONLINE', 3000.00, 3, NULL, '["Entrenamiento 100% online", "Guía alimentación", "Videoconferencias"]'),
+('Entrenamiento Semi-personalizado', 'SEMI-ONLINE', 700.00, 1, NULL, '["Rutinas Glúteo y Tren Superior", "Nutrición"]');
 
 -- Crear reservas de prueba (Bookings)
 INSERT INTO bookings (user_id, class_id, status) VALUES 
