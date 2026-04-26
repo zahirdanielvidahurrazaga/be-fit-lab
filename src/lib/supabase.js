@@ -3,9 +3,13 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-// Asegura de mostrar un error si falta el .env para facilitar el debug en la junta
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("Faltan variables de entorno de Supabase. Asegúrate de configurar tu archivo .env local.")
+// Validación estricta para evitar que la App se ponga en blanco si olvidaron poner la URL real
+const isValidUrl = supabaseUrl && supabaseUrl.startsWith('http');
+const finalUrl = isValidUrl ? supabaseUrl : 'https://placeholder.supabase.co';
+const finalKey = supabaseAnonKey && supabaseAnonKey.length > 20 ? supabaseAnonKey : 'placeholder';
+
+if (!isValidUrl) {
+  console.warn("⚠️ Las variables de Supabase están vacías o son inválidas. Usando MODO SEGURO (Offline).")
 }
 
-export const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseAnonKey || 'placeholder')
+export const supabase = createClient(finalUrl, finalKey)
