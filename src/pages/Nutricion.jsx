@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Calendar, Star, TrendingUp, ChevronLeft, Download, Clock, ChefHat } from 'lucide-react';
+import { Home, Calendar, Star, TrendingUp, ChevronLeft, Download, Clock, ChefHat, Play } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 function Nutricion() {
@@ -72,7 +72,7 @@ function Nutricion() {
 
       </main>
 
-      {/* Navegación Inferior (Consistent) */}
+      {/* Navegación Inferior (Luxury Pill) */}
       <nav className="bottom-nav">
         <Link to="/portal" className="nav-item">
           <Home size={22} />
@@ -82,6 +82,11 @@ function Nutricion() {
           <Calendar size={22} />
           <span>AGENDA</span>
         </Link>
+        
+        <button className="nav-central-btn" onClick={() => navigate('/agenda')}>
+           <Play size={24} fill="currentColor" />
+        </button>
+
         <Link to="/evolucion" className="nav-item">
           <TrendingUp size={22} />
           <span>MÉTRICAS</span>

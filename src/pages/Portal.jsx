@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Calendar, Star, Crown, LogOut, ArrowRight, Activity, Flame, TrendingUp } from 'lucide-react';
+import { Home, Calendar, Star, Crown, LogOut, ArrowRight, Activity, Flame, TrendingUp, Play } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -143,6 +143,7 @@ function Portal() {
       </main>
 
       {/* Navegación Inferior (App Navigation) */}
+      {/* Navegación Inferior (Luxury Pill) */}
       <nav className="bottom-nav">
         <Link to="/portal" className="nav-item active">
           <Home size={22} />
@@ -152,6 +153,11 @@ function Portal() {
           <Calendar size={22} />
           <span>AGENDA</span>
         </Link>
+        
+        <button className="nav-central-btn" onClick={() => navigate('/agenda')}>
+           <Play size={24} fill="currentColor" />
+        </button>
+
         <Link to="/evolucion" className="nav-item">
           <TrendingUp size={22} />
           <span>MÉTRICAS</span>

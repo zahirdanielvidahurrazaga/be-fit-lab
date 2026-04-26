@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Calendar, Star, TrendingUp, ChevronLeft, Activity, Flame, Target } from 'lucide-react';
+import { Home, Calendar, Star, TrendingUp, ChevronLeft, Activity, Flame, Target, Play } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 function Evolucion() {
@@ -73,7 +73,7 @@ function Evolucion() {
 
       </main>
 
-      {/* Navegación Inferior (Consistent) */}
+      {/* Navegación Inferior (Luxury Pill) */}
       <nav className="bottom-nav">
         <Link to="/portal" className="nav-item">
           <Home size={22} />
@@ -83,6 +83,11 @@ function Evolucion() {
           <Calendar size={22} />
           <span>AGENDA</span>
         </Link>
+        
+        <button className="nav-central-btn" onClick={() => navigate('/agenda')}>
+           <Play size={24} fill="currentColor" />
+        </button>
+
         <Link to="/evolucion" className="nav-item active">
           <TrendingUp size={22} />
           <span>MÉTRICAS</span>
