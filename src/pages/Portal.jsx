@@ -163,7 +163,6 @@ function Portal() {
       </nav>
     </div>
   );
-  );
 }
 
 function ClassCard({ title, time, instructor, color }) {
