@@ -1,10 +1,24 @@
-import React, { useState } from 'react';
-import { ArrowRight, Flame, Heart, PlayCircle, Smartphone, Menu, X } from 'lucide-react';
+import { ArrowRight, Flame, Heart, PlayCircle, Smartphone, Menu, X, Calendar, TrendingUp, Utensils } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 function Landing() {
   const navigate = useNavigate();
+  const { user, role } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const handleNavClick = (e, path, sectionId) => {
+    if (user) {
+      navigate(path);
+    } else {
+      e.preventDefault();
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      setIsMenuOpen(false);
+    }
+  };
 
   // Previene el scroll del body cuando el menú móvil está abierto
   if (isMenuOpen) {
@@ -21,11 +35,11 @@ function Landing() {
           BEFIT <span style={{ color: 'var(--primary)' }}>LAB</span>
         </div>
         
-        {/* Desktop Links (Se ocultan en móvil vía CSS) */}
+        {/* Desktop Links */}
         <div className="desktop-links" style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-          <Link to="/agenda" style={{ fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', color: 'var(--on-surface)' }}>Agenda / Clases</Link>
-          <Link to="/evolucion" style={{ fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', color: 'var(--on-surface)' }}>Mi Evolución</Link>
-          <Link to="/nutricion" style={{ fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', color: 'var(--on-surface)' }}>Nutrición</Link>
+          <a href="#agenda-info" onClick={(e) => handleNavClick(e, '/agenda', 'agenda-info')} style={{ fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', color: 'var(--on-surface)', cursor: 'pointer' }}>Agenda / Clases</a>
+          <a href="#evolucion-info" onClick={(e) => handleNavClick(e, '/evolucion', 'evolucion-info')} style={{ fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', color: 'var(--on-surface)', cursor: 'pointer' }}>Mi Evolución</a>
+          <a href="#nutricion-info" onClick={(e) => handleNavClick(e, '/nutricion', 'nutricion-info')} style={{ fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', color: 'var(--on-surface)', cursor: 'pointer' }}>Nutrición</a>
         </div>
 
         {/* Desktop Actions (Se ocultan en móvil)*/}
@@ -49,18 +63,13 @@ function Landing() {
       {/* --- Overlay Menú Móvil --- */}
       <div className={`mobile-menu-overlay ${isMenuOpen ? 'open' : ''}`}>
         <div style={{display: 'flex', flexDirection: 'column', gap: '2rem', alignItems: 'center', marginTop: '-50px'}}>
-          <Link to="/agenda" onClick={() => setIsMenuOpen(false)}>Agenda / Clases</Link>
-          <Link to="/evolucion" onClick={() => setIsMenuOpen(false)}>Mi Evolución</Link>
-          <Link to="/nutricion" onClick={() => setIsMenuOpen(false)}>Plan de Nutrición</Link>
+          <a href="#agenda-info" style={{fontSize: '1.2rem', fontWeight: 600, color: 'var(--black)', textDecoration: 'none'}} onClick={(e) => handleNavClick(e, '/agenda', 'agenda-info')}>Agenda / Clases</a>
+          <a href="#evolucion-info" style={{fontSize: '1.2rem', fontWeight: 600, color: 'var(--black)', textDecoration: 'none'}} onClick={(e) => handleNavClick(e, '/evolucion', 'evolucion-info')}>Mi Evolución</a>
+          <a href="#nutricion-info" style={{fontSize: '1.2rem', fontWeight: 600, color: 'var(--black)', textDecoration: 'none'}} onClick={(e) => handleNavClick(e, '/nutricion', 'nutricion-info')}>Plan de Nutrición</a>
           <div style={{ width: '50px', height: '1px', background: 'rgba(0,0,0,0.1)', margin: '1rem 0'}} />
-          <Link to="/portal" onClick={() => setIsMenuOpen(false)}>Acceder a mi Portal</Link>
-          <button 
-            onClick={() => { setIsMenuOpen(false); navigate('/agenda'); }} 
-            className="btn-primary" 
-            style={{ marginTop: '1rem', width: '100%', justifyContent: 'center' }}
-          >
-            Reservar Clase
-          </button>
+          <Link to={user ? (role === 'ADMIN' ? '/admin' : '/portal') : '/login'} onClick={() => setIsMenuOpen(false)} style={{fontSize: '1.2rem', fontWeight: 600, color: 'var(--primary)', textDecoration: 'none'}}>
+            {user ? 'Acceder a mi Portal' : 'Iniciar Sesión'}
+          </Link>
         </div>
       </div>
 
@@ -84,15 +93,26 @@ function Landing() {
         }} />
 
         <div className="animate-fade-up hero-text-container" style={{ maxWidth: '850px' }}>
-          <div className="badge-peach" style={{ background: 'var(--surface-lowest)' }}>Fuerza • Crecimiento • Conciencia</div>
+          <div className="badge-peach" style={{ background: 'var(--surface-lowest)' }}>
+            {user ? `¡Hola de nuevo, ${user.email.split('@')[0]}!` : 'Fuerza • Crecimiento • Conciencia'}
+          </div>
           <h1 style={{ 
             fontSize: 'clamp(3rem, 8vw, 6.5rem)', 
             lineHeight: 1.05,
             marginBottom: '2rem',
             color: 'var(--black)'
           }}>
-            Rediseña tu <br />
-            <span style={{ color: 'var(--primary)', fontStyle: 'italic' }}>potencial corporal.</span>
+            {user ? (
+              <>
+                Bienvenida a <br />
+                <span style={{ color: 'var(--primary)', fontStyle: 'italic' }}>tu espacio VIP.</span>
+              </>
+            ) : (
+              <>
+                Rediseña tu <br />
+                <span style={{ color: 'var(--primary)', fontStyle: 'italic' }}>potencial corporal.</span>
+              </>
+            )}
           </h1>
           <p style={{ 
             fontSize: '1.15rem', 
@@ -107,16 +127,27 @@ function Landing() {
             borderRadius: '12px',
             boxShadow: '0 4px 20px rgba(0,0,0,0.03)'
           }}>
-            La estética de Glúteos y bienestar integral combinando Pilates, Yoga, Danza y Fuerza. Accede a las instalaciones o a nuestra App inmersiva.
+            {user 
+              ? 'Tienes una sesión activa. Accede a tu agenda personalizada, planes de nutrición y seguimiento de objetivos desde tu portal privado.'
+              : 'La estética de Glúteos y bienestar integral combinando Pilates, Yoga, Danza y Fuerza. Accede a las instalaciones o a nuestra App inmersiva.'
+            }
           </p>
           
           <div className="hero-buttons">
-            <button className="glass-button" onClick={() => navigate('/planes')}>
-              Comenzar Transformación <ArrowRight size={20} />
-            </button>
-            <button className="glass-button-dark" onClick={() => navigate('/portal')}>
-               <Smartphone size={20} /> Explorar la App
-            </button>
+            {user ? (
+              <button className="glass-button-dark" onClick={() => navigate(role === 'ADMIN' ? '/admin' : '/portal')}>
+                Ir a mi Portal Personalizado <ArrowRight size={20} />
+              </button>
+            ) : (
+              <>
+                <button className="glass-button" onClick={() => navigate('/planes')}>
+                  Comenzar Transformación <ArrowRight size={20} />
+                </button>
+                <button className="glass-button-dark" onClick={() => navigate('/login')}>
+                   <Smartphone size={20} /> Iniciar Sesión
+                </button>
+              </>
+            )}
           </div>
           
           <div style={{ marginTop: '3.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -133,7 +164,7 @@ function Landing() {
       </section>
 
       {/* Nuestras Disciplinas */}
-      <section style={{ padding: '6rem 5%', background: '#F8F5F1' }}>
+      <section id="metodo" style={{ padding: '6rem 5%', background: '#F8F5F1' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           <div style={{ marginBottom: '4rem', textAlign: 'center' }}>
             <h2 style={{ fontSize: 'clamp(2.5rem, 6vw, 3rem)', marginBottom: '1rem' }}>El Método Lab</h2>
@@ -147,10 +178,86 @@ function Landing() {
             gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
             gap: '1.5rem' 
           }}>
-            <DisciplineCard icon={<Heart strokeWidth={1.5} color="var(--primary)" size={32} />} title="Yoga Flow" desc="Elasticidad y control respiratorio para la recuperación musculares." bgImage="/yoga_card.png" />
+            <DisciplineCard icon={<Heart strokeWidth={1.5} color="var(--primary)" size={32} />} title="Yoga Flow" desc="Elasticidad y control respiratorio para la recuperación muscular." bgImage="/yoga_card.png" />
             <DisciplineCard icon={<PlayCircle strokeWidth={1.5} color="var(--primary)" size={32} />} title="Cardio Baile" desc="Agilidad dinámica y quema calórica con ritmos explosivos." bgImage="/dance_card.png" />
             <DisciplineCard icon={<span style={{fontSize:'32px'}}>🍑</span>} title="Reformer Pilates" desc="Aislamiento muscular y tensión controlada. Santo grial del cuerpo." bgImage="/reformer_card.png" />
             <DisciplineCard icon={<Flame strokeWidth={1.5} color="var(--primary)" size={32} />} title="Fuerza y Peso" desc="Técnicas probadas de hipertrofia. Romper el músculo para crecer." bgImage="/strength_card.png" />
+          </div>
+        </div>
+      </section>
+
+      {/* --- SECCIONES INFORMATIVAS (CARTA DE PRESENTACIÓN) --- */}
+      
+      {/* 1. Agenda Info */}
+      <section id="agenda-info" style={{ padding: '8rem 5%', background: 'white', overflow: 'hidden' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: '4rem', alignItems: 'center' }}>
+          <div style={{ flex: '1 1 500px' }}>
+            <div className="badge-peach" style={{marginBottom: '1.5rem'}}><Calendar size={16} /> Horarios y Reservas</div>
+            <h2 style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>Tu tiempo, tus reglas.</h2>
+            <p style={{ fontSize: '1.1rem', color: '#4B5563', lineHeight: 1.8, marginBottom: '2rem' }}>
+              En BEFIT LAB olvidamos las agendas de papel. Nuestra App te permite reservar tu lugar en Reformer Pilates o Yoga Flow con un solo toque. Consulta la disponibilidad en tiempo real y gestiona tus clases 24/7.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+              <div>
+                <h4 style={{marginBottom: '0.5rem', color: 'var(--primary)'}}>Fácil de usar</h4>
+                <p style={{fontSize: '0.9rem', color: '#6B7280'}}>Cancela o reagenda tus clases hasta 12 horas antes sin cargos.</p>
+              </div>
+              <div>
+                <h4 style={{marginBottom: '0.5rem', color: 'var(--primary)'}}>Lista de Espera</h4>
+                <p style={{fontSize: '0.9rem', color: '#6B7280'}}>¿Clase llena? Nuestra IA te avisará en cuanto se libere un cupo.</p>
+              </div>
+            </div>
+          </div>
+          <div style={{ flex: '1 1 400px', position: 'relative' }}>
+             <div style={{ width: '100%', height: '500px', background: 'url("/agenda_mock.png")', backgroundSize: 'cover', borderRadius: '30px', boxShadow: '0 30px 60px rgba(0,0,0,0.1)' }}></div>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. Mi Evolución Info */}
+      <section id="evolucion-info" style={{ padding: '8rem 5%', background: '#FAF9F6' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap-reverse', gap: '4rem', alignItems: 'center' }}>
+          <div style={{ flex: '1 1 400px' }}>
+             <div style={{ width: '100%', height: '500px', background: 'url("/evolucion_mock.png")', backgroundSize: 'cover', borderRadius: '30px', boxShadow: '0 30px 60px rgba(0,0,0,0.1)' }}></div>
+          </div>
+          <div style={{ flex: '1 1 500px' }}>
+            <div className="badge-peach" style={{marginBottom: '1.5rem'}}><TrendingUp size={16} /> Seguimiento Bio-Digital</div>
+            <h2 style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>Lo que no se mide, no crece.</h2>
+            <p style={{ fontSize: '1.1rem', color: '#4B5563', lineHeight: 1.8, marginBottom: '2rem' }}>
+              Visualiza tu transformación con gráficas interactivas. Registramos tus perímetros, composición corporal y récords personales en cada disciplina. Tu evolución es la motivación que necesitas para seguir adelante.
+            </p>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              <li style={{display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center'}}>
+                <div style={{width: '24px', height: '24px', background: 'var(--primary)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px'}}>✓</div>
+                <span>Gráficas de progreso muscular en tiempo real.</span>
+              </li>
+              <li style={{display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center'}}>
+                <div style={{width: '24px', height: '24px', background: 'var(--primary)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px'}}>✓</div>
+                <span>Historial de medidas y composición corporal.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Nutrición Info */}
+      <section id="nutricion-info" style={{ padding: '8rem 5%', background: 'white' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
+          <div className="badge-peach" style={{margin: '0 auto 1.5rem'}}><Utensils size={16} /> Nutrición Consciente</div>
+          <h2 style={{ fontSize: '3.5rem', marginBottom: '2rem' }}>Alimenta tu esfuerzo.</h2>
+          <p style={{ fontSize: '1.2rem', color: '#4B5563', maxWidth: '800px', margin: '0 auto 4rem' }}>
+            La nutrición es el combustible de tu cambio. En BEFIT LAB, tu membresía incluye acceso a planes alimenticios diseñados para complementar tu entrenamiento.
+          </p>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+            <div style={{ padding: '3rem', borderRadius: '24px', background: '#FDFCFB', border: '1px solid #F1EFE9' }}>
+               <h3>Recetario Digital</h3>
+               <p style={{marginTop: '1rem', color: '#6B7280'}}>Cientos de recetas saludables y deliciosas con cálculo calórico automático.</p>
+            </div>
+            <div style={{ padding: '3rem', borderRadius: '24px', background: '#FDFCFB', border: '1px solid #F1EFE9' }}>
+               <h3>Lista de Compras</h3>
+               <p style={{marginTop: '1rem', color: '#6B7280'}}>Generamos tu lista del súper basada en tu plan semanal para que no pierdas tiempo.</p>
+            </div>
           </div>
         </div>
       </section>
