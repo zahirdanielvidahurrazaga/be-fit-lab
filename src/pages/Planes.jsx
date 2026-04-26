@@ -6,8 +6,9 @@ function Planes() {
   const navigate = useNavigate();
 
   const handleStripeCheckout = () => {
-    alert("Redirigiendo a la pasarela segura de Stripe...");
-    // Aquí en el futuro irá window.location.href = 'https://buy.stripe.com/...'
+    // Alerta simulando el proceso de pago
+    alert("¡Pago simulado exitoso en Stripe! Redirigiendo a crear tu cuenta...");
+    navigate('/registro');
   };
 
   return (

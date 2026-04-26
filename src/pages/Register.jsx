@@ -1,35 +1,23 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Mail, ArrowRight } from 'lucide-react';
+import { User, Mail, Lock, ArrowRight } from 'lucide-react';
 
-function Login() {
+function Register() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
-  const { login } = useAuth();
+  const { login } = useAuth(); // Por ahora simulamos que el registro inicia sesión directo
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     
-    // Si la BD de supabase no está configurada para Auth, simulamos el ruteo
-    if (email === 'admin@befitlab.com') {
-      navigate('/admin');
-      return;
-    } else if (email.includes('cliente')) {
-      navigate('/portal');
-      return;
-    }
-
-    const { data, error: authError } = await login(email, password);
-    if (authError) {
-      setError(authError.message);
-    } else {
-      // Rutas protegidas basadas en AuthContext
-      navigate('/'); // App.jsx redirigirá basado en rol
-    }
+    // Simulación: Si se registran exitosamente, los pasamos directo al portal
+    alert("¡Cuenta creada exitosamente! Bienvenida a BEFIT LAB.");
+    navigate('/portal');
   };
 
   return (
@@ -52,8 +40,8 @@ function Login() {
         }}>
           
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.2rem', color: '#1A1C1E', marginBottom: '0.5rem' }}>Bienvenida de nuevo</h1>
-            <p style={{ color: '#4B5563', fontWeight: 500 }}>Ingresa tus credenciales para acceder a tu portal.</p>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.2rem', color: '#1A1C1E', marginBottom: '0.5rem' }}>Crea tu Cuenta</h1>
+            <p style={{ color: '#4B5563', fontWeight: 500 }}>El primer paso hacia tu transformación.</p>
           </div>
 
           {error && (
@@ -63,6 +51,19 @@ function Login() {
           )}
 
           <form onSubmit={handleSubmit}>
+            <div className="premium-input-group">
+              <label>Nombre Completo</label>
+              <User size={20} className="premium-input-icon" />
+              <input 
+                type="text" 
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ej. María Sánchez"
+                className="premium-input"
+                required
+              />
+            </div>
+
             <div className="premium-input-group">
               <label>Correo Electrónico</label>
               <Mail size={20} className="premium-input-icon" />
@@ -77,7 +78,7 @@ function Login() {
             </div>
 
             <div className="premium-input-group">
-              <label>Contraseña</label>
+              <label>Contraseña Segura</label>
               <Lock size={20} className="premium-input-icon" />
               <input 
                 type="password" 
@@ -90,12 +91,12 @@ function Login() {
             </div>
 
             <button type="submit" className="glass-button-dark" style={{ width: '100%', marginTop: '2rem' }}>
-              Iniciar Sesión <ArrowRight size={20} />
+              Completar Registro <ArrowRight size={20} />
             </button>
           </form>
 
           <div style={{ textAlign: 'center', marginTop: '2rem', color: '#4B5563', fontSize: '0.9rem' }}>
-            ¿No tienes una cuenta? <span onClick={() => navigate('/registro')} style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }}>Regístrate aquí</span>
+            ¿Ya tienes una cuenta? <span onClick={() => navigate('/login')} style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }}>Inicia Sesión</span>
           </div>
 
         </div>
@@ -104,4 +105,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default Register;

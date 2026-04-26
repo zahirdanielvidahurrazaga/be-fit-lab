@@ -111,10 +111,10 @@ function Landing() {
           </p>
           
           <div className="hero-buttons">
-            <button className="btn-primary" onClick={() => navigate('/agenda')}>
+            <button className="glass-button" onClick={() => navigate('/planes')}>
               Comenzar Transformación <ArrowRight size={20} />
             </button>
-            <button className="btn-outline" style={{ background: 'var(--surface-lowest)'}} onClick={() => navigate('/portal')}>
+            <button className="glass-button-dark" onClick={() => navigate('/portal')}>
                <Smartphone size={20} /> Explorar la App
             </button>
           </div>

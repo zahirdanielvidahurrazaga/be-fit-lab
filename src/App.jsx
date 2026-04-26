@@ -7,6 +7,7 @@ import Nutricion from './pages/Nutricion';
 import Portal from './pages/Portal';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Planes from './pages/Planes';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './index.css';
@@ -35,6 +36,7 @@ function App() {
           {/* Rutas Públicas */}
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/registro" element={<Register />} />
           <Route path="/planes" element={<Planes />} />
           
           {/* Rutas Privadas Clienta */}
