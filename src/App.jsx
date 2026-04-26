@@ -4,6 +4,7 @@ import Landing from './pages/Landing';
 import Agenda from './pages/Agenda';
 import Evolucion from './pages/Evolucion';
 import Nutricion from './pages/Nutricion';
+import Portal from './pages/Portal';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
 import Planes from './pages/Planes';
