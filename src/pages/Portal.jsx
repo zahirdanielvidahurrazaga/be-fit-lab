@@ -81,7 +81,7 @@ function Portal() {
               <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Mi Agenda</span>
            </div>
            <div className="midnight-glass-card" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '12px' }} onClick={() => navigate('/nutricion')}>
-              <div style={{ color: 'var(--midnight-accent)' }}><Star size={20} /></div>
+              <div style={{ color: 'var(--midnight-accent)' }}><Utensils size={20} /></div>
               <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Nutrición</span>
            </div>
         </section>
