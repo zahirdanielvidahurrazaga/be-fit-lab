@@ -1,96 +1,111 @@
 import React from 'react';
-import { Download, CheckCircle2, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Home, Calendar, Star, TrendingUp, ChevronLeft, Download, Clock, ChefHat } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 function Nutricion() {
+  const navigate = useNavigate();
+
   return (
-    <div style={{ backgroundColor: 'var(--surface)', minHeight: '100vh', padding: '3rem 5% 4rem' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+    <div className="app-shell">
+      {/* Header */}
+      <header style={{ padding: '2rem 6% 1rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        <button onClick={() => navigate('/portal')} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '45px', height: '45px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', cursor: 'pointer' }}>
+          <ChevronLeft size={24} />
+        </button>
+        <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', color: 'white' }}>Nutrición</h1>
+      </header>
+
+      <main style={{ padding: '2rem 6% 120px' }}>
         
-        {/* Botón Volver Súper Elegante */}
-        <Link to="/" className="back-link" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'var(--on-surface-variant)', textDecoration: 'none', fontWeight: 500, marginBottom: '2.5rem', fontSize: '0.95rem' }}>
-          <ArrowLeft size={18} /> Volver al inicio
+        {/* Plan del Día Banner */}
+        <div className="midnight-glass-card" style={{ padding: '2rem', marginBottom: '2.5rem', background: 'linear-gradient(135deg, rgba(201, 114, 93, 0.1), transparent)', borderLeft: '4px solid var(--midnight-accent)' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--midnight-accent)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Objetivo Diario</div>
+          <h2 style={{ fontSize: '1.5rem', color: 'white', marginBottom: '1rem' }}>Recomposición Corporal</h2>
+          <div style={{ display: 'flex', gap: '1.5rem' }}>
+             <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'white' }}>1,850</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--midnight-on-surface-variant)', textTransform: 'uppercase' }}>Kcal</div>
+             </div>
+             <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'white' }}>130g</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--midnight-on-surface-variant)', textTransform: 'uppercase' }}>Prot</div>
+             </div>
+             <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'white' }}>180g</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--midnight-on-surface-variant)', textTransform: 'uppercase' }}>Carb</div>
+             </div>
+          </div>
+        </div>
+
+        {/* Lista de Comidas */}
+        <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--midnight-on-surface)', marginBottom: '1.5rem' }}>Tu Menú de Hoy</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+           <MealItem 
+             time="Desayuno" 
+             title="Tostadas de Aguacate y Huevo" 
+             kcal="350" 
+             img="https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&q=80&w=200&h=200"
+           />
+           <MealItem 
+             time="Almuerzo" 
+             title="Salmón con Quinoa y Espárragos" 
+             kcal="580" 
+             img="https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&q=80&w=200&h=200"
+           />
+           <MealItem 
+             time="Cena" 
+             title="Bowl de Pollo y Verduras" 
+             kcal="420" 
+             img="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=200&h=200"
+           />
+        </div>
+
+      </main>
+
+      {/* Navegación Inferior */}
+      <nav className="bottom-nav">
+        <Link to="/portal" className="nav-item">
+          <Home size={24} />
+          <span>Home</span>
         </Link>
-
-        {/* Header Section */}
-        <div style={{ marginBottom: '3rem' }}>
-          <div className="badge-peach">Plan Personalizado</div>
-          <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.8rem)', marginBottom: '1rem', color: 'var(--black)', fontFamily: 'var(--font-display)' }}>Tu Nutrición <span style={{color:'var(--primary)', fontStyle: 'italic'}}>Balanceada</span></h1>
-          <p style={{ color: 'var(--on-surface-variant)', fontSize: '1.05rem', maxWidth: '600px', lineHeight: 1.6 }}>
-            Alimentación diseñada para la asimilación post-entrenamiento muscular. Enfocado en recomposición corporal sin restricción extrema.
-          </p>
-        </div>
-
-        {/* Resumen Macros */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '4rem'
-        }}>
-          {['1,850 Kcal Diarias', '130g Proteínas', '180g Carbohidratos', '65g Grasas'].map((macro, i) => (
-            <div key={i} style={{
-              background: 'var(--surface-lowest)', padding: '1.5rem', borderRadius: 'var(--shape-lg)',
-              border: '1px solid rgba(89,88,86,0.05)', textAlign: 'center', fontWeight: '500', 
-              color: i === 0 ? 'var(--primary)' : 'var(--on-surface)', fontSize: '0.95rem'
-            }}>
-              {macro}
-            </div>
-          ))}
-        </div>
-
-        {/* Plan del Día */}
-        <h2 style={{ fontSize: '1.8rem', marginBottom: '2rem', fontFamily: 'var(--font-display)' }}>Recetas Sugeridas del Día</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          
-          <MealCard 
-            type="Desayuno (Por asimilación lenta)" 
-            title="Tostada Francesa Proteica con Frutos Rojos"
-            cal="350 kcal"
-            ingredients={['2 Rebanadas pan Ezequiel', '1/2 scoop de proteína Vainilla', '1 Huevo entero', 'Frutos rojos al gusto']}
-          />
-          <MealCard 
-            type="Almuerzo Post-Entrenamiento" 
-            title="Bowl Mediterráneo de Pechuga y Quinoa"
-            cal="550 kcal"
-            ingredients={['150g Pechuga de pollo', '1/2 taza de Quinoa', 'Hummus orgánico', 'Mix de lechugas frescas', 'Olivas y tomate cherry']}
-          />
-          <MealCard 
-            type="Cena Ligera (Restauración Muscular)" 
-            title="Salmón al horno con Espárragos"
-            cal="420 kcal"
-            ingredients={['120g Salmón fresco noruego', 'Espárragos salteados en ghee', '1/4 Aguacate Hass']}
-          />
-
-        </div>
-
-      </div>
+        <Link to="/agenda" className="nav-item">
+          <Calendar size={24} />
+          <span>Agenda</span>
+        </Link>
+        <Link to="/evolucion" className="nav-item">
+          <TrendingUp size={24} />
+          <span>Evolución</span>
+        </Link>
+        <Link to="/nutricion" className="nav-item active">
+          <Star size={24} />
+          <span>Nutrición</span>
+        </Link>
+      </nav>
     </div>
   );
 }
 
-function MealCard({ type, title, cal, ingredients }) {
+function MealItem({ time, title, kcal, img }) {
   return (
-    <div className="meal-card">
-      <div>
-        <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--primary)', fontWeight: 600, marginBottom: '0.5rem' }}>{type}</div>
-        <h3 style={{ fontSize: '1.4rem', marginBottom: '1.2rem', fontFamily: 'var(--font-display)', color: 'var(--on-surface)' }}>{title}</h3>
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {ingredients.map((ing, i) => (
-            <li key={i} style={{ color: 'var(--on-surface-variant)', fontSize: '0.95rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <CheckCircle2 size={16} color="var(--primary)" /> {ing}
-            </li>
-          ))}
-        </ul>
+    <div className="midnight-glass-card" style={{ padding: '1rem', display: 'flex', gap: '1.2rem', alignItems: 'center' }}>
+      <div style={{ width: '80px', height: '80px', borderRadius: '15px', overflow: 'hidden' }}>
+        <img src={img} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </div>
-      <div className="meal-card-action">
-        <div style={{ fontSize: '1.8rem', fontWeight: 600, color: 'var(--on-surface)', fontFamily: 'var(--font-display)' }}>{cal}</div>
-        <div style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>Calorías Estimadas</div>
-        <button style={{
-          marginTop: '1.5rem', background: 'var(--surface-low)', border: 'none', padding: '0.6rem 1.2rem',
-          borderRadius: 'var(--shape-xl)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px',
-          fontWeight: 600, color: 'var(--on-surface)', fontSize: '0.85rem', transition: 'background 0.2s'
-        }}>
-          <Download size={16} /> Ver Receta
-        </button>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--midnight-accent)', textTransform: 'uppercase', marginBottom: '0.2rem' }}>{time}</div>
+        <h3 style={{ fontSize: '1rem', color: 'white', marginBottom: '0.4rem' }}>{title}</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.8rem', color: 'var(--midnight-on-surface-variant)' }}>
+           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Flame size={14} /> {kcal} kcal
+           </div>
+           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Clock size={14} /> 15 min
+           </div>
+        </div>
       </div>
+      <button style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '40px', height: '40px', borderRadius: '12px', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <ChevronLeft size={20} style={{ transform: 'rotate(180deg)' }} />
+      </button>
     </div>
   );
 }

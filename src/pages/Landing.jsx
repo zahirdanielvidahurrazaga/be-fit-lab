@@ -210,7 +210,7 @@ function Landing() {
             </div>
           </div>
           <div style={{ flex: '1 1 400px', position: 'relative' }}>
-             <div style={{ width: '100%', height: '500px', background: 'url("/agenda_mock.png")', backgroundSize: 'cover', borderRadius: '30px', boxShadow: '0 30px 60px rgba(0,0,0,0.1)' }}></div>
+             <div style={{ width: '100%', height: '500px', background: 'url("/assets/agenda_mock.png")', backgroundSize: 'cover', borderRadius: '30px', boxShadow: '0 30px 60px rgba(0,0,0,0.1)' }}></div>
           </div>
         </div>
       </section>
@@ -219,7 +219,7 @@ function Landing() {
       <section id="evolucion-info" style={{ padding: '8rem 5%', background: '#FAF9F6' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap-reverse', gap: '4rem', alignItems: 'center' }}>
           <div style={{ flex: '1 1 400px' }}>
-             <div style={{ width: '100%', height: '500px', background: 'url("/evolucion_mock.png")', backgroundSize: 'cover', borderRadius: '30px', boxShadow: '0 30px 60px rgba(0,0,0,0.1)' }}></div>
+             <div style={{ width: '100%', height: '500px', background: 'url("/assets/evolucion_mock.png")', backgroundSize: 'cover', borderRadius: '30px', boxShadow: '0 30px 60px rgba(0,0,0,0.1)' }}></div>
           </div>
           <div style={{ flex: '1 1 500px' }}>
             <div className="badge-peach" style={{marginBottom: '1.5rem'}}><TrendingUp size={16} /> Seguimiento Bio-Digital</div>
@@ -250,14 +250,21 @@ function Landing() {
             La nutrición es el combustible de tu cambio. En BEFIT LAB, tu membresía incluye acceso a planes alimenticios diseñados para complementar tu entrenamiento.
           </p>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-            <div style={{ padding: '3rem', borderRadius: '24px', background: '#FDFCFB', border: '1px solid #F1EFE9' }}>
-               <h3>Recetario Digital</h3>
-               <p style={{marginTop: '1rem', color: '#6B7280'}}>Cientos de recetas saludables y deliciosas con cálculo calórico automático.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '3rem', alignItems: 'center' }}>
+            <div style={{ flex: '1' }}>
+              <div style={{ display: 'grid', gap: '2rem' }}>
+                <div style={{ padding: '3rem', borderRadius: '24px', background: '#FDFCFB', border: '1px solid #F1EFE9', textAlign: 'left' }}>
+                   <h3 style={{fontFamily: 'var(--font-display)'}}>Recetario Digital</h3>
+                   <p style={{marginTop: '1rem', color: '#6B7280'}}>Cientos de recetas saludables y deliciosas con cálculo calórico automático.</p>
+                </div>
+                <div style={{ padding: '3rem', borderRadius: '24px', background: '#FDFCFB', border: '1px solid #F1EFE9', textAlign: 'left' }}>
+                   <h3 style={{fontFamily: 'var(--font-display)'}}>Lista de Compras</h3>
+                   <p style={{marginTop: '1rem', color: '#6B7280'}}>Generamos tu lista del súper basada en tu plan semanal para que no pierdas tiempo.</p>
+                </div>
+              </div>
             </div>
-            <div style={{ padding: '3rem', borderRadius: '24px', background: '#FDFCFB', border: '1px solid #F1EFE9' }}>
-               <h3>Lista de Compras</h3>
-               <p style={{marginTop: '1rem', color: '#6B7280'}}>Generamos tu lista del súper basada en tu plan semanal para que no pierdas tiempo.</p>
+            <div style={{ flex: '1' }}>
+               <div style={{ width: '100%', height: '500px', background: 'url("/assets/nutricion_mock.png")', backgroundSize: 'cover', borderRadius: '30px', boxShadow: '0 30px 60px rgba(0,0,0,0.1)' }}></div>
             </div>
           </div>
         </div>

@@ -1,74 +1,92 @@
 import React from 'react';
-import { Target, TrendingUp, Trophy, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Home, Calendar, Star, TrendingUp, ChevronLeft, Activity, Flame, Target } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 function Evolucion() {
+  const navigate = useNavigate();
+
   return (
-    <div style={{ backgroundColor: '#FDFBF7', minHeight: '100vh', padding: '3rem 5% 4rem' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+    <div className="app-shell">
+      {/* Header */}
+      <header style={{ padding: '2rem 6% 1rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        <button onClick={() => navigate('/portal')} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '45px', height: '45px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', cursor: 'pointer' }}>
+          <ChevronLeft size={24} />
+        </button>
+        <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', color: 'white' }}>Mi Evolución</h1>
+      </header>
+
+      <main style={{ padding: '2rem 6% 120px' }}>
         
-        {/* Botón Volver Súper Elegante */}
-        <Link to="/" className="back-link" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'var(--on-surface-variant)', textDecoration: 'none', fontWeight: 500, marginBottom: '2.5rem', fontSize: '0.95rem' }}>
-          <ArrowLeft size={18} /> Volver al inicio
+        {/* Resumen General */}
+        <div className="midnight-glass-card" style={{ padding: '2rem', marginBottom: '2.5rem', background: 'linear-gradient(135deg, rgba(118, 216, 195, 0.1), transparent)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+            <div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--midnight-accent)', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Puntuación Lab</div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white' }}>94/100</div>
+            </div>
+            <div style={{ background: 'var(--midnight-accent)', color: 'var(--on-primary)', padding: '4px 12px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 700 }}>Nivel Pro</div>
+          </div>
+          <p style={{ fontSize: '0.9rem', color: 'var(--midnight-on-surface-variant)' }}>Has superado el 85% de tus objetivos mensuales. Tu enfoque en el tren inferior es impecable.</p>
+        </div>
+
+        {/* Métricas de Cuerpo */}
+        <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--midnight-on-surface)', marginBottom: '1.5rem' }}>Medidas y Composición</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '3rem' }}>
+           <MetricBox label="Peso" value="62.4" unit="kg" trend="-0.5" />
+           <MetricBox label="Cintura" value="68.2" unit="cm" trend="-1.2" />
+           <MetricBox label="Cadera" value="94.5" unit="cm" trend="+0.8" highlight />
+           <MetricBox label="Músculo" value="32.1" unit="%" trend="+1.5" highlight />
+        </div>
+
+        {/* Gráfico de Tendencia */}
+        <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--midnight-on-surface)', marginBottom: '1.5rem' }}>Actividad Semanal</h2>
+        <div className="midnight-glass-card" style={{ padding: '2rem', height: '220px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px' }}>
+           {[40, 70, 45, 90, 65, 80, 50].map((h, i) => (
+             <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '100%', height: `${h}%`, background: i === 3 ? 'var(--midnight-accent)' : 'rgba(255,255,255,0.1)', borderRadius: '6px' }} />
+                <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--midnight-on-surface-variant)' }}>
+                  {['L', 'M', 'M', 'J', 'V', 'S', 'D'][i]}
+                </span>
+             </div>
+           ))}
+        </div>
+
+      </main>
+
+      {/* Navegación Inferior */}
+      <nav className="bottom-nav">
+        <Link to="/portal" className="nav-item">
+          <Home size={24} />
+          <span>Home</span>
         </Link>
-
-        {/* Top Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '3rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <div className="badge-peach" style={{ marginBottom: '1rem' }}>Progreso Físico</div>
-            <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.8rem)', margin: 0, fontFamily: 'var(--font-display)' }}>Tu Evolución BEFIT</h1>
-          </div>
-          <div style={{ background: 'var(--primary)', color: 'white', padding: '0.8rem 1.5rem', borderRadius: 'var(--shape-xl)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
-            <Trophy size={20} /> Nivel: Elite
-          </div>
-        </div>
-
-        {/* Dashboard de métricas */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '1.5rem', marginBottom: '4rem' }}>
-          <MetricCard icon={<Target color="var(--primary)" size={24} />} title="Clases Completadas" data="24" subtitle="¡Súper constante!" />
-          <MetricCard icon={<TrendingUp color="var(--primary)" size={24} />} title="Racha Actual" data="8 Días" subtitle="Asistencia ininterrumpida" highlight />
-          <MetricCard icon={<span style={{fontSize:'24px'}}>🍑</span>} title="Foco Muscular" data="Glúteo + Pierna" subtitle="Según tus últimas reservas" />
-        </div>
-
-        {/* Visualizer (Sección de gráfico simulado) */}
-        <div style={{
-          background: 'var(--surface-lowest)', borderRadius: 'var(--shape-xl)', padding: 'clamp(1.5rem, 4vw, 3rem)',
-          border: '1px solid rgba(89,88,86,0.05)'
-        }}>
-          <h2 style={{ fontSize: '1.5rem', marginBottom: '2rem', fontFamily: 'var(--font-display)' }}>Pesos y Medidas de Reto</h2>
-          <div style={{ height: '300px', display: 'flex', alignItems: 'flex-end', gap: '1rem', paddingBottom: '1rem', borderBottom: '1px dashed var(--surface-low)', position: 'relative', overflowX: 'auto' }}>
-            {/* Simulación gráfica estética */}
-            {[50, 60, 55, 75, 80, 95].map((val, i) => (
-              <div key={i} style={{ flex: 1, minWidth: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                <div style={{
-                  width: '100%', maxWidth: '50px', height: `${val}%`, background: i === 5 ? 'var(--primary)' : 'var(--surface-low)',
-                  borderRadius: '10px 10px 0 0', transition: 'all 0.5s ease', cursor: 'pointer'
-                }}></div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>Mes {i+1}</div>
-              </div>
-            ))}
-          </div>
-          <p style={{ marginTop: '2rem', color: 'var(--on-surface-variant)', textAlign: 'center', fontSize: '0.95rem' }}>
-            Un progreso verdaderamente orgánico enfocado en el crecimiento muscular sostenido, no en la báscula.
-          </p>
-        </div>
-
-      </div>
+        <Link to="/agenda" className="nav-item">
+          <Calendar size={24} />
+          <span>Agenda</span>
+        </Link>
+        <Link to="/evolucion" className="nav-item active">
+          <TrendingUp size={24} />
+          <span>Evolución</span>
+        </Link>
+        <Link to="/nutricion" className="nav-item">
+          <Star size={24} />
+          <span>Nutrición</span>
+        </Link>
+      </nav>
     </div>
   );
 }
 
-function MetricCard({ icon, title, data, subtitle, highlight }) {
+function MetricBox({ label, value, unit, trend, highlight }) {
   return (
-    <div style={{
-      background: highlight ? 'var(--surface-low)' : 'var(--surface-lowest)',
-      padding: '2rem', borderRadius: 'var(--shape-lg)',
-      border: highlight ? '1px solid rgba(201, 114, 93, 0.2)' : '1px solid rgba(89,88,86,0.05)'
-    }}>
-      <div style={{ marginBottom: '1.5rem' }}>{icon}</div>
-      <div style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</div>
-      <div style={{ fontSize: '2.5rem', fontWeight: 600, color: 'var(--on-surface)', marginBottom: '0.5rem' }}>{data}</div>
-      <div style={{ fontSize: '0.85rem', color: highlight ? 'var(--primary)' : 'var(--on-surface-variant)' }}>{subtitle}</div>
+    <div className="midnight-glass-card" style={{ padding: '1.2rem' }}>
+      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--midnight-on-surface-variant)', marginBottom: '0.5rem' }}>{label}</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '0.5rem' }}>
+        <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>{value}</span>
+        <span style={{ fontSize: '0.8rem', color: 'var(--midnight-on-surface-variant)' }}>{unit}</span>
+      </div>
+      <div style={{ fontSize: '0.7rem', fontWeight: 700, color: trend.startsWith('+') ? (highlight ? '#76D8C3' : '#FFB4AB') : '#76D8C3' }}>
+        {trend} {trend.startsWith('+') ? '↑' : '↓'} este mes
+      </div>
     </div>
   );
 }

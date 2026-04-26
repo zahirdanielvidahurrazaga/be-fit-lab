@@ -9,20 +9,32 @@
   --primary: #C9725D; /* Ladrillo / Terra Cotta Elegante */
   --primary-dim: #B35E4B; /* Hover más profundo */
   --on-primary: #FFFFFF; 
-  
   --accent: #E8A18B; /* Durazno moderno para fondos o insignias */
   --on-accent: #3A231C;
   --black: #000000;
   
-  --on-surface: #262626; /* Charcoal oscuro para texto legibilidad excelente */
-  --on-surface-variant: #595856; /* Gris texto secundario */
+  --on-surface: #1C1B1B; /* Charcoal oscuro para texto legibilidad excelente */
+  --primary: #C9725D;
+  --primary-container: #D17963;
+  --on-primary: #591C0D;
+  --secondary: #EFBAAE;
+  --tertiary: #76D8C3;
+  --background: #FDFAF7;
+  
+  /* Midnight Luxury Tokens (Portal) */
+  --midnight-bg: #131313;
+  --midnight-surface: #1C1B1B;
+  --midnight-surface-high: #2A2A2A;
+  --midnight-accent: #FFB4A3;
+  --midnight-on-surface: #E5E2E1;
+  --midnight-on-surface-variant: #DAC1BB;
   
   --shape-xl: 36px;
   --shape-lg: 20px;
   --shape-md: 12px;
   
-  --font-display: 'Playfair Display', serif; /* Lujo ultra premium moderno */
-  --font-body: 'Inter', sans-serif; /* Claridad funcional */
+  --font-display: 'Epilogue', sans-serif;
+  --font-body: 'Manrope', sans-serif; /* Claridad funcional */
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -85,13 +97,29 @@ h1, h2, h3, h4, h5 {
   color: var(--surface);
 }
 
-/* --- GLASSMORPHISM BUTTONS (iPhone Style) --- */
+/* Glassmorphism Styles */
+.glass-card {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+}
+
+.midnight-glass-card {
+  background: rgba(42, 42, 42, 0.4);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 0.5px solid rgba(229, 226, 225, 0.15);
+  border-radius: 24px;
+}
+
 .glass-button {
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: var(--black);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--on-surface);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 1rem 2rem;
   border-radius: 30px;
   font-family: var(--font-body);
@@ -101,8 +129,6 @@ h1, h2, h3, h4, h5 {
   display: flex;
   align-items: center;
   gap: 10px;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
 }
 
 .glass-button:hover {
@@ -112,11 +138,10 @@ h1, h2, h3, h4, h5 {
 }
 
 .glass-button-dark {
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.05);
   backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: white;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  color: var(--on-surface);
   padding: 1rem 2rem;
   border-radius: 30px;
   font-weight: 600;

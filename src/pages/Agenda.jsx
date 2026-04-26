@@ -1,86 +1,105 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Clock, Calendar as CalendarIcon, CheckCircle2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Clock, Calendar as CalendarIcon, Home, Star, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 
 function Agenda() {
-  const [selectedDay, setSelectedDay] = useState('Hoy');
+  const navigate = useNavigate();
+  const [selectedDay, setSelectedDay] = useState(new Date().getDate());
+
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    return {
+      day: d.getDate(),
+      name: d.toLocaleDateString('es-MX', { weekday: 'short' }).charAt(0).toUpperCase(),
+      date: d
+    };
+  });
 
   return (
-    <div style={{ backgroundColor: 'var(--surface-low)', minHeight: '100vh', paddingBottom: '3rem' }}>
-      {/* Mini Navegación */}
-      <nav style={{ padding: '1.5rem 5%', background: 'var(--surface-lowest)', display: 'flex', alignItems: 'center', gap: '1.5rem', borderBottom: '1px solid rgba(89, 88, 86, 0.08)' }}>
-        <Link to="/" style={{ color: 'var(--on-surface)', display: 'flex', alignItems: 'center' }}>
-          <ArrowLeft size={24} />
-        </Link>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 600, letterSpacing: '0.02em', margin: 0, fontFamily: 'var(--font-display)' }}>Agenda tu Entrenamiento</h1>
-      </nav>
+    <div className="app-shell">
+      {/* Header Fijo de Pantalla */}
+      <header style={{ padding: '2rem 6% 1rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        <button onClick={() => navigate('/portal')} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '45px', height: '45px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', cursor: 'pointer' }}>
+          <ChevronLeft size={24} />
+        </button>
+        <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', color: 'white' }}>Agenda</h1>
+      </header>
 
-      <div style={{ maxWidth: '800px', margin: '3rem auto', padding: '0 5%' }}>
-        {/* Filtros de día estilo iOS */}
-        <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--surface)', padding: '0.4rem', borderRadius: 'var(--shape-xl)', marginBottom: '3rem', flexWrap: 'wrap' }}>
-          {['Ayer', 'Hoy', 'Mañana', 'Jueves'].map(day => (
+      <main style={{ padding: '1rem 0 120px' }}>
+        {/* Selector de Fecha (Calendar Strip) */}
+        <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', padding: '0 6% 2rem', scrollbarWidth: 'none' }}>
+          {days.map((d) => (
             <button 
-              key={day}
-              onClick={() => setSelectedDay(day)}
+              key={d.day}
+              onClick={() => setSelectedDay(d.day)}
               style={{
-                flex: 1, padding: '0.8rem', border: 'none', borderRadius: 'var(--shape-xl)', cursor: 'pointer',
-                fontWeight: selectedDay === day ? 600 : 500, minWidth: '70px',
-                color: selectedDay === day ? 'var(--on-primary)' : 'var(--on-surface-variant)',
-                backgroundColor: selectedDay === day ? 'var(--primary)' : 'transparent',
-                transition: 'all 0.3s ease'
+                minWidth: '65px', height: '90px', borderRadius: '20px', border: 'none',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                background: selectedDay === d.day ? 'var(--midnight-accent)' : 'var(--midnight-surface-high)',
+                color: selectedDay === d.day ? 'var(--on-primary)' : 'white',
+                cursor: 'pointer', transition: 'all 0.3s ease'
               }}
             >
-              {day}
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, opacity: 0.8 }}>{d.name}</span>
+              <span style={{ fontSize: '1.3rem', fontWeight: 800 }}>{d.day}</span>
             </button>
           ))}
         </div>
 
-        {/* Lista de clases */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          
-          <ClassCard 
-            time="07:00 AM" duration="50 min" title="Flow Mat Wake-up" instructor="Valeria N."
-            spots={2} type="Yoga" disabled={false}
-          />
-          <ClassCard 
-            time="09:30 AM" duration="60 min" title="Reformer Avanzado 🍑" instructor="Olga"
-            spots={0} type="Pilates" disabled={true}
-          />
-          <ClassCard 
-            time="06:00 PM" duration="50 min" title="Fuerza y Glúteos 101" instructor="Claudia"
-            spots={5} type="Fuerza" disabled={false}
-          />
+        {/* Lista de Clases del Día */}
+        <div style={{ padding: '0 6%', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+           <ClassItem time="07:00 AM" title="Pilates Reformer" instructor="Valeria N." level="Avanzado" spots={2} color="#FFB4A3" />
+           <ClassItem time="09:30 AM" title="Yoga Flow" instructor="Olga M." level="Intermedio" spots={0} color="#76D8C3" full />
+           <ClassItem time="05:00 PM" title="Fuerza Lab" instructor="Claudia S." level="Todos los niveles" spots={5} color="#EFBAAE" />
+           <ClassItem time="06:30 PM" title="Cardio Baile" instructor="Marco R." level="Principiante" spots={8} color="#D17963" />
         </div>
-      </div>
+      </main>
+
+      {/* Navegación Inferior */}
+      <nav className="bottom-nav">
+        <Link to="/portal" className="nav-item">
+          <Home size={24} />
+          <span>Home</span>
+        </Link>
+        <Link to="/agenda" className="nav-item active">
+          <CalendarIcon size={24} />
+          <span>Agenda</span>
+        </Link>
+        <Link to="/evolucion" className="nav-item">
+          <TrendingUp size={24} />
+          <span>Evolución</span>
+        </Link>
+        <Link to="/nutricion" className="nav-item">
+          <Star size={24} />
+          <span>Nutrición</span>
+        </Link>
+      </nav>
     </div>
   );
 }
 
-function ClassCard({ time, duration, title, instructor, spots, type, disabled }) {
+function ClassItem({ time, title, instructor, level, spots, color, full }) {
   return (
-    <div className={`class-card ${disabled ? 'disabled' : ''}`}>
-      <div className="class-card-info">
-        <div style={{ textAlign: 'center', minWidth: '85px' }}>
-          <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--primary)' }}>{time}</div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-            <Clock size={12} /> {duration}
-          </div>
+    <div className="midnight-glass-card" style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: full ? 0.6 : 1 }}>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color }} />
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--midnight-on-surface-variant)', textTransform: 'uppercase' }}>{time} • {level}</span>
         </div>
-        
-        <div style={{ borderLeft: '1px solid #EAE6DF', paddingLeft: '1.5rem' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)', marginBottom: '4px' }}>
-            {type}
-          </div>
-          <h3 style={{ fontSize: '1.15rem', fontFamily: 'var(--font-body)', fontWeight: 600, margin: 0, color: 'var(--on-surface)' }}>{title}</h3>
-          <p style={{ fontSize: '0.9rem', color: 'var(--on-surface-variant)', margin: '4px 0 0 0' }}>Con {instructor}</p>
-        </div>
+        <h3 style={{ fontSize: '1.2rem', color: 'white', marginBottom: '0.2rem' }}>{title}</h3>
+        <p style={{ fontSize: '0.85rem', color: 'var(--midnight-on-surface-variant)' }}>Con {instructor}</p>
       </div>
-
-      <div className="class-card-action">
-        <button className={disabled ? 'btn-agenda-disabled' : 'btn-primary'} disabled={disabled} style={!disabled ? {padding: '0.8rem 2rem', width: '100%', justifyContent: 'center'} : {}}>
-          {disabled ? 'Lleno' : 'Reservar Lugar'}
+      
+      <div style={{ textAlign: 'right' }}>
+        <button 
+          className={full ? 'glass-button-dark' : 'midnight-gradient-btn'} 
+          disabled={full}
+          style={{ padding: '0.6rem 1.2rem', fontSize: '0.8rem' }}
+        >
+          {full ? 'Lleno' : 'Reservar'}
         </button>
-        {!disabled && <span style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>{spots} cupos libres</span>}
+        {!full && <div style={{ fontSize: '0.7rem', color: 'var(--midnight-accent)', marginTop: '5px', fontWeight: 700 }}>{spots} cupos</div>}
       </div>
     </div>
   );
