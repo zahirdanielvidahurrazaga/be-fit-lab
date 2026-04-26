@@ -55,6 +55,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
+    // Bypass para demostración (Junta del viernes)
+    if (email === 'admin@befitlab.com' || email.includes('cliente')) {
+      const mockUser = { email, id: 'demo-id', user_metadata: { full_name: 'Usuario Demo' } };
+      setUser(mockUser);
+      setRole(email.includes('admin') ? 'ADMIN' : 'CLIENT');
+      setLoading(false);
+      return { data: { user: mockUser }, error: null };
+    }
+    
     return await supabase.auth.signInWithPassword({ email, password });
   };
 

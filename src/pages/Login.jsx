@@ -14,21 +14,20 @@ function Login() {
     e.preventDefault();
     setError(null);
     
-    // Si la BD de supabase no está configurada para Auth, simulamos el ruteo
-    if (email === 'admin@befitlab.com') {
-      navigate('/admin');
-      return;
-    } else if (email.includes('cliente')) {
-      navigate('/portal');
-      return;
-    }
-
-    const { data, error: authError } = await login(email, password);
+    const cleanEmail = email.trim().toLowerCase();
+    const { data, error: authError } = await login(cleanEmail, password);
+    
     if (authError) {
       setError(authError.message);
     } else {
-      // Rutas protegidas basadas en AuthContext
-      navigate('/'); // App.jsx redirigirá basado en rol
+      // Redirección inmediata basada en el correo de demo o el rol
+      if (cleanEmail === 'admin@befitlab.com') {
+        navigate('/admin');
+      } else if (cleanEmail.includes('cliente')) {
+        navigate('/portal');
+      } else {
+        navigate('/'); // Redirección por defecto
+      }
     }
   };
 
