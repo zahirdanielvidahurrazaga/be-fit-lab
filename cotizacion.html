@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Propuesta BEFIT LAB</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #C9725D;
+            --bg: #FDFBF7;
+            --text-dark: #262626;
+            --text-light: #595856;
+        }
+
+        body {
+            background-color: white;
+            color: var(--text-dark);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 60px;
+        }
+
+        .page {
+            page-break-after: always;
+            position: relative;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Playfair Display', serif;
+            color: var(--text-dark);
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            padding-bottom: 20px;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-top: 40px;
+        }
+
+        p {
+            font-size: 1.05rem;
+            font-weight: 300;
+            margin-bottom: 15px;
+        }
+
+        .hero-img {
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            margin: 20px 0;
+            object-fit: cover;
+            max-height: 300px; /* Para la portada */
+        }
+
+        /* ----- MOCKUPS DEVICES ----- */
+        .mockup-desktop {
+            border-radius: 10px 10px 4px 4px;
+            border: 1px solid #eaeaea;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            background: #ffffff;
+            padding-top: 25px; /* Barra de ventana tipo Mac */
+            position: relative;
+            overflow: hidden;
+            margin: 30px 0;
+        }
+        .mockup-desktop::before {
+            content: "•••";
+            position: absolute;
+            top: -12px; 
+            left: 12px;
+            font-size: 30px;
+            color: #d8d8d8;
+            letter-spacing: 2px;
+        }
+        .mockup-desktop img {
+            width: 100%;
+            display: block;
+            border-top: 1px solid #eee;
+        }
+
+        .mockup-mobile {
+            width: 250px;
+            margin: 30px auto;
+            border: 12px solid #1a1a1a;
+            border-radius: 35px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            background: white;
+            overflow: hidden;
+            position: relative;
+        }
+        /* Notch para iPhone feel */
+        .mockup-mobile::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 80px; height: 15px;
+            background: #1a1a1a;
+            border-radius: 0 0 10px 10px;
+            z-index: 2;
+        }
+        .mockup-mobile img {
+            width: 100%;
+            display: block;
+        }
+
+        .pricing-box {
+            background-color: var(--bg);
+            border: 1px solid rgba(201, 114, 93, 0.3);
+            border-radius: 12px;
+            padding: 30px;
+            margin-top: 20px;
+            page-break-inside: avoid;
+        }
+
+        .pricing-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 5px;
+        }
+
+        .price {
+            font-size: 2rem;
+            color: var(--primary);
+            font-family: 'Playfair Display', serif;
+            font-weight: 600;
+        }
+
+        .rol-box {
+            background: #fcfcfc;
+            border-left: 4px solid var(--primary);
+            padding: 20px 25px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+            page-break-inside: avoid;
+        }
+
+        @media print {
+            body { background: white; }
+            .container { padding: 20px; }
+            .page { page-break-after: always; }
+            .mockup-desktop, .mockup-mobile { box-shadow: none; border-color: #ddd; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container page">
+        <h1>BEFIT LAB<br><span style="font-size: 1.2rem; font-family: 'Inter', sans-serif; font-weight: 300; letter-spacing: 2px; color: var(--text-light)">TRANSFORMACIÓN DIGITAL Y SOFTWARE A MEDIDA</span></h1>
+
+        <h2>Resumen Operativo</h2>
+        <p>Actualmente, el mercado de Pilates y <em>Wellness Boutique</em> exige una huella digital que iguale el lujo de sus instalaciones presenciales. Nuestro <strong>Software Inteligente (Super App)</strong> fideliza, gestiona y multiplica los ingresos disminuyendo drásticamente tu carga operativa diaria.</p>
+
+        <!-- Esta imagen se asume que existe generada antes en /public/ -->
+        <img src="public/hero_bg.png" alt="Concepto Estético BEFIT" class="hero-img">
+
+        <h2>La Experiencia Integral: Caso de Uso en Tiempo Real</h2>
+
+        <div class="rol-box">
+            <h4>1. La Clienta (Mónica) - Atracción Responsiva</h4>
+            <p>Mónica entra a la plataforma desde su celular. La interfaz <em>Mobile-First</em> de nuestra plataforma se adapta como si fuera una aplicación nativa, dándole la opción de reservar cómodamente en un calendario limpio estilo iOS su clase de Reformer a las 7:00 am.</p>
+            
+            <h5 style="font-family: 'Playfair Display', serif; font-size: 1.5rem; margin-top: 40px; margin-bottom: 25px; color: var(--primary); text-align: center;">Galería: Experiencia Clienta</h5>
+            
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px;">
+                <!-- Fila Superior -->
+                <div class="mockup-mobile" style="width: auto; margin: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.05);"><img src="./Capturas/Captura de pantalla 2026-04-21 175903.png" alt="Atracción Inicial"></div>
+                <div class="mockup-mobile" style="width: auto; margin: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.05);"><img src="./Capturas/Captura de pantalla 2026-04-21 175919.png" alt="Información Clases"></div>
+                <div class="mockup-mobile" style="width: auto; margin: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.05);"><img src="./Capturas/Captura de pantalla 2026-04-21 175927.png" alt="Gestión Agenda"></div>
+                <div class="mockup-mobile" style="width: auto; margin: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.05);"><img src="./Capturas/Captura de pantalla 2026-04-21 175953.png" alt="Dashboard Interno"></div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                <!-- Fila Inferior -->
+                <div class="mockup-mobile" style="width: auto; margin: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.05);"><img src="./Capturas/Captura de pantalla 2026-04-21 180010.png" alt="Visualización de Clases"></div>
+                <div class="mockup-mobile" style="width: auto; margin: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.05);"><img src="./Capturas/Captura de pantalla 2026-04-21 175943.png" alt="Evolución"></div>
+                <div class="mockup-mobile" style="width: auto; margin: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.05);"><img src="./Capturas/Captura de pantalla 2026-04-21 180021.png" alt="Plan Nutricional"></div>
+                <div class="mockup-mobile" style="width: auto; margin: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.05);"><img src="./Capturas/Captura de pantalla 2026-04-21 180036.png" alt="Recetas"></div>
+            </div>
+        </div>
+    </div> <!-- Break Page -->
+
+    <div class="container page">
+        <div class="rol-box">
+            <h4>2. La Dueña (El Cerebro) - Dashboard Administrativo de PC</h4>
+            <p>Al entrar tú como administradora desde tu computadora de recepción, el portal se convierte en la <strong>Plataforma de Control Master</strong> con tu gran pantalla. Desaparecen los excel complicados.</p>
+            <p><strong>Lo que controla la Dueña:</strong>
+            <ul>
+                <li><strong>Base de Datos Absoluta:</strong> Visualiza toda tu cartera de alumnas.</li>
+                <li><strong>Métricas de Pagos Sólidas:</strong> ¿Quién renueva hoy? Bloquea agenda a deudoras.</li>
+                <li><strong>Reportes de Aforo:</strong> Qué clase tiene 100% ocupación.</li>
+            </ul></p>
+
+            <div class="mockup-desktop">
+                <img src="./Capturas/Captura de pantalla 2026-04-21 180913.png" alt="Dashboard Interno Computadora">
+            </div>
+        </div>
+
+        <h2>Presupuesto de Desarrollo e Inversión Tecnológica</h2>
+        <p>Nuestra propuesta elimina pagar altas sumas a sistemas de agenda externos, construyendo una estructura a tu medida anclada en React JS y Supabase (Bases de Datos Nube).</p>
+
+        <div class="pricing-box">
+            <div class="pricing-title">Construcción y Setup de Plataforma (Soft-Launch)</div>
+            <p style="margin-top: 5px;">Incluye diseño UI/UX (Frente Estético Móvil y PC), programación en React, configuración de Base de Datos y creación de roles.</p>
+            <div style="background: rgba(201, 114, 93, 0.1); padding: 10px 15px; border-radius: 8px; margin: 15px 0; font-size: 0.95rem; font-weight: 500; color: var(--primary); display: inline-block;">
+                Condiciones: Pago diferido en dos exhibiciones (50% de anticipo para arrancar / 50% al finalizar entrega).
+            </div>
+            <div class="price">$9,000 MXN <span style="font-size:0.9rem; font-weight:300; color:var(--text-light)">(Total del Proyecto)</span></div>
+        </div>
+
+        <div class="pricing-box">
+            <div class="pricing-title">Mantenimiento de Servidores, Bases de Datos y Soporte Vital</div>
+            <p style="margin-top: 5px;">Hospedaje internacional en Nube 24/7 y la operabilidad del algoritmo de usuarios en Supabase, más el manejo del programador.</p>
+            <div class="price">$300 MXN <span style="font-size:0.9rem; font-weight:300; color:var(--text-light)">(Suscripción Mensual)</span></div>
+        </div>
+
+    </div>
+</body>
+</html>
