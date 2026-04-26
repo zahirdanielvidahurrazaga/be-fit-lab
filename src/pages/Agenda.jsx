@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Calendar as CalendarIcon, Home, Star, TrendingUp, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { ArrowLeft, Clock, Calendar as CalendarIcon, Home, Utensils, TrendingUp, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 
 function Agenda() {
   const navigate = useNavigate();
@@ -67,24 +67,24 @@ function Agenda() {
       {/* Navegación Inferior (Luxury Pill) */}
       <nav className="bottom-nav">
         <Link to="/portal" className="nav-item">
-          <Home size={22} />
+          <Home size={20} strokeWidth={2.5} />
           <span>PORTAL</span>
         </Link>
         <Link to="/agenda" className="nav-item active">
-          <CalendarIcon size={22} />
+          <CalendarIcon size={20} strokeWidth={2.5} />
           <span>AGENDA</span>
         </Link>
         
         <button className="nav-central-btn" onClick={() => navigate('/agenda')}>
-           <Play size={24} fill="currentColor" />
+           <Play size={24} fill="currentColor" strokeWidth={2.5} />
         </button>
 
         <Link to="/evolucion" className="nav-item">
-          <TrendingUp size={22} />
+          <TrendingUp size={20} strokeWidth={2.5} />
           <span>MÉTRICAS</span>
         </Link>
         <Link to="/nutricion" className="nav-item">
-          <Star size={22} />
+          <Utensils size={20} strokeWidth={2.5} />
           <span>PLAN</span>
         </Link>
       </nav>
