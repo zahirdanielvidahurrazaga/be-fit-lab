@@ -6,6 +6,7 @@ import Evolucion from './pages/Evolucion';
 import Nutricion from './pages/Nutricion';
 import Portal from './pages/Portal';
 import Admin from './pages/Admin';
+import Coach from './pages/Coach';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Planes from './pages/Planes';
@@ -22,7 +23,9 @@ const ProtectedRoute = ({ children, requireRole }) => {
   }
 
   if (requireRole && role !== requireRole) {
-    return <Navigate to={role === 'ADMIN' ? '/admin' : '/portal'} replace />;
+    if (role === 'ADMIN') return <Navigate to="/admin" replace />;
+    if (role === 'COACH') return <Navigate to="/coach" replace />;
+    return <Navigate to="/portal" replace />;
   }
 
   return children;
@@ -45,6 +48,9 @@ function App() {
           <Route path="/nutricion" element={<ProtectedRoute requireRole="CLIENT"><Nutricion /></ProtectedRoute>} />
           <Route path="/evolucion" element={<ProtectedRoute requireRole="CLIENT"><Evolucion /></ProtectedRoute>} />
           
+          {/* Rutas Privadas Coach */}
+          <Route path="/coach" element={<ProtectedRoute requireRole="COACH"><Coach /></ProtectedRoute>} />
+
           {/* Rutas Privadas Admin */}
           <Route path="/admin" element={<ProtectedRoute requireRole="ADMIN"><Admin /></ProtectedRoute>} />
         </Routes>

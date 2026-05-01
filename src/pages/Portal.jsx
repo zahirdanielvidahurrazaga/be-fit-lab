@@ -1,188 +1,236 @@
-import React from 'react';
-import { Home, Calendar, Utensils, Crown, LogOut, ArrowRight, Activity, Flame, TrendingUp, Play } from 'lucide-react';
+import React, { useState } from 'react';
+import { Calendar, Utensils, TrendingUp, Play, User, QrCode, ChevronRight, Activity, Flame } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { QRCodeCanvas } from 'qrcode.react';
 
 function Portal() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, classesRemaining, myReservations, cancelClass } = useAuth();
+  
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState(null);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
+  const handleCancelClick = (res) => {
+    setSelectedReservation(res);
+    setShowCancelModal(true);
+  };
+
+  const confirmCancellation = () => {
+    if (selectedReservation) {
+      cancelClass(selectedReservation.classId);
+    }
+    setShowCancelModal(false);
   };
 
   return (
-    <div className="app-shell">
-      {/* Hero Profile Header (Ultra Luxury) */}
-      <div style={{
-        height: '240px',
-        background: 'linear-gradient(to bottom, rgba(19, 19, 19, 0) 0%, rgba(19, 19, 19, 1) 100%), url("/hero_bg.png")',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center 20%',
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'flex-end',
-        padding: '0 6% 40px'
-      }}>
-        {/* Floating Avatar Overlay */}
-        <div style={{
-          position: 'absolute',
-          bottom: '-30px',
-          left: '6%',
-          zIndex: 10
-        }}>
-          <div style={{
-            width: '90px',
-            height: '90px',
-            borderRadius: '24px',
-            background: 'linear-gradient(135deg, var(--midnight-accent), var(--primary-container))',
-            border: '4px solid var(--midnight-bg)',
-            boxShadow: '0 12px 30px rgba(0,0,0,0.3)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '2rem',
-            fontWeight: 800,
-            color: 'white',
-            fontFamily: 'var(--font-display)'
-          }}>
-            {user?.email?.[0].toUpperCase() || 'A'}
+    <div className="mobile-app-container">
+      
+      {/* HEADER TIPO iOS */}
+      <header className="ios-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.2 }}>Hola, {user?.email?.split('@')[0] || 'Amanda'}</h1>
+            <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', margin: 0, fontWeight: 500 }}>Membresía Premium Activa</p>
           </div>
-          <div style={{
-            position: 'absolute',
-            bottom: '-5px',
-            right: '-5px',
-            background: '#76D8C3',
-            width: '24px',
-            height: '24px',
-            borderRadius: '50%',
-            border: '3px solid var(--midnight-bg)',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
-          }} />
-        </div>
+          <div style={{ position: 'relative' }}>
+            <div 
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              style={{ 
+                width: '45px', height: '45px', borderRadius: '50%', 
+                background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(10px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 15px rgba(55,61,59,0.05)', cursor: 'pointer',
+                border: '1px solid rgba(255,255,255,0.8)'
+              }}>
+              <User size={20} color="var(--primary)" />
+            </div>
 
-        <div style={{ zIndex: 2 }}>
-           <div style={{ color: 'var(--midnight-accent)', fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
-             Membresía Elite
-           </div>
-           <h1 style={{ fontSize: '2.4rem', fontFamily: 'var(--font-display)', color: 'white', lineHeight: 1 }}>
-             {user?.email?.split('@')[0] || 'Amanda'}
-           </h1>
+            {/* DROPDOWN PERFIL INTEGRADO */}
+            {showProfileMenu && (
+              <div className="profile-dropdown">
+                <div style={{ padding: '10px 15px', borderBottom: '1px solid rgba(55,61,59,0.05)', marginBottom: '5px' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700 }}>{user?.email?.split('@')[0] || 'Amanda'}</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)' }}>Socia Activa</div>
+                </div>
+                <div className="profile-dropdown-item" onClick={() => setShowProfileMenu(false)}>
+                   Mi Cuenta (Próximamente)
+                </div>
+                <div className="profile-dropdown-item" onClick={() => setShowProfileMenu(false)}>
+                   Ajustes
+                </div>
+                <div className="profile-dropdown-item danger" onClick={logout}>
+                   Cerrar Sesión
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </header>
 
-      <main style={{ padding: '60px 6% 120px' }}>
+      <main className="dashboard-main">
         
-        {/* Atajos Rápidos (Nuevos) */}
-        <section style={{ marginBottom: '3rem', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-           <div className="midnight-glass-card" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '12px' }} onClick={() => navigate('/agenda')}>
-              <div style={{ color: 'var(--midnight-accent)' }}><Calendar size={20} /></div>
-              <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Mi Agenda</span>
-           </div>
-           <div className="midnight-glass-card" style={{ padding: '1.2rem', display: 'flex', alignItems: 'center', gap: '12px' }} onClick={() => navigate('/nutricion')}>
-              <div style={{ color: 'var(--midnight-accent)' }}><Utensils size={20} /></div>
-              <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Nutrición</span>
-           </div>
-        </section>
-
-        {/* Sección: Próximas Clases */}
-        <section style={{ marginBottom: '3rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--midnight-on-surface)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Próximas Clases</h2>
-            <Link to="/agenda" style={{ color: 'var(--midnight-accent)', fontSize: '0.8rem', textDecoration: 'none', fontWeight: 700 }}>VER TODAS</Link>
-          </div>
-          
-          <div style={{ display: 'flex', gap: '1.2rem', overflowX: 'auto', paddingBottom: '1rem', scrollbarWidth: 'none' }}>
-            <ClassCard title="Reformer Pilates" time="09:30 AM" instructor="Elena V." color="#FFB4A3" />
-            <ClassCard title="Yoga Flow" time="11:00 AM" instructor="Sofía G." color="#76D8C3" />
-            <ClassCard title="Fuerza Lab" time="06:00 PM" instructor="Marco R." color="#EFBAAE" />
-          </div>
-        </section>
-
-        {/* Sección: Tu Progreso */}
-        <section style={{ marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--midnight-on-surface)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '1.5rem' }}>Estadísticas Vitales</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-            <div className="midnight-glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', borderLeft: '3px solid #76D8C3' }}>
-              <div style={{ color: '#76D8C3' }}><Flame size={20} /></div>
-              <div>
-                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white' }}>1.2k</div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--midnight-on-surface-variant)', fontWeight: 700, textTransform: 'uppercase' }}>Calorías</div>
+        {/* LADO IZQUIERDO: Perfil y Accesos */}
+        <div className="dashboard-sidebar">
+          {/* MÓDULO QR TIPO APPLE WALLET */}
+          <section>
+            <div className="wallet-card">
+              <div className="wallet-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '30px', height: '30px', background: 'white', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'var(--primary)', fontFamily: 'var(--font-display)' }}>B</div>
+                  <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'white', letterSpacing: '1px' }}>BEFIT LAB</span>
+                </div>
+                <QrCode size={20} color="rgba(255,255,255,0.8)" />
+              </div>
+              
+              <div className="wallet-body">
+                <div style={{ background: 'white', padding: '15px', borderRadius: '16px', display: 'inline-block' }}>
+                  <QRCodeCanvas 
+                    value={user?.id || 'befit-client-id'} 
+                    size={140}
+                    level={"H"}
+                    includeMargin={false}
+                    fgColor="#373D3B"
+                  />
+                </div>
+              </div>
+              
+              <div className="wallet-footer">
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase' }}>Clases Restantes</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'white' }}>{classesRemaining} sesiones</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase' }}>Vigencia</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'white' }}>24 Nov</div>
+                </div>
               </div>
             </div>
-            <div className="midnight-glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', borderLeft: '3px solid #EFBAAE' }}>
-              <div style={{ color: '#EFBAAE' }}><Activity size={20} /></div>
-              <div>
-                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white' }}>12</div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--midnight-on-surface-variant)', fontWeight: 700, textTransform: 'uppercase' }}>Sesiones</div>
+          </section>
+
+          {/* ACCESOS RÁPIDOS GLASS */}
+          <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+            <div className="ios-glass-btn" onClick={() => navigate('/nutricion')}>
+              <div className="icon-wrapper" style={{ color: 'var(--primary)', background: 'rgba(255,145,77,0.1)' }}>
+                <Utensils size={20} />
               </div>
+              <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>Mi Plan</span>
             </div>
-          </div>
-        </section>
+            <div className="ios-glass-btn" onClick={() => navigate('/evolucion')}>
+              <div className="icon-wrapper" style={{ color: 'var(--accent)', background: 'rgba(238,186,137,0.15)' }}>
+                <Activity size={20} />
+              </div>
+              <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>Evolución</span>
+            </div>
+          </section>
+        </div>
 
-        {/* Banner Elite Luxury */}
-        <section className="midnight-glass-card" style={{ 
-          padding: '2.5rem 2rem', 
-          background: 'linear-gradient(225deg, rgba(201, 114, 93, 0.2) 0%, rgba(19, 19, 19, 1) 100%)', 
-          position: 'relative', 
-          overflow: 'hidden',
-          border: '1px solid rgba(255,180,163,0.1)'
-        }}>
-          <div style={{ position: 'relative', zIndex: 2 }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', marginBottom: '0.5rem', color: 'white' }}>Upgrade a ELITE</h3>
-            <p style={{ fontSize: '0.9rem', color: 'var(--midnight-on-surface-variant)', marginBottom: '2rem', maxWidth: '85%', lineHeight: 1.5 }}>Libera el acceso total a nutrición clínica y sesiones 1 a 1.</p>
-            <button className="midnight-gradient-btn" onClick={() => navigate('/planes')} style={{ padding: '1rem 2rem', fontSize: '0.9rem' }}>MEJORAR MI PLAN</button>
-          </div>
-          <Crown size={120} style={{ position: 'absolute', right: '-20px', bottom: '-20px', opacity: 0.05, color: 'white', transform: 'rotate(-10deg)' }} />
-        </section>
+        {/* LADO DERECHO: Reservas y Métricas */}
+        <div className="dashboard-content">
+          {/* METRICAS VITALES */}
+          <section>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '15px' }}>Tu Desempeño</h2>
+            <div className="ios-glass-card" style={{ padding: '20px', display: 'flex', justifyContent: 'space-around' }}>
+               <div style={{ textAlign: 'center' }}>
+                  <div style={{ color: 'var(--primary)', marginBottom: '5px' }}><Flame size={24} style={{ margin: '0 auto' }}/></div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>4</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 600, textTransform: 'uppercase' }}>Racha Días</div>
+               </div>
+               <div style={{ width: '1px', background: 'rgba(55,61,59,0.1)' }}></div>
+               <div style={{ textAlign: 'center' }}>
+                  <div style={{ color: 'var(--accent)', marginBottom: '5px' }}><Activity size={24} style={{ margin: '0 auto' }}/></div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>1,240</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 600, textTransform: 'uppercase' }}>Kcal Quemadas</div>
+               </div>
+            </div>
+          </section>
 
-        <button onClick={handleLogout} style={{ marginTop: '4rem', width: '100%', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', padding: '1rem', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.1em' }}>
-          CERRAR SESIÓN DE SEGURIDAD
-        </button>
+          {/* PRÓXIMAS CLASES */}
+          <section>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Mis Reservas</h2>
+              <Link to="/agenda" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>Ver todas</Link>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {myReservations && myReservations.length > 0 ? (
+                myReservations.map((res, index) => (
+                  <ClassRow 
+                    key={index}
+                    title={res.title} 
+                    time={res.time} 
+                    instructor={res.instructor} 
+                    color={res.color || 'var(--primary)'} 
+                    onClick={() => handleCancelClick(res)} 
+                  />
+                ))
+              ) : (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.9rem', fontStyle: 'italic', background: 'rgba(55,61,59,0.03)', borderRadius: '16px' }}>
+                  No tienes próximas clases agendadas.
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+
       </main>
 
-      {/* Navegación Inferior (App Navigation) */}
-      {/* Navegación Inferior (Luxury Pill) */}
-      <nav className="bottom-nav">
-        <Link to="/portal" className="nav-item active">
-          <Home size={20} strokeWidth={2.5} />
-          <span>PORTAL</span>
-        </Link>
-        <Link to="/agenda" className="nav-item">
-          <Calendar size={20} strokeWidth={2.5} />
-          <span>AGENDA</span>
-        </Link>
-        
-        <button className="nav-central-btn" onClick={() => navigate('/agenda')}>
-           <Play size={24} fill="currentColor" strokeWidth={2.5} />
-        </button>
+      {/* MODAL INTEGRADO PARA CANCELAR */}
+      {showCancelModal && (
+        <div className="modal-overlay" onClick={() => setShowCancelModal(false)}>
+          <div className="glass-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', marginBottom: '15px' }}>Detalle de Reserva</h2>
+            <div style={{ background: 'rgba(55,61,59,0.03)', padding: '15px', borderRadius: '16px', marginBottom: '20px', textAlign: 'left' }}>
+               <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--on-surface)' }}>{selectedReservation?.title}</div>
+               <div style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 600, marginTop: '5px' }}>{selectedReservation?.time}</div>
+            </div>
+            <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem', marginBottom: '20px', lineHeight: 1.5 }}>
+              ¿Deseas cancelar esta asistencia? La clase se devolverá a tu paquete si cancelas con 12hrs de anticipación.
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setShowCancelModal(false)} className="btn-outline" style={{ flex: 1, padding: '12px', fontSize: '0.9rem' }}>Volver</button>
+              <button onClick={confirmCancellation} className="btn-primary" style={{ flex: 1, padding: '12px', fontSize: '0.9rem', justifyContent: 'center', background: '#FF4D4D', boxShadow: '0 10px 25px rgba(255,77,77,0.3)' }}>Cancelar Clase</button>
+            </div>
+          </div>
+        </div>
+      )}
 
+      {/* FLOATING BOTTOM NAV TIPO iPHONE */}
+      <nav className="ios-bottom-nav">
+        <Link to="/portal" className="nav-item active">
+          <User size={24} strokeWidth={2.5} />
+        </Link>
         <Link to="/evolucion" className="nav-item">
-          <TrendingUp size={20} strokeWidth={2.5} />
-          <span>MÉTRICAS</span>
+          <TrendingUp size={24} strokeWidth={2.5} />
         </Link>
         <Link to="/nutricion" className="nav-item">
-          <Utensils size={20} strokeWidth={2.5} />
-          <span>PLAN</span>
+          <Utensils size={24} strokeWidth={2.5} />
+        </Link>
+        <Link to="/agenda" className="nav-item">
+          <Calendar size={24} strokeWidth={2.5} />
         </Link>
       </nav>
     </div>
   );
 }
 
-function ClassCard({ title, time, instructor, color }) {
+function ClassRow({ title, time, instructor, color, onClick }) {
   return (
-    <div className="midnight-glass-card" style={{ minWidth: '220px', padding: '1.5rem', position: 'relative' }}>
-      <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', width: '8px', height: '8px', borderRadius: '50%', background: color, boxShadow: `0 0 10px ${color}` }} />
-      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--midnight-on-surface-variant)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>{time}</div>
-      <h4 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'white' }}>{title}</h4>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--midnight-on-surface-variant)' }}>
-        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {instructor[0]}
+    <div 
+      className="ios-glass-card" 
+      onClick={onClick}
+      style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: `rgba(255,145,77,0.1)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: color }}></div>
         </div>
-        {instructor}
+        <div>
+          <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>{title}</h4>
+          <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', marginTop: '2px' }}>{time} • {instructor}</div>
+        </div>
       </div>
+      <ChevronRight size={20} color="var(--on-surface-variant)" opacity={0.5} />
     </div>
   )
 }
