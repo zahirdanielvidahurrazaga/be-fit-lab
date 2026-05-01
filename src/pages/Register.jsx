@@ -8,6 +8,7 @@ function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -18,6 +19,25 @@ function Register() {
     setLoading(true);
     setError(null);
     
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden.");
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres.");
+      setLoading(false);
+      return;
+    }
+    
+    // Opcional: Validación más estricta (letras y números)
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/.test(password)) {
+      setError("La contraseña debe contener al menos una mayúscula, una minúscula y un número.");
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -160,6 +180,7 @@ function Register() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="ejemplo@correo.com"
                     className="premium-input"
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -173,6 +194,21 @@ function Register() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     className="premium-input"
+                    autoComplete="new-password"
+                    required
+                  />
+                </div>
+
+                <div className="premium-input-group">
+                  <label>Confirmar Contraseña</label>
+                  <Lock size={20} className="premium-input-icon" />
+                  <input 
+                    type="password" 
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="premium-input"
+                    autoComplete="new-password"
                     required
                   />
                 </div>
