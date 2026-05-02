@@ -37,19 +37,26 @@ function Evolucion() {
 
       <main className="dashboard-main">
         <div className="dashboard-sidebar">
-          {/* Resumen General */}
-          <div className="wallet-card" style={{ padding: '25px 20px', borderRadius: '28px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.2rem' }}>
+          {/* Resumen General con Imagen */}
+          <div className="wallet-card" style={{ 
+            padding: '25px 20px', borderRadius: '28px',
+            background: 'linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 100%), url("/assets/evolucion_lifestyle.png")',
+            backgroundSize: 'cover', backgroundPosition: 'center',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)', border: 'none'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
               <div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.4rem' }}>SCORE BEFIT</div>
-                <div style={{ fontSize: '3.2rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)', lineHeight: 1 }}>94<span style={{ fontSize: '1rem', opacity: 0.6 }}>/100</span></div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.4rem' }}>SCORE BEFIT</div>
+                <div style={{ fontSize: '3.5rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)', lineHeight: 1 }}>94<span style={{ fontSize: '1.2rem', color: 'var(--accent)', fontWeight: 700 }}>/100</span></div>
               </div>
-              <div style={{ background: 'rgba(255, 255, 255, 0.25)', color: 'white', padding: '6px 12px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.1em' }}> NIVEL PRO</div>
+              <div style={{ background: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(5px)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', padding: '6px 12px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.1em' }}> NIVEL PRO</div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.1)', padding: '12px', borderRadius: '16px' }}>
-               <Award size={20} color="white" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)', padding: '15px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
+               <div style={{ background: 'var(--accent)', padding: '8px', borderRadius: '12px' }}>
+                 <Award size={20} color="#1A1C1E" />
+               </div>
                <p style={{ fontSize: '0.85rem', color: 'white', lineHeight: 1.4, margin: 0 }}>
-                  Has superado el <span style={{ fontWeight: 800 }}>85% de tus objetivos</span> este mes.
+                  Has superado el <span style={{ fontWeight: 800, color: 'var(--accent)' }}>85% de tus objetivos</span> este mes.
                </p>
             </div>
           </div>
@@ -153,16 +160,23 @@ function BadgeIcon({ icon, label, color }) {
 
 function MetricBox({ label, value, unit, trend, highlight }) {
   return (
-    <div className="ios-glass-card" style={{ padding: '18px', border: '1px solid rgba(255,255,255,0.9)' }}>
-      <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--on-surface-variant)', marginBottom: '0.8rem', letterSpacing: '0.1em' }}>{label}</div>
+    <div style={{ 
+      padding: '20px', borderRadius: '20px', 
+      background: highlight ? 'linear-gradient(135deg, rgba(255,145,77,0.05), rgba(238,186,137,0.15))' : 'white',
+      border: highlight ? '1px solid rgba(255,145,77,0.2)' : '1px solid rgba(0,0,0,0.03)',
+      boxShadow: '0 10px 30px rgba(0,0,0,0.03)'
+    }}>
+      <div style={{ fontSize: '0.65rem', fontWeight: 800, color: highlight ? 'var(--primary)' : 'var(--on-surface-variant)', marginBottom: '0.8rem', letterSpacing: '0.1em' }}>{label}</div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '0.8rem' }}>
-        <span style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--on-surface)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{value}</span>
-        <span style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>{unit}</span>
+        <span style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{value}</span>
+        <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>{unit}</span>
       </div>
       <div style={{ 
          fontSize: '0.7rem', fontWeight: 800, 
          color: trend.startsWith('+') ? (highlight ? 'var(--primary)' : '#22C55E') : 'var(--primary)',
-         display: 'flex', alignItems: 'center', gap: '3px'
+         display: 'flex', alignItems: 'center', gap: '3px',
+         background: trend.startsWith('+') ? (highlight ? 'rgba(255,145,77,0.1)' : 'rgba(34,197,94,0.1)') : 'rgba(255,145,77,0.1)',
+         padding: '4px 8px', borderRadius: '8px', display: 'inline-flex'
       }}>
         {trend.startsWith('+') ? '↑' : '↓'} {trend.replace('+', '').replace('-', '')} {unit}
       </div>

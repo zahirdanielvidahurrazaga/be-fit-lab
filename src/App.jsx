@@ -41,10 +41,10 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<Register />} />
           <Route path="/planes" element={<Planes />} />
+          <Route path="/agenda" element={<Agenda />} />
           
           {/* Rutas Privadas Clienta */}
           <Route path="/portal" element={<ProtectedRoute requireRole="CLIENT"><Portal /></ProtectedRoute>} />
-          <Route path="/agenda" element={<ProtectedRoute requireRole="CLIENT"><Agenda /></ProtectedRoute>} />
           <Route path="/nutricion" element={<ProtectedRoute requireRole="CLIENT"><Nutricion /></ProtectedRoute>} />
           <Route path="/evolucion" element={<ProtectedRoute requireRole="CLIENT"><Evolucion /></ProtectedRoute>} />
           

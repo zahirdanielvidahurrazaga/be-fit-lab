@@ -5,13 +5,17 @@ import { useAuth } from '../context/AuthContext';
 
 function Agenda() {
   const navigate = useNavigate();
-  const { classesRemaining, bookClass, globalClasses } = useAuth();
+  const { user, classesRemaining, bookClass, globalClasses } = useAuth();
   const [selectedDay, setSelectedDay] = useState(12);
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
   const handleReserveClick = (classObj) => {
+    if (!user) {
+      navigate('/planes');
+      return;
+    }
     if (classesRemaining <= 0) {
       alert("No te quedan clases disponibles. Renueva tu paquete.");
       return;
@@ -50,7 +54,7 @@ function Agenda() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div 
-              onClick={() => navigate('/portal')}
+              onClick={() => navigate(user ? '/portal' : '/')}
               style={{ 
                 width: '40px', height: '40px', borderRadius: '12px', 
                 background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(10px)',
@@ -60,7 +64,7 @@ function Agenda() {
               }}>
               <ChevronLeft size={20} color="var(--primary)" />
             </div>
-            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.2 }}>Reservas</h1>
+            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.2 }}>{user ? 'Reservas' : 'Horarios'}</h1>
           </div>
           <div style={{ color: 'var(--primary)' }}>
              <CalendarIcon size={24} />
@@ -71,19 +75,38 @@ function Agenda() {
       <main className="dashboard-main">
         
         <div className="dashboard-sidebar">
-          {/* Tarjeta Informativa / Premium Wallet */}
-          <section style={{ marginBottom: '20px' }}>
-            <div className="wallet-card" style={{ padding: '30px 20px' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.6rem' }}>TU MEMBRESÍA</div>
-              <h2 style={{ fontSize: '2.2rem', color: 'white', marginBottom: '1.5rem', fontFamily: 'var(--font-display)', lineHeight: 1 }}>Premium</h2>
-              <div style={{ display: 'flex', gap: '2rem' }}>
-                 <div>
-                    <div style={{ fontSize: '2rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>{classesRemaining}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)', fontWeight: 800, letterSpacing: '0.05em', marginTop: '4px' }}>CLASES DISPONIBLES</div>
-                 </div>
+          {/* Tarjeta Informativa / Premium Wallet (Sólo para usuarios) */}
+          {user ? (
+            <section style={{ marginBottom: '20px' }}>
+              <div className="wallet-card" style={{ padding: '30px 20px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.6rem' }}>TU MEMBRESÍA</div>
+                <h2 style={{ fontSize: '2.2rem', color: 'white', marginBottom: '1.5rem', fontFamily: 'var(--font-display)', lineHeight: 1 }}>Premium</h2>
+                <div style={{ display: 'flex', gap: '2rem' }}>
+                   <div>
+                      <div style={{ fontSize: '2rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>{classesRemaining}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)', fontWeight: 800, letterSpacing: '0.05em', marginTop: '4px' }}>CLASES DISPONIBLES</div>
+                   </div>
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+          ) : (
+            <section style={{ marginBottom: '20px' }}>
+              <div style={{ 
+                borderRadius: '24px', overflow: 'hidden', position: 'relative', 
+                boxShadow: '0 15px 35px rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', height: '220px' 
+              }}>
+                <img src="/assets/agenda_lifestyle.png" alt="Be Fit Lab Training" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.2) 100%)' }}></div>
+                <div style={{ position: 'relative', zIndex: 1, padding: '30px 20px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', textAlign: 'center' }}>
+                  <h2 style={{ fontSize: '2rem', color: 'white', margin: '0 0 5px 0', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>Únete a la Élite</h2>
+                  <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem', marginBottom: '15px' }}>Accede a nuestros horarios exclusivos.</p>
+                  <button onClick={() => navigate('/planes')} style={{ width: '100%', padding: '14px', borderRadius: '16px', border: 'none', background: 'var(--accent)', color: 'var(--black)', fontWeight: 900, cursor: 'pointer', boxShadow: '0 10px 25px rgba(238,186,137,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Adquirir Membresía
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
 
           {/* Selector de Fecha (Refined Calendar Strip) */}
           <section>
@@ -166,70 +189,78 @@ function Agenda() {
         </div>
       )}
 
-      {/* FLOATING BOTTOM NAV TIPO iPHONE */}
-      <nav className="ios-bottom-nav">
-        <Link to="/portal" className="nav-item">
-          <User size={24} strokeWidth={2.5} />
-        </Link>
-        <Link to="/evolucion" className="nav-item">
-          <TrendingUp size={24} strokeWidth={2.5} />
-        </Link>
-        <Link to="/nutricion" className="nav-item">
-          <Utensils size={24} strokeWidth={2.5} />
-        </Link>
-        <Link to="/agenda" className="nav-item active">
-          <CalendarIcon size={24} strokeWidth={2.5} />
-        </Link>
-      </nav>
+      {/* ====== BOTTOM NAV PREMIUM ====== */}
+      {user && (
+        <nav className="ios-bottom-nav" style={{ padding: '0 10px 25px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
+          <Link to="/portal" className="nav-item" style={{ color: 'var(--on-surface-variant)' }}>
+            <User size={22} strokeWidth={2.5} />
+            <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Portal</span>
+          </Link>
+          <Link to="/evolucion" className="nav-item" style={{ color: 'var(--on-surface-variant)' }}>
+            <TrendingUp size={22} strokeWidth={2.5} />
+            <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Stats</span>
+          </Link>
+          <Link to="/nutricion" className="nav-item" style={{ color: 'var(--on-surface-variant)' }}>
+            <Utensils size={22} strokeWidth={2.5} />
+            <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Fuel</span>
+          </Link>
+          <Link to="/agenda" className="nav-item active" style={{ color: 'var(--primary)' }}>
+            <CalendarIcon size={22} strokeWidth={2.5} />
+            <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Agenda</span>
+          </Link>
+        </nav>
+      )}
     </div>
   );
 }
 
 function ClassItem({ classData, full, onReserve }) {
-  const { classesRemaining } = useAuth();
+  const { user, classesRemaining } = useAuth();
   const { time, title, instructor, level, spots, color } = classData;
 
   return (
-    <div className="ios-glass-card" style={{ 
-      padding: '1.5rem', 
-      display: 'flex', 
-      justifyContent: 'space-between', 
-      alignItems: 'center', 
-      opacity: full ? 0.6 : 1,
-      borderLeft: `4px solid ${color}`
+    <div style={{ 
+      padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+      background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', 
+      border: '1px solid rgba(0,0,0,0.02)', position: 'relative', overflow: 'hidden',
+      opacity: full ? 0.6 : 1, transition: 'transform 0.2s ease', cursor: 'pointer'
     }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: color }}></div>
+      
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.6rem' }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--on-surface-variant)', letterSpacing: '0.15em' }}>{time} • {level}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: color, letterSpacing: '0.1em', background: `${color}15`, padding: '4px 10px', borderRadius: '8px' }}>{time}</span>
+          <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--on-surface-variant)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{level}</span>
         </div>
-        <h3 style={{ fontSize: '1.2rem', color: 'var(--on-surface)', marginBottom: '0.4rem', fontFamily: 'var(--font-display)' }}>{title}</h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>
-           <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(55,61,59,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', color: 'var(--primary)', fontWeight: 800 }}>
+        <h3 style={{ fontSize: '1.4rem', color: 'var(--black)', margin: '0 0 5px 0', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>{title}</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>
+           <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: 'white', fontWeight: 800 }}>
              {instructor[0]}
            </div>
            {instructor}
         </div>
       </div>
       
-      <div style={{ textAlign: 'right' }}>
+      <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
         <button 
-          disabled={full || classesRemaining <= 0}
+          disabled={full || (user && classesRemaining <= 0)}
           onClick={() => {
             if(!full && onReserve) {
                onReserve();
             }
           }}
           style={{ 
-            padding: '0.7rem 1.4rem', fontSize: '0.75rem', fontWeight: 800, borderRadius: '12px', border: 'none',
-            background: full || classesRemaining <= 0 ? 'rgba(55,61,59,0.1)' : 'var(--primary)',
-            color: full || classesRemaining <= 0 ? 'var(--on-surface-variant)' : 'white',
-            cursor: full || classesRemaining <= 0 ? 'not-allowed' : 'pointer',
-            boxShadow: full || classesRemaining <= 0 ? 'none' : '0 4px 15px rgba(55,61,59,0.1)'
+            padding: '12px 20px', fontSize: '0.8rem', fontWeight: 800, borderRadius: '16px', border: 'none',
+            background: full || (user && classesRemaining <= 0) ? 'rgba(0,0,0,0.05)' : 'var(--black)',
+            color: full || (user && classesRemaining <= 0) ? 'var(--on-surface-variant)' : 'white',
+            cursor: full || (user && classesRemaining <= 0) ? 'not-allowed' : 'pointer',
+            boxShadow: full || (user && classesRemaining <= 0) ? 'none' : '0 10px 20px rgba(0,0,0,0.15)',
+            textTransform: 'uppercase', letterSpacing: '0.05em'
           }}
         >
-          {full ? 'LLENO' : classesRemaining <= 0 ? 'SIN CLASES' : 'RESERVAR'}
+          {full ? 'Agotado' : (!user ? 'Ver Planes' : (classesRemaining <= 0 ? 'Sin Clases' : 'Reservar'))}
         </button>
-        {!full && <div style={{ fontSize: '0.65rem', color: color, marginTop: '8px', fontWeight: 800, letterSpacing: '0.05em' }}>{spots} DISPONIBLE{spots !== 1 ? 'S' : ''}</div>}
+        {!full && <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 800 }}>{spots} LUGARES</div>}
       </div>
     </div>
   );

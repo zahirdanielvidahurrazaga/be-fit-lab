@@ -77,21 +77,29 @@ function Nutricion() {
 
       <main className="dashboard-main">
         <div className="dashboard-sidebar">
-          {/* Plan del Día Banner */}
-          <div className="wallet-card" style={{ padding: '25px 20px', borderRadius: '28px' }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.6rem' }}>OBJETIVO DIARIO</div>
-            <h2 style={{ fontSize: '1.8rem', color: 'white', marginBottom: '1.8rem', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>Recomposición <span style={{ fontStyle: 'italic', opacity: 0.9 }}>Elite</span></h2>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-               <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>1,850</div>
+          {/* Plan del Día Banner con Imagen */}
+          <div className="wallet-card" style={{ 
+            padding: '25px 20px', borderRadius: '28px', 
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.8)), url("/assets/nutricion_lifestyle.png")',
+            backgroundSize: 'cover', backgroundPosition: 'center',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)', border: 'none'
+          }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.6rem' }}>OBJETIVO DIARIO</div>
+            <h2 style={{ fontSize: '2rem', color: 'white', marginBottom: '2rem', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>Recomposición <span style={{ fontStyle: 'italic', color: 'var(--accent)' }}>Elite</span></h2>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', padding: '15px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.2)' }}>
+               <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>1,850</div>
                   <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)', fontWeight: 800, letterSpacing: '0.05em', marginTop: '4px' }}>KCAL</div>
                </div>
-               <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>130g</div>
+               <div style={{ width: '1px', background: 'rgba(255,255,255,0.2)' }}></div>
+               <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>130g</div>
                   <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)', fontWeight: 800, letterSpacing: '0.05em', marginTop: '4px' }}>PROT</div>
                </div>
-               <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>180g</div>
+               <div style={{ width: '1px', background: 'rgba(255,255,255,0.2)' }}></div>
+               <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>180g</div>
                   <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)', fontWeight: 800, letterSpacing: '0.05em', marginTop: '4px' }}>CARB</div>
                </div>
             </div>
@@ -216,26 +224,32 @@ function Nutricion() {
 function MealItem({ time, title, kcal, img, timePrep, onClick }) {
   return (
     <div 
-      className="ios-glass-card" 
       onClick={onClick}
-      style={{ padding: '14px', display: 'flex', gap: '1.2rem', alignItems: 'center', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.9)' }}>
-      <div style={{ width: '75px', height: '75px', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 8px 20px rgba(0,0,0,0.08)', flexShrink: 0 }}>
+      style={{ 
+        padding: '14px', display: 'flex', gap: '1.2rem', alignItems: 'center', cursor: 'pointer', 
+        background: 'white', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.03)',
+        border: '1px solid rgba(0,0,0,0.02)', transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+      }}
+      onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 15px 35px rgba(0,0,0,0.06)'; }}
+      onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.03)'; }}
+    >
+      <div style={{ width: '85px', height: '85px', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 8px 20px rgba(0,0,0,0.1)', flexShrink: 0 }}>
         <img src={img} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.3rem' }}>{time}</div>
-        <h3 style={{ fontSize: '1rem', color: 'var(--on-surface)', marginBottom: '0.5rem', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>{title}</h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>
+        <h3 style={{ fontSize: '1.05rem', color: 'var(--black)', marginBottom: '0.5rem', fontFamily: 'var(--font-display)', lineHeight: 1.2, fontWeight: 800 }}>{title}</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>
            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Flame size={12} color="var(--primary)" /> {kcal} kcal
+              <Flame size={14} color="var(--primary)" /> {kcal} kcal
            </div>
            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Clock size={12} /> {timePrep}
+              <Clock size={14} /> {timePrep}
            </div>
         </div>
       </div>
-      <div style={{ background: 'rgba(255,145,77,0.08)', color: 'var(--primary)', width: '32px', height: '32px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <ChevronLeft size={16} style={{ transform: 'rotate(180deg)' }} />
+      <div style={{ background: 'rgba(255,145,77,0.08)', color: 'var(--primary)', width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <ChevronLeft size={18} style={{ transform: 'rotate(180deg)' }} />
       </div>
     </div>
   );

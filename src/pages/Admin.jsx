@@ -78,15 +78,15 @@ function Admin() {
 
   return (
     <div className="mobile-app-container" style={{ background: 'var(--surface-lowest)' }}>
-      {/* HEADER */}
-      <header className="ios-header" style={{ background: 'var(--surface-lowest)', paddingBottom: '10px' }}>
+      {/* HEADER PREMIUM */}
+      <header className="ios-header" style={{ background: 'var(--surface-lowest)', paddingBottom: '10px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.2 }}>Gestión Lab</h1>
-            <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', margin: 0, fontWeight: 500 }}>{user?.email?.split('@')[0] || 'Admin'}</p>
+            <h1 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Gestión Lab</h1>
+            <p style={{ fontSize: '0.8rem', color: 'var(--primary)', margin: '4px 0 0', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>CONTROL CENTER</p>
           </div>
-          <div onClick={handleLogout} style={{ width: '45px', height: '45px', borderRadius: '50%', background: 'var(--app-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 15px rgba(55,61,59,0.05)', cursor: 'pointer' }}>
-            <LogOut size={20} color="var(--primary)" />
+          <div onClick={handleLogout} style={{ width: '45px', height: '45px', borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', cursor: 'pointer', border: '1px solid rgba(0,0,0,0.03)' }}>
+            <LogOut size={18} color="var(--primary)" />
           </div>
         </div>
       </header>
@@ -97,24 +97,35 @@ function Admin() {
           {/* ============ TAB: MOSTRADOR (QR + métricas rápidas) ============ */}
           {activeTab === 'mostrador' && (
             <>
-              {/* LECTOR QR */}
+              {/* LECTOR QR PREMIUM */}
               <section>
-                <div className="wallet-card" style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))', padding: '30px 20px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+                <div className="wallet-card" style={{ 
+                  background: 'linear-gradient(135deg, #1A1C1E, #2C302E)', 
+                  padding: '40px 20px', textAlign: 'center', position: 'relative', overflow: 'hidden',
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.15)', border: '1px solid rgba(255,255,255,0.05)'
+                }}>
+                  {/* Animación de escáner simulada */}
+                  <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '2px', background: 'var(--accent)', opacity: 0.5, boxShadow: '0 0 15px var(--accent)', animation: 'scanLine 3s infinite linear' }}></div>
+
                   {showSuccessMsg ? (
                     <div style={{ animation: 'fadeIn 0.3s ease' }}>
-                      <div style={{ width: '60px', height: '60px', background: 'rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
-                        <CheckCircle2 size={30} color="white" />
+                      <div style={{ width: '70px', height: '70px', background: 'rgba(34,197,94,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px', border: '1px solid rgba(34,197,94,0.3)' }}>
+                        <CheckCircle2 size={35} color="#22C55E" />
                       </div>
-                      <h2 style={{ fontSize: '1.5rem', color: 'white', fontFamily: 'var(--font-display)', margin: 0 }}>¡Check-in Exitoso!</h2>
-                      <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem', margin: '5px 0 0' }}>{qrMessage}</p>
+                      <h2 style={{ fontSize: '1.8rem', color: 'white', fontFamily: 'var(--font-display)', margin: 0 }}>Acceso Concedido</h2>
+                      <p style={{ color: 'var(--accent)', fontSize: '0.9rem', margin: '8px 0 0', fontWeight: 600 }}>{qrMessage}</p>
                     </div>
                   ) : (
                     <div onClick={() => qrInputRef.current?.focus()} style={{ cursor: 'pointer' }}>
-                      <div style={{ width: '60px', height: '60px', background: 'rgba(255,255,255,0.2)', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
-                        <QrCode size={30} color="white" />
+                      <div style={{ width: '80px', height: '80px', border: '2px dashed rgba(255,255,255,0.3)', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px', position: 'relative' }}>
+                         <div style={{ position: 'absolute', top: '-2px', left: '-2px', width: '20px', height: '20px', borderTop: '2px solid var(--accent)', borderLeft: '2px solid var(--accent)', borderTopLeftRadius: '24px' }}></div>
+                         <div style={{ position: 'absolute', top: '-2px', right: '-2px', width: '20px', height: '20px', borderTop: '2px solid var(--accent)', borderRight: '2px solid var(--accent)', borderTopRightRadius: '24px' }}></div>
+                         <div style={{ position: 'absolute', bottom: '-2px', left: '-2px', width: '20px', height: '20px', borderBottom: '2px solid var(--accent)', borderLeft: '2px solid var(--accent)', borderBottomLeftRadius: '24px' }}></div>
+                         <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '20px', height: '20px', borderBottom: '2px solid var(--accent)', borderRight: '2px solid var(--accent)', borderBottomRightRadius: '24px' }}></div>
+                         <QrCode size={35} color="white" opacity={0.8} />
                       </div>
-                      <h2 style={{ fontSize: '1.5rem', color: 'white', fontFamily: 'var(--font-display)', margin: 0 }}>Escáner de Acceso</h2>
-                      <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem', margin: '5px 0 0' }}>Detectando códigos en tiempo real...</p>
+                      <h2 style={{ fontSize: '1.4rem', color: 'white', fontFamily: 'var(--font-display)', margin: 0, letterSpacing: '0.05em' }}>Escanear QR</h2>
+                      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', margin: '8px 0 0', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Aproximar código de alumna</p>
                     </div>
                   )}
                   <form onSubmit={handleQRScan} style={{ position: 'absolute', top: '-1000px', left: '-1000px' }}>
@@ -123,16 +134,16 @@ function Admin() {
                 </div>
               </section>
 
-              <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="ios-glass-card" style={{ padding: '18px', background: 'var(--surface)', border: 'none' }}>
-                  <div style={{ color: 'var(--primary)', marginBottom: '8px' }}><Users size={22} /></div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-display)', lineHeight: 1 }}>{totalAlumnasHoy}</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 600, textTransform: 'uppercase', marginTop: '4px' }}>Alumnas Hoy</div>
+              <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <div style={{ padding: '20px', background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
+                  <div style={{ color: 'var(--primary)', marginBottom: '12px', background: 'rgba(255,145,77,0.1)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={20} /></div>
+                  <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{totalAlumnasHoy}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, marginTop: '5px' }}>Reservas Hoy</div>
                 </div>
-                <div className="ios-glass-card" style={{ padding: '18px', background: 'var(--surface)', border: 'none' }}>
-                  <div style={{ color: 'var(--accent)', marginBottom: '8px' }}><Activity size={22} /></div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-display)', lineHeight: 1 }}>{avgOccupancy}%</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 600, textTransform: 'uppercase', marginTop: '4px' }}>Ocupación</div>
+                <div style={{ padding: '20px', background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
+                  <div style={{ color: 'var(--accent)', marginBottom: '12px', background: 'rgba(238,186,137,0.2)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Activity size={20} /></div>
+                  <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{avgOccupancy}<span style={{fontSize: '1.2rem', color: 'var(--on-surface-variant)'}}>%</span></div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, marginTop: '5px' }}>Ocupación Prom.</div>
                 </div>
               </section>
             </>
@@ -241,37 +252,47 @@ function Admin() {
             </section>
           )}
 
-          {/* ============ TAB: REPORTES (Métricas de Negocio) ============ */}
+          {/* ============ TAB: REPORTES (Métricas de Negocio) PREMIUM ============ */}
           {activeTab === 'reportes' && (
             <section>
-              <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', marginBottom: '20px' }}>Estado del Negocio</h2>
+              <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', marginBottom: '20px', color: 'var(--black)' }}>Financial Overview</h2>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-                <ReportMetric icon={<DollarSign size={18}/>} label="INGRESOS MES" value="$42,850" trend="+15%" />
-                <ReportMetric icon={<TrendingUp size={18}/>} label="RETENCIÓN" value="92%" trend="+2%" />
-              </div>
-
-              <div className="ios-glass-card" style={{ padding: '20px', background: 'var(--surface)', border: 'none', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                   <h3 style={{ fontSize: '0.9rem', fontWeight: 800 }}>Ocupación Semanal</h3>
-                   <PieChart size={16} color="var(--primary)" />
-                </div>
-                <div style={{ height: '100px', display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
-                   {[30, 45, 60, 85, 70, 40, 20].map((h, i) => (
-                     <div key={i} style={{ flex: 1, height: `${h}%`, background: 'var(--primary)', opacity: 0.2 + (h/100), borderRadius: '4px' }} />
+              <div style={{ background: 'linear-gradient(135deg, #2C302E, #1A1C1E)', padding: '25px', borderRadius: '24px', marginBottom: '20px', boxShadow: '0 15px 35px rgba(0,0,0,0.15)' }}>
+                 <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '5px' }}>Ingresos Brutos (Mes)</div>
+                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '15px' }}>
+                    <div style={{ fontSize: '2.8rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)', lineHeight: 1 }}>$42,850</div>
+                    <div style={{ background: 'rgba(34,197,94,0.2)', color: '#4ADE80', padding: '4px 8px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800 }}>+15%</div>
+                 </div>
+                 <div style={{ height: '60px', display: 'flex', alignItems: 'flex-end', gap: '6px' }}>
+                   {[30, 45, 60, 40, 70, 85, 100].map((h, i) => (
+                     <div key={i} style={{ flex: 1, height: `${h}%`, background: i === 6 ? 'var(--accent)' : 'rgba(255,255,255,0.1)', borderRadius: '4px' }} />
                    ))}
+                 </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                <div style={{ padding: '20px', background: 'white', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Retención</div>
+                      <TrendingUp size={16} color="var(--primary)" />
+                   </div>
+                   <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>92<span style={{ fontSize: '1rem', color: 'var(--on-surface-variant)' }}>%</span></div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
-                   {['L','M','M','J','V','S','D'].map(d => <span key={d} style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--on-surface-variant)' }}>{d}</span>)}
+                <div style={{ padding: '20px', background: 'white', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Ticket Prom.</div>
+                      <DollarSign size={16} color="var(--primary)" />
+                   </div>
+                   <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}><span style={{ fontSize: '1rem', color: 'var(--on-surface-variant)' }}>$</span>850</div>
                 </div>
               </div>
 
-              <div className="ios-glass-card" style={{ padding: '15px', background: 'rgba(34,197,94,0.05)', border: '1px solid rgba(34,197,94,0.1)' }}>
-                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <div style={{ background: '#22C55E', color: 'white', padding: '6px', borderRadius: '8px' }}><TrendingUp size={16}/></div>
+              <div style={{ padding: '20px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.15)', borderRadius: '20px' }}>
+                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                    <div style={{ background: '#22C55E', color: 'white', padding: '10px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(34,197,94,0.3)' }}><Activity size={20}/></div>
                     <div>
-                       <div style={{ fontSize: '0.85rem', fontWeight: 800 }}>Crecimiento Saludable</div>
-                       <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>12 nuevas alumnas este periodo.</div>
+                       <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#166534', marginBottom: '2px' }}>Crecimiento Acelerado</div>
+                       <div style={{ fontSize: '0.8rem', color: '#15803D', fontWeight: 600 }}>La retención ha mejorado un 2% este mes.</div>
                     </div>
                  </div>
               </div>
@@ -282,27 +303,30 @@ function Admin() {
       </main>
 
       {/* ====== BOTTOM NAV PREMIUM ====== */}
-      <nav className="ios-bottom-nav" style={{ padding: '0 10px 25px' }}>
-        <div className="nav-item" onClick={() => setActiveTab('cupos')} style={{ opacity: activeTab === 'cupos' ? 1 : 0.4 }}>
-          <Calendar size={20} strokeWidth={2.5} />
-          <span style={{ fontSize: '0.55rem' }}>Cupos</span>
+      <nav className="ios-bottom-nav" style={{ padding: '0 10px 25px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
+        <div className="nav-item" onClick={() => setActiveTab('cupos')} style={{ opacity: activeTab === 'cupos' ? 1 : 0.4, color: activeTab === 'cupos' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+          <Calendar size={22} strokeWidth={2.5} />
+          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Cupos</span>
         </div>
-        <div className="nav-item" onClick={() => setActiveTab('inscribir')} style={{ opacity: activeTab === 'inscribir' ? 1 : 0.4 }}>
-          <UserPlus size={20} strokeWidth={2.5} />
-          <span style={{ fontSize: '0.55rem' }}>Inscribir</span>
+        <div className="nav-item" onClick={() => setActiveTab('inscribir')} style={{ opacity: activeTab === 'inscribir' ? 1 : 0.4, color: activeTab === 'inscribir' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+          <UserPlus size={22} strokeWidth={2.5} />
+          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Inscribir</span>
         </div>
         
-        <button className="nav-central-action" onClick={() => setActiveTab('mostrador')} style={{ background: activeTab === 'mostrador' ? 'var(--primary)' : '#1A1C1E', width: '50px', height: '50px', transform: 'translateY(-15px)' }}>
-          <QrCode size={24} />
-        </button>
-
-        <div className="nav-item" onClick={() => setActiveTab('pagos')} style={{ opacity: activeTab === 'pagos' ? 1 : 0.4 }}>
-          <CreditCard size={20} strokeWidth={2.5} />
-          <span style={{ fontSize: '0.55rem' }}>Pagos</span>
+        {/* FAB CENTRAL ESTILO LUXURY */}
+        <div className="nav-item" onClick={() => setActiveTab('mostrador')} style={{ position: 'relative', top: '-20px', opacity: 1 }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(135deg, #1A1C1E, #2C302E)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', color: 'var(--accent)', border: '4px solid white' }}>
+            <QrCode size={26} />
+          </div>
         </div>
-        <div className="nav-item" onClick={() => setActiveTab('reportes')} style={{ opacity: activeTab === 'reportes' ? 1 : 0.4 }}>
-          <BarChart3 size={20} strokeWidth={2.5} />
-          <span style={{ fontSize: '0.55rem' }}>Reportes</span>
+
+        <div className="nav-item" onClick={() => setActiveTab('pagos')} style={{ opacity: activeTab === 'pagos' ? 1 : 0.4, color: activeTab === 'pagos' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+          <CreditCard size={22} strokeWidth={2.5} />
+          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Cobros</span>
+        </div>
+        <div className="nav-item" onClick={() => setActiveTab('reportes')} style={{ opacity: activeTab === 'reportes' ? 1 : 0.4, color: activeTab === 'reportes' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+          <PieChart size={22} strokeWidth={2.5} />
+          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Reportes</span>
         </div>
       </nav>
     </div>

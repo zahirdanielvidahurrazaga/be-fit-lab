@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
-import { ArrowRight, Flame, Heart, PlayCircle, Smartphone, Menu, X, Calendar, TrendingUp, Utensils } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { ArrowRight, Flame, Heart, PlayCircle, Smartphone, Menu, X, Calendar, TrendingUp, Utensils, CheckCircle2 } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 function Landing() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, role } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.registered) {
+      setShowToast(true);
+      // Ocultar el toast después de 5 segundos
+      const timer = setTimeout(() => setShowToast(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [location]);
 
   const handleNavClick = (e, path, sectionId) => {
     if (user) {
@@ -30,6 +41,28 @@ function Landing() {
 
   return (
     <div className="app-container">
+      {/* Toast de Registro Exitoso */}
+      {showToast && (
+        <div style={{
+          position: 'fixed', top: '20px', right: '20px', zIndex: 9999,
+          background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)',
+          padding: '15px 20px', borderRadius: '15px', border: '1px solid rgba(255,145,77,0.3)',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '15px',
+          animation: 'fadeInDown 0.5s ease forwards'
+        }}>
+          <div style={{ width: '35px', height: '35px', borderRadius: '50%', background: 'rgba(255,145,77,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+             <CheckCircle2 size={20} color="var(--primary)" />
+          </div>
+          <div style={{ paddingRight: '10px' }}>
+            <h4 style={{ margin: '0 0 2px 0', fontSize: '0.95rem', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>¡Bienvenida a Be Fit Lab!</h4>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>Tu cuenta ha sido creada exitosamente.</p>
+          </div>
+          <button onClick={() => setShowToast(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--on-surface-variant)' }}>
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
       {/* Navigation VIP */}
       <nav className={`glass-nav ${isMenuOpen ? 'nav-open-mobile' : ''}`}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 600, letterSpacing: '0.05em', zIndex: 1001, position: 'relative' }}>
@@ -45,9 +78,15 @@ function Landing() {
 
         {/* Desktop Actions (Se ocultan en móvil)*/}
         <div className="desktop-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <Link to="/portal" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--on-surface)', fontWeight: 500, fontSize: '0.95rem', textDecoration: 'none' }}>
-            Portal
-          </Link>
+          {user ? (
+            <Link to={role === 'ADMIN' ? '/admin' : '/portal'} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--on-surface)', fontWeight: 500, fontSize: '0.95rem', textDecoration: 'none' }}>
+              Mi Portal
+            </Link>
+          ) : (
+            <Link to="/login" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--on-surface)', fontWeight: 500, fontSize: '0.95rem', textDecoration: 'none' }}>
+              Iniciar Sesión
+            </Link>
+          )}
           <button onClick={() => navigate('/agenda')} className="btn-primary" style={{ padding: '0.6rem 1.8rem' }}>Agendar Clase</button>
         </div>
 
@@ -64,7 +103,7 @@ function Landing() {
       {/* --- Overlay Menú Móvil --- */}
       <div className={`mobile-menu-overlay ${isMenuOpen ? 'open' : ''}`}>
         <div style={{display: 'flex', flexDirection: 'column', gap: '2rem', alignItems: 'center', marginTop: '-50px'}}>
-          <a href="#agenda-info" style={{fontSize: '1.2rem', fontWeight: 600, color: 'var(--black)', textDecoration: 'none'}} onClick={(e) => handleNavClick(e, '/agenda', 'agenda-info')}>Agenda / Clases</a>
+          <Link to="/agenda" style={{fontSize: '1.2rem', fontWeight: 600, color: 'var(--black)', textDecoration: 'none'}} onClick={() => setIsMenuOpen(false)}>Agenda / Clases</Link>
           <a href="#evolucion-info" style={{fontSize: '1.2rem', fontWeight: 600, color: 'var(--black)', textDecoration: 'none'}} onClick={(e) => handleNavClick(e, '/evolucion', 'evolucion-info')}>Mi Evolución</a>
           <a href="#nutricion-info" style={{fontSize: '1.2rem', fontWeight: 600, color: 'var(--black)', textDecoration: 'none'}} onClick={(e) => handleNavClick(e, '/nutricion', 'nutricion-info')}>Plan de Nutrición</a>
           <div style={{ width: '50px', height: '1px', background: 'rgba(0,0,0,0.1)', margin: '1rem 0'}} />
@@ -144,8 +183,8 @@ function Landing() {
                 <button className="glass-button" onClick={() => navigate('/planes')}>
                   Comenzar Transformación <ArrowRight size={20} />
                 </button>
-                <button className="glass-button-dark" onClick={() => navigate('/login')}>
-                   <Smartphone size={20} /> Iniciar Sesión
+                <button className="glass-button-dark" onClick={(e) => handleNavClick(e, '/agenda', 'agenda-info')}>
+                   <Smartphone size={20} /> Descubre la App
                 </button>
               </>
             )}
@@ -210,7 +249,7 @@ function Landing() {
             </div>
           </div>
           <div style={{ flex: '1 1 400px', position: 'relative' }}>
-             <div style={{ width: '100%', height: '500px', background: 'url("/assets/agenda_mock.png")', backgroundSize: 'cover', borderRadius: '30px', boxShadow: '0 30px 60px rgba(0,0,0,0.1)' }}></div>
+             <div style={{ width: '100%', height: '500px', background: 'url("/assets/agenda_lifestyle.png")', backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '30px', boxShadow: '0 30px 60px rgba(0,0,0,0.15)' }}></div>
           </div>
         </div>
       </section>
@@ -219,7 +258,7 @@ function Landing() {
       <section id="evolucion-info" style={{ padding: '8rem 5%', background: '#FAF9F6' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap-reverse', gap: '4rem', alignItems: 'center' }}>
           <div style={{ flex: '1 1 400px' }}>
-             <div style={{ width: '100%', height: '500px', background: 'url("/assets/evolucion_mock.png")', backgroundSize: 'cover', borderRadius: '30px', boxShadow: '0 30px 60px rgba(0,0,0,0.1)' }}></div>
+             <div style={{ width: '100%', height: '500px', background: 'url("/assets/evolucion_lifestyle.png")', backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '30px', boxShadow: '0 30px 60px rgba(0,0,0,0.15)' }}></div>
           </div>
           <div style={{ flex: '1 1 500px' }}>
             <div className="badge-peach" style={{marginBottom: '1.5rem'}}><TrendingUp size={16} /> Seguimiento Bio-Digital</div>
@@ -264,7 +303,7 @@ function Landing() {
               </div>
             </div>
             <div style={{ flex: '1' }}>
-               <div style={{ width: '100%', height: '500px', background: 'url("/assets/nutricion_mock.png")', backgroundSize: 'cover', borderRadius: '30px', boxShadow: '0 30px 60px rgba(0,0,0,0.1)' }}></div>
+               <div style={{ width: '100%', height: '500px', background: 'url("/assets/nutricion_lifestyle.png")', backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '30px', boxShadow: '0 30px 60px rgba(0,0,0,0.15)' }}></div>
             </div>
           </div>
         </div>

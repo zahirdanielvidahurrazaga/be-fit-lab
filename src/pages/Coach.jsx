@@ -29,23 +29,22 @@ function Coach() {
 
   return (
     <div className="mobile-app-container">
-      {/* HEADER TIPO iOS */}
-      <header className="ios-header">
+      {/* HEADER PREMIUM */}
+      <header className="ios-header" style={{ paddingBottom: '15px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.2 }}>Instructor</h1>
-            <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', margin: 0, fontWeight: 500 }}>{user?.email?.split('@')[0] || 'Coach'}</p>
+            <h1 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Instructor</h1>
+            <p style={{ fontSize: '0.8rem', color: 'var(--primary)', margin: '4px 0 0', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{user?.email?.split('@')[0] || 'Coach'} • COACH</p>
           </div>
           <div 
             onClick={handleLogout}
             style={{ 
               width: '45px', height: '45px', borderRadius: '50%', 
-              background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(10px)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 15px rgba(55,61,59,0.05)', cursor: 'pointer',
-              border: '1px solid rgba(255,255,255,0.8)'
+              background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.05)', cursor: 'pointer',
+              border: '1px solid rgba(0,0,0,0.03)'
             }}>
-            <LogOut size={20} color="var(--primary)" />
+            <LogOut size={18} color="var(--primary)" />
           </div>
         </div>
       </header>
@@ -53,21 +52,21 @@ function Coach() {
       <main className="dashboard-main">
         
         <div className="dashboard-sidebar">
-          {/* MÉTRICAS HOY */}
+          {/* MÉTRICAS HOY PREMIUM */}
           <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-            <div className="ios-glass-card" style={{ padding: '20px' }}>
-              <div style={{ color: 'var(--primary)', marginBottom: '8px' }}><Users size={24} /></div>
-              <div style={{ fontSize: '2rem', fontWeight: 800, fontFamily: 'var(--font-display)', lineHeight: 1 }}>
+            <div style={{ padding: '20px', background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
+              <div style={{ color: 'var(--primary)', marginBottom: '12px', background: 'rgba(255,145,77,0.1)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={20} /></div>
+              <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>
                 {todayClasses.reduce((acc, c) => acc + (10 - c.spots), 0)}
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 600, textTransform: 'uppercase', marginTop: '5px' }}>Alumnas Hoy</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, marginTop: '5px' }}>Alumnas Hoy</div>
             </div>
-            <div className="ios-glass-card" style={{ padding: '20px' }}>
-              <div style={{ color: 'var(--accent)', marginBottom: '8px' }}><CalendarIcon size={24} /></div>
-              <div style={{ fontSize: '2rem', fontWeight: 800, fontFamily: 'var(--font-display)', lineHeight: 1 }}>
+            <div style={{ padding: '20px', background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
+              <div style={{ color: 'var(--accent)', marginBottom: '12px', background: 'rgba(238,186,137,0.2)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CalendarIcon size={20} /></div>
+              <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>
                 {todayClasses.length}
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 600, textTransform: 'uppercase', marginTop: '5px' }}>Tus Clases</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, marginTop: '5px' }}>Tus Clases</div>
             </div>
           </section>
         </div>
@@ -106,60 +105,63 @@ function Coach() {
             </section>
           )}
 
-          {/* ======= TAB: DIRECTORIO ======= */}
+          {/* ======= TAB: DIRECTORIO PREMIUM ======= */}
           {activeTab === 'directorio' && (
             <section>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Directorio de Alumnas</h2>
-                <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{alumnas.length} registradas</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '20px' }}>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, fontFamily: 'var(--font-display)' }}>Directorio de Alumnas</h2>
+                <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 800, background: 'rgba(255,145,77,0.1)', padding: '4px 10px', borderRadius: '12px' }}>{alumnas.length} ACTIVAS</span>
               </div>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {alumnas.map(a => (
-                  <div key={a.id} className="ios-glass-card" style={{ 
-                    padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    opacity: a.status === 'inactive' ? 0.5 : 1
+                  <div key={a.id} style={{ 
+                    padding: '18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    opacity: a.status === 'inactive' ? 0.5 : 1, background: 'white', borderRadius: '20px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                       <div style={{ 
-                        width: '44px', height: '44px', borderRadius: '50%', 
-                        background: a.status === 'active' ? 'linear-gradient(135deg, var(--primary), var(--accent))' : 'rgba(55,61,59,0.1)',
+                        width: '48px', height: '48px', borderRadius: '14px', 
+                        background: a.status === 'active' ? 'linear-gradient(135deg, #1A1C1E, #2C302E)' : 'rgba(55,61,59,0.1)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: 'white', fontWeight: 700, fontSize: '0.9rem'
+                        color: a.status === 'active' ? 'var(--accent)' : 'var(--on-surface-variant)', 
+                        fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-display)',
+                        boxShadow: a.status === 'active' ? '0 8px 15px rgba(0,0,0,0.15)' : 'none'
                       }}>
                         {a.name.split(' ').map(n => n[0]).join('')}
                       </div>
                       <div>
-                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>{a.name}</h4>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
+                        <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--black)' }}>{a.name}</h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '5px' }}>
                           <span style={{ 
-                            fontSize: '0.7rem', fontWeight: 700, 
-                            padding: '2px 8px', borderRadius: '6px',
-                            background: a.plan === 'Premium' ? 'rgba(255,145,77,0.12)' : 'rgba(55,61,59,0.06)',
+                            fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase',
+                            padding: '3px 8px', borderRadius: '6px',
+                            background: a.plan === 'Premium' ? 'rgba(255,145,77,0.1)' : 'rgba(0,0,0,0.05)',
                             color: a.plan === 'Premium' ? 'var(--primary)' : 'var(--on-surface-variant)'
                           }}>
                             {a.plan}
                           </span>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>
-                            {a.classes} clases restantes
+                          <span style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>
+                            {a.classes} sesiones
                           </span>
                         </div>
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <a href={`tel:${a.phone}`} style={{ 
-                        width: '34px', height: '34px', borderRadius: '10px', 
-                        background: 'rgba(55,61,59,0.04)', display: 'flex', 
+                        width: '36px', height: '36px', borderRadius: '12px', 
+                        background: 'rgba(0,122,255,0.08)', display: 'flex', 
                         alignItems: 'center', justifyContent: 'center', textDecoration: 'none'
                       }}>
-                        <Phone size={15} color="var(--on-surface-variant)" />
+                        <Phone size={16} color="#007AFF" />
                       </a>
                       <a href={`mailto:${a.email}`} style={{ 
-                        width: '34px', height: '34px', borderRadius: '10px', 
-                        background: 'rgba(55,61,59,0.04)', display: 'flex', 
+                        width: '36px', height: '36px', borderRadius: '12px', 
+                        background: 'rgba(55,61,59,0.06)', display: 'flex', 
                         alignItems: 'center', justifyContent: 'center', textDecoration: 'none'
                       }}>
-                        <Mail size={15} color="var(--on-surface-variant)" />
+                        <Mail size={16} color="var(--on-surface-variant)" />
                       </a>
                     </div>
                   </div>
@@ -248,15 +250,15 @@ function Coach() {
         </div>
       )}
 
-      {/* FLOATING BOTTOM NAV TIPO iPHONE */}
-      <nav className="ios-bottom-nav">
-        <div className="nav-item" onClick={() => setActiveTab('agenda')} style={{ opacity: activeTab === 'agenda' ? 1 : 0.5, color: activeTab === 'agenda' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+      {/* ====== BOTTOM NAV PREMIUM ====== */}
+      <nav className="ios-bottom-nav" style={{ padding: '0 10px 25px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
+        <div className="nav-item" onClick={() => setActiveTab('agenda')} style={{ opacity: activeTab === 'agenda' ? 1 : 0.4, color: activeTab === 'agenda' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
           <CalendarIcon size={24} strokeWidth={2.5} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>Agenda</span>
+          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Agenda</span>
         </div>
-        <div className="nav-item" onClick={() => setActiveTab('directorio')} style={{ opacity: activeTab === 'directorio' ? 1 : 0.5, color: activeTab === 'directorio' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+        <div className="nav-item" onClick={() => setActiveTab('directorio')} style={{ opacity: activeTab === 'directorio' ? 1 : 0.4, color: activeTab === 'directorio' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
           <Users size={24} strokeWidth={2.5} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>Alumnas</span>
+          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Alumnas</span>
         </div>
       </nav>
     </div>
@@ -266,24 +268,45 @@ function Coach() {
 function ClassCoachRow({ title, time, occupancy, status }) {
   const getStatusColor = () => {
     if (status === 'active') return 'var(--primary)';
-    if (status === 'full') return 'var(--accent)';
+    if (status === 'full') return '#FF4D4D';
     return 'var(--on-surface-variant)';
   };
 
   return (
-    <div className="ios-glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div style={{ 
+      padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      background: 'white', borderRadius: '20px', boxShadow: '0 8px 20px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)',
+      transition: 'transform 0.2s ease', cursor: 'pointer'
+    }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-        <div style={{ width: '45px', height: '45px', borderRadius: '14px', background: `rgba(255,145,77,0.1)`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <Clock size={16} color={getStatusColor()} />
+        <div style={{ 
+          width: '45px', height: '45px', borderRadius: '14px', 
+          background: status === 'full' ? 'rgba(255,77,77,0.1)' : 'rgba(255,145,77,0.1)', 
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: status === 'full' ? '1px solid rgba(255,77,77,0.2)' : '1px solid rgba(255,145,77,0.2)'
+        }}>
+          <div style={{ 
+            width: '12px', height: '12px', borderRadius: '50%', 
+            background: getStatusColor(),
+            boxShadow: `0 0 10px ${getStatusColor()}`
+          }}></div>
         </div>
         <div>
-          <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>{title}</h4>
-          <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', marginTop: '2px', fontWeight: 500 }}>
-            <span style={{ color: getStatusColor() }}>{time}</span> • {occupancy} Alumnas
+          <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--black)' }}>{title}</h4>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '5px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{time}</span>
+            <span style={{ 
+              fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.05em',
+              padding: '2px 8px', borderRadius: '8px',
+              background: status === 'full' ? 'rgba(255,77,77,0.1)' : 'rgba(0,0,0,0.05)',
+              color: status === 'full' ? '#FF4D4D' : 'var(--on-surface-variant)'
+            }}>
+              {occupancy} LUG.
+            </span>
           </div>
         </div>
       </div>
-      <ChevronRight size={20} color="var(--on-surface-variant)" opacity={0.5} />
+      <ChevronRight size={20} color="var(--on-surface-variant)" opacity={0.3} />
     </div>
   )
 }

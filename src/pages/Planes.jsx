@@ -1,14 +1,35 @@
-import React from 'react';
-import { Check, CreditCard } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, CreditCard, X, Lock, Mail, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 function Planes() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleStripeCheckout = () => {
-    // Alerta simulando el proceso de pago
-    alert("¡Pago simulado exitoso en Stripe! Redirigiendo a crear tu cuenta...");
-    navigate('/registro');
+  const handleOpenCheckout = (plan) => {
+    setSelectedPlan(plan);
+  };
+
+  const handleSimulatePayment = (e) => {
+    e.preventDefault();
+    setIsProcessing(true);
+    
+    // Simula el tiempo de procesamiento de Stripe (2 segundos)
+    setTimeout(() => {
+      setIsProcessing(false);
+      setSelectedPlan(null);
+      
+      // Si el usuario ya tiene sesión iniciada, lo mandamos a su portal, si no, a crear su cuenta.
+      if (user) {
+        // Aquí en un futuro se le sumarían las clases al usuario en Supabase
+        navigate('/portal', { state: { planPurchased: true } });
+      } else {
+        navigate('/registro');
+      }
+    }, 2000);
   };
 
   return (
@@ -25,7 +46,7 @@ function Planes() {
           title="Plan FIT Presencial" 
           price="1,200" 
           features={["Acceso a 20 clases", "Recetario (+100 recetas)", "Registro de métricas"]}
-          onCheckout={handleStripeCheckout}
+          onCheckout={() => handleOpenCheckout({ title: 'Plan FIT', price: '1,200' })}
         />
 
         {/* Plan Premium (Recomendado) */}
@@ -34,7 +55,7 @@ function Planes() {
           price="1,800" 
           recommended={true}
           features={["Acceso a 30 clases", "Recetario (+100 recetas)", "Registro de métricas", "3 invitadas al mes sin costo", "Contacto constante"]}
-          onCheckout={handleStripeCheckout}
+          onCheckout={() => handleOpenCheckout({ title: 'Plan Premium', price: '1,800' })}
         />
 
         {/* Plan Basico */}
@@ -42,7 +63,7 @@ function Planes() {
           title="Plan Básico Presencial" 
           price="950" 
           features={["Acceso a 15 clases", "Recetario (+100 recetas)", "Registro de métricas"]}
-          onCheckout={handleStripeCheckout}
+          onCheckout={() => handleOpenCheckout({ title: 'Plan Básico', price: '950' })}
         />
 
       </div>
@@ -50,6 +71,86 @@ function Planes() {
       <div style={{ textAlign: 'center', marginTop: '4rem' }}>
         <button onClick={() => navigate(-1)} style={{ padding: '0.8rem 2rem', border: '1px solid #1A1C1E', background: 'transparent', borderRadius: '30px', cursor: 'pointer', fontWeight: 600 }}>Volver</button>
       </div>
+
+      {/* STRIPE CHECKOUT MODAL SIMULATION */}
+      {selectedPlan && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(5px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+        }}>
+          <div style={{
+            background: 'white', borderRadius: '20px', width: '100%', maxWidth: '450px',
+            overflow: 'hidden', boxShadow: '0 25px 50px rgba(0,0,0,0.25)', animation: 'fadeInUp 0.3s ease'
+          }}>
+            {/* Header del Modal */}
+            <div style={{ background: '#F9FAFB', padding: '20px 25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E5E7EB' }}>
+              <div>
+                <div style={{ fontSize: '0.8rem', color: '#6B7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Resumen de compra</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {selectedPlan.title} <span style={{ color: 'var(--primary)' }}>${selectedPlan.price}</span>
+                </div>
+              </div>
+              <button onClick={() => !isProcessing && setSelectedPlan(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#9CA3AF' }}>
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Formulario de Pago */}
+            <form onSubmit={handleSimulatePayment} style={{ padding: '25px' }}>
+              
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Correo Electrónico</label>
+                <div style={{ position: 'relative' }}>
+                  <Mail size={18} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input type="email" required defaultValue={user?.email || ''} style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '0.95rem' }} placeholder="tu@correo.com" />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Información de la Tarjeta</label>
+                <div style={{ border: '1px solid #D1D5DB', borderRadius: '8px', overflow: 'hidden' }}>
+                  <div style={{ position: 'relative', borderBottom: '1px solid #D1D5DB' }}>
+                    <CreditCard size={18} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                    <input type="text" required pattern="[0-9]{16}" maxLength="16" style={{ width: '100%', padding: '12px 12px 12px 40px', border: 'none', fontSize: '0.95rem', outline: 'none' }} placeholder="Número de Tarjeta" />
+                  </div>
+                  <div style={{ display: 'flex' }}>
+                    <div style={{ flex: 1, borderRight: '1px solid #D1D5DB' }}>
+                      <input type="text" required placeholder="MM / AA" maxLength="5" style={{ width: '100%', padding: '12px', border: 'none', fontSize: '0.95rem', outline: 'none' }} />
+                    </div>
+                    <div style={{ flex: 1, position: 'relative' }}>
+                      <Lock size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                      <input type="text" required placeholder="CVC" maxLength="4" style={{ width: '100%', padding: '12px 12px 12px 35px', border: 'none', fontSize: '0.95rem', outline: 'none' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '25px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Nombre en la Tarjeta</label>
+                <div style={{ position: 'relative' }}>
+                  <User size={18} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input type="text" required style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '0.95rem' }} placeholder="Nombre Completo" />
+                </div>
+              </div>
+
+              <button type="submit" disabled={isProcessing} style={{ 
+                width: '100%', padding: '14px', borderRadius: '8px', border: 'none', 
+                background: isProcessing ? '#9CA3AF' : '#111827', color: 'white', 
+                fontSize: '1rem', fontWeight: 600, cursor: isProcessing ? 'not-allowed' : 'pointer',
+                display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', transition: 'all 0.2s ease'
+              }}>
+                {isProcessing ? 'Procesando...' : `Pagar $${selectedPlan.price}`} <Lock size={16} />
+              </button>
+              
+              <div style={{ textAlign: 'center', marginTop: '15px', fontSize: '0.75rem', color: '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                <Lock size={12} /> Pagos seguros encriptados por Stripe
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
