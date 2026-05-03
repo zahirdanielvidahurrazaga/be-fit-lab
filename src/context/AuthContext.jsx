@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
         }
 
         setUser(session.user);
-        setRole(profileData.role);
+        setRole((profileData.role || 'CLIENT').toUpperCase());
         setPlan(profileData.plan);
         setClassesRemaining(profileData.classes_remaining || 0);
 
@@ -115,7 +115,7 @@ export const AuthProvider = ({ children }) => {
         .single();
         
       if (userData) {
-        setRole(userData.role);
+        setRole((userData.role || 'CLIENT').toUpperCase());
         setPlan(userData.plan);
         setClassesRemaining(userData.classes_remaining || 0);
       } else {
