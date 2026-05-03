@@ -6,7 +6,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 
 function Portal() {
   const navigate = useNavigate();
-  const { user, logout, classesRemaining, myReservations, cancelClass } = useAuth();
+  const { user, plan, logout, classesRemaining, myReservations, cancelClass } = useAuth();
   
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -23,6 +23,50 @@ function Portal() {
     }
     setShowCancelModal(false);
   };
+
+  // PATRÓN SANTUARIO: Si no tiene membresía activa, mostrar pantalla inline (sin redirect)
+  if (!plan || plan === 'none') {
+    return (
+      <div style={{ 
+        minHeight: '100vh', display: 'flex', flexDirection: 'column', 
+        alignItems: 'center', justifyContent: 'center', padding: '2rem',
+        background: 'linear-gradient(180deg, #FDFBF7 0%, #F4F0EA 100%)',
+        textAlign: 'center'
+      }}>
+        <div style={{ 
+          width: '80px', height: '80px', borderRadius: '50%', 
+          background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', 
+          marginBottom: '1.5rem', boxShadow: '0 15px 40px rgba(255,145,77,0.3)'
+        }}>
+          <Flame size={35} color="white" />
+        </div>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: '#1A1C1E', marginBottom: '0.5rem' }}>
+          Activa tu Membresía
+        </h1>
+        <p style={{ color: '#6B7280', fontSize: '1rem', maxWidth: '400px', lineHeight: 1.6, marginBottom: '2rem' }}>
+          Para acceder a tu portal exclusivo, reservar clases y llevar tu evolución, necesitas un plan activo.
+        </p>
+        <button 
+          onClick={() => navigate('/planes')} 
+          className="btn-primary" 
+          style={{ padding: '1rem 3rem', fontSize: '1rem', borderRadius: '30px' }}
+        >
+          Ver Planes Disponibles
+        </button>
+        <button 
+          onClick={() => navigate('/')} 
+          style={{ 
+            marginTop: '1rem', padding: '0.7rem 2rem', background: 'transparent', 
+            border: '1px solid #D1D5DB', borderRadius: '30px', cursor: 'pointer',
+            fontSize: '0.9rem', color: '#6B7280', fontWeight: 500
+          }}
+        >
+          Volver al inicio
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="mobile-app-container">
