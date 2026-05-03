@@ -115,7 +115,7 @@ function Landing() {
 
 
       {/* BANNER INTELIGENTE DE MEMBRESÍA (Patrón Santuario) */}
-      {user && (!plan || plan === 'none') && (
+      {user && role === 'CLIENT' && (!plan || plan === 'none') && (
         <div style={{
           position: 'fixed', top: '75px', left: '50%', transform: 'translateX(-50%)',
           zIndex: 998, width: '94%', maxWidth: '600px',

@@ -16,20 +16,30 @@ import './index.css';
 const ProtectedRoute = ({ children, requireRole }) => {
   const { user, role, plan, loading } = useAuth();
   
-  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Cargando Seguridad...</div>;
+  // Si estamos cargando la sesión inicial o el rol, esperar
+  if (loading || (user && role === null)) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FDFBF7' }}>
+        <div className="loader">Cargando Seguridad...</div>
+      </div>
+    );
+  }
   
+  // Si no hay usuario, a login
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
+  // Si el rol no coincide con el requerido por la ruta
   if (requireRole && role !== requireRole) {
     if (role === 'ADMIN') return <Navigate to="/admin" replace />;
     if (role === 'COACH') return <Navigate to="/coach" replace />;
     return <Navigate to="/portal" replace />;
   }
 
-  // Si es CLIENT pero no tiene plan, redirigir a la Landing (donde verá el banner de membresía)
-  if (requireRole === 'CLIENT' && (!plan || plan === 'none')) {
+  // PATRÓN SANTUARIO: Si soy CLIENT pero no tengo plan, me quedo en la Landing (donde está el banner)
+  // Solo aplicamos esto si estamos en una ruta que requiere ser cliente (portal, nutricion, etc)
+  if (requireRole === 'CLIENT' && role === 'CLIENT' && (!plan || plan === 'none')) {
     return <Navigate to="/" replace />;
   }
 
