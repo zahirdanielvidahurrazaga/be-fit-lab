@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
     try {
       // 1. Obtener rol y clases restantes
       const { data: userData, error: userError } = await supabase
-        .from('users')
+        .from('profiles')
         .select('role, classes_remaining')
         .eq('id', currentUser.id)
         .single();
@@ -129,7 +129,7 @@ export const AuthProvider = ({ children }) => {
         if (resError) throw resError;
 
         await supabase.from('classes').update({ spots: classObj.spots - 1 }).eq('id', classObj.id);
-        await supabase.from('users').update({ classes_remaining: classesRemaining - 1 }).eq('id', user.id);
+        await supabase.from('profiles').update({ classes_remaining: classesRemaining - 1 }).eq('id', user.id);
 
         return true;
       } catch (err) {
@@ -168,7 +168,7 @@ export const AuthProvider = ({ children }) => {
       if (classObj) {
         await supabase.from('classes').update({ spots: classObj.spots + 1 }).eq('id', classId);
       }
-      await supabase.from('users').update({ classes_remaining: classesRemaining + 1 }).eq('id', user.id);
+      await supabase.from('profiles').update({ classes_remaining: classesRemaining + 1 }).eq('id', user.id);
 
     } catch (err) {
       console.error("Error cancelando reserva:", err);
