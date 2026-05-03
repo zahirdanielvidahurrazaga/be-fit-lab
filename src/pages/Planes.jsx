@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Check, CreditCard, X, Lock, Mail, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 function Planes() {
   const navigate = useNavigate();
@@ -18,15 +19,20 @@ function Planes() {
     setIsProcessing(true);
     
     // Simula el tiempo de procesamiento de Stripe (2 segundos)
-    setTimeout(() => {
-      setIsProcessing(false);
-      setSelectedPlan(null);
-      
-      // Si el usuario ya tiene sesión iniciada, lo mandamos a su portal, si no, a crear su cuenta.
+    setTimeout(async () => {
+      // Si el usuario ya tiene sesión iniciada, actualizamos su plan en BD y lo mandamos a su portal
       if (user) {
-        // Aquí en un futuro se le sumarían las clases al usuario en Supabase
-        navigate('/portal', { state: { planPurchased: true } });
+        await supabase.from('profiles').update({ 
+          plan: selectedPlan.title, 
+          classes_remaining: selectedPlan.title.includes('FIT') ? 20 : (selectedPlan.title.includes('Premium') ? 30 : 15) 
+        }).eq('id', user.id);
+        
+        setIsProcessing(false);
+        setSelectedPlan(null);
+        window.location.href = '/portal'; // Fuerza recarga para que AuthContext obtenga los nuevos datos
       } else {
+        setIsProcessing(false);
+        setSelectedPlan(null);
         navigate('/registro');
       }
     }, 2000);

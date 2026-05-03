@@ -14,7 +14,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import './index.css';
 
 const ProtectedRoute = ({ children, requireRole }) => {
-  const { user, role, loading } = useAuth();
+  const { user, role, plan, loading } = useAuth();
   
   if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Cargando Seguridad...</div>;
   
@@ -26,6 +26,11 @@ const ProtectedRoute = ({ children, requireRole }) => {
     if (role === 'ADMIN') return <Navigate to="/admin" replace />;
     if (role === 'COACH') return <Navigate to="/coach" replace />;
     return <Navigate to="/portal" replace />;
+  }
+
+  // Bloqueo: Clientes sin plan no pueden entrar al portal ni ver secciones protegidas
+  if (requireRole === 'CLIENT' && (!plan || plan === 'none')) {
+    return <Navigate to="/planes" replace />;
   }
 
   return children;

@@ -6,6 +6,7 @@ const AuthContext = createContext({});
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
+  const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // ESTADO GLOBAL DE RESERVAS (Supabase)
@@ -62,15 +63,17 @@ export const AuthProvider = ({ children }) => {
       // 1. Obtener rol y clases restantes
       const { data: userData, error: userError } = await supabase
         .from('profiles')
-        .select('role, classes_remaining')
+        .select('role, classes_remaining, plan')
         .eq('id', currentUser.id)
         .single();
         
       if (userData) {
         setRole(userData.role);
+        setPlan(userData.plan);
         setClassesRemaining(userData.classes_remaining || 0);
       } else {
         setRole('CLIENT');
+        setPlan('none');
       }
 
       // 2. Obtener mis reservas
@@ -95,6 +98,7 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error("Error obteniendo datos del usuario:", err);
       setRole('CLIENT');
+      setPlan('none');
     } finally {
       setLoading(false);
     }
@@ -218,7 +222,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ 
-      user, role, loading, login, logout, 
+      user, role, plan, loading, login, logout, 
       classesRemaining, myReservations, globalClasses, 
       bookClass, cancelClass, updateClassSpots, checkInClient 
     }}>
