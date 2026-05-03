@@ -36,10 +36,23 @@ CREATE TABLE IF NOT EXISTS public.reservations (
   UNIQUE(user_id, class_id) -- Evitar reservas duplicadas de la misma alumna en la misma clase
 );
 
+CREATE TABLE IF NOT EXISTS public.recipes (
+  id uuid default gen_random_uuid() primary key,
+  time text not null, -- e.g. "Desayuno", "Almuerzo", "Cena", "Snack"
+  title text not null,
+  kcal text,
+  time_prep text,
+  img text,
+  ingredients text[] default '{}',
+  steps text[] default '{}',
+  created_at timestamp with time zone default timezone('utc'::text, now())
+);
+
 -- 3. Habilitar RLS (Row Level Security) para proteger los datos
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.classes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reservations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.recipes ENABLE ROW LEVEL SECURITY;
 
 -- 4. Políticas de Seguridad (Policies)
 
@@ -52,6 +65,18 @@ CREATE POLICY "Users can insert own profile" ON public.users FOR INSERT WITH CHE
 -- CLASSES
 -- Cualquier usuario autenticado (o anónimo si la app es pública) puede ver las clases
 CREATE POLICY "Anyone can view classes" ON public.classes FOR SELECT USING (true);
+-- Los administradores pueden gestionar las clases
+CREATE POLICY "Admins can manage classes" ON public.classes FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'ADMIN')
+);
+
+-- RECIPES
+-- Cualquiera puede ver las recetas
+CREATE POLICY "Anyone can view recipes" ON public.recipes FOR SELECT USING (true);
+-- Los administradores pueden gestionar las recetas
+CREATE POLICY "Admins can manage recipes" ON public.recipes FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'ADMIN')
+);
 
 -- RESERVATIONS
 -- Las alumnas solo pueden ver sus propias reservas

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 function Admin() {
-  const { user, logout, globalClasses, updateClassSpots, checkInClient } = useAuth();
+  const { user, logout, globalClasses, recipes, updateClassSpots, checkInClient, addClass, deleteClass, addRecipe, deleteRecipe } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('mostrador');
   
@@ -23,6 +23,13 @@ function Admin() {
   // Pagos
   const [selectedPayMethod, setSelectedPayMethod] = useState('efectivo');
   const [showPaySuccess, setShowPaySuccess] = useState(false);
+
+  // Formularios de Creación
+  const [showAddClass, setShowAddClass] = useState(false);
+  const [newClass, setNewClass] = useState({ title: '', time: '', day: 1, instructor: '', spots: 10 });
+  
+  const [showAddRecipe, setShowAddRecipe] = useState(false);
+  const [newRecipe, setNewRecipe] = useState({ title: '', time: 'Desayuno', kcal: '', time_prep: '', img: '', ingredients: '', steps: '' });
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -71,6 +78,22 @@ function Admin() {
   const handlePago = () => {
     setShowPaySuccess(true);
     setTimeout(() => setShowPaySuccess(false), 2500);
+  };
+
+  const handleCreateClass = async (e) => {
+    e.preventDefault();
+    await addClass({ ...newClass, day: parseInt(newClass.day), spots: parseInt(newClass.spots) });
+    setShowAddClass(false);
+    setNewClass({ title: '', time: '', day: 1, instructor: '', spots: 10 });
+  };
+
+  const handleCreateRecipe = async (e) => {
+    e.preventDefault();
+    const ingredientsArr = newRecipe.ingredients.split(',').map(s => s.trim()).filter(s => s);
+    const stepsArr = newRecipe.steps.split('.').map(s => s.trim()).filter(s => s);
+    await addRecipe({ ...newRecipe, ingredients: ingredientsArr, steps: stepsArr });
+    setShowAddRecipe(false);
+    setNewRecipe({ title: '', time: 'Desayuno', kcal: '', time_prep: '', img: '', ingredients: '', steps: '' });
   };
 
   const inputStyle = { width: '100%', padding: '14px 16px', borderRadius: '14px', border: '1px solid rgba(55,61,59,0.08)', background: 'var(--surface-lowest)', fontFamily: 'var(--font-body)', fontSize: '0.9rem', outline: 'none', transition: 'border 0.2s' };
@@ -149,32 +172,57 @@ function Admin() {
             </>
           )}
 
-          {/* ============ TAB: CUPOS (Control de disponibilidad) ============ */}
-          {activeTab === 'cupos' && (
+          {/* ============ TAB: CLASES (Antes Cupos) ============ */}
+          {activeTab === 'clases' && (
             <section>
-              <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', marginBottom: '15px' }}>Gestión de Disponibilidad</h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', margin: 0 }}>Gestión de Clases</h2>
+                <button onClick={() => setShowAddClass(!showAddClass)} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '8px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Plus size={16} /> Nueva
+                </button>
+              </div>
+
+              {showAddClass && (
+                <div className="ios-glass-card" style={{ padding: '15px', marginBottom: '15px', background: 'white' }}>
+                  <input placeholder="Título (ej. Full Body)" value={newClass.title} onChange={e => setNewClass({...newClass, title: e.target.value})} style={{...inputStyle, marginBottom: '10px'}} />
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                    <input placeholder="Hora (ej. 07:00 AM)" value={newClass.time} onChange={e => setNewClass({...newClass, time: e.target.value})} style={inputStyle} />
+                    <select value={newClass.day} onChange={e => setNewClass({...newClass, day: e.target.value})} style={{...inputStyle, WebkitAppearance: 'none'}}>
+                      <option value="1">Día 1</option><option value="2">Día 2</option><option value="3">Día 3</option>
+                      <option value="4">Día 4</option><option value="5">Día 5</option><option value="6">Día 6</option><option value="7">Día 7</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                    <input placeholder="Instructor" value={newClass.instructor} onChange={e => setNewClass({...newClass, instructor: e.target.value})} style={inputStyle} />
+                    <input type="number" placeholder="Cupos" value={newClass.spots} onChange={e => setNewClass({...newClass, spots: e.target.value})} style={inputStyle} />
+                  </div>
+                  <button onClick={handleCreateClass} style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none' }}>Guardar Clase</button>
+                </div>
+              )}
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {todayClasses.length > 0 ? todayClasses.map((c) => (
+                {globalClasses.length > 0 ? globalClasses.map((c) => (
                   <div key={c.id} className="ios-glass-card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface)' }}>
                     <div style={{ flex: 1 }}>
-                      <h3 style={{ fontSize: '1rem', margin: '0 0 4px 0', fontFamily: 'var(--font-display)' }}>{c.title}</h3>
+                      <h3 style={{ fontSize: '1rem', margin: '0 0 4px 0', fontFamily: 'var(--font-display)' }}>{c.title} <span style={{fontSize:'0.7rem', color:'gray'}}>(Día {c.day})</span></h3>
                       <p style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', margin: 0 }}>{c.time} • {c.instructor}</p>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <button onClick={() => updateClassSpots(c.id, Math.max(0, c.spots - 1))} style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: 'rgba(55,61,59,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <Minus size={16} color="var(--on-surface)" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <button onClick={() => updateClassSpots(c.id, Math.max(0, c.spots - 1))} style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: 'rgba(55,61,59,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Minus size={14} color="var(--on-surface)" />
                       </button>
-                      <div style={{ textAlign: 'center', minWidth: '35px' }}>
-                        <span style={{ fontSize: '1.4rem', fontWeight: 800, color: c.spots === 0 ? '#FF4D4D' : 'var(--primary)' }}>{c.spots}</span>
-                      </div>
-                      <button onClick={() => updateClassSpots(c.id, c.spots + 1)} style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: 'rgba(55,61,59,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <Plus size={16} color="var(--on-surface)" />
+                      <span style={{ fontSize: '1.2rem', fontWeight: 800, color: c.spots === 0 ? '#FF4D4D' : 'var(--primary)', minWidth: '25px', textAlign: 'center' }}>{c.spots}</span>
+                      <button onClick={() => updateClassSpots(c.id, c.spots + 1)} style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: 'rgba(55,61,59,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Plus size={14} color="var(--on-surface)" />
+                      </button>
+                      <button onClick={() => deleteClass(c.id)} style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: '#FF4D4D15', color: '#FF4D4D', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '5px' }}>
+                        <Minus size={14} />
                       </button>
                     </div>
                   </div>
                 )) : (
                   <div style={{ padding: '40px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.9rem', fontStyle: 'italic', background: 'rgba(55,61,59,0.03)', borderRadius: '16px' }}>
-                    No hay clases programadas para hoy.
+                    No hay clases programadas.
                   </div>
                 )}
               </div>
@@ -252,49 +300,55 @@ function Admin() {
             </section>
           )}
 
-          {/* ============ TAB: REPORTES (Métricas de Negocio) PREMIUM ============ */}
-          {activeTab === 'reportes' && (
+          {/* ============ TAB: NUTRICION ============ */}
+          {activeTab === 'nutricion' && (
             <section>
-              <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', marginBottom: '20px', color: 'var(--black)' }}>Financial Overview</h2>
-              
-              <div style={{ background: 'linear-gradient(135deg, #2C302E, #1A1C1E)', padding: '25px', borderRadius: '24px', marginBottom: '20px', boxShadow: '0 15px 35px rgba(0,0,0,0.15)' }}>
-                 <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '5px' }}>Ingresos Brutos (Mes)</div>
-                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '15px' }}>
-                    <div style={{ fontSize: '2.8rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)', lineHeight: 1 }}>$42,850</div>
-                    <div style={{ background: 'rgba(34,197,94,0.2)', color: '#4ADE80', padding: '4px 8px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800 }}>+15%</div>
-                 </div>
-                 <div style={{ height: '60px', display: 'flex', alignItems: 'flex-end', gap: '6px' }}>
-                   {[30, 45, 60, 40, 70, 85, 100].map((h, i) => (
-                     <div key={i} style={{ flex: 1, height: `${h}%`, background: i === 6 ? 'var(--accent)' : 'rgba(255,255,255,0.1)', borderRadius: '4px' }} />
-                   ))}
-                 </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', margin: 0 }}>Gestión de Nutrición</h2>
+                <button onClick={() => setShowAddRecipe(!showAddRecipe)} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '8px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                  <Plus size={16} /> Nueva
+                </button>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-                <div style={{ padding: '20px', background: 'white', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
-                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Retención</div>
-                      <TrendingUp size={16} color="var(--primary)" />
-                   </div>
-                   <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>92<span style={{ fontSize: '1rem', color: 'var(--on-surface-variant)' }}>%</span></div>
+              {showAddRecipe && (
+                <div className="ios-glass-card" style={{ padding: '15px', marginBottom: '15px', background: 'white' }}>
+                  <select value={newRecipe.time} onChange={e => setNewRecipe({...newRecipe, time: e.target.value})} style={{...inputStyle, marginBottom: '10px', WebkitAppearance: 'none'}}>
+                    <option value="Desayuno">Desayuno</option>
+                    <option value="Almuerzo">Almuerzo</option>
+                    <option value="Cena">Cena</option>
+                    <option value="Snack">Snack</option>
+                  </select>
+                  <input placeholder="Título (ej. Bowl de Pollo)" value={newRecipe.title} onChange={e => setNewRecipe({...newRecipe, title: e.target.value})} style={{...inputStyle, marginBottom: '10px'}} />
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                    <input placeholder="Kcal (ej. 450)" value={newRecipe.kcal} onChange={e => setNewRecipe({...newRecipe, kcal: e.target.value})} style={inputStyle} />
+                    <input placeholder="Tiempo (ej. 15 min)" value={newRecipe.time_prep} onChange={e => setNewRecipe({...newRecipe, time_prep: e.target.value})} style={inputStyle} />
+                  </div>
+                  <input placeholder="URL de Imagen (Unsplash...)" value={newRecipe.img} onChange={e => setNewRecipe({...newRecipe, img: e.target.value})} style={{...inputStyle, marginBottom: '10px'}} />
+                  <textarea placeholder="Ingredientes separados por comas (Pollo, Arroz, Limón)" value={newRecipe.ingredients} onChange={e => setNewRecipe({...newRecipe, ingredients: e.target.value})} style={{...inputStyle, marginBottom: '10px', height: '60px', resize: 'none'}} />
+                  <textarea placeholder="Pasos separados por puntos (Cocinar. Servir.)" value={newRecipe.steps} onChange={e => setNewRecipe({...newRecipe, steps: e.target.value})} style={{...inputStyle, marginBottom: '15px', height: '60px', resize: 'none'}} />
+                  
+                  <button onClick={handleCreateRecipe} style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer' }}>Guardar Receta</button>
                 </div>
-                <div style={{ padding: '20px', background: 'white', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
-                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Ticket Prom.</div>
-                      <DollarSign size={16} color="var(--primary)" />
-                   </div>
-                   <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}><span style={{ fontSize: '1rem', color: 'var(--on-surface-variant)' }}>$</span>850</div>
-                </div>
-              </div>
+              )}
 
-              <div style={{ padding: '20px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.15)', borderRadius: '20px' }}>
-                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                    <div style={{ background: '#22C55E', color: 'white', padding: '10px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(34,197,94,0.3)' }}><Activity size={20}/></div>
-                    <div>
-                       <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#166534', marginBottom: '2px' }}>Crecimiento Acelerado</div>
-                       <div style={{ fontSize: '0.8rem', color: '#15803D', fontWeight: 600 }}>La retención ha mejorado un 2% este mes.</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {recipes && recipes.length > 0 ? recipes.map((r) => (
+                  <div key={r.id} className="ios-glass-card" style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '15px', background: 'var(--surface)' }}>
+                    <img src={r.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400&h=300"} alt={r.title} style={{ width: '60px', height: '60px', borderRadius: '12px', objectFit: 'cover' }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 800, textTransform: 'uppercase' }}>{r.time}</div>
+                      <h3 style={{ fontSize: '0.95rem', margin: '2px 0', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>{r.title}</h3>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: 0 }}>{r.kcal} kcal • {r.time_prep}</p>
                     </div>
-                 </div>
+                    <button onClick={() => deleteRecipe(r.id)} style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: '#FF4D4D15', color: '#FF4D4D', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                      <Minus size={16} />
+                    </button>
+                  </div>
+                )) : (
+                  <div style={{ padding: '40px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.9rem', fontStyle: 'italic', background: 'rgba(55,61,59,0.03)', borderRadius: '16px' }}>
+                    No hay recetas registradas.
+                  </div>
+                )}
               </div>
             </section>
           )}
@@ -304,9 +358,9 @@ function Admin() {
 
       {/* ====== BOTTOM NAV PREMIUM ====== */}
       <nav className="ios-bottom-nav" style={{ padding: '0 10px 25px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
-        <div className="nav-item" onClick={() => setActiveTab('cupos')} style={{ opacity: activeTab === 'cupos' ? 1 : 0.4, color: activeTab === 'cupos' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+        <div className="nav-item" onClick={() => setActiveTab('clases')} style={{ opacity: activeTab === 'clases' ? 1 : 0.4, color: activeTab === 'clases' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
           <Calendar size={22} strokeWidth={2.5} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Cupos</span>
+          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Clases</span>
         </div>
         <div className="nav-item" onClick={() => setActiveTab('inscribir')} style={{ opacity: activeTab === 'inscribir' ? 1 : 0.4, color: activeTab === 'inscribir' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
           <UserPlus size={22} strokeWidth={2.5} />
@@ -324,9 +378,9 @@ function Admin() {
           <CreditCard size={22} strokeWidth={2.5} />
           <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Cobros</span>
         </div>
-        <div className="nav-item" onClick={() => setActiveTab('reportes')} style={{ opacity: activeTab === 'reportes' ? 1 : 0.4, color: activeTab === 'reportes' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
-          <PieChart size={22} strokeWidth={2.5} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Reportes</span>
+        <div className="nav-item" onClick={() => setActiveTab('nutricion')} style={{ opacity: activeTab === 'nutricion' ? 1 : 0.4, color: activeTab === 'nutricion' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+          <Utensils size={22} strokeWidth={2.5} />
+          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Nutrición</span>
         </div>
       </nav>
     </div>

@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 
 function Nutricion() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, recipes } = useAuth();
   const [showRecipe, setShowRecipe] = useState(false);
   const [recipeData, setRecipeData] = useState(null);
 
@@ -14,38 +14,8 @@ function Nutricion() {
     setShowRecipe(true);
   };
 
-  const meals = [
-    {
-      id: 1,
-      time: "Desayuno",
-      title: "Tostadas de Aguacate y Huevo",
-      kcal: "350",
-      timePrep: "12 min",
-      img: "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&q=80&w=400&h=300",
-      ingredients: ["2 rebanadas de pan integral masa madre", "1/2 aguacate maduro", "2 huevos pochados", "Semillas de chía y sésamo", "Pizca de sal rosa del Himalaya"],
-      steps: ["Tostar el pan hasta que esté crujiente.", "Machacar el aguacate con un toque de limón.", "Preparar los huevos pochados (3 min en agua hirviendo).", "Montar y decorar con semillas."]
-    },
-    {
-      id: 2,
-      time: "Almuerzo",
-      title: "Salmón con Quinoa y Espárragos",
-      kcal: "580",
-      timePrep: "20 min",
-      img: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&q=80&w=400&h=300",
-      ingredients: ["150g de salmón fresco", "1/2 taza de quinoa cocida", "6 espárragos trigueros", "Aceite de oliva virgen extra", "Limón y eneldo fresco"],
-      steps: ["Sellar el salmón en la plancha (4 min por lado).", "Saltear los espárragos con poco aceite.", "Servir sobre la base de quinoa.", "Aliñar con limón y eneldo."]
-    },
-    {
-      id: 3,
-      time: "Cena",
-      title: "Bowl de Pollo y Verduras",
-      kcal: "420",
-      timePrep: "15 min",
-      img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400&h=300",
-      ingredients: ["120g de pechuga de pollo", "Mix de hojas verdes (espinaca/rúcula)", "Tomates cherry y pepino", "Aderezo de yogurt griego y menta", "Nueces picadas"],
-      steps: ["Cocinar el pollo a las hierbas finas.", "Trocear las verduras frescas.", "Mezclar en un bowl amplio.", "Agregar el aderezo de yogurt al final."]
-    }
-  ];
+  // Usamos las recetas globales que vienen de Supabase
+  const meals = recipes || [];
 
   return (
     <div className="mobile-app-container">

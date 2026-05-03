@@ -13,6 +13,7 @@ export const AuthProvider = ({ children }) => {
   // ESTADO GLOBAL DE RESERVAS (Supabase)
   const [classesRemaining, setClassesRemaining] = useState(0);
   const [globalClasses, setGlobalClasses] = useState([]);
+  const [recipes, setRecipes] = useState([]);
   const [myReservations, setMyReservations] = useState([]);
 
   // Flag para evitar que onAuthStateChange sobreescriba un plan recién activado
@@ -61,27 +62,91 @@ export const AuthProvider = ({ children }) => {
         setMembershipStatus('INACTIVE');
         setUser(null);
         setGlobalClasses([]);
+        setRecipes([]);
         setMyReservations([]);
         setClassesRemaining(0);
         setLoading(false);
       }
     });
 
-    // Cargar clases globales
+    // Cargar datos globales
     fetchGlobalClasses();
+    fetchRecipes();
 
     return () => subscription.unsubscribe();
   }, []);
 
   const fetchGlobalClasses = async () => {
-    const { data, error } = await supabase
-      .from('classes')
-      .select('*')
-      .order('day', { ascending: true })
-      .order('time', { ascending: true });
-      
-    if (data) {
-      setGlobalClasses(data);
+    try {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('*')
+        .order('day', { ascending: true })
+        .order('time', { ascending: true });
+        
+      if (data) {
+        setGlobalClasses(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchRecipes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('recipes')
+        .select('*')
+        .order('created_at', { ascending: true });
+        
+      if (data) {
+        setRecipes(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // ============================================
+  // ADMIN CRUD OPERATIONS
+  // ============================================
+  const addClass = async (classData) => {
+    try {
+      const { data, error } = await supabase.from('classes').insert(classData).select().single();
+      if (!error && data) setGlobalClasses(prev => [...prev, data]);
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
+  const deleteClass = async (classId) => {
+    try {
+      const { error } = await supabase.from('classes').delete().eq('id', classId);
+      if (!error) setGlobalClasses(prev => prev.filter(c => c.id !== classId));
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
+  const addRecipe = async (recipeData) => {
+    try {
+      const { data, error } = await supabase.from('recipes').insert(recipeData).select().single();
+      if (!error && data) setRecipes(prev => [...prev, data]);
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
+  const deleteRecipe = async (recipeId) => {
+    try {
+      const { error } = await supabase.from('recipes').delete().eq('id', recipeId);
+      if (!error) setRecipes(prev => prev.filter(r => r.id !== recipeId));
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
     }
   };
 
@@ -307,14 +372,15 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ 
-      user, role, plan, membershipStatus, loading, login, logout, refreshUserData, activatePlan,
-      classesRemaining, myReservations, globalClasses, 
-      bookClass, cancelClass, updateClassSpots, checkInClient 
+      user, role, plan, membershipStatus, loading, 
+      classesRemaining, myReservations, globalClasses, recipes,
+      login, register, logout, forceCleanSession,
+      bookClass, cancelClass, checkInClient, updateClassSpots,
+      activatePlan, addClass, deleteClass, addRecipe, deleteRecipe
     }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => useContext(AuthContext);
-
