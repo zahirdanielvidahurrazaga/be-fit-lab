@@ -16,8 +16,16 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Verificar sesión activa inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        // Verificar que el usuario no haya sido borrado de la base de datos (sesión fantasma)
+        const { data: { user: verifiedUser }, error } = await supabase.auth.getUser();
+        if (error || !verifiedUser) {
+          await supabase.auth.signOut();
+          setUser(null);
+          setLoading(false);
+          return;
+        }
         setUser(session.user);
         fetchUserData(session.user);
       } else {

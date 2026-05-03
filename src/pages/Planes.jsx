@@ -119,7 +119,7 @@ function Planes() {
                 <div style={{ border: '1px solid #D1D5DB', borderRadius: '8px', overflow: 'hidden' }}>
                   <div style={{ position: 'relative', borderBottom: '1px solid #D1D5DB' }}>
                     <CreditCard size={18} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-                    <input type="text" required pattern="[0-9]{16}" maxLength="16" style={{ width: '100%', padding: '12px 12px 12px 40px', border: 'none', fontSize: '0.95rem', outline: 'none' }} placeholder="Número de Tarjeta" />
+                    <input type="text" required maxLength="16" style={{ width: '100%', padding: '12px 12px 12px 40px', border: 'none', fontSize: '0.95rem', outline: 'none' }} placeholder="Número de Tarjeta" />
                   </div>
                   <div style={{ display: 'flex' }}>
                     <div style={{ flex: 1, borderRight: '1px solid #D1D5DB' }}>
