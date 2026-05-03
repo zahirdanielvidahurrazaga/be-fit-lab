@@ -36,30 +36,31 @@ export const AuthProvider = ({ children }) => {
     // Verificar sesión activa inicial
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        // Verificar que el perfil exista en la BD (mismo patrón de Santuario)
-        const { data: profileData, error: profileError } = await supabase
+        // Obtener perfil (si existe)
+        const { data: profileData } = await supabase
           .from('profiles')
           .select('role, classes_remaining, plan')
           .eq('id', session.user.id)
           .single();
 
-        if (profileError || !profileData) {
-          // El usuario fue borrado de la BD o nunca tuvo perfil → limpiar todo
-          console.warn('Sesión fantasma detectada. Limpiando...');
-          await forceCleanSession();
-          return;
-        }
-
         setUser(session.user);
-        setRole((profileData.role || 'CLIENT').toUpperCase());
-        setPlan(profileData.plan);
-        setClassesRemaining(profileData.classes_remaining || 0);
+        if (profileData) {
+          setRole((profileData.role || 'CLIENT').toUpperCase());
+          setPlan(profileData.plan);
+          setClassesRemaining(profileData.classes_remaining || 0);
+        } else {
+          // Si no hay perfil aún, asumimos CLIENT sin plan
+          setRole('CLIENT');
+          setPlan('none');
+          setClassesRemaining(0);
+        }
 
         // Cargar reservas
         const { data: resData } = await supabase
           .from('reservations')
           .select('*, classes(*)')
           .eq('user_id', session.user.id);
+        
         if (resData) {
           setMyReservations(resData.map(r => ({
             id: r.id, classId: r.class_id,
