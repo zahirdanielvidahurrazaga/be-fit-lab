@@ -38,41 +38,10 @@ export const AuthProvider = ({ children }) => {
     // Verificar sesión activa inicial
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const { data: profileData } = await supabase
-          .from('users')
-          .select('role, classes_remaining, membership_plan, membership_status')
-          .eq('id', session.user.id)
-          .single();
-
         setUser(session.user);
-        if (profileData) {
-          setRole((profileData.role || 'CLIENT').toUpperCase());
-          setPlan(profileData.membership_plan);
-          setMembershipStatus(profileData.membership_status || 'INACTIVE');
-          setClassesRemaining(profileData.classes_remaining || 0);
-        } else {
-          // Si no hay perfil aún, asumimos CLIENT sin plan
-          setRole('CLIENT');
-          setPlan('none');
-          setMembershipStatus('INACTIVE');
-          setClassesRemaining(0);
-        }
+        await fetchUserData(session.user);
 
-        // Cargar reservas
-        const { data: resData } = await supabase
-          .from('reservations')
-          .select('*, classes(*)')
-          .eq('user_id', session.user.id);
-        
-        if (resData) {
-          setMyReservations(resData.map(r => ({
-            id: r.id, classId: r.class_id,
-            title: r.classes?.title, time: r.classes?.time,
-            instructor: r.classes?.instructor, color: r.classes?.color,
-            checkedIn: r.checked_in
-          })));
-        }
-        setLoading(false);
+        // fetchUserData ya carga las reservas y maneja el loading state
       } else {
         setLoading(false);
       }
@@ -125,7 +94,25 @@ export const AuthProvider = ({ children }) => {
         .eq('id', currentUser.id)
         .single();
         
-      if (userData) {
+      if (userError && userError.code === 'PGRST116') {
+        // La fila no existe (posible error del trigger o usuario antiguo). La creamos ahora mismo.
+        console.log("Fila de usuario no encontrada. Creando fila...");
+        // Intentar crear la fila (fallará silenciosamente si RLS no lo permite, pero es mejor intentarlo)
+        const newRow = {
+          id: currentUser.id,
+          email: currentUser.email,
+          full_name: currentUser.user_metadata?.full_name || '',
+          role: 'CLIENT',
+          membership_status: 'INACTIVE',
+          classes_remaining: 0
+        };
+        await supabase.from('users').insert(newRow);
+        
+        setRole('CLIENT');
+        setPlan('none');
+        setMembershipStatus('INACTIVE');
+        setClassesRemaining(0);
+      } else if (userData) {
         setRole((userData.role || 'CLIENT').toUpperCase());
         setPlan(userData.membership_plan);
         setMembershipStatus(userData.membership_status || 'INACTIVE');
@@ -282,7 +269,7 @@ export const AuthProvider = ({ children }) => {
 
   // Activar plan: actualiza estado local INMEDIATAMENTE + intenta persistir en BD
   // Patrón Santuario: la UI se actualiza sin depender de que la BD responda
-  const activatePlan = async (planTitle, classCount) => {
+  const activatePlan = async (planTitle, classCount, specificUserId = null) => {
     // Bloquear re-fetch automático por 10 segundos para evitar race condition
     planJustActivatedRef.current = true;
     setTimeout(() => { planJustActivatedRef.current = false; }, 10000);
@@ -292,13 +279,16 @@ export const AuthProvider = ({ children }) => {
     setMembershipStatus('ACTIVE');
     setClassesRemaining(classCount);
 
-    // 2. Intentar persistir en la BD
-    if (user) {
+    // 2. Intentar persistir en la BD de forma segura
+    const { data: { session } } = await supabase.auth.getSession();
+    const targetId = specificUserId || session?.user?.id || user?.id;
+    
+    if (targetId) {
       const { error } = await supabase.from('users').update({ 
         membership_plan: planTitle, 
         membership_status: 'ACTIVE',
         classes_remaining: classCount 
-      }).eq('id', user.id);
+      }).eq('id', targetId);
       
       if (error) {
         console.error('Error guardando plan en BD:', error);

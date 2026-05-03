@@ -59,7 +59,7 @@ function Register() {
         // Esperar a que el trigger cree el perfil, luego activar plan via contexto
         setTimeout(async () => {
           const classes = purchasedPlan.title.includes('FIT') ? 20 : (purchasedPlan.title.includes('Premium') ? 30 : 15);
-          await activatePlan(purchasedPlan.title, classes);
+          await activatePlan(purchasedPlan.title, classes, data.user.id);
           navigate('/portal');
         }, 1000);
       } else {
