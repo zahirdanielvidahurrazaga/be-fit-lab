@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 function Landing() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, role } = useAuth();
+  const { user, role, plan, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
@@ -113,6 +113,34 @@ function Landing() {
         </div>
       </div>
 
+
+      {/* BANNER INTELIGENTE DE MEMBRESÍA (Patrón Santuario) */}
+      {user && (!plan || plan === 'none') && (
+        <div style={{
+          position: 'fixed', top: '75px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 998, width: '94%', maxWidth: '600px',
+          background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(20px)',
+          borderRadius: '16px', padding: '12px 20px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+          border: '1px solid rgba(255,145,77,0.2)', boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
+          animation: 'fadeInUp 0.4s ease'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+            <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ color: 'white', fontWeight: 800, fontSize: '0.85rem' }}>{user.email?.charAt(0).toUpperCase()}</span>
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1A1C1E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Hola, {user.user_metadata?.full_name || user.email?.split('@')[0]}</div>
+              <div style={{ fontSize: '0.7rem', color: '#6B7280' }}>Aún no tienes membresía activa</div>
+            </div>
+          </div>
+          <button onClick={() => navigate('/planes')} style={{
+            padding: '7px 16px', borderRadius: '20px', border: 'none', flexShrink: 0,
+            background: 'var(--primary)', color: 'white', fontSize: '0.75rem',
+            fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap'
+          }}>Ver Planes</button>
+        </div>
+      )}
 
       {/* Hero Section Masterpiece */}
       <section style={{ 
