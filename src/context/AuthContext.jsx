@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext({});
@@ -13,6 +13,9 @@ export const AuthProvider = ({ children }) => {
   const [classesRemaining, setClassesRemaining] = useState(0);
   const [globalClasses, setGlobalClasses] = useState([]);
   const [myReservations, setMyReservations] = useState([]);
+
+  // Flag para evitar que onAuthStateChange sobreescriba un plan recién activado
+  const planJustActivatedRef = useRef(false);
 
   // Función para limpiar sesión fantasma por completo
   const forceCleanSession = async () => {
@@ -75,7 +78,10 @@ export const AuthProvider = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user);
-        fetchUserData(session.user);
+        // NO re-fetch si acabamos de activar un plan (evita sobreescribir con datos viejos de la BD)
+        if (!planJustActivatedRef.current) {
+          fetchUserData(session.user);
+        }
       } else {
         setRole(null);
         setPlan(null);
@@ -269,11 +275,15 @@ export const AuthProvider = ({ children }) => {
   // Activar plan: actualiza estado local INMEDIATAMENTE + intenta persistir en BD
   // Patrón Santuario: la UI se actualiza sin depender de que la BD responda
   const activatePlan = async (planTitle, classCount) => {
+    // Bloquear re-fetch automático por 10 segundos para evitar race condition
+    planJustActivatedRef.current = true;
+    setTimeout(() => { planJustActivatedRef.current = false; }, 10000);
+
     // 1. Actualizar estado local de inmediato (la UI cambia al instante)
     setPlan(planTitle);
     setClassesRemaining(classCount);
 
-    // 2. Intentar persistir en la BD (si falla, al menos la sesión actual funciona)
+    // 2. Intentar persistir en la BD
     if (user) {
       const { error } = await supabase.from('profiles').update({ 
         plan: planTitle, 
