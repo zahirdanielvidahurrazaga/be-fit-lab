@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 function Landing() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, role, plan, logout } = useAuth();
+  const { user, role, plan, membershipStatus, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
@@ -115,7 +115,7 @@ function Landing() {
 
 
       {/* BANNER INTELIGENTE DE MEMBRESÍA (Patrón Santuario) */}
-      {user && role === 'CLIENT' && (!plan || plan === 'none') && (
+      {user && role === 'CLIENT' && membershipStatus !== 'ACTIVE' && (
         <div style={{
           position: 'fixed', top: '75px', left: '50%', transform: 'translateX(-50%)',
           zIndex: 998, width: '94%', maxWidth: '600px',

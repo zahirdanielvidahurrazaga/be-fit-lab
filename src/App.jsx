@@ -14,7 +14,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import './index.css';
 
 const ProtectedRoute = ({ children, requireRole }) => {
-  const { user, role, plan, loading } = useAuth();
+  const { user, role, membershipStatus, loading } = useAuth();
   
   // Si estamos cargando la sesión inicial o el rol, esperar
   if (loading || (user && role === null)) {
@@ -37,9 +37,9 @@ const ProtectedRoute = ({ children, requireRole }) => {
     return <Navigate to="/portal" replace />;
   }
 
-  // PATRÓN SANTUARIO: Si soy CLIENT pero no tengo plan, me quedo en la Landing (donde está el banner)
+  // PATRÓN SANTUARIO: Si soy CLIENT pero no tengo plan activo, me quedo en la Landing (donde está el banner)
   // Solo aplicamos esto si estamos en una ruta que requiere ser cliente (portal, nutricion, etc)
-  if (requireRole === 'CLIENT' && role === 'CLIENT' && (!plan || plan === 'none')) {
+  if (requireRole === 'CLIENT' && role === 'CLIENT' && membershipStatus !== 'ACTIVE') {
     return <Navigate to="/" replace />;
   }
 

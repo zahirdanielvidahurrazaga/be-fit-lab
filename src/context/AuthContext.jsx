@@ -7,6 +7,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [plan, setPlan] = useState(null);
+  const [membershipStatus, setMembershipStatus] = useState('INACTIVE');
   const [loading, setLoading] = useState(true);
 
   // ESTADO GLOBAL DE RESERVAS (Supabase)
@@ -27,6 +28,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setRole(null);
     setPlan(null);
+    setMembershipStatus('INACTIVE');
     setClassesRemaining(0);
     setMyReservations([]);
     setLoading(false);
@@ -36,10 +38,9 @@ export const AuthProvider = ({ children }) => {
     // Verificar sesión activa inicial
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        // Obtener perfil (si existe)
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('role, classes_remaining, plan')
+          .select('role, classes_remaining, plan, membership_status')
           .eq('id', session.user.id)
           .single();
 
@@ -47,11 +48,13 @@ export const AuthProvider = ({ children }) => {
         if (profileData) {
           setRole((profileData.role || 'CLIENT').toUpperCase());
           setPlan(profileData.plan);
+          setMembershipStatus(profileData.membership_status || 'INACTIVE');
           setClassesRemaining(profileData.classes_remaining || 0);
         } else {
           // Si no hay perfil aún, asumimos CLIENT sin plan
           setRole('CLIENT');
           setPlan('none');
+          setMembershipStatus('INACTIVE');
           setClassesRemaining(0);
         }
 
@@ -86,6 +89,7 @@ export const AuthProvider = ({ children }) => {
       } else {
         setRole(null);
         setPlan(null);
+        setMembershipStatus('INACTIVE');
         setUser(null);
         setGlobalClasses([]);
         setMyReservations([]);
@@ -117,17 +121,19 @@ export const AuthProvider = ({ children }) => {
       // 1. Obtener rol y clases restantes
       const { data: userData, error: userError } = await supabase
         .from('profiles')
-        .select('role, classes_remaining, plan')
+        .select('role, classes_remaining, plan, membership_status')
         .eq('id', currentUser.id)
         .single();
         
       if (userData) {
         setRole((userData.role || 'CLIENT').toUpperCase());
         setPlan(userData.plan);
+        setMembershipStatus(userData.membership_status || 'INACTIVE');
         setClassesRemaining(userData.classes_remaining || 0);
       } else {
         setRole('CLIENT');
         setPlan('none');
+        setMembershipStatus('INACTIVE');
       }
 
       // 2. Obtener mis reservas
@@ -153,6 +159,7 @@ export const AuthProvider = ({ children }) => {
       console.error("Error obteniendo datos del usuario:", err);
       setRole('CLIENT');
       setPlan('none');
+      setMembershipStatus('INACTIVE');
     } finally {
       setLoading(false);
     }
@@ -282,12 +289,14 @@ export const AuthProvider = ({ children }) => {
 
     // 1. Actualizar estado local de inmediato (la UI cambia al instante)
     setPlan(planTitle);
+    setMembershipStatus('ACTIVE');
     setClassesRemaining(classCount);
 
     // 2. Intentar persistir en la BD
     if (user) {
       const { error } = await supabase.from('profiles').update({ 
         plan: planTitle, 
+        membership_status: 'ACTIVE',
         classes_remaining: classCount 
       }).eq('id', user.id);
       
@@ -308,7 +317,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ 
-      user, role, plan, loading, login, logout, refreshUserData, activatePlan,
+      user, role, plan, membershipStatus, loading, login, logout, refreshUserData, activatePlan,
       classesRemaining, myReservations, globalClasses, 
       bookClass, cancelClass, updateClassSpots, checkInClient 
     }}>
