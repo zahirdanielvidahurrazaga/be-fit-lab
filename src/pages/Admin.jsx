@@ -229,75 +229,76 @@ function Admin() {
             </section>
           )}
 
-          {/* ============ TAB: INSCRIBIR ============ */}
-          {activeTab === 'inscribir' && (
-            <section>
-              <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', marginBottom: '20px' }}>Inscripción Directa</h2>
-              {showInscribirSuccess ? (
-                <SuccessCard message="Alumna registrada exitosamente." />
-              ) : (
-                <div className="ios-glass-card" style={{ background: 'var(--surface)', border: 'none', padding: '22px' }}>
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={labelStyle}>Nombre Completo</label>
-                    <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ej. Ana Pérez" style={inputStyle} />
-                  </div>
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={labelStyle}>Correo Electrónico</label>
-                    <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="ana@ejemplo.com" style={inputStyle} />
-                  </div>
-                  <div style={{ marginBottom: '22px' }}>
-                    <label style={labelStyle}>WhatsApp</label>
-                    <input type="tel" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="10 dígitos" style={inputStyle} />
-                  </div>
-                  <button onClick={handleInscribir} style={{ width: '100%', padding: '15px', borderRadius: '14px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '0.95rem' }}>
-                    Crear Expediente
-                  </button>
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* ============ TAB: PAGOS ============ */}
-          {activeTab === 'pagos' && (
-            <section>
-              <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', marginBottom: '20px' }}>Cobro de Membresía</h2>
-              {showPaySuccess ? (
-                <SuccessCard message="Pago confirmado y clases asignadas." />
-              ) : (
-                <div className="ios-glass-card" style={{ background: 'var(--surface)', border: 'none', padding: '22px' }}>
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={labelStyle}>Alumna</label>
-                    <select style={{ ...inputStyle, WebkitAppearance: 'none' }}>
-                      <option value="">Seleccionar alumna...</option>
-                      {alumnas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    </select>
-                  </div>
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={labelStyle}>Membresía</label>
-                    <select style={{ ...inputStyle, WebkitAppearance: 'none' }}>
-                      <option value="fit">Plan FIT — 20 clases ($1,200)</option>
-                      <option value="premium">Plan Premium — 30 clases ($1,800)</option>
-                    </select>
-                  </div>
-                  <div style={{ marginBottom: '22px' }}>
-                    <label style={labelStyle}>Método</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                      {['efectivo', 'tarjeta', 'transferencia'].map(m => (
-                        <div key={m} onClick={() => setSelectedPayMethod(m)} style={{ 
-                          padding: '12px 8px', textAlign: 'center', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem',
-                          background: selectedPayMethod === m ? 'var(--primary)' : 'var(--surface-lowest)',
-                          color: selectedPayMethod === m ? 'white' : 'var(--on-surface-variant)',
-                          border: selectedPayMethod === m ? '1px solid var(--primary)' : '1px solid rgba(55,61,59,0.08)'
-                        }}>{m.toUpperCase()}</div>
-                      ))}
+          {/* ============ TAB: VENTAS (Inscribir + Cobros) ============ */}
+          {activeTab === 'ventas' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+              {/* SECCIÓN INSCRIBIR */}
+              <section>
+                <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', marginBottom: '20px' }}>Inscripción Directa</h2>
+                {showInscribirSuccess ? (
+                  <SuccessCard message="Alumna registrada exitosamente." />
+                ) : (
+                  <div className="ios-glass-card" style={{ background: 'var(--surface)', border: 'none', padding: '22px' }}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={labelStyle}>Nombre Completo</label>
+                      <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ej. Ana Pérez" style={inputStyle} />
                     </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={labelStyle}>Correo Electrónico</label>
+                      <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="ana@ejemplo.com" style={inputStyle} />
+                    </div>
+                    <div style={{ marginBottom: '22px' }}>
+                      <label style={labelStyle}>WhatsApp</label>
+                      <input type="tel" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="10 dígitos" style={inputStyle} />
+                    </div>
+                    <button onClick={handleInscribir} style={{ width: '100%', padding: '15px', borderRadius: '14px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '0.95rem' }}>
+                      Crear Expediente
+                    </button>
                   </div>
-                  <button onClick={handlePago} style={{ width: '100%', padding: '15px', borderRadius: '14px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '0.95rem' }}>
-                    Confirmar Transacción
-                  </button>
-                </div>
-              )}
-            </section>
+                )}
+              </section>
+
+              {/* SECCIÓN COBROS */}
+              <section>
+                <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', marginBottom: '20px' }}>Cobro de Membresía</h2>
+                {showPaySuccess ? (
+                  <SuccessCard message="Pago confirmado y clases asignadas." />
+                ) : (
+                  <div className="ios-glass-card" style={{ background: 'var(--surface)', border: 'none', padding: '22px' }}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={labelStyle}>Alumna</label>
+                      <select style={{ ...inputStyle, WebkitAppearance: 'none' }}>
+                        <option value="">Seleccionar alumna...</option>
+                        {alumnas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={labelStyle}>Membresía</label>
+                      <select style={{ ...inputStyle, WebkitAppearance: 'none' }}>
+                        <option value="fit">Plan FIT — 20 clases ($1,200)</option>
+                        <option value="premium">Plan Premium — 30 clases ($1,800)</option>
+                      </select>
+                    </div>
+                    <div style={{ marginBottom: '22px' }}>
+                      <label style={labelStyle}>Método</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                        {['efectivo', 'tarjeta', 'transferencia'].map(m => (
+                          <div key={m} onClick={() => setSelectedPayMethod(m)} style={{ 
+                            padding: '12px 8px', textAlign: 'center', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem',
+                            background: selectedPayMethod === m ? 'var(--primary)' : 'var(--surface-lowest)',
+                            color: selectedPayMethod === m ? 'white' : 'var(--on-surface-variant)',
+                            border: selectedPayMethod === m ? '1px solid var(--primary)' : '1px solid rgba(55,61,59,0.08)'
+                          }}>{m.toUpperCase()}</div>
+                        ))}
+                      </div>
+                    </div>
+                    <button onClick={handlePago} style={{ width: '100%', padding: '15px', borderRadius: '14px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '0.95rem' }}>
+                      Confirmar Transacción
+                    </button>
+                  </div>
+                )}
+              </section>
+            </div>
           )}
 
           {/* ============ TAB: NUTRICION ============ */}
@@ -353,6 +354,53 @@ function Admin() {
             </section>
           )}
 
+          {/* ============ TAB: REPORTES (Métricas de Negocio) PREMIUM ============ */}
+          {activeTab === 'reportes' && (
+            <section>
+              <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', marginBottom: '20px', color: 'var(--black)' }}>Resumen Financiero</h2>
+              
+              <div style={{ background: 'linear-gradient(135deg, #2C302E, #1A1C1E)', padding: '25px', borderRadius: '24px', marginBottom: '20px', boxShadow: '0 15px 35px rgba(0,0,0,0.15)' }}>
+                 <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '5px' }}>Ingresos Brutos (Mes)</div>
+                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '15px' }}>
+                    <div style={{ fontSize: '2.8rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)', lineHeight: 1 }}>$42,850</div>
+                    <div style={{ background: 'rgba(34,197,94,0.2)', color: '#4ADE80', padding: '4px 8px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800 }}>+15%</div>
+                 </div>
+                 <div style={{ height: '60px', display: 'flex', alignItems: 'flex-end', gap: '6px' }}>
+                   {[30, 45, 60, 40, 70, 85, 100].map((h, i) => (
+                     <div key={i} style={{ flex: 1, height: `${h}%`, background: i === 6 ? 'var(--accent)' : 'rgba(255,255,255,0.1)', borderRadius: '4px' }} />
+                   ))}
+                 </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                <div style={{ padding: '20px', background: 'white', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Retención</div>
+                      <TrendingUp size={16} color="var(--primary)" />
+                   </div>
+                   <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>92<span style={{ fontSize: '1rem', color: 'var(--on-surface-variant)' }}>%</span></div>
+                </div>
+                <div style={{ padding: '20px', background: 'white', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Ticket Prom.</div>
+                      <DollarSign size={16} color="var(--primary)" />
+                   </div>
+                   <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}><span style={{ fontSize: '1rem', color: 'var(--on-surface-variant)' }}>$</span>850</div>
+                </div>
+              </div>
+
+              <div style={{ padding: '20px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.15)', borderRadius: '20px' }}>
+                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                    <div style={{ background: '#22C55E', color: 'white', padding: '10px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(34,197,94,0.3)' }}><Activity size={20}/></div>
+                    <div>
+                       <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#166534', marginBottom: '2px' }}>Crecimiento Acelerado</div>
+                       <div style={{ fontSize: '0.8rem', color: '#15803D', fontWeight: 600 }}>La retención ha mejorado un 2% este mes.</div>
+                    </div>
+                 </div>
+              </div>
+            </section>
+          )}
+
         </div>
       </main>
 
@@ -362,9 +410,9 @@ function Admin() {
           <Calendar size={22} strokeWidth={2.5} />
           <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Clases</span>
         </div>
-        <div className="nav-item" onClick={() => setActiveTab('inscribir')} style={{ opacity: activeTab === 'inscribir' ? 1 : 0.4, color: activeTab === 'inscribir' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
-          <UserPlus size={22} strokeWidth={2.5} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Inscribir</span>
+        <div className="nav-item" onClick={() => setActiveTab('ventas')} style={{ opacity: activeTab === 'ventas' ? 1 : 0.4, color: activeTab === 'ventas' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+          <DollarSign size={22} strokeWidth={2.5} />
+          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Ventas</span>
         </div>
         
         {/* FAB CENTRAL ESTILO LUXURY */}
@@ -374,9 +422,9 @@ function Admin() {
           </div>
         </div>
 
-        <div className="nav-item" onClick={() => setActiveTab('pagos')} style={{ opacity: activeTab === 'pagos' ? 1 : 0.4, color: activeTab === 'pagos' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
-          <CreditCard size={22} strokeWidth={2.5} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Cobros</span>
+        <div className="nav-item" onClick={() => setActiveTab('reportes')} style={{ opacity: activeTab === 'reportes' ? 1 : 0.4, color: activeTab === 'reportes' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+          <BarChart3 size={22} strokeWidth={2.5} />
+          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Reportes</span>
         </div>
         <div className="nav-item" onClick={() => setActiveTab('nutricion')} style={{ opacity: activeTab === 'nutricion' ? 1 : 0.4, color: activeTab === 'nutricion' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
           <Utensils size={22} strokeWidth={2.5} />
