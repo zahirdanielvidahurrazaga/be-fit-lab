@@ -374,7 +374,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{ 
       user, role, plan, membershipStatus, loading, 
       classesRemaining, myReservations, globalClasses, recipes,
-      login, register, logout, forceCleanSession,
+      login, logout, forceCleanSession,
       bookClass, cancelClass, checkInClient, updateClassSpots,
       activatePlan, addClass, deleteClass, addRecipe, deleteRecipe
     }}>
