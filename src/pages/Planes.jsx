@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase';
 
 function Planes() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUserData } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -20,16 +20,19 @@ function Planes() {
     
     // Simula el tiempo de procesamiento de Stripe (2 segundos)
     setTimeout(async () => {
-      // Si el usuario ya tiene sesión iniciada, actualizamos su plan en BD y lo mandamos a su portal
       if (user) {
+        // Actualizar plan en la BD
         await supabase.from('profiles').update({ 
           plan: selectedPlan.title, 
           classes_remaining: selectedPlan.title.includes('FIT') ? 20 : (selectedPlan.title.includes('Premium') ? 30 : 15) 
         }).eq('id', user.id);
         
+        // Refrescar el estado del AuthContext con datos frescos de la BD (patrón Santuario)
+        await refreshUserData();
+        
         setIsProcessing(false);
         setSelectedPlan(null);
-        window.location.href = '/portal'; // Fuerza recarga para que AuthContext obtenga los nuevos datos
+        navigate('/portal');
       } else {
         const planToPass = selectedPlan;
         setIsProcessing(false);

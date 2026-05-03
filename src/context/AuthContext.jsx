@@ -259,9 +259,17 @@ export const AuthProvider = ({ children }) => {
     return await supabase.auth.signInWithPassword({ email, password });
   };
 
+  // Función para refrescar datos del usuario desde la BD (usada después de comprar un plan)
+  const refreshUserData = async () => {
+    if (user) {
+      await fetchUserData(user);
+    }
+  };
+
   const logout = async () => {
     setUser(null);
     setRole(null);
+    setPlan(null);
     setGlobalClasses([]);
     setMyReservations([]);
     await supabase.auth.signOut();
@@ -269,7 +277,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ 
-      user, role, plan, loading, login, logout, 
+      user, role, plan, loading, login, logout, refreshUserData,
       classesRemaining, myReservations, globalClasses, 
       bookClass, cancelClass, updateClassSpots, checkInClient 
     }}>
