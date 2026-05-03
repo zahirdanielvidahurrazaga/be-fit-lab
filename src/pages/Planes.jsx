@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase';
 
 function Planes() {
   const navigate = useNavigate();
-  const { user, refreshUserData } = useAuth();
+  const { user, activatePlan } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState(1); // 1 = form, 2 = success
@@ -23,11 +23,9 @@ function Planes() {
     // Simula el tiempo de procesamiento de Stripe (2 segundos)
     setTimeout(async () => {
       if (user) {
-        await supabase.from('profiles').update({ 
-          plan: selectedPlan.title, 
-          classes_remaining: selectedPlan.title.includes('FIT') ? 20 : (selectedPlan.title.includes('Premium') ? 30 : 15) 
-        }).eq('id', user.id);
-        await refreshUserData();
+        const classCount = selectedPlan.title.includes('FIT') ? 20 : (selectedPlan.title.includes('Premium') ? 30 : 15);
+        // activatePlan actualiza el estado local DE INMEDIATO + persiste en BD
+        await activatePlan(selectedPlan.title, classCount);
       }
       setIsProcessing(false);
       setCheckoutStep(2); // Mostrar pantalla de éxito

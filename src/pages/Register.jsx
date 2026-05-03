@@ -13,6 +13,7 @@ function Register() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { activatePlan } = useAuth();
   const purchasedPlan = location.state?.purchasedPlan;
 
   const handleSubmit = async (e) => {
@@ -54,13 +55,13 @@ function Register() {
       setLoading(false);
     } else {
       if (purchasedPlan && data.user) {
-        // El usuario compró un plan antes de registrarse, asignar plan a su perfil recién creado.
-        // Damos un pequeño tiempo para asegurar que el trigger de BD ya creó su fila en profiles
+        // El usuario compró un plan antes de registrarse
+        // Esperar a que el trigger cree el perfil, luego activar plan via contexto
         setTimeout(async () => {
           const classes = purchasedPlan.title.includes('FIT') ? 20 : (purchasedPlan.title.includes('Premium') ? 30 : 15);
-          await supabase.from('profiles').update({ plan: purchasedPlan.title, classes_remaining: classes }).eq('id', data.user.id);
-          window.location.href = '/portal';
-        }, 500);
+          await activatePlan(purchasedPlan.title, classes);
+          navigate('/portal');
+        }, 1000);
       } else {
         // Registro normal (sin pago previo), enviar a landing
         navigate('/', { state: { registered: true } });

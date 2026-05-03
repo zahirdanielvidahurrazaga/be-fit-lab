@@ -259,10 +259,30 @@ export const AuthProvider = ({ children }) => {
     return await supabase.auth.signInWithPassword({ email, password });
   };
 
-  // Función para refrescar datos del usuario desde la BD (usada después de comprar un plan)
+  // Función para refrescar datos del usuario desde la BD
   const refreshUserData = async () => {
     if (user) {
       await fetchUserData(user);
+    }
+  };
+
+  // Activar plan: actualiza estado local INMEDIATAMENTE + intenta persistir en BD
+  // Patrón Santuario: la UI se actualiza sin depender de que la BD responda
+  const activatePlan = async (planTitle, classCount) => {
+    // 1. Actualizar estado local de inmediato (la UI cambia al instante)
+    setPlan(planTitle);
+    setClassesRemaining(classCount);
+
+    // 2. Intentar persistir en la BD (si falla, al menos la sesión actual funciona)
+    if (user) {
+      const { error } = await supabase.from('profiles').update({ 
+        plan: planTitle, 
+        classes_remaining: classCount 
+      }).eq('id', user.id);
+      
+      if (error) {
+        console.error('Error guardando plan en BD:', error);
+      }
     }
   };
 
@@ -277,7 +297,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ 
-      user, role, plan, loading, login, logout, refreshUserData,
+      user, role, plan, loading, login, logout, refreshUserData, activatePlan,
       classesRemaining, myReservations, globalClasses, 
       bookClass, cancelClass, updateClassSpots, checkInClient 
     }}>
