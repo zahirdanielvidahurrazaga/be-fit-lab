@@ -4,13 +4,14 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 2. Crear tablas principales
-CREATE TABLE IF NOT EXISTS public.profiles (
+CREATE TABLE IF NOT EXISTS public.users (
   id uuid references auth.users on delete cascade primary key,
   email text,
   full_name text,
-  plan text default 'none',
+  role text default 'CLIENT', -- 'CLIENT', 'COACH', 'ADMIN'
+  membership_status text default 'INACTIVE', -- 'ACTIVE', 'INACTIVE'
+  membership_plan text, -- Nombre del plan
   classes_remaining integer default 0,
-  role text default 'client', -- 'client', 'coach', 'admin'
   created_at timestamp with time zone default timezone('utc'::text, now())
 );
 
@@ -28,7 +29,7 @@ CREATE TABLE IF NOT EXISTS public.classes (
 
 CREATE TABLE IF NOT EXISTS public.reservations (
   id uuid default gen_random_uuid() primary key,
-  user_id uuid references public.profiles(id) on delete cascade not null,
+  user_id uuid references public.users(id) on delete cascade not null,
   class_id uuid references public.classes(id) on delete cascade not null,
   status text default 'confirmed',
   created_at timestamp with time zone default timezone('utc'::text, now()),
@@ -36,16 +37,16 @@ CREATE TABLE IF NOT EXISTS public.reservations (
 );
 
 -- 3. Habilitar RLS (Row Level Security) para proteger los datos
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.classes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reservations ENABLE ROW LEVEL SECURITY;
 
 -- 4. Políticas de Seguridad (Policies)
 
--- PROFILES
+-- USERS
 -- Los usuarios solo pueden ver y editar su propio perfil
-CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Users can view own profile" ON public.users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
 
 -- CLASSES
 -- Cualquier usuario autenticado (o anónimo si la app es pública) puede ver las clases
@@ -77,7 +78,7 @@ BEGIN
 
   -- 2. Bloquear y verificar el saldo de la alumna
   SELECT classes_remaining INTO v_classes_remaining 
-  FROM public.profiles 
+  FROM public.users
   WHERE id = auth.uid() FOR UPDATE;
 
   IF v_classes_remaining <= 0 THEN
@@ -86,7 +87,7 @@ BEGIN
 
   -- 3. Procesar la transacción
   UPDATE public.classes SET spots = spots - 1 WHERE id = p_class_id;
-  UPDATE public.profiles SET classes_remaining = classes_remaining - 1 WHERE id = auth.uid();
+  UPDATE public.users SET classes_remaining = classes_remaining - 1 WHERE id = auth.uid();
   INSERT INTO public.reservations (user_id, class_id) VALUES (auth.uid(), p_class_id);
 
   RETURN true;
@@ -100,13 +101,14 @@ $$;
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, full_name, role, plan, classes_remaining)
+  INSERT INTO public.users (id, email, full_name, role, membership_status, membership_plan, classes_remaining)
   VALUES (
     new.id, 
     new.email, 
     new.raw_user_meta_data->>'full_name', 
-    'client', 
-    'none', 
+    'CLIENT', 
+    'INACTIVE',
+    NULL,
     0
   );
   RETURN new;
@@ -121,7 +123,7 @@ CREATE TRIGGER on_auth_user_created
 
 -- 3. [Opcional pero Recomendado] Arreglar los usuarios que ya creaste durante tus pruebas
 -- Esto insertará un perfil en blanco para cualquier usuario que te haya dado error hoy.
-INSERT INTO public.profiles (id, email, role, plan, classes_remaining)
-SELECT id, email, 'client', 'none', 0
+INSERT INTO public.users (id, email, role, membership_status, classes_remaining)
+SELECT id, email, 'CLIENT', 'INACTIVE', 0
 FROM auth.users
-WHERE id NOT IN (SELECT id FROM public.profiles);
+WHERE id NOT IN (SELECT id FROM public.users);

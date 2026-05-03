@@ -39,15 +39,15 @@ export const AuthProvider = ({ children }) => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         const { data: profileData } = await supabase
-          .from('profiles')
-          .select('role, classes_remaining, plan, membership_status')
+          .from('users')
+          .select('role, classes_remaining, membership_plan, membership_status')
           .eq('id', session.user.id)
           .single();
 
         setUser(session.user);
         if (profileData) {
           setRole((profileData.role || 'CLIENT').toUpperCase());
-          setPlan(profileData.plan);
+          setPlan(profileData.membership_plan);
           setMembershipStatus(profileData.membership_status || 'INACTIVE');
           setClassesRemaining(profileData.classes_remaining || 0);
         } else {
@@ -120,14 +120,14 @@ export const AuthProvider = ({ children }) => {
     try {
       // 1. Obtener rol y clases restantes
       const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .select('role, classes_remaining, plan, membership_status')
+        .from('users')
+        .select('role, classes_remaining, membership_plan, membership_status')
         .eq('id', currentUser.id)
         .single();
         
       if (userData) {
         setRole((userData.role || 'CLIENT').toUpperCase());
-        setPlan(userData.plan);
+        setPlan(userData.membership_plan);
         setMembershipStatus(userData.membership_status || 'INACTIVE');
         setClassesRemaining(userData.classes_remaining || 0);
       } else {
@@ -194,7 +194,7 @@ export const AuthProvider = ({ children }) => {
         if (resError) throw resError;
 
         await supabase.from('classes').update({ spots: classObj.spots - 1 }).eq('id', classObj.id);
-        await supabase.from('profiles').update({ classes_remaining: classesRemaining - 1 }).eq('id', user.id);
+        await supabase.from('users').update({ classes_remaining: classesRemaining - 1 }).eq('id', user.id);
 
         return true;
       } catch (err) {
@@ -233,7 +233,7 @@ export const AuthProvider = ({ children }) => {
       if (classObj) {
         await supabase.from('classes').update({ spots: classObj.spots + 1 }).eq('id', classId);
       }
-      await supabase.from('profiles').update({ classes_remaining: classesRemaining + 1 }).eq('id', user.id);
+      await supabase.from('users').update({ classes_remaining: classesRemaining + 1 }).eq('id', user.id);
 
     } catch (err) {
       console.error("Error cancelando reserva:", err);
@@ -294,8 +294,8 @@ export const AuthProvider = ({ children }) => {
 
     // 2. Intentar persistir en la BD
     if (user) {
-      const { error } = await supabase.from('profiles').update({ 
-        plan: planTitle, 
+      const { error } = await supabase.from('users').update({ 
+        membership_plan: planTitle, 
         membership_status: 'ACTIVE',
         classes_remaining: classCount 
       }).eq('id', user.id);
