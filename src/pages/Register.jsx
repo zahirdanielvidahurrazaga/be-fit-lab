@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { User, Mail, Lock, ArrowRight, ChevronLeft, CheckCircle2 } from 'lucide-react';
@@ -12,6 +12,8 @@ function Register() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const purchasedPlan = location.state?.purchasedPlan;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -51,8 +53,18 @@ function Register() {
       setError(error.message);
       setLoading(false);
     } else {
-      // Redirigir a la landing page con un indicador de éxito
-      navigate('/', { state: { registered: true } });
+      if (purchasedPlan && data.user) {
+        // El usuario compró un plan antes de registrarse, asignar plan a su perfil recién creado.
+        // Damos un pequeño tiempo para asegurar que el trigger de BD ya creó su fila en profiles
+        setTimeout(async () => {
+          const classes = purchasedPlan.title.includes('FIT') ? 20 : (purchasedPlan.title.includes('Premium') ? 30 : 15);
+          await supabase.from('profiles').update({ plan: purchasedPlan.title, classes_remaining: classes }).eq('id', data.user.id);
+          window.location.href = '/portal';
+        }, 500);
+      } else {
+        // Registro normal (sin pago previo), enviar a landing
+        navigate('/', { state: { registered: true } });
+      }
     }
   };
 
@@ -93,8 +105,19 @@ function Register() {
           
           {/* FORMULARIO DE REGISTRO */}
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.2rem', color: '#1A1C1E', marginBottom: '0.5rem' }}>Crea tu Cuenta</h1>
-            <p style={{ color: '#4B5563', fontWeight: 500 }}>El primer paso hacia tu transformación.</p>
+            {purchasedPlan ? (
+               <>
+                 <div style={{ display: 'inline-block', padding: '6px 12px', background: 'rgba(238,186,137,0.2)', color: 'var(--accent)', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '10px' }}>
+                   Pago Exitoso
+                 </div>
+                 <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: '#1A1C1E', marginBottom: '0.5rem', lineHeight: 1.1 }}>Crea tu cuenta para disfrutar tu {purchasedPlan.title}</h1>
+               </>
+            ) : (
+               <>
+                 <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.2rem', color: '#1A1C1E', marginBottom: '0.5rem' }}>Crea tu Cuenta</h1>
+                 <p style={{ color: '#4B5563', fontWeight: 500 }}>El primer paso hacia tu transformación.</p>
+               </>
+            )}
           </div>
 
           {error && (

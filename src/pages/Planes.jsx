@@ -31,9 +31,10 @@ function Planes() {
         setSelectedPlan(null);
         window.location.href = '/portal'; // Fuerza recarga para que AuthContext obtenga los nuevos datos
       } else {
+        const planToPass = selectedPlan;
         setIsProcessing(false);
         setSelectedPlan(null);
-        navigate('/registro');
+        navigate('/registro', { state: { purchasedPlan: planToPass } });
       }
     }, 2000);
   };
