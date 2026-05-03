@@ -14,20 +14,58 @@ export const AuthProvider = ({ children }) => {
   const [globalClasses, setGlobalClasses] = useState([]);
   const [myReservations, setMyReservations] = useState([]);
 
+  // Función para limpiar sesión fantasma por completo
+  const forceCleanSession = async () => {
+    try { await supabase.auth.signOut(); } catch(e) {}
+    // Limpiar manualmente tokens de Supabase del localStorage
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-')) localStorage.removeItem(key);
+    });
+    setUser(null);
+    setRole(null);
+    setPlan(null);
+    setClassesRemaining(0);
+    setMyReservations([]);
+    setLoading(false);
+  };
+
   useEffect(() => {
     // Verificar sesión activa inicial
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        // Verificar que el usuario no haya sido borrado de la base de datos (sesión fantasma)
-        const { data: { user: verifiedUser }, error } = await supabase.auth.getUser();
-        if (error || !verifiedUser) {
-          await supabase.auth.signOut();
-          setUser(null);
-          setLoading(false);
+        // Verificar que el perfil exista en la BD (mismo patrón de Santuario)
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('role, classes_remaining, plan')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError || !profileData) {
+          // El usuario fue borrado de la BD o nunca tuvo perfil → limpiar todo
+          console.warn('Sesión fantasma detectada. Limpiando...');
+          await forceCleanSession();
           return;
         }
+
         setUser(session.user);
-        fetchUserData(session.user);
+        setRole(profileData.role);
+        setPlan(profileData.plan);
+        setClassesRemaining(profileData.classes_remaining || 0);
+
+        // Cargar reservas
+        const { data: resData } = await supabase
+          .from('reservations')
+          .select('*, classes(*)')
+          .eq('user_id', session.user.id);
+        if (resData) {
+          setMyReservations(resData.map(r => ({
+            id: r.id, classId: r.class_id,
+            title: r.classes?.title, time: r.classes?.time,
+            instructor: r.classes?.instructor, color: r.classes?.color,
+            checkedIn: r.checked_in
+          })));
+        }
+        setLoading(false);
       } else {
         setLoading(false);
       }
@@ -40,6 +78,7 @@ export const AuthProvider = ({ children }) => {
         fetchUserData(session.user);
       } else {
         setRole(null);
+        setPlan(null);
         setUser(null);
         setGlobalClasses([]);
         setMyReservations([]);
