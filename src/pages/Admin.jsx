@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LogOut, Users, Activity, QrCode, UserPlus, CreditCard, CheckCircle2, Plus, Minus, Calendar, BarChart3, Phone, Mail, TrendingUp, DollarSign, PieChart } from 'lucide-react';
+import { LogOut, Users, Activity, QrCode, UserPlus, CreditCard, CheckCircle2, Plus, Minus, Calendar, BarChart3, Phone, Mail, TrendingUp, DollarSign, PieChart, Utensils } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
