@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { Users, Calendar as CalendarIcon, Clock, LogOut, ChevronRight, ClipboardList, X, CheckCircle2, Mail, Phone, ChevronLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function Coach() {
-  const { user, logout, globalClasses, myReservations } = useAuth();
+  const { user, logout, globalClasses, myReservations, allUsers } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('agenda'); // agenda, directorio
   const [selectedClass, setSelectedClass] = useState(null);
@@ -16,16 +17,16 @@ function Coach() {
 
   const todayClasses = globalClasses.filter(c => c.day === new Date().getDate());
 
-  // Mock de directorio de alumnas
-  const alumnas = [
-    { id: 1, name: "María López", plan: "Premium", classes: 8, phone: "2221234567", email: "maria@correo.com", status: "active" },
-    { id: 2, name: "Ana García", plan: "FIT", classes: 5, phone: "2229876543", email: "ana@correo.com", status: "active" },
-    { id: 3, name: "Sofía Ramírez", plan: "Básico", classes: 2, phone: "2225554433", email: "sofia@correo.com", status: "active" },
-    { id: 4, name: "Valentina Torres", plan: "Premium", classes: 12, phone: "2228887766", email: "vale@correo.com", status: "active" },
-    { id: 5, name: "Isabella Ruiz", plan: "FIT", classes: 0, phone: "2221112233", email: "isa@correo.com", status: "inactive" },
-    { id: 6, name: "Camila Herrera", plan: "Premium", classes: 6, phone: "2224445566", email: "cami@correo.com", status: "active" },
-    { id: 7, name: "Luciana Morales", plan: "Básico", classes: 3, phone: "2227778899", email: "lu@correo.com", status: "active" },
-  ];
+  // Alumnas reales de DB
+  const alumnas = allUsers.map(u => ({
+    id: u.id,
+    name: u.full_name || u.email.split('@')[0],
+    plan: u.membership_plan || 'Sin Plan',
+    classes: u.classes_remaining || 0,
+    phone: u.phone || 'N/A',
+    email: u.email,
+    status: u.membership_status?.toLowerCase() || 'inactive'
+  }));
 
   return (
     <div className="mobile-app-container">
@@ -57,7 +58,7 @@ function Coach() {
             <div style={{ padding: '20px', background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
               <div style={{ color: 'var(--primary)', marginBottom: '12px', background: 'rgba(255,145,77,0.1)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={20} /></div>
               <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>
-                {todayClasses.reduce((acc, c) => acc + (10 - c.spots), 0)}
+                {todayClasses.reduce((acc, c) => acc + ((c.max_spots || 10) - c.spots), 0)}
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, marginTop: '5px' }}>Alumnas Hoy</div>
             </div>
@@ -72,10 +73,11 @@ function Coach() {
         </div>
 
         <div className="dashboard-content">
-          
+          <AnimatePresence mode="wait">
           {/* ======= TAB: AGENDA ======= */}
           {activeTab === 'agenda' && (
-            <section>
+            <motion.div key="agenda" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
+              <section>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                 <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Agenda del Día</h2>
               </div>
@@ -91,7 +93,7 @@ function Coach() {
                       <ClassCoachRow 
                         title={c.title} 
                         time={c.time} 
-                        occupancy={`${10 - c.spots}/10`} 
+                        occupancy={`${(c.max_spots || 10) - c.spots}/${c.max_spots || 10}`} 
                         status={c.spots === 0 ? "full" : "active"} 
                       />
                     </div>
@@ -103,11 +105,13 @@ function Coach() {
                 )}
               </div>
             </section>
+            </motion.div>
           )}
 
           {/* ======= TAB: DIRECTORIO PREMIUM ======= */}
           {activeTab === 'directorio' && (
-            <section>
+            <motion.div key="directorio" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
+              <section>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '20px' }}>
                 <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, fontFamily: 'var(--font-display)' }}>Directorio de Alumnas</h2>
                 <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 800, background: 'rgba(255,145,77,0.1)', padding: '4px 10px', borderRadius: '12px' }}>{alumnas.length} ACTIVAS</span>
@@ -168,8 +172,9 @@ function Coach() {
                 ))}
               </div>
             </section>
+            </motion.div>
           )}
-
+          </AnimatePresence>
         </div>
       </main>
 
@@ -197,7 +202,7 @@ function Coach() {
               <div style={{ padding: '14px', background: 'rgba(255,145,77,0.06)', borderRadius: '14px' }}>
                 <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '5px' }}>Ocupación</div>
                 <div style={{ fontSize: '1rem', fontWeight: 700, color: selectedClass.spots === 0 ? '#FF4D4D' : 'var(--primary)' }}>
-                  {10 - selectedClass.spots}/10
+                  {(selectedClass.max_spots || 10) - selectedClass.spots}/{(selectedClass.max_spots || 10)}
                 </div>
               </div>
               <div style={{ padding: '14px', background: 'rgba(255,145,77,0.06)', borderRadius: '14px' }}>
@@ -214,7 +219,7 @@ function Coach() {
                 Alumnas Inscritas
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {['María López', 'Ana García', 'Valentina Torres'].slice(0, 10 - selectedClass.spots > 3 ? 3 : 10 - selectedClass.spots).map((name, i) => (
+                {['María López', 'Ana García', 'Valentina Torres'].slice(0, ((selectedClass.max_spots || 10) - selectedClass.spots) > 3 ? 3 : ((selectedClass.max_spots || 10) - selectedClass.spots)).map((name, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: 'rgba(55,61,59,0.03)', borderRadius: '12px' }}>
                     <div style={{ 
                       width: '30px', height: '30px', borderRadius: '50%', 
@@ -228,9 +233,9 @@ function Coach() {
                     <CheckCircle2 size={14} color="#22C55E" style={{ marginLeft: 'auto' }} />
                   </div>
                 ))}
-                {(10 - selectedClass.spots) > 3 && (
+                {((selectedClass.max_spots || 10) - selectedClass.spots) > 3 && (
                   <div style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', textAlign: 'center', padding: '8px', fontStyle: 'italic' }}>
-                    +{(10 - selectedClass.spots) - 3} alumnas más
+                    +{((selectedClass.max_spots || 10) - selectedClass.spots) - 3} alumnas más
                   </div>
                 )}
               </div>

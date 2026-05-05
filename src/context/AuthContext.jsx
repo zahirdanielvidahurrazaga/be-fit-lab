@@ -15,6 +15,7 @@ export const AuthProvider = ({ children }) => {
   const [globalClasses, setGlobalClasses] = useState([]);
   const [recipes, setRecipes] = useState([]);
   const [myReservations, setMyReservations] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
 
   // Flag para evitar que onAuthStateChange sobreescriba un plan recién activado
   const planJustActivatedRef = useRef(false);
@@ -72,9 +73,26 @@ export const AuthProvider = ({ children }) => {
     // Cargar datos globales
     fetchGlobalClasses();
     fetchRecipes();
+    fetchAllUsers();
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchAllUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'CLIENT')
+        .order('full_name', { ascending: true });
+        
+      if (data) {
+        setAllUsers(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchGlobalClasses = async () => {
     try {
@@ -303,22 +321,39 @@ export const AuthProvider = ({ children }) => {
   };
 
   const checkInClient = async (qrData) => {
-    if (!user) return { success: false, message: "No autenticado" };
-    // MOCK: En un sistema real el QR traería el reservation_id o user_id.
-    // Por ahora simulamos que marca TODAS las reservas de HOY como asistidas.
-    if (myReservations.length > 0) {
-      setMyReservations(prev => prev.map(res => 
-        res.checkedIn === false ? { ...res, checkedIn: true } : res
-      ));
-      
-      // Update DB (marcando la primera reserva activa que encontremos)
-      const resToUpdate = myReservations.find(r => !r.checkedIn);
-      if (resToUpdate) {
-         await supabase.from('reservations').update({ checked_in: true }).eq('user_id', user.id).eq('class_id', resToUpdate.classId);
+    if (!qrData) return { success: false, message: "Código QR inválido." };
+
+    try {
+      // Obtener reservas pendientes del usuario escaneado
+      const { data: resData, error: resError } = await supabase
+        .from('reservations')
+        .select('*')
+        .eq('user_id', qrData)
+        .eq('checked_in', false);
+
+      if (resError) throw resError;
+
+      if (resData && resData.length > 0) {
+        // Marcar la primera reserva pendiente como asistida
+        const resToUpdate = resData[0];
+        const { error: updateError } = await supabase
+          .from('reservations')
+          .update({ checked_in: true })
+          .eq('id', resToUpdate.id);
+          
+        if (updateError) throw updateError;
+        
+        // Obtener nombre para mensaje personalizado
+        const userObj = allUsers.find(u => u.id === qrData);
+        const name = userObj ? (userObj.full_name || userObj.email.split('@')[0]) : 'Socia';
+
+        return { success: true, message: `Asistencia de ${name} registrada.` };
       }
-      return { success: true, message: "Asistencia registrada correctamente." };
+      return { success: false, message: "Sin reservas pendientes." };
+    } catch (err) {
+      console.error("Error al registrar asistencia:", err);
+      return { success: false, message: "Error en la base de datos." };
     }
-    return { success: false, message: "El usuario no tiene reservas pendientes." };
   };
 
   const login = async (email, password) => {
@@ -367,14 +402,15 @@ export const AuthProvider = ({ children }) => {
     setPlan(null);
     setGlobalClasses([]);
     setMyReservations([]);
+    setAllUsers([]);
     await supabase.auth.signOut();
   };
 
   return (
     <AuthContext.Provider value={{ 
       user, role, plan, membershipStatus, loading, 
-      classesRemaining, myReservations, globalClasses, recipes,
-      login, logout, forceCleanSession,
+      classesRemaining, myReservations, globalClasses, recipes, allUsers,
+      login, logout, forceCleanSession, fetchAllUsers,
       bookClass, cancelClass, checkInClient, updateClassSpots,
       activatePlan, addClass, deleteClass, addRecipe, deleteRecipe
     }}>

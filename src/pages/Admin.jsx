@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { LogOut, Users, Activity, QrCode, UserPlus, CreditCard, CheckCircle2, Plus, Minus, Calendar, BarChart3, Phone, Mail, TrendingUp, DollarSign, PieChart, Utensils } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function Admin() {
-  const { user, logout, globalClasses, recipes, updateClassSpots, checkInClient, addClass, deleteClass, addRecipe, deleteRecipe } = useAuth();
+  const { user, logout, globalClasses, recipes, updateClassSpots, checkInClient, addClass, deleteClass, addRecipe, deleteRecipe, allUsers, activatePlan } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('mostrador');
   
@@ -26,26 +27,31 @@ function Admin() {
 
   // Formularios de Creación
   const [showAddClass, setShowAddClass] = useState(false);
-  const [newClass, setNewClass] = useState({ title: '', time: '', day: 1, instructor: '', spots: 10 });
+  const [newClass, setNewClass] = useState({ title: '', time: '', day: 1, instructor: '', spots: 10, max_spots: 10 });
   
   const [showAddRecipe, setShowAddRecipe] = useState(false);
   const [newRecipe, setNewRecipe] = useState({ title: '', time: 'Desayuno', kcal: '', time_prep: '', img: '', ingredients: '', steps: '' });
 
   const handleLogout = () => { logout(); navigate('/'); };
 
-  const todayClasses = globalClasses.filter(c => c.day === new Date().getDate());
-  const totalAlumnasHoy = todayClasses.reduce((acc, c) => acc + (10 - c.spots), 0);
-  const avgOccupancy = todayClasses.length > 0 ? Math.round((totalAlumnasHoy / (todayClasses.length * 10)) * 100) : 0;
+  const todayClasses = globalClasses.filter(c => c.day === new Date().getDate() || c.day === new Date().getDay()); // Mejor manejo de dia, pero asume day 1-7
+  const totalAlumnasHoy = todayClasses.reduce((acc, c) => acc + ((c.max_spots || 10) - c.spots), 0);
+  const totalMaxSpots = todayClasses.reduce((acc, c) => acc + (c.max_spots || 10), 0);
+  const avgOccupancy = totalMaxSpots > 0 ? Math.round((totalAlumnasHoy / totalMaxSpots) * 100) : 0;
 
-  // Mock alumnas
-  const alumnas = [
-    { id: 1, name: "María López", plan: "Premium", classes: 8, phone: "2221234567", email: "maria@correo.com" },
-    { id: 2, name: "Ana García", plan: "FIT", classes: 5, phone: "2229876543", email: "ana@correo.com" },
-    { id: 3, name: "Sofía Ramírez", plan: "Básico", classes: 2, phone: "2225554433", email: "sofia@correo.com" },
-    { id: 4, name: "Valentina Torres", plan: "Premium", classes: 12, phone: "2228887766", email: "vale@correo.com" },
-    { id: 5, name: "Isabella Ruiz", plan: "FIT", classes: 0, phone: "2221112233", email: "isa@correo.com" },
-    { id: 6, name: "Camila Herrera", plan: "Premium", classes: 6, phone: "2224445566", email: "cami@correo.com" },
-  ];
+  // Alumnas reales de DB
+  const alumnas = allUsers.map(u => ({
+    id: u.id,
+    name: u.full_name || u.email.split('@')[0],
+    plan: u.membership_plan || 'Sin Plan',
+    classes: u.classes_remaining || 0,
+    phone: u.phone || 'N/A',
+    email: u.email,
+    status: u.membership_status?.toLowerCase() || 'inactive'
+  }));
+
+  const [selectedAlumnaId, setSelectedAlumnaId] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState('fit');
 
   useEffect(() => {
     if (activeTab === 'mostrador' && qrInputRef.current) {
@@ -75,16 +81,25 @@ function Admin() {
     }
   };
 
-  const handlePago = () => {
+  const handlePago = async () => {
+    if (!selectedAlumnaId) return;
+    
+    // Simular integración de pagos guardando en BD (por simplificar asume que activatePlan actualiza BD)
+    const planDetails = selectedPlan === 'fit' ? { title: 'Plan FIT', classes: 20 } : { title: 'Plan Premium', classes: 30 };
+    await activatePlan(planDetails.title, planDetails.classes, selectedAlumnaId);
+    
     setShowPaySuccess(true);
-    setTimeout(() => setShowPaySuccess(false), 2500);
+    setTimeout(() => {
+      setShowPaySuccess(false);
+      setSelectedAlumnaId('');
+    }, 2500);
   };
 
   const handleCreateClass = async (e) => {
     e.preventDefault();
-    await addClass({ ...newClass, day: parseInt(newClass.day), spots: parseInt(newClass.spots) });
+    await addClass({ ...newClass, day: parseInt(newClass.day), spots: parseInt(newClass.spots), max_spots: parseInt(newClass.spots) });
     setShowAddClass(false);
-    setNewClass({ title: '', time: '', day: 1, instructor: '', spots: 10 });
+    setNewClass({ title: '', time: '', day: 1, instructor: '', spots: 10, max_spots: 10 });
   };
 
   const handleCreateRecipe = async (e) => {
@@ -116,10 +131,10 @@ function Admin() {
 
       <main className="dashboard-main">
         <div className="dashboard-sidebar">
-
+          <AnimatePresence mode="wait">
           {/* ============ TAB: MOSTRADOR (QR + métricas rápidas) ============ */}
           {activeTab === 'mostrador' && (
-            <>
+            <motion.div key="mostrador" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
               {/* LECTOR QR PREMIUM */}
               <section>
                 <div className="wallet-card" style={{ 
@@ -169,12 +184,13 @@ function Admin() {
                   <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, marginTop: '5px' }}>Ocupación Prom.</div>
                 </div>
               </section>
-            </>
+            </motion.div>
           )}
 
           {/* ============ TAB: CLASES (Antes Cupos) ============ */}
           {activeTab === 'clases' && (
-            <section>
+            <motion.div key="clases" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
+              <section>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                 <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', margin: 0 }}>Gestión de Clases</h2>
                 <button onClick={() => setShowAddClass(!showAddClass)} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '8px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -227,11 +243,12 @@ function Admin() {
                 )}
               </div>
             </section>
+            </motion.div>
           )}
 
           {/* ============ TAB: VENTAS (Inscribir + Cobros) ============ */}
           {activeTab === 'ventas' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+            <motion.div key="ventas" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}} style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
               {/* SECCIÓN INSCRIBIR */}
               <section>
                 <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', marginBottom: '20px' }}>Inscripción Directa</h2>
@@ -267,14 +284,14 @@ function Admin() {
                   <div className="ios-glass-card" style={{ background: 'var(--surface)', border: 'none', padding: '22px' }}>
                     <div style={{ marginBottom: '16px' }}>
                       <label style={labelStyle}>Alumna</label>
-                      <select style={{ ...inputStyle, WebkitAppearance: 'none' }}>
+                      <select value={selectedAlumnaId} onChange={(e)=>setSelectedAlumnaId(e.target.value)} style={{ ...inputStyle, WebkitAppearance: 'none' }}>
                         <option value="">Seleccionar alumna...</option>
-                        {alumnas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                        {alumnas.map(a => <option key={a.id} value={a.id}>{a.name} ({a.email})</option>)}
                       </select>
                     </div>
                     <div style={{ marginBottom: '16px' }}>
                       <label style={labelStyle}>Membresía</label>
-                      <select style={{ ...inputStyle, WebkitAppearance: 'none' }}>
+                      <select value={selectedPlan} onChange={(e)=>setSelectedPlan(e.target.value)} style={{ ...inputStyle, WebkitAppearance: 'none' }}>
                         <option value="fit">Plan FIT — 20 clases ($1,200)</option>
                         <option value="premium">Plan Premium — 30 clases ($1,800)</option>
                       </select>
@@ -298,12 +315,13 @@ function Admin() {
                   </div>
                 )}
               </section>
-            </div>
+            </motion.div>
           )}
 
           {/* ============ TAB: NUTRICION ============ */}
           {activeTab === 'nutricion' && (
-            <section>
+            <motion.div key="nutricion" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
+              <section>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                 <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', margin: 0 }}>Gestión de Nutrición</h2>
                 <button onClick={() => setShowAddRecipe(!showAddRecipe)} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '8px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
@@ -352,11 +370,13 @@ function Admin() {
                 )}
               </div>
             </section>
+            </motion.div>
           )}
 
           {/* ============ TAB: REPORTES (Métricas de Negocio) PREMIUM ============ */}
           {activeTab === 'reportes' && (
-            <section>
+            <motion.div key="reportes" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
+              <section>
               <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', marginBottom: '20px', color: 'var(--black)' }}>Resumen Financiero</h2>
               
               <div style={{ background: 'linear-gradient(135deg, #2C302E, #1A1C1E)', padding: '25px', borderRadius: '24px', marginBottom: '20px', boxShadow: '0 15px 35px rgba(0,0,0,0.15)' }}>
@@ -399,8 +419,9 @@ function Admin() {
                  </div>
               </div>
             </section>
+            </motion.div>
           )}
-
+          </AnimatePresence>
         </div>
       </main>
 

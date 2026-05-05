@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowRight, Flame, Heart, PlayCircle, Smartphone, Menu, X, Calendar, TrendingUp, Utensils, CheckCircle2 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { motion } from 'framer-motion';
 
 function Landing() {
   const navigate = useNavigate();
@@ -160,7 +161,13 @@ function Landing() {
           borderRadius: '50%', zIndex: -1, opacity: 0.5
         }} />
 
-        <div className="animate-fade-up hero-text-container" style={{ maxWidth: '850px' }}>
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="hero-text-container" 
+          style={{ maxWidth: '850px' }}
+        >
           <div className="badge-peach" style={{ background: 'var(--surface-lowest)' }}>
             {user ? `¡Hola de nuevo, ${user.email.split('@')[0]}!` : 'Fuerza • Crecimiento • Conciencia'}
           </div>
@@ -228,7 +235,7 @@ function Landing() {
               Mujeres ya transformando <br/> su cuerpo con BEFIT LAB.
             </p>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* Nuestras Disciplinas */}
@@ -258,7 +265,13 @@ function Landing() {
       
       {/* 1. Agenda Info */}
       <section id="agenda-info" style={{ padding: '8rem 5%', background: 'white', overflow: 'hidden' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: '4rem', alignItems: 'center' }}>
+        <motion.div 
+          initial={{ opacity: 0, x: -40 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+          style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: '4rem', alignItems: 'center' }}
+        >
           <div style={{ flex: '1 1 500px' }}>
             <div className="badge-peach" style={{marginBottom: '1.5rem'}}><Calendar size={16} /> Horarios y Reservas</div>
             <h2 style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>Tu tiempo, tus reglas.</h2>
@@ -279,12 +292,18 @@ function Landing() {
           <div style={{ flex: '1 1 400px', position: 'relative' }}>
              <div style={{ width: '100%', height: '500px', background: 'url("/assets/agenda_lifestyle.png")', backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '30px', boxShadow: '0 30px 60px rgba(0,0,0,0.15)' }}></div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* 2. Mi Evolución Info */}
       <section id="evolucion-info" style={{ padding: '8rem 5%', background: '#FAF9F6' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap-reverse', gap: '4rem', alignItems: 'center' }}>
+        <motion.div 
+          initial={{ opacity: 0, x: 40 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+          style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap-reverse', gap: '4rem', alignItems: 'center' }}
+        >
           <div style={{ flex: '1 1 400px' }}>
              <div style={{ width: '100%', height: '500px', background: 'url("/assets/evolucion_lifestyle.png")', backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '30px', boxShadow: '0 30px 60px rgba(0,0,0,0.15)' }}></div>
           </div>
@@ -305,12 +324,18 @@ function Landing() {
               </li>
             </ul>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* 3. Nutrición Info */}
       <section id="nutricion-info" style={{ padding: '8rem 5%', background: 'white' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
+        <motion.div 
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+          style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}
+        >
           <div className="badge-peach" style={{margin: '0 auto 1.5rem'}}><Utensils size={16} /> Nutrición Consciente</div>
           <h2 style={{ fontSize: '3.5rem', marginBottom: '2rem' }}>Alimenta tu esfuerzo.</h2>
           <p style={{ fontSize: '1.2rem', color: '#4B5563', maxWidth: '800px', margin: '0 auto 4rem' }}>
@@ -334,7 +359,7 @@ function Landing() {
                <div style={{ width: '100%', height: '500px', background: 'url("/assets/nutricion_lifestyle.png")', backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '30px', boxShadow: '0 30px 60px rgba(0,0,0,0.15)' }}></div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
     </div>
   );

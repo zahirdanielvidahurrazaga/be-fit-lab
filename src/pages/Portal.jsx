@@ -3,6 +3,7 @@ import { Calendar, Utensils, TrendingUp, Play, User, QrCode, ChevronRight, Activ
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
+import { motion } from 'framer-motion';
 
 function Portal() {
   const navigate = useNavigate();
@@ -77,7 +78,7 @@ function Portal() {
         {/* LADO IZQUIERDO: Perfil y Accesos */}
         <div className="dashboard-sidebar">
           {/* MÓDULO QR TIPO BLACK CARD */}
-          <section>
+          <motion.section initial={{opacity:0, x:-20}} animate={{opacity:1, x:0}} transition={{duration:0.4}}>
             <div className="wallet-card" style={{ 
               background: 'linear-gradient(135deg, #2C302E 0%, #1A1C1E 100%)', 
               boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
@@ -118,10 +119,10 @@ function Portal() {
                 </div>
               </div>
             </div>
-          </section>
+          </motion.section>
 
           {/* ACCESOS RÁPIDOS GLASS (Rediseñados) */}
-          <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+          <motion.section initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.4, delay:0.1}} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
             <div className="ios-glass-btn" onClick={() => navigate('/nutricion')} style={{ padding: '20px 15px', background: 'linear-gradient(to bottom right, rgba(255,255,255,0.9), rgba(255,255,255,0.6))', border: '1px solid white', boxShadow: '0 10px 20px rgba(0,0,0,0.03)' }}>
               <div className="icon-wrapper" style={{ color: 'var(--primary)', background: 'rgba(255,145,77,0.1)', width: '45px', height: '45px', marginBottom: '12px' }}>
                 <Utensils size={22} />
@@ -136,13 +137,13 @@ function Portal() {
               <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--black)' }}>Evolución</span>
               <span style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', marginTop: '4px' }}>Tu progreso</span>
             </div>
-          </section>
+          </motion.section>
         </div>
 
         {/* LADO DERECHO: Reservas y Métricas */}
         <div className="dashboard-content">
           {/* METRICAS VITALES */}
-          <section>
+          <motion.section initial={{opacity:0, x:20}} animate={{opacity:1, x:0}} transition={{duration:0.4, delay:0.2}}>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '15px', fontFamily: 'var(--font-display)', letterSpacing: '0.02em' }}>Tu Desempeño</h2>
             <div className="ios-glass-card" style={{ padding: '25px', display: 'flex', justifyContent: 'space-around', background: 'white', border: 'none', boxShadow: '0 15px 35px rgba(0,0,0,0.03)' }}>
                <div style={{ textAlign: 'center' }}>
@@ -157,10 +158,10 @@ function Portal() {
                   <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '5px' }}>Kcal Quemadas</div>
                </div>
             </div>
-          </section>
+          </motion.section>
 
           {/* PRÓXIMAS CLASES */}
-          <section style={{ marginTop: '25px' }}>
+          <motion.section initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.4, delay:0.3}} style={{ marginTop: '25px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '15px' }}>
               <h2 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, fontFamily: 'var(--font-display)', letterSpacing: '0.02em' }}>Mis Reservas</h2>
               <Link to="/agenda" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)', textDecoration: 'none', background: 'rgba(255,145,77,0.1)', padding: '4px 10px', borderRadius: '20px' }}>Ver agenda</Link>
@@ -186,7 +187,7 @@ function Portal() {
                 </div>
               )}
             </div>
-          </section>
+          </motion.section>
         </div>
 
       </main>

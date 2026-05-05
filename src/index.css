@@ -413,6 +413,10 @@ h1, h2, h3, h4, h5 {
   /* HERO: Ajustar para que no se encime */
   .hero-text-container {
     max-width: 100% !important;
+    margin-top: 3rem; /* Espacio extra debajo del nav */
+  }
+  .hero-text-container h1 {
+    font-size: clamp(2.5rem, 8vw, 4rem) !important;
   }
   .hero-buttons {
     flex-direction: column;
@@ -645,7 +649,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .dashboard-main {
-  padding: 0 20px 120px;
+  padding: 0 15px 120px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -664,11 +668,13 @@ h1, h2, h3, h4, h5 {
 }
 
 .ios-header {
-  padding: 40px 20px 20px;
+  padding: 20px 15px 15px;
   position: sticky;
   top: 0;
   z-index: 100;
-  background: linear-gradient(to bottom, rgba(245, 239, 235, 1) 40%, rgba(245, 239, 235, 0));
+  background: rgba(245, 239, 235, 0.95);
+  backdrop-filter: blur(15px);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 
 @media (min-width: 768px) {
