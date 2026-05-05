@@ -1,319 +1,222 @@
-import React, { useState } from 'react';
-import { Users, Calendar as CalendarIcon, Clock, LogOut, ChevronRight, ClipboardList, X, CheckCircle2, Mail, Phone, ChevronLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { LogOut, CheckCircle2, ChevronRight, Users, Activity, QrCode, Calendar, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function Coach() {
-  const { user, logout, globalClasses, myReservations, allUsers } = useAuth();
+  const { user, logout, globalClasses, fetchClassReservations } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('agenda'); // agenda, directorio
+  
+  // Gestión de días
+  const currentDay = new Date().getDay();
+  const [selectedDay, setSelectedDay] = useState(currentDay);
+  
   const [selectedClass, setSelectedClass] = useState(null);
+  const [classAlumnas, setClassAlumnas] = useState([]);
+  const [loadingAlumnas, setLoadingAlumnas] = useState(false);
+  const [activeTab, setActiveTab] = useState('clases'); // 'clases', 'asistencia'
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
+  const handleLogout = () => { logout(); navigate('/'); };
+
+  const daysOfWeek = [
+    { num: 1, label: 'LUN' },
+    { num: 2, label: 'MAR' },
+    { num: 3, label: 'MIE' },
+    { num: 4, label: 'JUE' },
+    { num: 5, label: 'VIE' },
+    { num: 6, label: 'SAB' },
+    { num: 0, label: 'DOM' }
+  ];
+
+  // Filtrar clases del instructor logueado Y del día seleccionado
+  const myClasses = globalClasses.filter(c => {
+    // Si el usuario tiene nombre, buscar en instructor (idealmente debería ser por user_id)
+    const isInstructor = c.instructor.toLowerCase().includes(user?.user_metadata?.full_name?.toLowerCase() || '') || 
+                         c.instructor.toLowerCase() === 'coach' ||
+                         true; // For now showing all to coach for testing, normally filter by instructor ID
+    
+    return isInstructor && c.day_of_week === selectedDay;
+  });
+
+  const totalAlumnasHoy = myClasses.reduce((acc, c) => acc + ((c.max_spots || 10) - c.spots), 0);
+
+  const openClassDetail = async (c) => {
+    setSelectedClass(c);
+    setLoadingAlumnas(true);
+    // Fetch real reservations
+    const reservations = await fetchClassReservations(c.id);
+    setClassAlumnas(reservations);
+    setLoadingAlumnas(false);
   };
 
-  const todayClasses = globalClasses.filter(c => c.day === new Date().getDate());
-
-  // Alumnas reales de DB
-  const alumnas = allUsers.map(u => ({
-    id: u.id,
-    name: u.full_name || u.email.split('@')[0],
-    plan: u.membership_plan || 'Sin Plan',
-    classes: u.classes_remaining || 0,
-    phone: u.phone || 'N/A',
-    email: u.email,
-    status: u.membership_status?.toLowerCase() || 'inactive'
-  }));
+  const handleManualCheckIn = (reservationId) => {
+    setClassAlumnas(prev => prev.map(a => 
+      a.reservationId === reservationId ? { ...a, checkedIn: !a.checkedIn } : a
+    ));
+    // Here we should also update DB: supabase.from('reservations').update({ checked_in: !currentStatus }).eq('id', reservationId)
+    // Se puede agregar una función en AuthContext para esto
+  };
 
   return (
-    <div className="mobile-app-container">
-      {/* HEADER PREMIUM */}
-      <header className="ios-header" style={{ paddingBottom: '15px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+    <div className="mobile-app-container" style={{ background: 'var(--surface-lowest)' }}>
+      {/* HEADER COACH */}
+      <header className="ios-header" style={{ background: 'var(--surface-lowest)', paddingBottom: '10px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Instructor</h1>
-            <p style={{ fontSize: '0.8rem', color: 'var(--primary)', margin: '4px 0 0', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{user?.email?.split('@')[0] || 'Coach'} • COACH</p>
+            <h1 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Coach</h1>
+            <p style={{ fontSize: '0.8rem', color: 'var(--primary)', margin: '4px 0 0', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>INSTRUCTOR PORTAL</p>
           </div>
-          <div 
-            onClick={handleLogout}
-            style={{ 
-              width: '45px', height: '45px', borderRadius: '50%', 
-              background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.05)', cursor: 'pointer',
-              border: '1px solid rgba(0,0,0,0.03)'
-            }}>
+          <div onClick={handleLogout} style={{ width: '45px', height: '45px', borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', cursor: 'pointer', border: '1px solid rgba(0,0,0,0.03)' }}>
             <LogOut size={18} color="var(--primary)" />
           </div>
         </div>
       </header>
 
-      <main className="dashboard-main">
+      <main className="dashboard-main" style={{ paddingBottom: '100px' }}>
         
-        <div className="dashboard-sidebar">
-          {/* MÉTRICAS HOY PREMIUM */}
-          <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-            <div style={{ padding: '20px', background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
-              <div style={{ color: 'var(--primary)', marginBottom: '12px', background: 'rgba(255,145,77,0.1)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={20} /></div>
-              <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>
-                {todayClasses.reduce((acc, c) => acc + ((c.max_spots || 10) - c.spots), 0)}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, marginTop: '5px' }}>Alumnas Hoy</div>
-            </div>
-            <div style={{ padding: '20px', background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
-              <div style={{ color: 'var(--accent)', marginBottom: '12px', background: 'rgba(238,186,137,0.2)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CalendarIcon size={20} /></div>
-              <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>
-                {todayClasses.length}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, marginTop: '5px' }}>Tus Clases</div>
-            </div>
-          </section>
-        </div>
+        {/* TOP METRICS */}
+        <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '25px' }}>
+          <div style={{ padding: '20px', background: 'linear-gradient(135deg, #1A1C1E, #2C302E)', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
+             <div style={{ color: 'var(--accent)', marginBottom: '12px', background: 'rgba(255,145,77,0.15)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={20} /></div>
+             <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{totalAlumnasHoy}</div>
+             <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', fontWeight: 700, marginTop: '5px' }}>Alumnas Hoy</div>
+          </div>
+          <div style={{ padding: '20px', background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
+             <div style={{ color: 'var(--primary)', marginBottom: '12px', background: 'rgba(255,145,77,0.1)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Activity size={20} /></div>
+             <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{myClasses.length}</div>
+             <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, marginTop: '5px' }}>Clases de Hoy</div>
+          </div>
+        </section>
 
-        <div className="dashboard-content">
-          <AnimatePresence mode="wait">
-          {/* ======= TAB: AGENDA ======= */}
-          {activeTab === 'agenda' && (
-            <motion.div key="agenda" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
-              <section>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Agenda del Día</h2>
-              </div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {todayClasses.length > 0 ? (
-                  todayClasses.map(c => (
-                    <div 
-                      key={c.id} 
-                      onClick={() => setSelectedClass(c)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <ClassCoachRow 
-                        title={c.title} 
-                        time={c.time} 
-                        occupancy={`${(c.max_spots || 10) - c.spots}/${c.max_spots || 10}`} 
-                        status={c.spots === 0 ? "full" : "active"} 
-                      />
-                    </div>
-                  ))
-                ) : (
-                  <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.9rem', fontStyle: 'italic', background: 'rgba(55,61,59,0.03)', borderRadius: '16px' }}>
-                    No tienes clases programadas para hoy.
-                  </div>
-                )}
-              </div>
-            </section>
-            </motion.div>
-          )}
+        {/* SELECTOR DE DÍAS */}
+        <section style={{ marginBottom: '20px' }}>
+          <div className="day-selector">
+            {daysOfWeek.map((day) => (
+              <button 
+                key={day.num}
+                className={`day-pill ${selectedDay === day.num ? 'active' : ''}`}
+                onClick={() => setSelectedDay(day.num)}
+              >
+                <span style={{ fontSize: '0.6rem' }}>{day.label}</span>
+              </button>
+            ))}
+          </div>
+        </section>
 
-          {/* ======= TAB: DIRECTORIO PREMIUM ======= */}
-          {activeTab === 'directorio' && (
-            <motion.div key="directorio" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
-              <section>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, fontFamily: 'var(--font-display)' }}>Directorio de Alumnas</h2>
-                <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 800, background: 'rgba(255,145,77,0.1)', padding: '4px 10px', borderRadius: '12px' }}>{alumnas.length} ACTIVAS</span>
-              </div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {alumnas.map(a => (
-                  <div key={a.id} style={{ 
-                    padding: '18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    opacity: a.status === 'inactive' ? 0.5 : 1, background: 'white', borderRadius: '20px',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                      <div style={{ 
-                        width: '48px', height: '48px', borderRadius: '14px', 
-                        background: a.status === 'active' ? 'linear-gradient(135deg, #1A1C1E, #2C302E)' : 'rgba(55,61,59,0.1)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: a.status === 'active' ? 'var(--accent)' : 'var(--on-surface-variant)', 
-                        fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-display)',
-                        boxShadow: a.status === 'active' ? '0 8px 15px rgba(0,0,0,0.15)' : 'none'
-                      }}>
-                        {a.name.split(' ').map(n => n[0]).join('')}
-                      </div>
-                      <div>
-                        <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--black)' }}>{a.name}</h4>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '5px' }}>
-                          <span style={{ 
-                            fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase',
-                            padding: '3px 8px', borderRadius: '6px',
-                            background: a.plan === 'Premium' ? 'rgba(255,145,77,0.1)' : 'rgba(0,0,0,0.05)',
-                            color: a.plan === 'Premium' ? 'var(--primary)' : 'var(--on-surface-variant)'
-                          }}>
-                            {a.plan}
-                          </span>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>
-                            {a.classes} sesiones
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <a href={`tel:${a.phone}`} style={{ 
-                        width: '36px', height: '36px', borderRadius: '12px', 
-                        background: 'rgba(0,122,255,0.08)', display: 'flex', 
-                        alignItems: 'center', justifyContent: 'center', textDecoration: 'none'
-                      }}>
-                        <Phone size={16} color="#007AFF" />
-                      </a>
-                      <a href={`mailto:${a.email}`} style={{ 
-                        width: '36px', height: '36px', borderRadius: '12px', 
-                        background: 'rgba(55,61,59,0.06)', display: 'flex', 
-                        alignItems: 'center', justifyContent: 'center', textDecoration: 'none'
-                      }}>
-                        <Mail size={16} color="var(--on-surface-variant)" />
-                      </a>
-                    </div>
+        {/* LISTA DE CLASES */}
+        <section>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+             <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', margin: 0 }}>Mis Clases</h2>
+             <span style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 700 }}>{daysOfWeek.find(d=>d.num===selectedDay)?.label}</span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            {myClasses.length > 0 ? myClasses.map(c => {
+               const ocupacion = (c.max_spots || 10) - c.spots;
+               const porcentaje = Math.round((ocupacion / (c.max_spots || 10)) * 100);
+               return (
+              <div key={c.id} onClick={() => openClassDetail(c)} className="ios-glass-card" style={{ padding: '20px', background: 'white', display: 'flex', alignItems: 'center', cursor: 'pointer', transition: 'transform 0.2s', border: '1px solid rgba(0,0,0,0.02)' }}>
+                <div style={{ width: '50px', height: '50px', borderRadius: '14px', background: 'var(--surface)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginRight: '15px' }}>
+                   <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'var(--font-display)' }}>{c.time.split(' ')[0]}</span>
+                   <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--on-surface-variant)' }}>{c.time.split(' ')[1] || 'AM'}</span>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontSize: '1.1rem', margin: '0 0 4px 0', fontFamily: 'var(--font-display)' }}>{c.title}</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                     <div style={{ flex: 1, height: '4px', background: 'rgba(0,0,0,0.05)', borderRadius: '2px' }}>
+                        <div style={{ width: `${porcentaje}%`, height: '100%', background: 'var(--primary)', borderRadius: '2px' }}></div>
+                     </div>
+                     <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--on-surface-variant)' }}>{ocupacion}/10</span>
                   </div>
-                ))}
+                </div>
+                <ChevronRight size={20} color="var(--on-surface-variant)" style={{ opacity: 0.5, marginLeft: '10px' }} />
               </div>
-            </section>
-            </motion.div>
-          )}
-          </AnimatePresence>
-        </div>
+            )}) : (
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.9rem', fontStyle: 'italic', background: 'rgba(55,61,59,0.03)', borderRadius: '16px' }}>
+                 No tienes clases programadas para este día.
+              </div>
+            )}
+          </div>
+        </section>
       </main>
 
-      {/* MODAL DETALLE DE CLASE */}
-      {selectedClass && (
-        <div className="modal-overlay" onClick={() => setSelectedClass(null)}>
-          <div className="glass-modal" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'left', maxWidth: '420px' }}>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', margin: 0 }}>{selectedClass.title}</h2>
-              <div onClick={() => setSelectedClass(null)} style={{ cursor: 'pointer', padding: '5px' }}>
-                <X size={20} color="var(--on-surface-variant)" />
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-              <div style={{ padding: '14px', background: 'rgba(255,145,77,0.06)', borderRadius: '14px' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '5px' }}>Horario</div>
-                <div style={{ fontSize: '1rem', fontWeight: 700 }}>{selectedClass.time}</div>
-              </div>
-              <div style={{ padding: '14px', background: 'rgba(255,145,77,0.06)', borderRadius: '14px' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '5px' }}>Nivel</div>
-                <div style={{ fontSize: '1rem', fontWeight: 700 }}>{selectedClass.level}</div>
-              </div>
-              <div style={{ padding: '14px', background: 'rgba(255,145,77,0.06)', borderRadius: '14px' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '5px' }}>Ocupación</div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: selectedClass.spots === 0 ? '#FF4D4D' : 'var(--primary)' }}>
-                  {(selectedClass.max_spots || 10) - selectedClass.spots}/{(selectedClass.max_spots || 10)}
-                </div>
-              </div>
-              <div style={{ padding: '14px', background: 'rgba(255,145,77,0.06)', borderRadius: '14px' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '5px' }}>Disponibles</div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: selectedClass.spots === 0 ? '#FF4D4D' : '#22C55E' }}>
-                  {selectedClass.spots} lugar{selectedClass.spots !== 1 ? 'es' : ''}
-                </div>
-              </div>
-            </div>
-
-            {/* Lista de alumnas inscritas (mock) */}
-            <div style={{ marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
-                Alumnas Inscritas
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {['María López', 'Ana García', 'Valentina Torres'].slice(0, ((selectedClass.max_spots || 10) - selectedClass.spots) > 3 ? 3 : ((selectedClass.max_spots || 10) - selectedClass.spots)).map((name, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: 'rgba(55,61,59,0.03)', borderRadius: '12px' }}>
-                    <div style={{ 
-                      width: '30px', height: '30px', borderRadius: '50%', 
-                      background: 'linear-gradient(135deg, var(--primary), var(--accent))',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: 'white', fontSize: '0.65rem', fontWeight: 700
-                    }}>
-                      {name.split(' ').map(n => n[0]).join('')}
-                    </div>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{name}</span>
-                    <CheckCircle2 size={14} color="#22C55E" style={{ marginLeft: 'auto' }} />
-                  </div>
-                ))}
-                {((selectedClass.max_spots || 10) - selectedClass.spots) > 3 && (
-                  <div style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', textAlign: 'center', padding: '8px', fontStyle: 'italic' }}>
-                    +{((selectedClass.max_spots || 10) - selectedClass.spots) - 3} alumnas más
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <button 
-              onClick={() => setSelectedClass(null)} 
-              style={{ 
-                width: '100%', padding: '14px', borderRadius: '14px', 
-                background: 'var(--primary)', color: 'white', 
-                fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '0.9rem' 
-              }}
-            >
-              Cerrar Detalle
-            </button>
-          </div>
+      {/* BOTTOM NAV */}
+      <nav className="ios-bottom-nav" style={{ padding: '0 30px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
+        <div className="nav-item active">
+          <Calendar size={24} />
         </div>
-      )}
-
-      {/* ====== BOTTOM NAV PREMIUM ====== */}
-      <nav className="ios-bottom-nav" style={{ padding: '0 10px 25px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
-        <div className="nav-item" onClick={() => setActiveTab('agenda')} style={{ opacity: activeTab === 'agenda' ? 1 : 0.4, color: activeTab === 'agenda' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
-          <CalendarIcon size={24} strokeWidth={2.5} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Agenda</span>
+        <div className="nav-item" style={{ opacity: 0.4 }}>
+          <Activity size={24} />
         </div>
-        <div className="nav-item" onClick={() => setActiveTab('directorio')} style={{ opacity: activeTab === 'directorio' ? 1 : 0.4, color: activeTab === 'directorio' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
-          <Users size={24} strokeWidth={2.5} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Alumnas</span>
+        <div className="nav-item" style={{ opacity: 0.4 }}>
+          <Search size={24} />
         </div>
       </nav>
+
+      {/* MODAL DETALLE DE CLASE CON LISTA REAL DE ALUMNAS */}
+      <AnimatePresence>
+        {selectedClass && (
+          <div className="modal-overlay">
+            <motion.div 
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="modal-drawer"
+              style={{ background: 'var(--surface-lowest)', padding: '20px 20px 40px' }}
+            >
+              <div className="modal-close-pill" onClick={() => setSelectedClass(null)}></div>
+              
+              <div style={{ textAlign: 'center', marginBottom: '25px' }}>
+                 <div style={{ display: 'inline-block', padding: '6px 12px', background: 'rgba(255,145,77,0.1)', color: 'var(--primary)', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '10px' }}>{selectedClass.time}</div>
+                 <h2 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0 }}>{selectedClass.title}</h2>
+                 <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.9rem', margin: '5px 0 0' }}>Lista de Asistencia</p>
+              </div>
+
+              <div style={{ background: 'white', borderRadius: '24px', padding: '15px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)' }}>
+                 {loadingAlumnas ? (
+                   <div style={{ padding: '30px', textAlign: 'center', color: 'var(--on-surface-variant)' }}>
+                     Cargando lista de asistencia...
+                   </div>
+                 ) : (
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {classAlumnas.length > 0 ? classAlumnas.map((a, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 10px', borderBottom: i < classAlumnas.length -1 ? '1px solid rgba(0,0,0,0.03)' : 'none' }}>
+                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'var(--primary)' }}>
+                                 {a.name.substring(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                 <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{a.name}</div>
+                                 <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', textTransform: 'uppercase' }}>{a.plan}</div>
+                              </div>
+                           </div>
+                           <button 
+                              onClick={() => handleManualCheckIn(a.reservationId)}
+                              style={{ 
+                                width: '36px', height: '36px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
+                                background: a.checkedIn ? 'rgba(34,197,94,0.1)' : 'var(--surface)',
+                                color: a.checkedIn ? '#22C55E' : 'var(--on-surface-variant)'
+                              }}>
+                              <CheckCircle2 size={20} />
+                           </button>
+                        </div>
+                      )) : (
+                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.85rem' }}>
+                          Aún no hay alumnas inscritas.
+                        </div>
+                      )}
+                   </div>
+                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
-}
-
-function ClassCoachRow({ title, time, occupancy, status }) {
-  const getStatusColor = () => {
-    if (status === 'active') return 'var(--primary)';
-    if (status === 'full') return '#FF4D4D';
-    return 'var(--on-surface-variant)';
-  };
-
-  return (
-    <div style={{ 
-      padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      background: 'white', borderRadius: '20px', boxShadow: '0 8px 20px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)',
-      transition: 'transform 0.2s ease', cursor: 'pointer'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-        <div style={{ 
-          width: '45px', height: '45px', borderRadius: '14px', 
-          background: status === 'full' ? 'rgba(255,77,77,0.1)' : 'rgba(255,145,77,0.1)', 
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          border: status === 'full' ? '1px solid rgba(255,77,77,0.2)' : '1px solid rgba(255,145,77,0.2)'
-        }}>
-          <div style={{ 
-            width: '12px', height: '12px', borderRadius: '50%', 
-            background: getStatusColor(),
-            boxShadow: `0 0 10px ${getStatusColor()}`
-          }}></div>
-        </div>
-        <div>
-          <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--black)' }}>{title}</h4>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '5px' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{time}</span>
-            <span style={{ 
-              fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.05em',
-              padding: '2px 8px', borderRadius: '8px',
-              background: status === 'full' ? 'rgba(255,77,77,0.1)' : 'rgba(0,0,0,0.05)',
-              color: status === 'full' ? '#FF4D4D' : 'var(--on-surface-variant)'
-            }}>
-              {occupancy} LUG.
-            </span>
-          </div>
-        </div>
-      </div>
-      <ChevronRight size={20} color="var(--on-surface-variant)" opacity={0.3} />
-    </div>
-  )
 }
 
 export default Coach;

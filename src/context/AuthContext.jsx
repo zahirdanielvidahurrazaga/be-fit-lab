@@ -42,8 +42,6 @@ export const AuthProvider = ({ children }) => {
       if (session?.user) {
         setUser(session.user);
         await fetchUserData(session.user);
-
-        // fetchUserData ya carga las reservas y maneja el loading state
       } else {
         setLoading(false);
       }
@@ -126,6 +124,63 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ============================================
+  // NUEVA: Obtener alumnas reales inscritas en una clase
+  // ============================================
+  const fetchClassReservations = async (classId) => {
+    try {
+      const { data, error } = await supabase
+        .from('reservations')
+        .select('*, users:user_id(id, full_name, email, phone, membership_plan, classes_remaining, membership_status)')
+        .eq('class_id', classId);
+
+      if (error) {
+        console.error('Error fetching class reservations:', error);
+        return [];
+      }
+
+      if (data) {
+        return data.map(r => ({
+          reservationId: r.id,
+          userId: r.user_id,
+          checkedIn: r.checked_in,
+          name: r.users?.full_name || r.users?.email?.split('@')[0] || 'Sin nombre',
+          email: r.users?.email || '',
+          phone: r.users?.phone || '',
+          plan: r.users?.membership_plan || 'Sin Plan',
+          classesRemaining: r.users?.classes_remaining || 0,
+          status: r.users?.membership_status || 'INACTIVE'
+        }));
+      }
+      return [];
+    } catch (err) {
+      console.error('Error fetching class reservations:', err);
+      return [];
+    }
+  };
+
+  // ============================================
+  // NUEVA: Obtener clases por día de la semana (0-6)
+  // ============================================
+  const fetchClassesByDayOfWeek = async (dayOfWeek) => {
+    try {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('day_of_week', dayOfWeek)
+        .order('time', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching classes by day:', error);
+        return [];
+      }
+      return data || [];
+    } catch (err) {
+      console.error(err);
+      return [];
+    }
+  };
+
+  // ============================================
   // ADMIN CRUD OPERATIONS
   // ============================================
   const addClass = async (classData) => {
@@ -180,7 +235,6 @@ export const AuthProvider = ({ children }) => {
       if (userError && userError.code === 'PGRST116') {
         // La fila no existe (posible error del trigger o usuario antiguo). La creamos ahora mismo.
         console.log("Fila de usuario no encontrada. Creando fila...");
-        // Intentar crear la fila (fallará silenciosamente si RLS no lo permite, pero es mejor intentarlo)
         const newRow = {
           id: currentUser.id,
           email: currentUser.email,
@@ -316,15 +370,57 @@ export const AuthProvider = ({ children }) => {
     setGlobalClasses(prev => prev.map(c => 
       c.id === id ? { ...c, spots: newSpots } : c
     ));
-    // Falta permisos en BD si no es admin, pero asumiendo que lo es:
     await supabase.from('classes').update({ spots: newSpots }).eq('id', id);
   };
 
+  // ============================================
+  // MEJORADO: Check-in con info completa del cliente
+  // ============================================
   const checkInClient = async (qrData) => {
-    if (!qrData) return { success: false, message: "Código QR inválido." };
+    if (!qrData) return { success: false, message: "Código QR inválido.", clientInfo: null };
 
     try {
-      // Obtener reservas pendientes del usuario escaneado
+      // 1. Buscar al usuario escaneado
+      const userObj = allUsers.find(u => u.id === qrData);
+      
+      // Si no lo encontramos en el cache, buscarlo directamente
+      let clientInfo = null;
+      if (userObj) {
+        clientInfo = {
+          id: userObj.id,
+          name: userObj.full_name || userObj.email?.split('@')[0] || 'Sin nombre',
+          email: userObj.email || '',
+          phone: userObj.phone || 'N/A',
+          plan: userObj.membership_plan || 'Sin Plan',
+          classesRemaining: userObj.classes_remaining || 0,
+          status: userObj.membership_status || 'INACTIVE'
+        };
+      } else {
+        // Buscar directo en BD
+        const { data: directUser } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', qrData)
+          .single();
+        
+        if (directUser) {
+          clientInfo = {
+            id: directUser.id,
+            name: directUser.full_name || directUser.email?.split('@')[0] || 'Sin nombre',
+            email: directUser.email || '',
+            phone: directUser.phone || 'N/A',
+            plan: directUser.membership_plan || 'Sin Plan',
+            classesRemaining: directUser.classes_remaining || 0,
+            status: directUser.membership_status || 'INACTIVE'
+          };
+        }
+      }
+
+      if (!clientInfo) {
+        return { success: false, message: "Usuario no encontrado en el sistema.", clientInfo: null };
+      }
+
+      // 2. Obtener reservas pendientes del usuario escaneado
       const { data: resData, error: resError } = await supabase
         .from('reservations')
         .select('*')
@@ -342,17 +438,21 @@ export const AuthProvider = ({ children }) => {
           .eq('id', resToUpdate.id);
           
         if (updateError) throw updateError;
-        
-        // Obtener nombre para mensaje personalizado
-        const userObj = allUsers.find(u => u.id === qrData);
-        const name = userObj ? (userObj.full_name || userObj.email.split('@')[0]) : 'Socia';
 
-        return { success: true, message: `Asistencia de ${name} registrada.` };
+        return { 
+          success: true, 
+          message: `Asistencia de ${clientInfo.name} registrada.`, 
+          clientInfo 
+        };
       }
-      return { success: false, message: "Sin reservas pendientes." };
+      return { 
+        success: false, 
+        message: "Sin reservas pendientes para hoy.", 
+        clientInfo 
+      };
     } catch (err) {
       console.error("Error al registrar asistencia:", err);
-      return { success: false, message: "Error en la base de datos." };
+      return { success: false, message: "Error en la base de datos.", clientInfo: null };
     }
   };
 
@@ -393,6 +493,9 @@ export const AuthProvider = ({ children }) => {
       if (error) {
         console.error('Error guardando plan en BD:', error);
       }
+      
+      // Refrescar lista de usuarios para reflejar el cambio
+      fetchAllUsers();
     }
   };
 
@@ -412,7 +515,8 @@ export const AuthProvider = ({ children }) => {
       classesRemaining, myReservations, globalClasses, recipes, allUsers,
       login, logout, forceCleanSession, fetchAllUsers,
       bookClass, cancelClass, checkInClient, updateClassSpots,
-      activatePlan, addClass, deleteClass, addRecipe, deleteRecipe
+      activatePlan, addClass, deleteClass, addRecipe, deleteRecipe,
+      fetchClassReservations, fetchClassesByDayOfWeek, fetchGlobalClasses
     }}>
       {children}
     </AuthContext.Provider>

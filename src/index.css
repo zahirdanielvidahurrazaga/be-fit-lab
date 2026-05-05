@@ -680,6 +680,7 @@ h1, h2, h3, h4, h5 {
 @media (min-width: 768px) {
   .mobile-app-container {
     max-width: 1200px;
+    margin: 0 auto;
     padding: 0 40px;
   }
   
@@ -694,6 +695,22 @@ h1, h2, h3, h4, h5 {
     padding: 0 0 120px;
     gap: 40px;
   }
+
+  /* Admin: full-width single column layout for desktop */
+  .admin-dashboard-main {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    padding: 0 0 120px;
+    max-width: 100%;
+  }
+  
+  .admin-dashboard-main .admin-content-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    align-items: start;
+  }
   
   .ios-bottom-nav {
     width: auto !important;
@@ -706,6 +723,162 @@ h1, h2, h3, h4, h5 {
     border: 1px solid rgba(255, 255, 255, 0.8) !important;
     height: 80px !important;
   }
+}
+
+/* ===== DAY SELECTOR PILLS ===== */
+.day-selector {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px;
+  background: rgba(55,61,59,0.04);
+  border-radius: 16px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.day-selector::-webkit-scrollbar { display: none; }
+
+.day-pill {
+  flex: 1;
+  min-width: 46px;
+  padding: 10px 6px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: var(--on-surface-variant);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.day-pill .day-number {
+  font-size: 1.1rem;
+  font-weight: 800;
+  font-family: var(--font-display);
+  line-height: 1;
+}
+
+.day-pill.active {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 6px 20px rgba(255,145,77,0.35);
+}
+
+.day-pill:hover:not(.active) {
+  background: rgba(255,145,77,0.1);
+  color: var(--primary);
+}
+
+/* ===== QR CLIENT INFO CARD ===== */
+.qr-client-card {
+  background: linear-gradient(135deg, #1A1C1E, #2C302E);
+  border-radius: 24px;
+  padding: 30px 25px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  animation: scaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.qr-client-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(255,145,77,0.15), transparent 70%);
+  border-radius: 50%;
+}
+
+.qr-client-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 20px rgba(255,145,77,0.3);
+}
+
+.qr-client-name {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-family: var(--font-display);
+  margin-bottom: 4px;
+}
+
+.qr-client-email {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 20px;
+}
+
+.qr-client-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.qr-client-stat {
+  background: rgba(255,255,255,0.08);
+  padding: 14px 10px;
+  border-radius: 14px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.qr-client-stat .stat-value {
+  font-size: 1.3rem;
+  font-weight: 900;
+  font-family: var(--font-display);
+  line-height: 1;
+}
+
+.qr-client-stat .stat-label {
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.status-badge.active {
+  background: rgba(34,197,94,0.15);
+  color: #4ADE80;
+}
+.status-badge.inactive {
+  background: rgba(255,77,77,0.15);
+  color: #FF6B6B;
+}
+
+@keyframes scanLine {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(300px); }
 }
 
 .ios-glass-card {
