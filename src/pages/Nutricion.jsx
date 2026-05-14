@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChefHat, Flame, Clock, User, Calendar, Utensils, TrendingUp, CheckCircle2, Droplets } from 'lucide-react';
+import { ChevronLeft, ChefHat, Flame, Clock, User, Calendar, Utensils, TrendingUp, CheckCircle2, Droplets, Play } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 

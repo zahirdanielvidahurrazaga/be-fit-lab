@@ -112,12 +112,11 @@ function Admin() {
   const handleCreateClass = async (e) => {
     e.preventDefault();
     await addClass({ 
-      ...newClass, 
+      title: newClass.title,
+      time: newClass.time,
+      instructor: newClass.instructor,
       day_of_week: parseInt(newClass.day_of_week), 
-      spots: parseInt(newClass.spots), 
-      max_spots: parseInt(newClass.spots),
-      // Set class_date base logic could be added here if scheduling for specific dates,
-      // For now we rely on day_of_week for the schedule
+      spots: parseInt(newClass.spots)
     });
     setShowAddClass(false);
     setNewClass({ title: '', time: '', day_of_week: selectedDay, instructor: '', spots: 10, max_spots: 10 });

@@ -189,24 +189,24 @@ function Agenda() {
         </div>
       )}
 
-      {/* ====== BOTTOM NAV PREMIUM ====== */}
+      {/* FLOATING BOTTOM NAV TIPO iPHONE */}
       {user && (
-        <nav className="ios-bottom-nav" style={{ padding: '0 10px 25px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
-          <Link to="/portal" className="nav-item" style={{ color: 'var(--on-surface-variant)' }}>
-            <User size={22} strokeWidth={2.5} />
-            <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Portal</span>
+        <nav className="ios-bottom-nav">
+          <Link to="/portal" className="nav-item">
+            <User size={24} strokeWidth={2.5} />
+            <span>Yo</span>
           </Link>
-          <Link to="/evolucion" className="nav-item" style={{ color: 'var(--on-surface-variant)' }}>
-            <TrendingUp size={22} strokeWidth={2.5} />
-            <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Stats</span>
+          <Link to="/evolucion" className="nav-item">
+            <TrendingUp size={24} strokeWidth={2.5} />
+            <span>Metas</span>
           </Link>
-          <Link to="/nutricion" className="nav-item" style={{ color: 'var(--on-surface-variant)' }}>
-            <Utensils size={22} strokeWidth={2.5} />
-            <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Fuel</span>
+          <Link to="/nutricion" className="nav-item">
+            <Utensils size={24} strokeWidth={2.5} />
+            <span>Comida</span>
           </Link>
-          <Link to="/agenda" className="nav-item active" style={{ color: 'var(--primary)' }}>
-            <CalendarIcon size={22} strokeWidth={2.5} />
-            <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Agenda</span>
+          <Link to="/agenda" className="nav-item active">
+            <CalendarIcon size={24} strokeWidth={2.5} />
+            <span>Clases</span>
           </Link>
         </nav>
       )}
