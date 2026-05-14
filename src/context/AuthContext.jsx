@@ -309,16 +309,10 @@ export const AuthProvider = ({ children }) => {
           checkedIn: false 
         }]);
 
-        // DB Updates
-        const { error: resError } = await supabase.from('reservations').insert({
-          user_id: user.id,
-          class_id: classObj.id
-        });
+        // DB Updates via secure RPC
+        const { error: rpcError } = await supabase.rpc('book_class_secure', { p_class_id: classObj.id });
 
-        if (resError) throw resError;
-
-        await supabase.from('classes').update({ spots: classObj.spots - 1 }).eq('id', classObj.id);
-        await supabase.from('users').update({ classes_remaining: classesRemaining - 1 }).eq('id', user.id);
+        if (rpcError) throw rpcError;
 
         return true;
       } catch (err) {
@@ -347,17 +341,10 @@ export const AuthProvider = ({ children }) => {
         ));
       }
 
-      // DB Updates
-      const { error } = await supabase.from('reservations').delete()
-        .eq('user_id', user.id)
-        .eq('class_id', classId);
+      // DB Updates via secure RPC
+      const { error } = await supabase.rpc('cancel_class_secure', { p_class_id: classId });
         
       if (error) throw error;
-
-      if (classObj) {
-        await supabase.from('classes').update({ spots: classObj.spots + 1 }).eq('id', classId);
-      }
-      await supabase.from('users').update({ classes_remaining: classesRemaining + 1 }).eq('id', user.id);
 
     } catch (err) {
       console.error("Error cancelando reserva:", err);

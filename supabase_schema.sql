@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS public.classes (
   id uuid default gen_random_uuid() primary key,
   title text not null,
   time text not null,
-  day integer not null,
+  day_of_week integer not null,
   instructor text,
   level text,
   spots integer default 10,
@@ -58,28 +58,40 @@ ALTER TABLE public.recipes ENABLE ROW LEVEL SECURITY;
 
 -- USERS
 -- Los usuarios solo pueden ver y editar su propio perfil
+DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
 CREATE POLICY "Users can view own profile" ON public.users FOR SELECT USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
 CREATE POLICY "Users can update own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.users;
 CREATE POLICY "Users can insert own profile" ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- CLASSES
 -- Cualquier usuario autenticado (o anónimo si la app es pública) puede ver las clases
+DROP POLICY IF EXISTS "Anyone can view classes" ON public.classes;
 CREATE POLICY "Anyone can view classes" ON public.classes FOR SELECT USING (true);
+
 -- Los administradores pueden gestionar las clases
+DROP POLICY IF EXISTS "Admins can manage classes" ON public.classes;
 CREATE POLICY "Admins can manage classes" ON public.classes FOR ALL USING (
   EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'ADMIN')
 );
 
 -- RECIPES
 -- Cualquiera puede ver las recetas
+DROP POLICY IF EXISTS "Anyone can view recipes" ON public.recipes;
 CREATE POLICY "Anyone can view recipes" ON public.recipes FOR SELECT USING (true);
+
 -- Los administradores pueden gestionar las recetas
+DROP POLICY IF EXISTS "Admins can manage recipes" ON public.recipes;
 CREATE POLICY "Admins can manage recipes" ON public.recipes FOR ALL USING (
   EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'ADMIN')
 );
 
 -- RESERVATIONS
 -- Las alumnas solo pueden ver sus propias reservas
+DROP POLICY IF EXISTS "Users can view own reservations" ON public.reservations;
 CREATE POLICY "Users can view own reservations" ON public.reservations FOR SELECT USING (auth.uid() = user_id);
 
 -- 5. Función de Base de Datos Transaccional (RPC) para reservar de forma segura
@@ -115,6 +127,26 @@ BEGIN
   UPDATE public.classes SET spots = spots - 1 WHERE id = p_class_id;
   UPDATE public.users SET classes_remaining = classes_remaining - 1 WHERE id = auth.uid();
   INSERT INTO public.reservations (user_id, class_id) VALUES (auth.uid(), p_class_id);
+
+  RETURN true;
+END;
+$$;
+
+-- Función de Base de Datos Transaccional (RPC) para cancelar reserva de forma segura
+CREATE OR REPLACE FUNCTION public.cancel_class_secure(p_class_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- 1. Eliminar reserva (si no existe, no hace nada pero no falla)
+  DELETE FROM public.reservations WHERE user_id = auth.uid() AND class_id = p_class_id;
+  
+  -- 2. Devolver cupo a la clase
+  UPDATE public.classes SET spots = spots + 1 WHERE id = p_class_id;
+  
+  -- 3. Devolver sesión a la alumna
+  UPDATE public.users SET classes_remaining = classes_remaining + 1 WHERE id = auth.uid();
 
   RETURN true;
 END;

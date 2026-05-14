@@ -31,10 +31,9 @@ function Coach() {
 
   // Filtrar clases del instructor logueado Y del día seleccionado
   const myClasses = globalClasses.filter(c => {
-    // Si el usuario tiene nombre, buscar en instructor (idealmente debería ser por user_id)
-    const isInstructor = c.instructor.toLowerCase().includes(user?.user_metadata?.full_name?.toLowerCase() || '') || 
-                         c.instructor.toLowerCase() === 'coach' ||
-                         true; // For now showing all to coach for testing, normally filter by instructor ID
+    // Buscar por nombre o por el inicio del correo si no hay nombre completo
+    const coachName = (user?.user_metadata?.full_name || user?.email?.split('@')[0] || '').toLowerCase();
+    const isInstructor = coachName && c.instructor.toLowerCase().includes(coachName);
     
     return isInstructor && c.day_of_week === selectedDay;
   });

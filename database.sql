@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS public.classes (
   id BIGSERIAL PRIMARY KEY,
   title TEXT NOT NULL,
   instructor TEXT NOT NULL,
-  day INTEGER NOT NULL, -- Día del mes (1-31)
+  day_of_week INTEGER NOT NULL, -- Día de la semana (0-6)
   time TEXT NOT NULL,
   level TEXT NOT NULL,
   spots INTEGER NOT NULL DEFAULT 10,
