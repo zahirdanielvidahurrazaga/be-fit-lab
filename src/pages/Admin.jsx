@@ -111,13 +111,27 @@ function Admin() {
 
   const handleCreateClass = async (e) => {
     e.preventDefault();
-    await addClass({ 
+    
+    if (!newClass.title || !newClass.time || !newClass.instructor) {
+      alert("Por favor llena todos los campos (Título, Hora, Instructor).");
+      return;
+    }
+
+    const result = await addClass({ 
       title: newClass.title,
       time: newClass.time,
       instructor: newClass.instructor,
       day_of_week: parseInt(newClass.day_of_week), 
       spots: parseInt(newClass.spots)
     });
+    
+    if (result && !result.success) {
+      alert("Error de Supabase: " + (result.error?.message || JSON.stringify(result.error)));
+      console.error("Error detallado al agregar clase:", result.error);
+      return;
+    }
+
+    alert("Clase creada con éxito!");
     setShowAddClass(false);
     setNewClass({ title: '', time: '', day_of_week: selectedDay, instructor: '', spots: 10, max_spots: 10 });
     fetchGlobalClasses(); // Refresh
