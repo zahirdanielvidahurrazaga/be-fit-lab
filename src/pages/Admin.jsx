@@ -32,7 +32,7 @@ function Admin() {
 
   // Formularios de Creación
   const [showAddClass, setShowAddClass] = useState(false);
-  const [newClass, setNewClass] = useState({ title: '', time: '', day_of_week: currentDay, instructor: '', spots: 10, max_spots: 10 });
+  const [newClass, setNewClass] = useState({ title: '', time: '', day: currentDay, instructor: '', spots: 10, max_spots: 10 });
   
   const [showAddRecipe, setShowAddRecipe] = useState(false);
   const [newRecipe, setNewRecipe] = useState({ title: '', time: 'Desayuno', kcal: '', time_prep: '', img: '', ingredients: '', steps: '' });
@@ -121,7 +121,7 @@ function Admin() {
       title: newClass.title,
       time: newClass.time,
       instructor: newClass.instructor,
-      day_of_week: parseInt(newClass.day_of_week), 
+      day: parseInt(newClass.day), 
       spots: parseInt(newClass.spots)
     });
     
@@ -133,7 +133,7 @@ function Admin() {
 
     alert("Clase creada con éxito!");
     setShowAddClass(false);
-    setNewClass({ title: '', time: '', day_of_week: selectedDay, instructor: '', spots: 10, max_spots: 10 });
+    setNewClass({ title: '', time: '', day: selectedDay, instructor: '', spots: 10, max_spots: 10 });
     fetchGlobalClasses(); // Refresh
   };
 
@@ -313,7 +313,7 @@ function Admin() {
                     <input placeholder="Título (ej. Full Body)" value={newClass.title} onChange={e => setNewClass({...newClass, title: e.target.value})} style={{...inputStyle, marginBottom: '10px'}} />
                     <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
                       <input placeholder="Hora (ej. 07:00 AM)" value={newClass.time} onChange={e => setNewClass({...newClass, time: e.target.value})} style={inputStyle} />
-                      <select value={newClass.day_of_week} onChange={e => setNewClass({...newClass, day_of_week: e.target.value})} style={{...inputStyle, WebkitAppearance: 'none'}}>
+                      <select value={newClass.day} onChange={e => setNewClass({...newClass, day: e.target.value})} style={{...inputStyle, WebkitAppearance: 'none'}}>
                         {daysOfWeek.map(d => (
                           <option key={d.num} value={d.num}>{d.label}</option>
                         ))}

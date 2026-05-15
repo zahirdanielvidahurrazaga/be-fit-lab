@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS public.classes (
   id uuid default gen_random_uuid() primary key,
   title text not null,
   time text not null,
-  day_of_week integer not null,
+  day integer not null,
   instructor text,
   level text,
   spots integer default 10,
