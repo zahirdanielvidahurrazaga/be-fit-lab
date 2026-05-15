@@ -32,7 +32,7 @@ function Admin() {
 
   // Formularios de Creación
   const [showAddClass, setShowAddClass] = useState(false);
-  const [newClass, setNewClass] = useState({ title: '', time: '', day: currentDay, instructor: '', spots: 10, max_spots: 10 });
+  const [newClass, setNewClass] = useState({ title: '', time: '', day: currentDay, instructor: '', spots: 10, level: 'Todos los niveles' });
   
   const [showAddRecipe, setShowAddRecipe] = useState(false);
   const [newRecipe, setNewRecipe] = useState({ title: '', time: 'Desayuno', kcal: '', time_prep: '', img: '', ingredients: '', steps: '' });
@@ -122,7 +122,8 @@ function Admin() {
       time: newClass.time,
       instructor: newClass.instructor,
       day: parseInt(newClass.day), 
-      spots: parseInt(newClass.spots)
+      spots: parseInt(newClass.spots),
+      level: newClass.level
     });
     
     if (result && !result.success) {
@@ -133,7 +134,7 @@ function Admin() {
 
     alert("Clase creada con éxito!");
     setShowAddClass(false);
-    setNewClass({ title: '', time: '', day: selectedDay, instructor: '', spots: 10, max_spots: 10 });
+    setNewClass({ title: '', time: '', day: selectedDay, instructor: '', spots: 10, level: 'Todos los niveles' });
     fetchGlobalClasses(); // Refresh
   };
 
@@ -319,10 +320,16 @@ function Admin() {
                         ))}
                       </select>
                     </div>
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
                       <input placeholder="Instructor" value={newClass.instructor} onChange={e => setNewClass({...newClass, instructor: e.target.value})} style={inputStyle} />
                       <input type="number" placeholder="Cupos" value={newClass.spots} onChange={e => setNewClass({...newClass, spots: e.target.value})} style={inputStyle} />
                     </div>
+                    <select value={newClass.level} onChange={e => setNewClass({...newClass, level: e.target.value})} style={{...inputStyle, marginBottom: '15px', WebkitAppearance: 'none'}}>
+                      <option value="Todos los niveles">Todos los niveles</option>
+                      <option value="Principiante">Principiante</option>
+                      <option value="Intermedio">Intermedio</option>
+                      <option value="Avanzado">Avanzado</option>
+                    </select>
                     <button onClick={handleCreateClass} style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none' }}>Guardar Clase</button>
                   </div>
                 )}
