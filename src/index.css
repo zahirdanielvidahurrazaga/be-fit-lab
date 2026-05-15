@@ -960,9 +960,9 @@ h1, h2, h3, h4, h5 {
   width: calc(100% - 32px);
   max-width: 420px;
   height: 64px;
-  background: rgba(20, 20, 20, 0.85);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  background: rgba(20, 20, 20, 0.45);
+  backdrop-filter: blur(40px) saturate(220%);
+  -webkit-backdrop-filter: blur(40px) saturate(220%);
   display: flex;
   justify-content: space-around;
   align-items: center;

@@ -173,11 +173,51 @@ function Nutricion() {
       {showQR && (
         <>
           <div className="qr-sheet-overlay" onClick={() => setShowQR(false)} />
-          <div className="qr-bottom-sheet">
+          <div className="qr-bottom-sheet" style={{ padding: '12px 24px 20px', background: 'var(--surface)' }}>
             <div className="sheet-handle" />
-            <div className="sheet-credits"><span style={{ fontSize: '1.2rem' }}>⭐</span><span>{classesRemaining} créditos disponibles</span></div>
-            <div className="qr-wrapper"><QRCodeCanvas value={user?.id || 'be-fit-lab-user'} size={192} level="H" style={{ width: '100%', height: 'auto' }} fgColor="#1a1a1a" bgColor="#ffffff" /></div>
-            <div className="sheet-user-info"><div className="user-name">{user?.user_metadata?.full_name || 'Miembro BeFit'}</div><div>{user?.email}</div></div>
+            
+            <div className="wallet-card" style={{ 
+              background: 'linear-gradient(135deg, #2C302E 0%, #1A1C1E 100%)', 
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              position: 'relative', overflow: 'hidden',
+              margin: '0 auto 10px',
+              width: '100%'
+            }}>
+              <div style={{ position: 'absolute', top: 0, left: '-100%', width: '50%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent)', transform: 'skewX(-20deg)' }}></div>
+
+              <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--accent), #D4A373)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1A1C1E', fontFamily: 'var(--font-display)', fontSize: '1.2rem' }}>B</div>
+                  <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--accent)', letterSpacing: '2px' }}>BEFIT LAB</span>
+                </div>
+                <QrCode size={20} color="var(--accent)" opacity={0.8} />
+              </div>
+              
+              <div className="wallet-body" style={{ padding: '25px 20px', textAlign: 'center' }}>
+                <div style={{ background: 'white', padding: '12px', borderRadius: '16px', display: 'inline-block', boxShadow: '0 10px 20px rgba(0,0,0,0.3)' }}>
+                  <QRCodeCanvas 
+                    value={user?.id || 'befit-client-id'} 
+                    size={160}
+                    level={"H"}
+                    includeMargin={false}
+                    fgColor="#1A1C1E"
+                  />
+                </div>
+              </div>
+              
+              <div className="wallet-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px', justifyContent: 'center' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white', fontFamily: 'var(--font-display)' }}>{classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--accent)'}}>sesiones</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="sheet-user-info" style={{ marginTop: '10px' }}>
+              <div className="user-name">{user?.user_metadata?.full_name || 'Miembro BeFit'}</div>
+              <div>{user?.email}</div>
+            </div>
           </div>
         </>
       )}
