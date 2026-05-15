@@ -11,6 +11,7 @@
   --on-primary: #FFFFFF; 
   --accent: #EEBA89; 
   --on-accent: #373D3B;
+  --black: #1A1C1E;
   
   --on-surface: #373D3B; /* Marrón Carbón para texto */
   --on-surface-variant: #5E5343; /* Texto secundario */
@@ -954,26 +955,27 @@ h1, h2, h3, h4, h5 {
 /* ===== INSTAGRAM-STYLE FLOATING PILL NAV ===== */
 .ios-bottom-nav {
   position: fixed;
-  bottom: 16px;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 32px);
-  max-width: 420px;
-  height: 64px;
+  width: calc(100% - 40px);
+  max-width: 500px;
+  height: 68px;
   background: rgba(20, 20, 20, 0.45);
   backdrop-filter: blur(40px) saturate(220%);
   -webkit-backdrop-filter: blur(40px) saturate(220%);
   display: flex;
-  justify-content: space-around;
+  justify-content: space-evenly;
   align-items: center;
-  padding: 0 8px;
-  border-radius: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 12px;
+  border-radius: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   z-index: 2000;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.35),
-    0 2px 8px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: all 0.3s ease;
 }
 
 .ios-bottom-nav .nav-item {
@@ -985,10 +987,11 @@ h1, h2, h3, h4, h5 {
   gap: 2px;
   text-decoration: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 8px 14px;
-  border-radius: 20px;
+  padding: 6px 10px;
+  border-radius: 18px;
   position: relative;
-  min-width: 48px;
+  min-width: 60px;
+  height: 48px;
 }
 
 .ios-bottom-nav .nav-item span {
@@ -1006,26 +1009,26 @@ h1, h2, h3, h4, h5 {
 
 /* QR Center Button */
 .nav-qr-button {
-  width: 52px;
-  height: 52px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
   background: linear-gradient(135deg, #FF914D, #E67A38);
   color: white;
-  border: 3px solid rgba(20, 20, 20, 0.85);
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 
-    0 4px 20px rgba(255, 145, 77, 0.45),
-    0 0 0 2px rgba(255, 145, 77, 0.15);
+    0 6px 20px rgba(255, 145, 77, 0.5),
+    0 0 0 3px rgba(20, 20, 20, 0.3);
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: translateY(-6px);
+  transform: translateY(0);
+  transition: transform 0.2s ease;
   flex-shrink: 0;
 }
 
 .nav-qr-button:active {
-  transform: translateY(-3px) scale(0.95);
+  transform: scale(0.92);
 }
 
 /* ===== QR BOTTOM SHEET ===== */
