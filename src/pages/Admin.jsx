@@ -40,7 +40,7 @@ function Admin() {
   const handleLogout = () => { logout(); navigate('/'); };
 
   // Filtrar clases por el día seleccionado
-  const displayClasses = globalClasses.filter(c => c.day_of_week === selectedDay);
+  const displayClasses = globalClasses.filter(c => c.day === selectedDay);
   
   // Métricas del día seleccionado
   const totalAlumnasHoy = displayClasses.reduce((acc, c) => acc + ((c.max_spots || 10) - c.spots), 0);

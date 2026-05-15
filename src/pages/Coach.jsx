@@ -35,7 +35,7 @@ function Coach() {
     const coachName = (user?.user_metadata?.full_name || user?.email?.split('@')[0] || '').toLowerCase();
     const isInstructor = coachName && c.instructor.toLowerCase().includes(coachName);
     
-    return isInstructor && c.day_of_week === selectedDay;
+    return isInstructor && c.day === selectedDay;
   });
 
   const totalAlumnasHoy = myClasses.reduce((acc, c) => acc + ((c.max_spots || 10) - c.spots), 0);

@@ -166,7 +166,7 @@ export const AuthProvider = ({ children }) => {
       const { data, error } = await supabase
         .from('classes')
         .select('*')
-        .eq('day_of_week', dayOfWeek)
+        .eq('day', dayOfWeek)
         .order('time', { ascending: true });
 
       if (error) {
