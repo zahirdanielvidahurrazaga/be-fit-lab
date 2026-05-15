@@ -6,7 +6,11 @@ import { useAuth } from '../context/AuthContext';
 function Agenda() {
   const navigate = useNavigate();
   const { user, classesRemaining, bookClass, globalClasses } = useAuth();
-  const [selectedDay, setSelectedDay] = useState(12);
+  
+  // Use day-of-week (0=Dom, 1=Lun, ..., 6=Sab) to match DB 'day' column
+  const today = new Date();
+  const [selectedDayOfWeek, setSelectedDayOfWeek] = useState(today.getDay());
+  const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -41,8 +45,9 @@ function Agenda() {
     const d = new Date();
     d.setDate(d.getDate() + i);
     return {
-      day: d.getDate(),
-      name: d.toLocaleDateString('es-MX', { weekday: 'short' }).charAt(0).toUpperCase(),
+      dateNum: d.getDate(),
+      dayOfWeek: d.getDay(), // 0=Dom, 1=Lun ... 6=Sab - matches DB
+      name: d.toLocaleDateString('es-MX', { weekday: 'short' }).toUpperCase().substring(0, 3),
       date: d
     };
   });
@@ -112,22 +117,22 @@ function Agenda() {
           <section>
             <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--on-surface)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '15px' }}>Selecciona una fecha</h2>
             <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px', scrollbarWidth: 'none' }}>
-              {days.map((d) => (
+              {days.map((d, i) => (
                 <button 
-                  key={d.day}
-                  onClick={() => setSelectedDay(d.day)}
+                  key={i}
+                  onClick={() => { setSelectedDayOfWeek(d.dayOfWeek); setSelectedDateIndex(i); }}
                   style={{
                     flex: '0 0 auto', width: '65px', height: '85px', borderRadius: '18px', border: 'none',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    background: selectedDay === d.day ? 'var(--primary)' : 'rgba(255,145,77,0.08)',
-                    color: selectedDay === d.day ? 'white' : 'var(--on-surface-variant)',
+                    background: selectedDateIndex === i ? 'var(--primary)' : 'rgba(255,145,77,0.08)',
+                    color: selectedDateIndex === i ? 'white' : 'var(--on-surface-variant)',
                     cursor: 'pointer', transition: 'all 0.3s ease',
-                    boxShadow: selectedDay === d.day ? '0 10px 20px rgba(55,61,59,0.1)' : 'none',
-                    transform: selectedDay === d.day ? 'scale(1.05)' : 'scale(1)'
+                    boxShadow: selectedDateIndex === i ? '0 10px 20px rgba(55,61,59,0.1)' : 'none',
+                    transform: selectedDateIndex === i ? 'scale(1.05)' : 'scale(1)'
                   }}
                 >
                   <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.1em' }}>{d.name}</span>
-                  <span style={{ fontSize: '1.4rem', fontWeight: 900, fontFamily: 'var(--font-display)' }}>{d.day}</span>
+                  <span style={{ fontSize: '1.4rem', fontWeight: 900, fontFamily: 'var(--font-display)' }}>{d.dateNum}</span>
                 </button>
               ))}
             </div>
@@ -141,8 +146,8 @@ function Agenda() {
               <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--on-surface)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Clases Disponibles</h2>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-               {globalClasses.filter(c => c.day === selectedDay).length > 0 ? (
-                 globalClasses.filter(c => c.day === selectedDay).map(c => (
+               {globalClasses.filter(c => c.day === selectedDayOfWeek).length > 0 ? (
+                 globalClasses.filter(c => c.day === selectedDayOfWeek).map(c => (
                    <ClassItem 
                      key={c.id}
                      classData={c}

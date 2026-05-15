@@ -109,11 +109,18 @@ function Admin() {
     }, 2500);
   };
 
+  // Toast notification state
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 2500);
+  };
+
   const handleCreateClass = async (e) => {
     e.preventDefault();
     
     if (!newClass.title || !newClass.time || !newClass.instructor) {
-      alert("Por favor llena todos los campos (Título, Hora, Instructor).");
+      showToast("Llena todos los campos: Título, Hora e Instructor.", "error");
       return;
     }
 
@@ -127,12 +134,12 @@ function Admin() {
     });
     
     if (result && !result.success) {
-      alert("Error de Supabase: " + (result.error?.message || JSON.stringify(result.error)));
+      showToast("Error: " + (result.error?.message || "No se pudo guardar"), "error");
       console.error("Error detallado al agregar clase:", result.error);
       return;
     }
 
-    alert("Clase creada con éxito!");
+    showToast("¡Clase creada con éxito!");
     setShowAddClass(false);
     setNewClass({ title: '', time: '', day: selectedDay, instructor: '', spots: 10, level: 'Todos los niveles' });
     fetchGlobalClasses(); // Refresh
@@ -571,6 +578,35 @@ function Admin() {
           <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Nutrición</span>
         </div>
       </nav>
+
+      {/* PREMIUM TOAST NOTIFICATION */}
+      {toast.show && (
+        <div style={{
+          position: 'fixed', top: '30px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 9999, animation: 'fadeIn 0.3s ease',
+          display: 'flex', alignItems: 'center', gap: '12px',
+          padding: '16px 24px', borderRadius: '16px',
+          background: toast.type === 'error' 
+            ? 'linear-gradient(135deg, #FF4D4D, #FF6B6B)' 
+            : 'linear-gradient(135deg, #22C55E, #4ADE80)',
+          color: 'white', fontWeight: 700, fontSize: '0.9rem',
+          boxShadow: toast.type === 'error' 
+            ? '0 15px 40px rgba(255,77,77,0.35)' 
+            : '0 15px 40px rgba(34,197,94,0.35)',
+          backdropFilter: 'blur(20px)',
+          fontFamily: 'var(--font-body)',
+          minWidth: '280px', maxWidth: '90vw',
+        }}>
+          <div style={{ 
+            width: '32px', height: '32px', borderRadius: '50%', 
+            background: 'rgba(255,255,255,0.25)', display: 'flex', 
+            alignItems: 'center', justifyContent: 'center', flexShrink: 0 
+          }}>
+            <CheckCircle2 size={18} />
+          </div>
+          <span>{toast.message}</span>
+        </div>
+      )}
     </div>
   );
 }
