@@ -551,31 +551,28 @@ function Admin() {
         </div>
       </main>
 
-      {/* ====== BOTTOM NAV PREMIUM ====== */}
-      <nav className="ios-bottom-nav" style={{ padding: '0 10px 25px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
-        <div className="nav-item" onClick={() => setActiveTab('clases')} style={{ opacity: activeTab === 'clases' ? 1 : 0.4, color: activeTab === 'clases' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+      {/* ====== BOTTOM NAV PREMIUM — INSTAGRAM STYLE ====== */}
+      <nav className="ios-bottom-nav">
+        <div onClick={() => setActiveTab('clases')} className={`nav-item ${activeTab === 'clases' ? 'active' : ''}`}>
           <Calendar size={22} strokeWidth={2.5} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Clases</span>
+          <span>Clases</span>
         </div>
-        <div className="nav-item" onClick={() => setActiveTab('ventas')} style={{ opacity: activeTab === 'ventas' ? 1 : 0.4, color: activeTab === 'ventas' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+        <div onClick={() => setActiveTab('ventas')} className={`nav-item ${activeTab === 'ventas' ? 'active' : ''}`}>
           <DollarSign size={22} strokeWidth={2.5} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Ventas</span>
+          <span>Ventas</span>
         </div>
         
-        {/* FAB CENTRAL ESTILO LUXURY */}
-        <div className="nav-item" onClick={() => setActiveTab('mostrador')} style={{ position: 'relative', top: '-20px', opacity: 1 }}>
-          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(135deg, #1A1C1E, #2C302E)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', color: 'var(--accent)', border: '4px solid white' }}>
-            <QrCode size={26} />
-          </div>
-        </div>
+        <button className="nav-qr-button" onClick={() => setActiveTab('mostrador')}>
+          <QrCode size={24} strokeWidth={2.5} />
+        </button>
 
-        <div className="nav-item" onClick={() => setActiveTab('reportes')} style={{ opacity: activeTab === 'reportes' ? 1 : 0.4, color: activeTab === 'reportes' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+        <div onClick={() => setActiveTab('reportes')} className={`nav-item ${activeTab === 'reportes' ? 'active' : ''}`}>
           <BarChart3 size={22} strokeWidth={2.5} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Reportes</span>
+          <span>Reportes</span>
         </div>
-        <div className="nav-item" onClick={() => setActiveTab('nutricion')} style={{ opacity: activeTab === 'nutricion' ? 1 : 0.4, color: activeTab === 'nutricion' ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+        <div onClick={() => setActiveTab('nutricion')} className={`nav-item ${activeTab === 'nutricion' ? 'active' : ''}`}>
           <Utensils size={22} strokeWidth={2.5} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Nutrición</span>
+          <span>Nutrición</span>
         </div>
       </nav>
 

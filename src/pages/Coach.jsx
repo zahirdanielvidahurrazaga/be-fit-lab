@@ -140,16 +140,19 @@ function Coach() {
         </section>
       </main>
 
-      {/* BOTTOM NAV */}
-      <nav className="ios-bottom-nav" style={{ padding: '0 30px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
+      {/* ====== BOTTOM NAV PREMIUM — INSTAGRAM STYLE ====== */}
+      <nav className="ios-bottom-nav">
         <div className="nav-item active">
-          <Calendar size={24} />
+          <Calendar size={22} strokeWidth={2.5} />
+          <span>Agenda</span>
         </div>
-        <div className="nav-item" style={{ opacity: 0.4 }}>
-          <Activity size={24} />
+        <div className="nav-item">
+          <Activity size={22} strokeWidth={2.5} />
+          <span>Estatus</span>
         </div>
-        <div className="nav-item" style={{ opacity: 0.4 }}>
-          <Search size={24} />
+        <div className="nav-item">
+          <Search size={22} strokeWidth={2.5} />
+          <span>Buscar</span>
         </div>
       </nav>
 

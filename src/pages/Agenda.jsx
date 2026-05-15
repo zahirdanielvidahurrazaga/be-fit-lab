@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Calendar as CalendarIcon, Clock, ChevronRight, User, TrendingUp, Play, Utensils, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Calendar as CalendarIcon, Clock, ChevronRight, User, TrendingUp, Play, Utensils, CheckCircle2, QrCode } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { QRCodeCanvas } from 'qrcode.react';
 
 function Agenda() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ function Agenda() {
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showQR, setShowQR] = useState(false);
 
   const handleReserveClick = (classObj) => {
     if (!user) {
@@ -194,23 +196,54 @@ function Agenda() {
         </div>
       )}
 
-      {/* FLOATING BOTTOM NAV TIPO iPHONE */}
+      {/* QR BOTTOM SHEET */}
+      {showQR && (
+        <>
+          <div className="qr-sheet-overlay" onClick={() => setShowQR(false)} />
+          <div className="qr-bottom-sheet">
+            <div className="sheet-handle" />
+            <div className="sheet-credits">
+              <span style={{ fontSize: '1.2rem' }}>⭐</span>
+              <span>{classesRemaining} créditos disponibles</span>
+            </div>
+            <div className="qr-wrapper">
+              <QRCodeCanvas 
+                value={user?.id || 'be-fit-lab-user'}
+                size={192}
+                level="H"
+                style={{ width: '100%', height: 'auto' }}
+                fgColor="#1a1a1a"
+                bgColor="#ffffff"
+              />
+            </div>
+            <div className="sheet-user-info">
+              <div className="user-name">{user?.user_metadata?.full_name || 'Miembro BeFit'}</div>
+              <div>{user?.email}</div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* FLOATING BOTTOM NAV — INSTAGRAM STYLE */}
       {user && (
         <nav className="ios-bottom-nav">
           <Link to="/portal" className="nav-item">
-            <User size={24} strokeWidth={2.5} />
+            <User size={22} strokeWidth={2.5} />
             <span>Yo</span>
           </Link>
           <Link to="/evolucion" className="nav-item">
-            <TrendingUp size={24} strokeWidth={2.5} />
+            <TrendingUp size={22} strokeWidth={2.5} />
             <span>Metas</span>
           </Link>
+          <button className="nav-qr-button" onClick={() => setShowQR(true)}>
+            <QrCode size={24} strokeWidth={2.5} />
+          </button>
           <Link to="/nutricion" className="nav-item">
-            <Utensils size={24} strokeWidth={2.5} />
+            <Utensils size={22} strokeWidth={2.5} />
             <span>Comida</span>
           </Link>
           <Link to="/agenda" className="nav-item active">
-            <CalendarIcon size={24} strokeWidth={2.5} />
+            <CalendarIcon size={22} strokeWidth={2.5} />
             <span>Clases</span>
           </Link>
         </nav>

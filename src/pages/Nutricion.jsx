@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChefHat, Flame, Clock, User, Calendar, Utensils, TrendingUp, CheckCircle2, Droplets, Play } from 'lucide-react';
+import { ChevronLeft, ChefHat, Flame, Clock, User, Calendar, Utensils, TrendingUp, CheckCircle2, Droplets, Play, QrCode } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { QRCodeCanvas } from 'qrcode.react';
 
 function Nutricion() {
   const navigate = useNavigate();
-  const { user, recipes } = useAuth();
+  const { user, recipes, classesRemaining } = useAuth();
   const [showRecipe, setShowRecipe] = useState(false);
   const [recipeData, setRecipeData] = useState(null);
+  const [showQR, setShowQR] = useState(false);
 
   const handleMealClick = (meal) => {
     setRecipeData(meal);
@@ -168,24 +170,23 @@ function Nutricion() {
         </div>
       )}
 
-      {/* FLOATING BOTTOM NAV TIPO iPHONE */}
+      {showQR && (
+        <>
+          <div className="qr-sheet-overlay" onClick={() => setShowQR(false)} />
+          <div className="qr-bottom-sheet">
+            <div className="sheet-handle" />
+            <div className="sheet-credits"><span style={{ fontSize: '1.2rem' }}>⭐</span><span>{classesRemaining} créditos disponibles</span></div>
+            <div className="qr-wrapper"><QRCodeCanvas value={user?.id || 'be-fit-lab-user'} size={192} level="H" style={{ width: '100%', height: 'auto' }} fgColor="#1a1a1a" bgColor="#ffffff" /></div>
+            <div className="sheet-user-info"><div className="user-name">{user?.user_metadata?.full_name || 'Miembro BeFit'}</div><div>{user?.email}</div></div>
+          </div>
+        </>
+      )}
       <nav className="ios-bottom-nav">
-        <Link to="/portal" className="nav-item">
-          <User size={24} strokeWidth={2.5} />
-          <span>Yo</span>
-        </Link>
-        <Link to="/evolucion" className="nav-item">
-          <TrendingUp size={24} strokeWidth={2.5} />
-          <span>Metas</span>
-        </Link>
-        <Link to="/nutricion" className="nav-item active">
-          <Utensils size={24} strokeWidth={2.5} />
-          <span>Comida</span>
-        </Link>
-        <Link to="/agenda" className="nav-item">
-          <Calendar size={24} strokeWidth={2.5} />
-          <span>Clases</span>
-        </Link>
+        <Link to="/portal" className="nav-item"><User size={22} strokeWidth={2.5} /><span>Yo</span></Link>
+        <Link to="/evolucion" className="nav-item"><TrendingUp size={22} strokeWidth={2.5} /><span>Metas</span></Link>
+        <button className="nav-qr-button" onClick={() => setShowQR(true)}><QrCode size={24} strokeWidth={2.5} /></button>
+        <Link to="/nutricion" className="nav-item active"><Utensils size={22} strokeWidth={2.5} /><span>Comida</span></Link>
+        <Link to="/agenda" className="nav-item"><Calendar size={22} strokeWidth={2.5} /><span>Clases</span></Link>
       </nav>
     </div>
   );
