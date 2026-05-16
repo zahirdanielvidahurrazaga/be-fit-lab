@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Camera, Mail, Phone, Shield, Clock, ChevronRight, Check, AlertCircle, Utensils, TrendingUp, CalendarDays, QrCode, Home } from 'lucide-react';
+import { User, Camera, Mail, Phone, Shield, Clock, ChevronRight, ChevronLeft, Check, AlertCircle, Utensils, TrendingUp, CalendarDays, QrCode, Home } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 
 function MiCuenta() {
   const navigate = useNavigate();
-  const { user, plan, classesRemaining, membershipStatus, myReservations } = useAuth();
+  const { user, plan, classesRemaining, membershipStatus, myReservations, refreshUserData } = useAuth();
   const isScrolled = useScrollDetect(30);
 
   // Form state
@@ -74,6 +74,7 @@ function MiCuenta() {
       setError('Error al guardar. Intenta de nuevo.');
     } else {
       setSaved(true);
+      if (refreshUserData) await refreshUserData();
       setTimeout(() => setSaved(false), 3000);
     }
     setSaving(false);
@@ -126,18 +127,18 @@ function MiCuenta() {
   return (
     <div className="mobile-app-container" style={{ background: 'var(--app-bg)' }}>
       {/* HEADER UNIFICADO */}
-      <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent' }}>
+      <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent', maxWidth: '600px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div 
-              onClick={() => navigate('/portal')}
+              onClick={() => navigate(-1)}
               style={{ 
                 width: '36px', height: '36px', borderRadius: '50%', 
                 background: 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer'
               }}
             >
-              <Home size={18} color="var(--primary)" />
+              <ChevronLeft size={20} color="var(--primary)" />
             </div>
             <div>
               <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>Mi perfil</p>
@@ -153,8 +154,8 @@ function MiCuenta() {
         </div>
       </header>
 
-      <main className="dashboard-main">
-        <div className="dashboard-sidebar">
+      <main className="dashboard-main" style={{ display: 'block', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
+        <div className="dashboard-sidebar" style={{ width: '100%' }}>
 
           {/* AVATAR */}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
@@ -399,30 +400,7 @@ function MiCuenta() {
         </div>
       </main>
 
-      {/* BOTTOM NAV */}
-      {user && (
-        <nav className={`ios-bottom-nav ${isScrolled ? 'scrolled' : ''}`}>
-          <Link to="/portal" className="nav-item">
-            <Home size={22} strokeWidth={2.5} />
-            <span>Yo</span>
-          </Link>
-          <Link to="/evolucion" className="nav-item">
-            <TrendingUp size={22} strokeWidth={2.5} />
-            <span>Metas</span>
-          </Link>
-          <button className="nav-qr-button" onClick={() => navigate('/portal')}>
-            <QrCode size={24} strokeWidth={2.5} />
-          </button>
-          <Link to="/nutricion" className="nav-item">
-            <Utensils size={22} strokeWidth={2.5} />
-            <span>Comida</span>
-          </Link>
-          <Link to="/agenda" className="nav-item">
-            <CalendarDays size={22} strokeWidth={2.5} />
-            <span>Clases</span>
-          </Link>
-        </nav>
-      )}
+
     </div>
   );
 }

@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { Calendar, Utensils, TrendingUp, User, QrCode, ChevronRight, Activity, Flame, Sparkles, Clock, MapPin } from 'lucide-react';
+import { Calendar, Utensils, TrendingUp, User, QrCode, ChevronRight, Activity, Flame, Sparkles, Clock, MapPin, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
 import { motion } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
+import { Capacitor } from '@capacitor/core';
 
 function Portal() {
+  const isNative = Capacitor.isNativePlatform() || localStorage.getItem('simulateNative') === 'true';
   const navigate = useNavigate();
-  const { user, plan, logout, classesRemaining, myReservations, cancelClass } = useAuth();
+  const { user, plan, logout, classesRemaining, myReservations, cancelClass, profileName } = useAuth();
   
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showAppBanner, setShowAppBanner] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [showQR, setShowQR] = useState(false);
@@ -28,7 +31,7 @@ function Portal() {
     setShowCancelModal(false);
   };
 
-  const rawName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Amanda';
+  const rawName = profileName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Cliente';
   const userName = rawName.split(' ')[0]; // Solo el primer nombre para el saludo
   const greeting = new Date().getHours() < 12 ? 'Buenos días' : new Date().getHours() < 18 ? 'Buenas tardes' : 'Buenas noches';
 
@@ -40,7 +43,7 @@ function Portal() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
           <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
             <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>{greeting}</p>
-            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>{userName} ✨</h1>
+            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>{userName}</h1>
           </motion.div>
           <div style={{ position: 'relative' }}>
             <div 
@@ -78,39 +81,76 @@ function Portal() {
 
       <main className="dashboard-main" style={{ paddingTop: '10px' }}>
         
+        {/* APP DOWNLOAD BANNER */}
+        {!isNative && showAppBanner && (
+          <div style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: '24px', padding: '20px', marginBottom: '20px', color: 'var(--black)', position: 'relative', boxShadow: '0 10px 25px rgba(238,186,137,0.3)', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <div onClick={() => setShowAppBanner(false)} style={{ position: 'absolute', top: '15px', right: '15px', cursor: 'pointer', background: 'rgba(0,0,0,0.1)', borderRadius: '50%', padding: '4px' }}>
+              <X size={16} />
+            </div>
+            <div>
+              <h3 style={{ margin: '0 0 5px', fontSize: '1.2rem', fontWeight: 800, fontFamily: 'var(--font-display)', letterSpacing: '0.02em' }}>La verdadera experiencia Be Fit Lab</h3>
+              <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 500, opacity: 0.9 }}>Descarga nuestra aplicación móvil exclusiva para socias. Reserva más rápido, usa tu código QR y sigue tu nutrición.</p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '5px' }}>
+              <img 
+                src="/assets/appstore.svg" 
+                alt="Download on the App Store" 
+                style={{ height: '42px', cursor: 'pointer', transition: 'transform 0.2s ease' }} 
+                onMouseOver={(e) => e.currentTarget.style.transform='scale(1.05)'} 
+                onMouseOut={(e) => e.currentTarget.style.transform='scale(1)'} 
+              />
+              <img 
+                src="/assets/googleplay.svg" 
+                alt="Get it on Google Play" 
+                style={{ height: '42px', cursor: 'pointer', transition: 'transform 0.2s ease' }} 
+                onMouseOver={(e) => e.currentTarget.style.transform='scale(1.05)'} 
+                onMouseOut={(e) => e.currentTarget.style.transform='scale(1)'} 
+              />
+            </div>
+          </div>
+        )}
+
         <div className="dashboard-sidebar">
 
-          {/* MEMBERSHIP CARD - Minimal */}
-          <motion.section initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5}}>
-            <div style={{ 
-              background: 'linear-gradient(135deg, #1C1C1A 0%, #0D0D0C 100%)', borderRadius: '28px', padding: '25px',
-              color: 'white', position: 'relative', overflow: 'hidden',
-              boxShadow: 'var(--card-shadow)',
-              border: '1px solid rgba(255,255,255,0.05)'
-            }}>
-              {/* Subtle glow */}
-              <div style={{ position: 'absolute', top: '-50%', right: '-30%', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(255,139,66,0.1) 0%, transparent 70%)', borderRadius: '50%' }}></div>
-              
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px', position: 'relative', zIndex: 1 }}>
-                <div>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '4px' }}>Membresía</div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Premium</div>
-                </div>
-                <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontFamily: 'var(--font-display)', fontSize: '1rem' }}>B</div>
+          {/* MEMBERSHIP CARD - Premium Glow Redesign */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            style={{ 
+              padding: '28px 24px', borderRadius: '32px', 
+              background: 'linear-gradient(135deg, #2D2928 0%, #4A4544 100%)',
+              color: 'white',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+              position: 'relative', overflow: 'hidden'
+            }}
+          >
+            <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '120px', height: '120px', background: 'rgba(255,139,66,0.15)', borderRadius: '50%', filter: 'blur(30px)' }}></div>
+            
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <Sparkles size={14} color="var(--primary)" />
+                <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Membresía Actual</span>
               </div>
-
-              <div style={{ display: 'flex', gap: '30px', position: 'relative', zIndex: 1 }}>
-                <div>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--font-display)', lineHeight: 1 }}>{classesRemaining}</div>
-                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '4px' }}>Clases</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--font-display)', lineHeight: 1 }}>4</div>
-                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '4px' }}>Racha</div>
-                </div>
+              
+              <h2 style={{ fontSize: '1.8rem', color: 'white', marginBottom: '24px', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>Premium <span style={{ color: 'var(--primary)' }}>Pass</span></h2>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
+                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)' }}>{classesRemaining}</div>
+                    <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', fontWeight: 800, marginTop: '2px' }}>CLASES</div>
+                 </div>
+                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)' }}>4</div>
+                    <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', fontWeight: 800, marginTop: '2px' }}>RACHA</div>
+                 </div>
+                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary)', fontFamily: 'var(--font-display)' }}>ON</div>
+                    <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', fontWeight: 800, marginTop: '2px' }}>ESTATUS</div>
+                 </div>
               </div>
             </div>
-          </motion.section>
+          </motion.div>
 
           {/* STORIES-STYLE HORIZONTAL SCROLL */}
           <motion.section 
@@ -259,7 +299,22 @@ function Portal() {
       {showQR && (
         <>
           <div className="qr-sheet-overlay" onClick={() => setShowQR(false)} />
-          <div className="qr-bottom-sheet" style={{ padding: '12px 24px 20px', background: 'var(--surface)' }}>
+          <motion.div 
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={0.2}
+            onDragEnd={(e, info) => {
+              if (info.offset.y > 100 || info.velocity.y > 500) {
+                setShowQR(false);
+              }
+            }}
+            className="qr-bottom-sheet" 
+            style={{ padding: '12px 24px 20px', background: 'var(--surface)' }}
+          >
             <div className="sheet-handle" />
             
             <div className="wallet-card" style={{ 
@@ -305,7 +360,7 @@ function Portal() {
               <div className="user-name">{user?.user_metadata?.full_name || 'Miembro BeFit'}</div>
               <div>{user?.email}</div>
             </div>
-          </div>
+          </motion.div>
         </>
       )}
 

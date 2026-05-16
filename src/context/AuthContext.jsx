@@ -5,6 +5,7 @@ const AuthContext = createContext({});
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [profileName, setProfileName] = useState('');
   const [role, setRole] = useState(null);
   const [plan, setPlan] = useState(null);
   const [membershipStatus, setMembershipStatus] = useState('INACTIVE');
@@ -228,7 +229,7 @@ export const AuthProvider = ({ children }) => {
       // 1. Obtener rol y clases restantes
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('role, classes_remaining, membership_plan, membership_status')
+        .select('role, classes_remaining, membership_plan, membership_status, full_name')
         .eq('id', currentUser.id)
         .single();
         
@@ -254,6 +255,7 @@ export const AuthProvider = ({ children }) => {
         setPlan(userData.membership_plan);
         setMembershipStatus(userData.membership_status || 'INACTIVE');
         setClassesRemaining(userData.classes_remaining || 0);
+        setProfileName(userData.full_name || '');
       } else {
         setRole('CLIENT');
         setPlan('none');
@@ -498,9 +500,9 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ 
-      user, role, plan, membershipStatus, loading, 
+      user, role, plan, membershipStatus, loading, profileName,
       classesRemaining, myReservations, globalClasses, recipes, allUsers,
-      login, logout, forceCleanSession, fetchAllUsers,
+      login, logout, forceCleanSession, fetchAllUsers, refreshUserData,
       bookClass, cancelClass, checkInClient, updateClassSpots,
       activatePlan, addClass, deleteClass, addRecipe, deleteRecipe,
       fetchClassReservations, fetchClassesByDayOfWeek, fetchGlobalClasses

@@ -185,3 +185,10 @@ INSERT INTO public.users (id, email, role, membership_status, classes_remaining)
 SELECT id, email, 'CLIENT', 'INACTIVE', 0
 FROM auth.users
 WHERE id NOT IN (SELECT id FROM public.users);
+
+-- ==========================================
+-- SCRIPT DE CORRECCIÓN: AÑADIR COLUMNAS FALTANTES A USUARIOS
+-- ==========================================
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS phone text;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS emergency_contact_name text;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS emergency_contact_phone text;

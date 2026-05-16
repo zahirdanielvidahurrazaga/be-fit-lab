@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import Landing from './pages/Landing';
 import Agenda from './pages/Agenda';
@@ -15,6 +15,16 @@ import Register from './pages/Register';
 import Planes from './pages/Planes';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './index.css';
+
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
 
 const ProtectedRoute = ({ children, requireRole }) => {
   const { user, role, membershipStatus, loading } = useAuth();
@@ -50,7 +60,7 @@ const ProtectedRoute = ({ children, requireRole }) => {
 };
 
 function App() {
-  const isNative = Capacitor.isNativePlatform();
+  const isNative = Capacitor.isNativePlatform() || localStorage.getItem('simulateNative') === 'true';
 
   // Inicializar Modo Oscuro desde LocalStorage
   React.useEffect(() => {
@@ -65,6 +75,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
+        <ScrollToTop />
         <Routes>
           {/* Rutas Públicas */}
           <Route path="/" element={isNative ? <Navigate to="/login" replace /> : <Landing />} />

@@ -37,7 +37,7 @@ function Nutricion() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
           <div>
             <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>Plan Nutricional</p>
-            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Healthy Era ✨</h1>
+            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Healthy Era</h1>
           </div>
           <div style={{ 
             width: '42px', height: '42px', borderRadius: '50%', 
@@ -144,6 +144,14 @@ function Nutricion() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={0.2}
+              onDragEnd={(e, info) => {
+                if (info.offset.y > 100 || info.velocity.y > 500) {
+                  setShowRecipe(false);
+                }
+              }}
               className="modal-drawer" 
               onClick={(e) => e.stopPropagation()} 
               style={{ paddingBottom: '40px', background: 'var(--surface)' }}
@@ -226,28 +234,61 @@ function Nutricion() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={0.2}
+              onDragEnd={(e, info) => {
+                if (info.offset.y > 100 || info.velocity.y > 500) {
+                  setShowQR(false);
+                }
+              }}
               className="qr-bottom-sheet" 
-              style={{ padding: '12px 24px 40px', background: 'var(--surface)' }}
+              style={{ padding: '12px 24px 20px', background: 'var(--surface)' }}
             >
               <div className="sheet-handle" />
+              
               <div className="wallet-card" style={{ 
                 background: 'var(--surface-low)', 
                 boxShadow: 'var(--card-shadow)',
                 border: '1px solid var(--border-subtle)',
                 position: 'relative', overflow: 'hidden',
-                margin: '0 auto 10px', width: '100%', borderRadius: '30px'
+                margin: '0 auto 10px',
+                width: '100%',
+                borderRadius: '30px'
               }}>
-                <div className="wallet-header" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ position: 'absolute', top: 0, left: '-100%', width: '50%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)', transform: 'skewX(-20deg)' }}></div>
+
+                <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0, paddingTop: '20px', paddingLeft: '20px', paddingRight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'white', fontFamily: 'var(--font-display)', fontSize: '1.2rem' }}>B</div>
-                    <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--on-surface)', letterSpacing: '2px' }}>BEFIT LAB</span>
+                    <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'white', fontFamily: 'var(--font-display)', fontSize: '1.2rem', boxShadow: '0 4px 10px rgba(255,139,66,0.3)' }}>B</div>
+                    <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--black)', letterSpacing: '2px' }}>BEFIT LAB</span>
+                  </div>
+                  <QrCode size={20} color="var(--primary)" opacity={0.8} />
+                </div>
+                
+                <div className="wallet-body" style={{ padding: '25px 20px', textAlign: 'center' }}>
+                  <div style={{ background: 'white', padding: '12px', borderRadius: '20px', display: 'inline-block', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', border: 'none' }}>
+                    <QRCodeCanvas 
+                      value={user?.id || 'befit-client-id'} 
+                      size={160}
+                      level={"H"}
+                      includeMargin={false}
+                      fgColor="#000000"
+                    />
                   </div>
                 </div>
-                <div className="wallet-body" style={{ padding: '10px 20px 30px', textAlign: 'center' }}>
-                  <div style={{ background: 'white', padding: '12px', borderRadius: '20px', display: 'inline-block', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
-                    <QRCodeCanvas value={user?.id || 'befit-client-id'} size={160} level={"H"} includeMargin={false} fgColor="#000000" />
+                
+                <div className="wallet-footer" style={{ borderTop: '1px dashed rgba(0,0,0,0.05)', paddingTop: '20px', paddingBottom: '20px', justifyContent: 'center' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--primary)'}}>sesiones</span></div>
                   </div>
                 </div>
+              </div>
+
+              <div className="sheet-user-info" style={{ marginTop: '10px' }}>
+                <div className="user-name">{user?.user_metadata?.full_name || 'Miembro BeFit'}</div>
+                <div>{user?.email}</div>
               </div>
             </motion.div>
           </>

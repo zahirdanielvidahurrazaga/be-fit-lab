@@ -5,8 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Capacitor } from '@capacitor/core';
 
 function Agenda() {
+  const isNative = Capacitor.isNativePlatform() || localStorage.getItem('simulateNative') === 'true';
   const navigate = useNavigate();
   const { user, plan, classesRemaining, bookClass, globalClasses } = useAuth();
   
@@ -22,7 +24,7 @@ function Agenda() {
 
   const handleReserveClick = (classObj) => {
     if (!user) {
-      navigate('/planes');
+      navigate(isNative ? '/login' : '/planes');
       return;
     }
     if (classesRemaining <= 0) {
@@ -138,8 +140,17 @@ function Agenda() {
                 <img src="/assets/agenda_lifestyle.png" alt="Be Fit Lab" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)' }} />
                 <div style={{ position: 'absolute', bottom: '20px', left: '20px', right: '20px' }}>
-                   <h3 style={{ color: 'white', fontSize: '1.4rem', marginBottom: '10px' }}>Inicia tu transformación</h3>
-                   <button onClick={() => navigate('/planes')} className="btn-primary" style={{ width: '100%', padding: '12px' }}>Ver Planes</button>
+                   {isNative ? (
+                     <>
+                       <h3 style={{ color: 'white', fontSize: '1.4rem', marginBottom: '10px' }}>Exclusivo para Socias</h3>
+                       <button onClick={() => navigate('/login')} className="btn-primary" style={{ width: '100%', padding: '12px' }}>Inicia Sesión</button>
+                     </>
+                   ) : (
+                     <>
+                       <h3 style={{ color: 'white', fontSize: '1.4rem', marginBottom: '10px' }}>Inicia tu transformación</h3>
+                       <button onClick={() => navigate('/planes')} className="btn-primary" style={{ width: '100%', padding: '12px' }}>Ver Planes</button>
+                     </>
+                   )}
                 </div>
               </div>
             </section>
@@ -265,8 +276,16 @@ function Agenda() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={0.2}
+              onDragEnd={(e, info) => {
+                if (info.offset.y > 100 || info.velocity.y > 500) {
+                  setShowQR(false);
+                }
+              }}
               className="qr-bottom-sheet" 
-              style={{ padding: '12px 24px 40px', background: 'var(--surface)' }}
+              style={{ padding: '12px 24px 20px', background: 'var(--surface)' }}
             >
               <div className="sheet-handle" />
               
@@ -279,11 +298,14 @@ function Agenda() {
                 width: '100%',
                 borderRadius: '30px'
               }}>
+                <div style={{ position: 'absolute', top: 0, left: '-100%', width: '50%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)', transform: 'skewX(-20deg)' }}></div>
+
                 <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0, paddingTop: '20px', paddingLeft: '20px', paddingRight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'white', fontFamily: 'var(--font-display)', fontSize: '1.2rem' }}>B</div>
+                    <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'white', fontFamily: 'var(--font-display)', fontSize: '1.2rem', boxShadow: '0 4px 10px rgba(255,139,66,0.3)' }}>B</div>
                     <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--black)', letterSpacing: '2px' }}>BEFIT LAB</span>
                   </div>
+                  <QrCode size={20} color="var(--primary)" opacity={0.8} />
                 </div>
                 
                 <div className="wallet-body" style={{ padding: '25px 20px', textAlign: 'center' }}>
@@ -297,6 +319,18 @@ function Agenda() {
                     />
                   </div>
                 </div>
+                
+                <div className="wallet-footer" style={{ borderTop: '1px dashed rgba(0,0,0,0.05)', paddingTop: '20px', paddingBottom: '20px', justifyContent: 'center' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--primary)'}}>sesiones</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="sheet-user-info" style={{ marginTop: '10px' }}>
+                <div className="user-name">{user?.user_metadata?.full_name || 'Miembro BeFit'}</div>
+                <div>{user?.email}</div>
               </div>
             </motion.div>
           </>

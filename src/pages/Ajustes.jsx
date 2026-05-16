@@ -191,11 +191,11 @@ function Ajustes() {
   return (
     <div className="mobile-app-container" style={{ background: 'var(--app-bg)' }}>
       {/* HEADER UNIFICADO */}
-      <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent' }}>
+      <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent', maxWidth: '600px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
-              onClick={() => navigate('/mi-cuenta')}
+              onClick={() => navigate(-1)}
               style={{
                 width: '36px', height: '36px', borderRadius: '50%',
                 background: 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -218,8 +218,8 @@ function Ajustes() {
         </div>
       </header>
 
-      <main className="dashboard-main">
-        <div className="dashboard-sidebar">
+      <main className="dashboard-main" style={{ display: 'block', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
+        <div className="dashboard-sidebar" style={{ width: '100%' }}>
 
           {/* PREFERENCIAS */}
           <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '0 0 8px', paddingLeft: '8px' }}>
@@ -468,30 +468,7 @@ function Ajustes() {
         </div>
       </ModalOverlay>
 
-      {/* BOTTOM NAV */}
-      {user && (
-        <nav className={`ios-bottom-nav ${isScrolled ? 'scrolled' : ''}`}>
-          <Link to="/portal" className="nav-item">
-            <Home size={22} strokeWidth={2.5} />
-            <span>Yo</span>
-          </Link>
-          <Link to="/evolucion" className="nav-item">
-            <TrendingUp size={22} strokeWidth={2.5} />
-            <span>Metas</span>
-          </Link>
-          <button className="nav-qr-button" onClick={() => navigate('/portal')}>
-            <QrCode size={24} strokeWidth={2.5} />
-          </button>
-          <Link to="/nutricion" className="nav-item">
-            <Utensils size={22} strokeWidth={2.5} />
-            <span>Comida</span>
-          </Link>
-          <Link to="/agenda" className="nav-item">
-            <CalendarDays size={22} strokeWidth={2.5} />
-            <span>Clases</span>
-          </Link>
-        </nav>
-      )}
+
     </div>
   );
 }
