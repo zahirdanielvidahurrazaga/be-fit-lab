@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 function Agenda() {
   const navigate = useNavigate();
-  const { user, classesRemaining, bookClass, globalClasses } = useAuth();
+  const { user, plan, classesRemaining, bookClass, globalClasses } = useAuth();
   
   // Use day-of-week (0=Dom, 1=Lun, ..., 6=Sab) to match DB 'day' column
   const today = new Date();
@@ -201,7 +201,7 @@ function Agenda() {
           {/* Lista de Clases del Día */}
           <section style={{ marginTop: '10px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-               {globalClasses.filter(c => c.day === selectedDayOfWeek).length > 0 ? (
+               {globalClasses && globalClasses.filter(c => c.day === selectedDayOfWeek).length > 0 ? (
                  globalClasses.filter(c => c.day === selectedDayOfWeek).map(c => (
                    <ClassItem 
                      key={c.id}
