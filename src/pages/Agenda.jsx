@@ -78,65 +78,120 @@ function Agenda() {
       <main className="dashboard-main">
         
         <div className="dashboard-sidebar">
-          {/* Tarjeta Informativa / Premium Wallet (Sólo para usuarios) */}
+          {/* Tarjeta de Membresía Premium - Rediseño Luxury */}
           {user ? (
-            <section style={{ marginBottom: '20px' }}>
-              <div className="wallet-card" style={{ padding: '30px 20px' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.6rem' }}>TU MEMBRESÍA</div>
-                <h2 style={{ fontSize: '2.2rem', color: 'white', marginBottom: '1.5rem', fontFamily: 'var(--font-display)', lineHeight: 1 }}>Premium</h2>
-                <div style={{ display: 'flex', gap: '2rem' }}>
-                   <div>
-                      <div style={{ fontSize: '2rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>{classesRemaining}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)', fontWeight: 800, letterSpacing: '0.05em', marginTop: '4px' }}>CLASES DISPONIBLES</div>
-                   </div>
+            <motion.section 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              style={{ marginBottom: '25px' }}
+            >
+              <div style={{ 
+                padding: '28px', borderRadius: '32px', 
+                background: 'linear-gradient(135deg, #1C1C1A 0%, #3D3D3D 100%)',
+                color: 'white', position: 'relative', overflow: 'hidden',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+                border: '1px solid rgba(255,255,255,0.05)'
+              }}>
+                {/* Decorative element */}
+                <div style={{ 
+                  position: 'absolute', top: '-20px', right: '-20px', 
+                  width: '120px', height: '120px', 
+                  background: 'rgba(255,139,66,0.15)', borderRadius: '50%', 
+                  filter: 'blur(40px)' 
+                }} />
+
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                    <div>
+                      <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '4px' }}>Membresía Actual</p>
+                      <h2 style={{ fontSize: '2rem', color: 'white', margin: 0, fontFamily: 'var(--font-display)', fontWeight: 500 }}>{plan || 'Premium'}</h2>
+                    </div>
+                    <div style={{ background: 'rgba(255,139,66,0.1)', padding: '6px 12px', borderRadius: '12px', border: '1px solid rgba(255,139,66,0.2)' }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--primary)' }}>ACTIVA</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '5px' }}>Disponibles</p>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                        <span style={{ fontSize: '1.8rem', fontWeight: 900, color: 'white' }}>{classesRemaining}</span>
+                        <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>clases</span>
+                      </div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '5px' }}>Próxima Clase</p>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white', marginTop: '10px' }}>
+                        Hoy, 18:00
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </section>
+            </motion.section>
           ) : (
-            <section style={{ marginBottom: '20px' }}>
+            <section style={{ marginBottom: '25px' }}>
               <div style={{ 
-                borderRadius: '24px', overflow: 'hidden', position: 'relative', 
-                boxShadow: '0 15px 35px rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', height: '220px' 
+                borderRadius: '32px', overflow: 'hidden', position: 'relative', 
+                boxShadow: '0 20px 40px rgba(0,0,0,0.1)', height: '200px' 
               }}>
-                <img src="/assets/agenda_lifestyle.png" alt="Be Fit Lab Training" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
-                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.2) 100%)' }}></div>
-                <div style={{ position: 'relative', zIndex: 1, padding: '30px 20px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', textAlign: 'center' }}>
-                  <h2 style={{ fontSize: '2rem', color: 'white', margin: '0 0 5px 0', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>Únete a la Élite</h2>
-                  <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem', marginBottom: '15px' }}>Accede a nuestros horarios exclusivos.</p>
-                  <button onClick={() => navigate('/planes')} style={{ width: '100%', padding: '14px', borderRadius: '16px', border: 'none', background: 'var(--accent)', color: 'var(--black)', fontWeight: 900, cursor: 'pointer', boxShadow: '0 10px 25px rgba(238,186,137,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Adquirir Membresía
-                  </button>
+                <img src="/assets/agenda_lifestyle.png" alt="Be Fit Lab" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)' }} />
+                <div style={{ position: 'absolute', bottom: '20px', left: '20px', right: '20px' }}>
+                   <h3 style={{ color: 'white', fontSize: '1.4rem', marginBottom: '10px' }}>Inicia tu transformación</h3>
+                   <button onClick={() => navigate('/planes')} className="btn-primary" style={{ width: '100%', padding: '12px' }}>Ver Planes</button>
                 </div>
               </div>
             </section>
           )}
 
-          {/* Selector de Fecha (Refined Calendar Strip) */}
-          <section style={{ marginTop: '20px' }}>
-            <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px', scrollbarWidth: 'none', paddingLeft: '5px', paddingRight: '5px' }}>
+          {/* Selector de Fecha Estilo Strip Luxury */}
+          <section style={{ marginBottom: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', padding: '0 5px' }}>
+               <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--black)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Selecciona el día</h3>
+               <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700 }}>Mayo 2026</span>
+            </div>
+            
+            <div style={{ 
+              display: 'flex', gap: '12px', overflowX: 'auto', 
+              paddingBottom: '15px', scrollbarWidth: 'none', 
+              paddingLeft: '5px', paddingRight: '5px' 
+            }}>
               {days.map((d, i) => (
-                <button 
+                <motion.button 
                   key={i}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => { setSelectedDayOfWeek(d.dayOfWeek); setSelectedDateIndex(i); }}
                   style={{
-                    flex: '0 0 auto', width: '55px', border: 'none', background: 'transparent',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-                    color: 'var(--black)', cursor: 'pointer', transition: 'all 0.3s ease'
-                  }}
-                >
-                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase' }}>{d.name}</span>
-                  <div style={{ 
-                    width: '45px', height: '45px', borderRadius: '50%', 
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flex: '0 0 auto', width: '64px', height: '90px', border: 'none',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                    borderRadius: '24px',
                     background: selectedDateIndex === i ? 'var(--primary)' : 'white',
                     color: selectedDateIndex === i ? 'white' : 'var(--black)',
-                    border: selectedDateIndex === i ? 'none' : '1px solid rgba(0,0,0,0.1)',
-                    boxShadow: selectedDateIndex === i ? '0 5px 15px rgba(255,139,66,0.3)' : 'none',
-                    fontSize: '1.1rem', fontWeight: 700
+                    boxShadow: selectedDateIndex === i 
+                      ? '0 10px 20px rgba(255,139,66,0.3)' 
+                      : '0 4px 12px rgba(0,0,0,0.03)',
+                    cursor: 'pointer', transition: 'all 0.3s ease',
+                    border: selectedDateIndex === i ? 'none' : '1px solid rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <span style={{ 
+                    fontSize: '0.65rem', 
+                    fontWeight: 800, 
+                    opacity: selectedDateIndex === i ? 1 : 0.5,
+                    textTransform: 'uppercase'
+                  }}>{d.name}</span>
+                  <span style={{ 
+                    fontSize: '1.2rem', 
+                    fontWeight: 900,
+                    fontFamily: 'DM Sans'
                   }}>
                     {d.dateNum}
-                  </div>
-                </button>
+                  </span>
+                  {selectedDateIndex === i && (
+                    <motion.div layoutId="dot" style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'white' }} />
+                  )}
+                </motion.button>
               ))}
             </div>
           </section>
