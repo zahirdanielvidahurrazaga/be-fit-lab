@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Mail, ArrowRight, ChevronLeft } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -10,6 +11,7 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const isNative = Capacitor.isNativePlatform();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,20 +34,22 @@ function Login() {
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)', zIndex: 0 }}></div>
 
       {/* BOTÓN VOLVER AL SITIO */}
-      <div 
-        onClick={() => navigate('/')} 
-        style={{ 
-          position: 'absolute', top: '20px', left: '20px', zIndex: 10,
-          display: 'flex', alignItems: 'center', gap: '6px',
-          padding: '10px 18px', borderRadius: '50px',
-          background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(20px)',
-          color: 'white', fontSize: '0.85rem', fontWeight: 600,
-          cursor: 'pointer', border: '1px solid rgba(255,255,255,0.2)',
-          transition: 'all 0.3s ease'
-        }}>
-        <ChevronLeft size={18} />
-        Volver al sitio
-      </div>
+      {!isNative && (
+        <div 
+          onClick={() => navigate('/')} 
+          style={{ 
+            position: 'absolute', top: '20px', left: '20px', zIndex: 10,
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '10px 18px', borderRadius: '50px',
+            background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(20px)',
+            color: 'white', fontSize: '0.85rem', fontWeight: 600,
+            cursor: 'pointer', border: '1px solid rgba(255,255,255,0.2)',
+            transition: 'all 0.3s ease'
+          }}>
+          <ChevronLeft size={18} />
+          Volver al sitio
+        </div>
+      )}
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', zIndex: 1 }}>
         <div style={{ 
@@ -103,9 +107,11 @@ function Login() {
             </button>
           </form>
 
-          <div style={{ textAlign: 'center', marginTop: '2rem', color: '#4B5563', fontSize: '0.9rem' }}>
-            ¿No tienes una cuenta? <span onClick={() => navigate('/registro')} style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }}>Regístrate aquí</span>
-          </div>
+          {!isNative && (
+            <div style={{ textAlign: 'center', marginTop: '2rem', color: '#4B5563', fontSize: '0.9rem' }}>
+              ¿No tienes una cuenta? <span onClick={() => navigate('/registro')} style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }}>Regístrate aquí</span>
+            </div>
+          )}
 
         </div>
       </div>

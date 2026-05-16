@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChefHat, Flame, Clock, User, Calendar, Utensils, TrendingUp, CheckCircle2, Droplets, Play, QrCode } from 'lucide-react';
+import { ChefHat, Flame, Clock, User, Calendar, Utensils, TrendingUp, CheckCircle2, Droplets, Play, QrCode, ChevronRight, Heart, Info, Scale } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
+import { useScrollDetect } from '../hooks/useScrollDetect';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function Nutricion() {
   const navigate = useNavigate();
@@ -10,104 +12,115 @@ function Nutricion() {
   const [showRecipe, setShowRecipe] = useState(false);
   const [recipeData, setRecipeData] = useState(null);
   const [showQR, setShowQR] = useState(false);
+  const [favorites, setFavorites] = useState([]);
+  const isScrolled = useScrollDetect(30);
 
   const handleMealClick = (meal) => {
     setRecipeData(meal);
     setShowRecipe(true);
   };
 
-  // Usamos las recetas globales que vienen de Supabase
+  const toggleFavorite = (id, e) => {
+    e.stopPropagation();
+    setFavorites(prev => 
+      prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
+    );
+  };
+
+  // Recetas globales
   const meals = recipes || [];
 
   return (
-    <div className="mobile-app-container">
-      {/* HEADER TIPO iOS */}
-      <header className="ios-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <div 
-              onClick={() => navigate('/portal')}
-              style={{ 
-                width: '40px', height: '40px', borderRadius: '12px', 
-                background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(10px)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 15px rgba(55,61,59,0.05)', cursor: 'pointer',
-                border: '1px solid rgba(255,255,255,0.8)'
-              }}>
-              <ChevronLeft size={20} color="var(--primary)" />
-            </div>
-            <div>
-               <h1 style={{ fontSize: '1.6rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1 }}>Nutrición</h1>
-               <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: 0, fontWeight: 600 }}>Plan de {user?.email?.split('@')[0] || 'Amanda'}</p>
-            </div>
+    <div className="mobile-app-container" style={{ background: '#FCF9F5' }}>
+      {/* HEADER UNIFICADO */}
+      <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
+          <div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>Plan Nutricional</p>
+            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Healthy Era ✨</h1>
           </div>
-          <div style={{ color: 'var(--primary)', background: 'rgba(255,145,77,0.1)', padding: '10px', borderRadius: '12px' }}>
-             <ChefHat size={22} />
+          <div style={{ 
+            width: '42px', height: '42px', borderRadius: '50%', 
+            background: 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+             <Utensils size={20} color="var(--primary)" />
           </div>
         </div>
       </header>
 
       <main className="dashboard-main">
         <div className="dashboard-sidebar">
-          {/* Plan del Día Banner con Imagen */}
-          <div className="wallet-card" style={{ 
-            padding: '25px 20px', borderRadius: '28px', 
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.8)), url("/assets/nutricion_lifestyle.png")',
-            backgroundSize: 'cover', backgroundPosition: 'center',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.15)', border: 'none'
-          }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.6rem' }}>OBJETIVO DIARIO</div>
-            <h2 style={{ fontSize: '2rem', color: 'white', marginBottom: '2rem', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>Recomposición <span style={{ fontStyle: 'italic', color: 'var(--accent)' }}>Elite</span></h2>
+          {/* Plan del Día Banner - Premium Redesign */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{ 
+              padding: '28px 24px', borderRadius: '32px', 
+              background: 'linear-gradient(135deg, #2D2928 0%, #4A4544 100%)',
+              color: 'white',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+              position: 'relative', overflow: 'hidden'
+            }}
+          >
+            <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '120px', height: '120px', background: 'rgba(255,139,66,0.15)', borderRadius: '50%', filter: 'blur(30px)' }}></div>
             
-            <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', padding: '15px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.2)' }}>
-               <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>1,850</div>
-                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)', fontWeight: 800, letterSpacing: '0.05em', marginTop: '4px' }}>KCAL</div>
-               </div>
-               <div style={{ width: '1px', background: 'rgba(255,255,255,0.2)' }}></div>
-               <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>130g</div>
-                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)', fontWeight: 800, letterSpacing: '0.05em', marginTop: '4px' }}>PROT</div>
-               </div>
-               <div style={{ width: '1px', background: 'rgba(255,255,255,0.2)' }}></div>
-               <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>180g</div>
-                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)', fontWeight: 800, letterSpacing: '0.05em', marginTop: '4px' }}>CARB</div>
-               </div>
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <Scale size={14} color="var(--primary)" />
+                <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Objetivo Semanal</span>
+              </div>
+              
+              <h2 style={{ fontSize: '1.8rem', color: 'white', marginBottom: '24px', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>Definición <span style={{ color: 'var(--primary)' }}>Glow</span></h2>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
+                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white' }}>1.6k</div>
+                    <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', fontWeight: 800, marginTop: '2px' }}>KCAL</div>
+                 </div>
+                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white' }}>120g</div>
+                    <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', fontWeight: 800, marginTop: '2px' }}>PROT</div>
+                 </div>
+                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white' }}>150g</div>
+                    <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', fontWeight: 800, marginTop: '2px' }}>CARBS</div>
+                 </div>
+              </div>
             </div>
-          </div>
+          </motion.div>
 
-          {/* HIDRATACIÓN */}
-          <div className="ios-glass-card" style={{ padding: '15px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '15px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(0,122,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#007AFF' }}>
-                <Droplets size={20} />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>Hidratación</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>Meta: 2.5L hoy</div>
-              </div>
+          {/* HIDRATACIÓN - Minimal Circle Progress */}
+          <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="ios-glass-card" style={{ padding: '18px', borderRadius: '24px', background: 'white' }}>
+              <div style={{ color: '#007AFF', marginBottom: '10px' }}><Droplets size={20} /></div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 900 }}>1.8<span style={{ fontSize: '0.7rem', color: '#8a7266', marginLeft: '4px' }}>Liters</span></div>
+              <div style={{ fontSize: '0.7rem', color: '#8a7266', fontWeight: 600, marginTop: '4px' }}>72% de la meta</div>
             </div>
-            <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--on-surface)' }}>1.8L</div>
+            <div className="ios-glass-card" style={{ padding: '18px', borderRadius: '24px', background: 'white' }}>
+              <div style={{ color: '#FF8B42', marginBottom: '10px' }}><Flame size={20} /></div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 900 }}>450<span style={{ fontSize: '0.7rem', color: '#8a7266', marginLeft: '4px' }}>Kcal</span></div>
+              <div style={{ fontSize: '0.7rem', color: '#8a7266', fontWeight: 600, marginTop: '4px' }}>Quemadas hoy</div>
+            </div>
           </div>
         </div>
 
-        <div className="dashboard-content">
-          {/* Lista de Comidas */}
+        <div className="dashboard-content" style={{ marginTop: '5px' }}>
           <section>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-               <h2 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--on-surface)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Menú Recomendado</h2>
-               <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700 }}>Viernes, 01 Mayo</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+               <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>Menu del día</h2>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,139,66,0.1)', padding: '6px 12px', borderRadius: '99px' }}>
+                 <Calendar size={12} color="var(--primary)" />
+                 <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 800 }}>HOY</span>
+               </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                {meals.map(meal => (
                  <MealItem 
                    key={meal.id}
-                   time={meal.time} 
-                   title={meal.title} 
-                   kcal={meal.kcal} 
-                   img={meal.img}
-                   timePrep={meal.timePrep}
+                   meal={meal}
+                   isFavorite={favorites.includes(meal.id)}
+                   onFavorite={(e) => toggleFavorite(meal.id, e)}
                    onClick={() => handleMealClick(meal)}
                  />
                ))}
@@ -116,112 +129,133 @@ function Nutricion() {
         </div>
       </main>
 
-      {/* DRAWER DE RECETA INTEGRADO */}
-      {showRecipe && (
-        <div className="modal-overlay" onClick={() => setShowRecipe(false)}>
-          <div className="modal-drawer" onClick={(e) => e.stopPropagation()} style={{ paddingBottom: '30px' }}>
-            <div className="modal-close-pill"></div>
-            
-            <div style={{ height: '220px', borderRadius: '24px', overflow: 'hidden', marginBottom: '20px', position: 'relative' }}>
-              <img src={recipeData?.img} alt="Recipe" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <div style={{ position: 'absolute', bottom: '15px', right: '15px', background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)', padding: '8px 15px', borderRadius: '14px', fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
-                {recipeData?.kcal} kcal
+      {/* RECIPE DRAWER */}
+      <AnimatePresence>
+        {showRecipe && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="modal-overlay" 
+            onClick={() => setShowRecipe(false)}
+          >
+            <motion.div 
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="modal-drawer" 
+              onClick={(e) => e.stopPropagation()} 
+              style={{ paddingBottom: '40px', background: '#FCF9F5' }}
+            >
+              <div className="modal-close-pill"></div>
+              
+              <div style={{ height: '240px', borderRadius: '28px', overflow: 'hidden', marginBottom: '24px', position: 'relative', boxShadow: '0 15px 35px rgba(0,0,0,0.1)' }}>
+                <img src={recipeData?.img} alt="Recipe" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ 
+                  position: 'absolute', top: '20px', left: '20px', 
+                  background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', 
+                  padding: '8px 16px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 800, color: 'var(--black)' 
+                }}>
+                  {recipeData?.time}
+                </div>
               </div>
-            </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-               <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{recipeData?.time}</div>
-               <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'rgba(0,0,0,0.2)' }}></div>
-               <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--on-surface-variant)' }}>{recipeData?.timePrep} preparación</div>
-            </div>
-            
-            <h2 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', marginBottom: '20px', lineHeight: 1.1 }}>{recipeData?.title}</h2>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' }}>
-               <div>
-                  <h4 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                     <Utensils size={16} color="var(--primary)" /> Ingredientes
-                  </h4>
-                  <ul style={{ paddingLeft: '0', listStyle: 'none', color: 'var(--on-surface-variant)', fontSize: '0.85rem', lineHeight: 1.8 }}>
+              <div style={{ padding: '0 10px' }}>
+                <h2 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', marginBottom: '12px', lineHeight: 1.1 }}>{recipeData?.title}</h2>
+                
+                <div style={{ display: 'flex', gap: '15px', marginBottom: '25px' }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: '#8a7266' }}>
+                     <Clock size={16} /> {recipeData?.timePrep}
+                   </div>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: '#8a7266' }}>
+                     <Flame size={16} /> {recipeData?.kcal} kcal
+                   </div>
+                </div>
+
+                <div style={{ background: 'white', borderRadius: '24px', padding: '24px', boxShadow: '0 10px 30px rgba(155,69,0,0.04)', marginBottom: '24px' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '16px', color: 'var(--black)' }}>Ingredientes</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
                     {recipeData?.ingredients.map((ing, i) => (
-                      <li key={i} style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
-                        <div style={{ marginTop: '6px', width: '4px', height: '4px', borderRadius: '50%', background: 'var(--primary)', flexShrink: 0 }}></div>
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: '#FCF9F5', borderRadius: '14px', fontSize: '0.9rem', color: '#564338', fontWeight: 500 }}>
+                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary)' }}></div>
                         {ing}
-                      </li>
+                      </div>
                     ))}
-                  </ul>
-               </div>
-               <div>
-                  <h4 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                     <Play size={16} color="var(--primary)" /> Pasos
-                  </h4>
-                  <ol style={{ paddingLeft: '0', listStyle: 'none', color: 'var(--on-surface-variant)', fontSize: '0.85rem', lineHeight: 1.7 }}>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '30px' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '16px', color: 'var(--black)' }}>Preparación</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     {recipeData?.steps.map((step, i) => (
-                      <li key={i} style={{ marginBottom: '10px' }}>
-                        <span style={{ fontWeight: 800, color: 'var(--on-surface)', marginRight: '5px' }}>{i+1}.</span> {step}
-                      </li>
+                      <div key={i} style={{ display: 'flex', gap: '15px' }}>
+                        <div style={{ 
+                          width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary)', 
+                          color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                          fontSize: '0.85rem', fontWeight: 900, flexShrink: 0, marginTop: '2px' 
+                        }}>
+                          {i+1}
+                        </div>
+                        <p style={{ margin: 0, fontSize: '0.95rem', color: '#564338', lineHeight: 1.6, fontWeight: 500 }}>{step}</p>
+                      </div>
                     ))}
-                  </ol>
-               </div>
-            </div>
-
-            <button onClick={() => setShowRecipe(false)} className="glass-button-dark" style={{ width: '100%', justifyContent: 'center' }}>Volver al Menú</button>
-          </div>
-        </div>
-      )}
-
-      {showQR && (
-        <>
-          <div className="qr-sheet-overlay" onClick={() => setShowQR(false)} />
-          <div className="qr-bottom-sheet" style={{ padding: '12px 24px 20px', background: 'var(--surface)' }}>
-            <div className="sheet-handle" />
-            
-            <div className="wallet-card" style={{ 
-              background: 'linear-gradient(135deg, #2C302E 0%, #1A1C1E 100%)', 
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              position: 'relative', overflow: 'hidden',
-              margin: '0 auto 10px',
-              width: '100%'
-            }}>
-              <div style={{ position: 'absolute', top: 0, left: '-100%', width: '50%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent)', transform: 'skewX(-20deg)' }}></div>
-
-              <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--accent), #D4A373)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1A1C1E', fontFamily: 'var(--font-display)', fontSize: '1.2rem' }}>B</div>
-                  <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--accent)', letterSpacing: '2px' }}>BEFIT LAB</span>
+                  </div>
                 </div>
-                <QrCode size={20} color="var(--accent)" opacity={0.8} />
+
+                <button onClick={() => setShowRecipe(false)} style={{ 
+                  width: '100%', padding: '18px', borderRadius: '99px', border: 'none',
+                  background: 'var(--black)', color: 'white', fontSize: '1rem', fontWeight: 800,
+                  boxShadow: '0 15px 35px rgba(0,0,0,0.15)', cursor: 'pointer'
+                }}>
+                  Listo, volver al menú
+                </button>
               </div>
-              
-              <div className="wallet-body" style={{ padding: '25px 20px', textAlign: 'center' }}>
-                <div style={{ background: 'white', padding: '12px', borderRadius: '16px', display: 'inline-block', boxShadow: '0 10px 20px rgba(0,0,0,0.3)' }}>
-                  <QRCodeCanvas 
-                    value={user?.id || 'befit-client-id'} 
-                    size={160}
-                    level={"H"}
-                    includeMargin={false}
-                    fgColor="#1A1C1E"
-                  />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* QR BOTTOM SHEET */}
+      <AnimatePresence>
+        {showQR && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="qr-sheet-overlay" onClick={() => setShowQR(false)} />
+            <motion.div 
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="qr-bottom-sheet" 
+              style={{ padding: '12px 24px 40px', background: 'var(--surface)' }}
+            >
+              <div className="sheet-handle" />
+              <div className="wallet-card" style={{ 
+                background: 'linear-gradient(135deg, #FFFFFF 0%, #FCF9F5 100%)', 
+                boxShadow: '0 20px 50px rgba(0,0,0,0.06)',
+                border: '1px solid rgba(255,255,255,0.9)',
+                position: 'relative', overflow: 'hidden',
+                margin: '0 auto 10px', width: '100%', borderRadius: '30px'
+              }}>
+                <div className="wallet-header" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'white', fontFamily: 'var(--font-display)', fontSize: '1.2rem' }}>B</div>
+                    <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--black)', letterSpacing: '2px' }}>BEFIT LAB</span>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="wallet-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px', justifyContent: 'center' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white', fontFamily: 'var(--font-display)' }}>{classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--accent)'}}>sesiones</span></div>
+                <div className="wallet-body" style={{ padding: '10px 20px 30px', textAlign: 'center' }}>
+                  <div style={{ background: 'white', padding: '12px', borderRadius: '20px', display: 'inline-block', boxShadow: '0 10px 30px rgba(0,0,0,0.04)' }}>
+                    <QRCodeCanvas value={user?.id || 'befit-client-id'} size={160} level={"H"} includeMargin={false} fgColor="#2D2928" />
+                  </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
-            <div className="sheet-user-info" style={{ marginTop: '10px' }}>
-              <div className="user-name">{user?.user_metadata?.full_name || 'Miembro BeFit'}</div>
-              <div>{user?.email}</div>
-            </div>
-          </div>
-        </>
-      )}
-      <nav className="ios-bottom-nav">
+      {/* NAV */}
+      <nav className={`ios-bottom-nav ${isScrolled ? 'scrolled' : ''}`}>
         <Link to="/portal" className="nav-item"><User size={22} strokeWidth={2.5} /><span>Yo</span></Link>
         <Link to="/evolucion" className="nav-item"><TrendingUp size={22} strokeWidth={2.5} /><span>Metas</span></Link>
         <button className="nav-qr-button" onClick={() => setShowQR(true)}><QrCode size={24} strokeWidth={2.5} /></button>
@@ -232,25 +266,33 @@ function Nutricion() {
   );
 }
 
-function MealItem({ time, title, kcal, img, timePrep, onClick }) {
+function MealItem({ meal, isFavorite, onFavorite, onClick }) {
+  const { time, title, kcal, img, timePrep } = meal;
   return (
-    <div 
+    <motion.div 
+      whileTap={{ scale: 0.98 }}
       onClick={onClick}
       style={{ 
-        padding: '14px', display: 'flex', gap: '1.2rem', alignItems: 'center', cursor: 'pointer', 
-        background: 'white', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.03)',
-        border: '1px solid rgba(0,0,0,0.02)', transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+        padding: '16px', display: 'flex', gap: '16px', alignItems: 'center', cursor: 'pointer', 
+        background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(155,69,0,0.04)',
+        border: '1px solid rgba(255,255,255,0.8)', position: 'relative'
       }}
-      onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 15px 35px rgba(0,0,0,0.06)'; }}
-      onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.03)'; }}
     >
-      <div style={{ width: '85px', height: '85px', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 8px 20px rgba(0,0,0,0.1)', flexShrink: 0 }}>
+      <div style={{ width: '90px', height: '90px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0 }}>
         <img src={img} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.3rem' }}>{time}</div>
-        <h3 style={{ fontSize: '1.05rem', color: 'var(--black)', marginBottom: '0.5rem', fontFamily: 'var(--font-display)', lineHeight: 1.2, fontWeight: 800 }}>{title}</h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>{time}</div>
+          <button 
+            onClick={onFavorite}
+            style={{ border: 'none', background: 'transparent', padding: '0', cursor: 'pointer', color: isFavorite ? '#FF4D4D' : '#ddc1b3' }}
+          >
+            <Heart size={18} fill={isFavorite ? '#FF4D4D' : 'transparent'} />
+          </button>
+        </div>
+        <h3 style={{ fontSize: '1.05rem', color: 'var(--black)', marginBottom: '8px', fontFamily: 'var(--font-display)', lineHeight: 1.2, fontWeight: 800 }}>{title}</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.75rem', color: '#8a7266', fontWeight: 700 }}>
            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <Flame size={14} color="var(--primary)" /> {kcal} kcal
            </div>
@@ -259,10 +301,7 @@ function MealItem({ time, title, kcal, img, timePrep, onClick }) {
            </div>
         </div>
       </div>
-      <div style={{ background: 'rgba(255,145,77,0.08)', color: 'var(--primary)', width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <ChevronLeft size={18} style={{ transform: 'rotate(180deg)' }} />
-      </div>
-    </div>
+    </motion.div>
   );
 }
 

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Calendar, Utensils, TrendingUp, Play, User, QrCode, ChevronRight, Activity, Flame } from 'lucide-react';
+import { Calendar, Utensils, TrendingUp, User, QrCode, ChevronRight, Activity, Flame, Sparkles, Clock, MapPin } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
 import { motion } from 'framer-motion';
+import { useScrollDetect } from '../hooks/useScrollDetect';
 
 function Portal() {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ function Portal() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [showQR, setShowQR] = useState(false);
+  const isScrolled = useScrollDetect(30);
 
   const handleCancelClick = (res) => {
     setSelectedReservation(res);
@@ -26,43 +28,43 @@ function Portal() {
     setShowCancelModal(false);
   };
 
-  return (
-    <div className="mobile-app-container">
-      
-      {/* BACKGROUND DECORATION */}
-      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '30vh', background: 'linear-gradient(to bottom, rgba(238,186,137,0.15), transparent)', zIndex: -1 }}></div>
+  const rawName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Amanda';
+  const userName = rawName.split(' ')[0]; // Solo el primer nombre para el saludo
+  const greeting = new Date().getHours() < 12 ? 'Buenos días' : new Date().getHours() < 18 ? 'Buenas tardes' : 'Buenas noches';
 
-      {/* HEADER TIPO iOS */}
-      <header className="ios-header" style={{ paddingTop: '20px', background: 'transparent' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 style={{ fontSize: '2.2rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Hola, {user?.email?.split('@')[0] || 'Amanda'}</h1>
-            <p style={{ fontSize: '0.9rem', color: 'var(--primary)', margin: '5px 0 0', fontWeight: 700, letterSpacing: '0.05em' }}>Membresía Premium Activa</p>
-          </div>
+  return (
+    <div className="mobile-app-container" style={{ background: '#FCF9F5' }}>
+
+      {/* HEADER UNIFICADO */}
+      <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
+          <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>{greeting}</p>
+            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>{userName} ✨</h1>
+          </motion.div>
           <div style={{ position: 'relative' }}>
             <div 
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               style={{ 
-                width: '45px', height: '45px', borderRadius: '50%', 
-                background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(10px)',
+                width: '42px', height: '42px', borderRadius: '50%', 
+                background: 'rgba(255,139,66,0.1)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 15px rgba(55,61,59,0.05)', cursor: 'pointer',
-                border: '1px solid rgba(255,255,255,0.8)'
+                cursor: 'pointer'
               }}>
               <User size={20} color="var(--primary)" />
             </div>
 
-            {/* DROPDOWN PERFIL INTEGRADO */}
+            {/* DROPDOWN PERFIL */}
             {showProfileMenu && (
               <div className="profile-dropdown">
                 <div style={{ padding: '10px 15px', borderBottom: '1px solid rgba(55,61,59,0.05)', marginBottom: '5px' }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 700 }}>{user?.email?.split('@')[0] || 'Amanda'}</div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700 }}>{userName}</div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)' }}>Socia Activa</div>
                 </div>
-                <div className="profile-dropdown-item" onClick={() => setShowProfileMenu(false)}>
-                   Mi Cuenta (Próximamente)
+                <div className="profile-dropdown-item" onClick={() => { navigate('/mi-cuenta'); setShowProfileMenu(false); }}>
+                   Mi Cuenta
                 </div>
-                <div className="profile-dropdown-item" onClick={() => setShowProfileMenu(false)}>
+                <div className="profile-dropdown-item" onClick={() => { navigate('/ajustes'); setShowProfileMenu(false); }}>
                    Ajustes
                 </div>
                 <div className="profile-dropdown-item danger" onClick={logout}>
@@ -74,60 +76,123 @@ function Portal() {
         </div>
       </header>
 
-      <main className="dashboard-main">
+      <main className="dashboard-main" style={{ paddingTop: '10px' }}>
         
-        {/* LADO IZQUIERDO: Perfil y Accesos */}
         <div className="dashboard-sidebar">
-          {/* ACCESOS RÁPIDOS GLASS (Rediseñados) */}
-          <motion.section initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.4, delay:0.1}} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-            <div className="ios-glass-btn" onClick={() => navigate('/nutricion')} style={{ padding: '20px 15px', background: 'linear-gradient(to bottom right, rgba(255,255,255,0.9), rgba(255,255,255,0.6))', border: '1px solid white', boxShadow: '0 10px 20px rgba(0,0,0,0.03)', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <div className="icon-wrapper" style={{ color: 'var(--primary)', background: 'rgba(255,145,77,0.1)', width: '45px', height: '45px', marginBottom: '12px' }}>
-                <Utensils size={22} />
+
+          {/* MEMBERSHIP CARD - Minimal */}
+          <motion.section initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5}}>
+            <div style={{ 
+              background: 'var(--black)', borderRadius: '28px', padding: '25px',
+              color: 'white', position: 'relative', overflow: 'hidden',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.15)'
+            }}>
+              {/* Subtle glow */}
+              <div style={{ position: 'absolute', top: '-50%', right: '-30%', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(255,139,66,0.15) 0%, transparent 70%)', borderRadius: '50%' }}></div>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px', position: 'relative', zIndex: 1 }}>
+                <div>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '4px' }}>Membresía</div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Premium</div>
+                </div>
+                <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontFamily: 'var(--font-display)', fontSize: '1rem' }}>B</div>
               </div>
-              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--black)' }}>Nutrición</span>
-              <span style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', marginTop: '4px' }}>Ver recetario</span>
+
+              <div style={{ display: 'flex', gap: '30px', position: 'relative', zIndex: 1 }}>
+                <div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--font-display)', lineHeight: 1 }}>{classesRemaining}</div>
+                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '4px' }}>Clases</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--font-display)', lineHeight: 1 }}>4</div>
+                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '4px' }}>Racha</div>
+                </div>
+              </div>
             </div>
-            <div className="ios-glass-btn" onClick={() => navigate('/evolucion')} style={{ padding: '20px 15px', background: 'linear-gradient(to bottom right, rgba(255,255,255,0.9), rgba(255,255,255,0.6))', border: '1px solid white', boxShadow: '0 10px 20px rgba(0,0,0,0.03)', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <div className="icon-wrapper" style={{ color: 'var(--accent)', background: 'rgba(238,186,137,0.2)', width: '45px', height: '45px', marginBottom: '12px' }}>
-                <Activity size={22} />
+          </motion.section>
+
+          {/* STORIES-STYLE HORIZONTAL SCROLL */}
+          <motion.section 
+            initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5, delay:0.15}}
+            style={{ marginTop: '25px' }}
+          >
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '15px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Explora</h2>
+            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '5px', marginLeft: '-5px', paddingLeft: '5px', paddingRight: '5px' }}>
+              
+              {/* Story Card - Nutrición */}
+              <div 
+                onClick={() => navigate('/nutricion')}
+                style={{ 
+                  flex: '0 0 auto', width: '140px', height: '180px', borderRadius: '24px', 
+                  background: 'linear-gradient(135deg, #FF8B42 0%, #EEBA89 100%)',
+                  padding: '20px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                  cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                  boxShadow: '0 12px 30px rgba(255,139,66,0.25)'
+                }}
+              >
+                <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '80px', height: '80px', background: 'rgba(255,255,255,0.15)', borderRadius: '50%' }}></div>
+                <Utensils size={28} color="white" strokeWidth={2} />
+                <div>
+                  <div style={{ color: 'white', fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>Nutrición</div>
+                  <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.7rem', fontWeight: 600, marginTop: '3px' }}>Tu recetario</div>
+                </div>
               </div>
-              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--black)' }}>Evolución</span>
-              <span style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', marginTop: '4px' }}>Tu progreso</span>
+
+              {/* Story Card - Evolución */}
+              <div 
+                onClick={() => navigate('/evolucion')}
+                style={{ 
+                  flex: '0 0 auto', width: '140px', height: '180px', borderRadius: '24px', 
+                  background: 'linear-gradient(135deg, #2D2928 0%, #4A4544 100%)',
+                  padding: '20px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                  cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                  boxShadow: '0 12px 30px rgba(0,0,0,0.15)'
+                }}
+              >
+                <div style={{ position: 'absolute', bottom: '-20px', left: '-20px', width: '80px', height: '80px', background: 'rgba(255,139,66,0.12)', borderRadius: '50%' }}></div>
+                <Activity size={28} color="var(--primary)" strokeWidth={2} />
+                <div>
+                  <div style={{ color: 'white', fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>Evolución</div>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: 600, marginTop: '3px' }}>Tu progreso</div>
+                </div>
+              </div>
+
+              {/* Story Card - Agenda */}
+              <div 
+                onClick={() => navigate('/agenda')}
+                style={{ 
+                  flex: '0 0 auto', width: '140px', height: '180px', borderRadius: '24px', 
+                  background: 'linear-gradient(135deg, #FCF9F5 0%, #FFFFFF 100%)',
+                  padding: '20px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                  cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                  border: '1px solid rgba(0,0,0,0.06)',
+                  boxShadow: '0 12px 30px rgba(0,0,0,0.05)'
+                }}
+              >
+                <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '80px', height: '80px', background: 'rgba(255,139,66,0.06)', borderRadius: '50%' }}></div>
+                <Calendar size={28} color="var(--primary)" strokeWidth={2} />
+                <div>
+                  <div style={{ color: 'var(--black)', fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>Reservar</div>
+                  <div style={{ color: 'var(--on-surface-variant)', fontSize: '0.7rem', fontWeight: 600, marginTop: '3px' }}>Agendar clase</div>
+                </div>
+              </div>
             </div>
           </motion.section>
         </div>
 
-        {/* LADO DERECHO: Reservas y Métricas */}
         <div className="dashboard-content" style={{ zIndex: 1, position: 'relative' }}>
-          {/* METRICAS VITALES */}
-          <motion.section initial={{opacity:0, x:20}} animate={{opacity:1, x:0}} transition={{duration:0.4, delay:0.2}}>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '15px', fontFamily: 'var(--font-display)', letterSpacing: '0.02em' }}>Tu Desempeño</h2>
-            <div className="ios-glass-card" style={{ padding: '25px', display: 'flex', justifyContent: 'space-around', background: 'white', border: 'none', boxShadow: '0 15px 35px rgba(0,0,0,0.03)' }}>
-               <div style={{ textAlign: 'center' }}>
-                  <div style={{ color: 'var(--primary)', marginBottom: '8px', background: 'rgba(255,145,77,0.1)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}><Flame size={20} /></div>
-                  <div style={{ fontSize: '1.8rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--black)', lineHeight: 1 }}>4 <span style={{fontSize: '1rem', color: 'var(--on-surface-variant)'}}>días</span></div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '5px' }}>Racha actual</div>
-               </div>
-               <div style={{ width: '1px', background: 'rgba(0,0,0,0.05)' }}></div>
-               <div style={{ textAlign: 'center' }}>
-                  <div style={{ color: 'var(--accent)', marginBottom: '8px', background: 'rgba(238,186,137,0.2)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}><Activity size={20} /></div>
-                  <div style={{ fontSize: '1.8rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--black)', lineHeight: 1 }}>1.2<span style={{fontSize: '1rem', color: 'var(--on-surface-variant)'}}>k</span></div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '5px' }}>Kcal Quemadas</div>
-               </div>
-            </div>
-          </motion.section>
 
-          {/* PRÓXIMAS CLASES */}
-          <motion.section initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.4, delay:0.3}} style={{ marginTop: '25px', position: 'relative', zIndex: 2 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '15px' }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, fontFamily: 'var(--font-display)', letterSpacing: '0.02em' }}>Mis Reservas</h2>
-              <Link to="/agenda" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)', textDecoration: 'none', background: 'rgba(255,145,77,0.1)', padding: '4px 10px', borderRadius: '20px' }}>Ver agenda</Link>
+          {/* PRÓXIMA CLASE - TICKET STYLE */}
+          <motion.section initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5, delay:0.25}}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Próximas clases</h2>
+              <Link to="/agenda" style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textDecoration: 'none' }}>Ver todo →</Link>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {myReservations && myReservations.length > 0 ? (
                 myReservations.map((res, index) => (
-                  <ClassRow 
+                  <TicketCard 
                     key={index}
                     title={res.title} 
                     time={res.time} 
@@ -137,12 +202,31 @@ function Portal() {
                   />
                 ))
               ) : (
-                <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.9rem', background: 'white', borderRadius: '16px', border: '1px dashed rgba(0,0,0,0.1)' }}>
-                  <Calendar size={30} color="rgba(0,0,0,0.1)" style={{ margin: '0 auto 10px' }} />
-                  <p style={{ margin: 0, fontWeight: 500 }}>No tienes clases próximas.</p>
-                  <Link to="/agenda" style={{ display: 'inline-block', marginTop: '10px', color: 'var(--primary)', fontWeight: 700, textDecoration: 'none' }}>Agendar ahora</Link>
+                <div style={{ 
+                  padding: '40px 20px', textAlign: 'center', color: 'var(--on-surface-variant)', 
+                  background: 'white', borderRadius: '24px', border: '1px dashed rgba(0,0,0,0.08)'
+                }}>
+                  <Calendar size={36} color="rgba(0,0,0,0.08)" style={{ margin: '0 auto 12px' }} />
+                  <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: 'var(--black)' }}>Sin clases agendadas</p>
+                  <p style={{ margin: '5px 0 0', fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>Reserva tu próxima sesión</p>
+                  <Link to="/agenda" style={{ 
+                    display: 'inline-block', marginTop: '15px', color: 'white', fontWeight: 700, 
+                    textDecoration: 'none', background: 'var(--primary)', padding: '10px 24px', 
+                    borderRadius: '14px', fontSize: '0.85rem',
+                    boxShadow: '0 8px 20px rgba(255,139,66,0.3)'
+                  }}>Agendar ahora</Link>
                 </div>
               )}
+            </div>
+          </motion.section>
+
+          {/* WEEKLY STATS MINI */}
+          <motion.section initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5, delay:0.35}} style={{ marginTop: '25px' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '15px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Tu semana</h2>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <StatPill icon={<Flame size={16} />} value="1.2k" label="kcal" color="var(--primary)" />
+              <StatPill icon={<Activity size={16} />} value="3" label="clases" color="#2D2928" />
+              <StatPill icon={<Sparkles size={16} />} value="85" label="pts" color="var(--accent)" />
             </div>
           </motion.section>
         </div>
@@ -168,7 +252,8 @@ function Portal() {
           </div>
         </div>
       )}
-      {/* QR BOTTOM SHEET CON DISEÑO BLACK CARD */}
+
+      {/* QR BOTTOM SHEET */}
       {showQR && (
         <>
           <div className="qr-sheet-overlay" onClick={() => setShowQR(false)} />
@@ -176,39 +261,40 @@ function Portal() {
             <div className="sheet-handle" />
             
             <div className="wallet-card" style={{ 
-              background: 'linear-gradient(135deg, #2C302E 0%, #1A1C1E 100%)', 
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'linear-gradient(135deg, #FFFFFF 0%, #FCF9F5 100%)', 
+              boxShadow: '0 20px 50px rgba(0,0,0,0.06)',
+              border: '1px solid rgba(255,255,255,0.9)',
               position: 'relative', overflow: 'hidden',
               margin: '0 auto 10px',
-              width: '100%'
+              width: '100%',
+              borderRadius: '30px'
             }}>
-              <div style={{ position: 'absolute', top: 0, left: '-100%', width: '50%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent)', transform: 'skewX(-20deg)' }}></div>
+              <div style={{ position: 'absolute', top: 0, left: '-100%', width: '50%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)', transform: 'skewX(-20deg)' }}></div>
 
-              <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
+              <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0, paddingTop: '20px', paddingLeft: '20px', paddingRight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--accent), #D4A373)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1A1C1E', fontFamily: 'var(--font-display)', fontSize: '1.2rem' }}>B</div>
-                  <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--accent)', letterSpacing: '2px' }}>BEFIT LAB</span>
+                  <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'white', fontFamily: 'var(--font-display)', fontSize: '1.2rem', boxShadow: '0 4px 10px rgba(255,139,66,0.3)' }}>B</div>
+                  <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--black)', letterSpacing: '2px' }}>BEFIT LAB</span>
                 </div>
-                <QrCode size={20} color="var(--accent)" opacity={0.8} />
+                <QrCode size={20} color="var(--primary)" opacity={0.8} />
               </div>
               
               <div className="wallet-body" style={{ padding: '25px 20px', textAlign: 'center' }}>
-                <div style={{ background: 'white', padding: '12px', borderRadius: '16px', display: 'inline-block', boxShadow: '0 10px 20px rgba(0,0,0,0.3)' }}>
+                <div style={{ background: 'white', padding: '12px', borderRadius: '20px', display: 'inline-block', boxShadow: '0 10px 30px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.02)' }}>
                   <QRCodeCanvas 
                     value={user?.id || 'befit-client-id'} 
                     size={160}
                     level={"H"}
                     includeMargin={false}
-                    fgColor="#1A1C1E"
+                    fgColor="#2D2928"
                   />
                 </div>
               </div>
               
-              <div className="wallet-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px', justifyContent: 'center' }}>
+              <div className="wallet-footer" style={{ borderTop: '1px dashed rgba(0,0,0,0.05)', paddingTop: '20px', paddingBottom: '20px', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white', fontFamily: 'var(--font-display)' }}>{classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--accent)'}}>sesiones</span></div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--primary)'}}>sesiones</span></div>
                 </div>
               </div>
             </div>
@@ -222,7 +308,7 @@ function Portal() {
       )}
 
       {/* FLOATING BOTTOM NAV — INSTAGRAM STYLE */}
-      <nav className="ios-bottom-nav">
+      <nav className={`ios-bottom-nav ${isScrolled ? 'scrolled' : ''}`}>
         <Link to="/portal" className="nav-item active">
           <User size={22} strokeWidth={2.5} />
           <span>Yo</span>
@@ -247,33 +333,67 @@ function Portal() {
   );
 }
 
-function ClassRow({ title, time, instructor, color, onClick }) {
+/* TICKET-STYLE CLASS CARD */
+function TicketCard({ title, time, instructor, color, onClick }) {
   return (
     <div 
       onClick={onClick}
       style={{ 
-        padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
-        cursor: 'pointer', background: 'white', borderRadius: '16px',
-        boxShadow: '0 4px 15px rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.03)',
-        transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+        background: 'white', borderRadius: '24px', overflow: 'hidden',
+        boxShadow: '0 8px 25px rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.03)',
+        cursor: 'pointer', transition: 'transform 0.2s ease'
       }}
-      onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.01)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.05)'; }}
-      onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.02)'; }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-        <div style={{ width: '45px', height: '45px', borderRadius: '12px', background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${color}30` }}>
-          <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: color, boxShadow: `0 0 10px ${color}` }}></div>
-        </div>
-        <div>
-          <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--black)' }}>{title}</h4>
-          <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', marginTop: '4px', fontWeight: 600 }}>
-            <span style={{ color: color }}>{time}</span> • {instructor}
+      {/* Top Section */}
+      <div style={{ padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ 
+            width: '50px', height: '50px', borderRadius: '50%', overflow: 'hidden',
+            background: 'var(--surface)', flexShrink: 0
+          }}>
+            <img src={`https://i.pravatar.cc/150?u=${instructor}`} alt={instructor} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+          <div>
+            <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{title}</h4>
+            <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', marginTop: '3px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+              {instructor}
+            </div>
           </div>
         </div>
+        <ChevronRight size={18} color="var(--on-surface-variant)" opacity={0.3} />
       </div>
-      <ChevronRight size={20} color="var(--on-surface-variant)" opacity={0.3} />
+
+      {/* Dashed Divider */}
+      <div style={{ borderTop: '1px dashed rgba(0,0,0,0.08)', marginLeft: '20px', marginRight: '20px' }}></div>
+      
+      {/* Bottom Section - Ticket Info */}
+      <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Clock size={14} color="var(--primary)" />
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)' }}>{time}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <MapPin size={14} color="var(--on-surface-variant)" />
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--on-surface-variant)' }}>BEFIT LAB</span>
+        </div>
+      </div>
     </div>
   )
+}
+
+/* STAT PILL */
+function StatPill({ icon, value, label, color }) {
+  return (
+    <div style={{ 
+      flex: 1, background: 'white', borderRadius: '20px', padding: '16px 12px', 
+      textAlign: 'center', border: '1px solid rgba(0,0,0,0.03)',
+      boxShadow: '0 6px 18px rgba(0,0,0,0.03)'
+    }}>
+      <div style={{ color: color, marginBottom: '8px', display: 'flex', justifyContent: 'center' }}>{icon}</div>
+      <div style={{ fontSize: '1.3rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--black)', lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: '0.65rem', color: 'var(--on-surface-variant)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>{label}</div>
+    </div>
+  );
 }
 
 export default Portal;

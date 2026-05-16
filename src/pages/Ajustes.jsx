@@ -1,0 +1,497 @@
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Settings, Bell, Moon, Lock, FileText, ShieldAlert, Trash2, ChevronRight, ChevronLeft, Check, AlertCircle, Home, TrendingUp, Utensils, CalendarDays, QrCode, Info } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
+import { useScrollDetect } from '../hooks/useScrollDetect';
+
+function Ajustes() {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const isScrolled = useScrollDetect(30);
+
+  // Settings state
+  const [notifications, setNotifications] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Modals
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteStep, setDeleteStep] = useState(1);
+
+  // Password change
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordMsg, setPasswordMsg] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  // Load settings from localStorage
+  useEffect(() => {
+    const savedNotif = localStorage.getItem('befit_notifications');
+    const savedDark = localStorage.getItem('befit_darkmode');
+    if (savedNotif !== null) setNotifications(savedNotif === 'true');
+    if (savedDark !== null) setDarkMode(savedDark === 'true');
+  }, []);
+
+  const toggleNotifications = () => {
+    const newVal = !notifications;
+    setNotifications(newVal);
+    localStorage.setItem('befit_notifications', String(newVal));
+  };
+
+  const toggleDarkMode = () => {
+    const newVal = !darkMode;
+    setDarkMode(newVal);
+    localStorage.setItem('befit_darkmode', String(newVal));
+    // Apply dark mode to document
+    document.documentElement.setAttribute('data-theme', newVal ? 'dark' : 'light');
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) {
+      setPasswordError(true);
+      setPasswordMsg('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError(true);
+      setPasswordMsg('Las contraseñas no coinciden.');
+      return;
+    }
+
+    setChangingPassword(true);
+    setPasswordError(false);
+    setPasswordMsg('');
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      setPasswordError(true);
+      setPasswordMsg('Error: ' + error.message);
+    } else {
+      setPasswordError(false);
+      setPasswordMsg('Contraseña actualizada correctamente.');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => {
+        setShowChangePassword(false);
+        setPasswordMsg('');
+      }, 2000);
+    }
+    setChangingPassword(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteStep === 1) {
+      setDeleteStep(2);
+      return;
+    }
+    // Step 2: actual delete
+    try {
+      // Delete user data from users table
+      await supabase.from('reservations').delete().eq('user_id', user.id);
+      await supabase.from('users').delete().eq('id', user.id);
+      await logout();
+      navigate('/');
+    } catch (err) {
+      console.error('Error deleting account:', err);
+    }
+  };
+
+  // Styles
+  const cardStyle = {
+    background: 'white',
+    borderRadius: '24px',
+    padding: '6px 0',
+    marginBottom: '16px',
+    boxShadow: '0 8px 30px rgba(155,69,0,0.05)',
+    overflow: 'hidden'
+  };
+
+  const rowStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '16px 20px',
+    cursor: 'pointer',
+    transition: 'background 0.2s ease'
+  };
+
+  const iconBoxStyle = {
+    width: '36px', height: '36px', borderRadius: '12px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '14px 18px',
+    borderRadius: '9999px',
+    border: '1px solid #ddc1b3',
+    background: '#FCF9F5',
+    fontSize: '0.95rem',
+    fontFamily: 'DM Sans, sans-serif',
+    color: '#1c1c1a',
+    outline: 'none',
+    boxSizing: 'border-box'
+  };
+
+  const ToggleSwitch = ({ value, onToggle }) => (
+    <div
+      onClick={onToggle}
+      style={{
+        width: '52px', height: '30px', borderRadius: '15px',
+        background: value ? '#FF8B42' : '#ddc1b3',
+        padding: '3px', cursor: 'pointer',
+        transition: 'background 0.3s ease',
+        display: 'flex', alignItems: 'center'
+      }}
+    >
+      <div style={{
+        width: '24px', height: '24px', borderRadius: '50%',
+        background: 'white',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+        transform: value ? 'translateX(22px)' : 'translateX(0)',
+        transition: 'transform 0.3s ease'
+      }} />
+    </div>
+  );
+
+  // MODAL OVERLAY
+  const ModalOverlay = ({ show, onClose, children }) => {
+    if (!show) return null;
+    return (
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(0,0,0,0.4)', zIndex: 9999,
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)'
+      }} onClick={onClose}>
+        <div
+          style={{
+            background: '#FCF9F5', borderRadius: '28px 28px 0 0',
+            width: '100%', maxWidth: '430px',
+            maxHeight: '85vh', overflow: 'auto',
+            padding: '24px 20px 40px',
+            animation: 'slideUp 0.3s ease'
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          {children}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="mobile-app-container" style={{ background: '#FCF9F5' }}>
+      {/* HEADER UNIFICADO */}
+      <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              onClick={() => navigate('/mi-cuenta')}
+              style={{
+                width: '36px', height: '36px', borderRadius: '50%',
+                background: 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              <ChevronLeft size={20} color="var(--primary)" />
+            </div>
+            <div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>Configuración</p>
+              <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Ajustes</h1>
+            </div>
+          </div>
+          <div style={{ 
+            width: '42px', height: '42px', borderRadius: '50%', 
+            background: 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <Settings size={20} color="var(--primary)" />
+          </div>
+        </div>
+      </header>
+
+      <main className="dashboard-main">
+        <div className="dashboard-sidebar">
+
+          {/* PREFERENCIAS */}
+          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8a7266', margin: '0 0 8px', paddingLeft: '8px' }}>
+            Preferencias
+          </p>
+          <div style={cardStyle}>
+            <div style={rowStyle}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ ...iconBoxStyle, background: 'rgba(255,139,66,0.1)' }}>
+                  <Bell size={18} color="#FF8B42" />
+                </div>
+                <div>
+                  <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1c1c1a', margin: 0 }}>Notificaciones</p>
+                  <p style={{ fontSize: '0.75rem', color: '#8a7266', margin: '2px 0 0' }}>Recordatorio 1hr antes</p>
+                </div>
+              </div>
+              <ToggleSwitch value={notifications} onToggle={toggleNotifications} />
+            </div>
+
+            <div style={{ height: '1px', background: '#f0ede9', margin: '0 20px' }} />
+
+            <div style={rowStyle}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ ...iconBoxStyle, background: 'rgba(45,41,40,0.08)' }}>
+                  <Moon size={18} color="#2D2928" />
+                </div>
+                <div>
+                  <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1c1c1a', margin: 0 }}>Modo Oscuro</p>
+                  <p style={{ fontSize: '0.75rem', color: '#8a7266', margin: '2px 0 0' }}>Apariencia de la app</p>
+                </div>
+              </div>
+              <ToggleSwitch value={darkMode} onToggle={toggleDarkMode} />
+            </div>
+          </div>
+
+          {/* SEGURIDAD */}
+          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8a7266', margin: '8px 0 8px', paddingLeft: '8px' }}>
+            Seguridad
+          </p>
+          <div style={cardStyle}>
+            <div style={rowStyle} onClick={() => setShowChangePassword(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ ...iconBoxStyle, background: 'rgba(0,103,126,0.08)' }}>
+                  <Lock size={18} color="#00677e" />
+                </div>
+                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1c1c1a', margin: 0 }}>Cambiar Contraseña</p>
+              </div>
+              <ChevronRight size={20} color="#8a7266" />
+            </div>
+          </div>
+
+          {/* LEGAL */}
+          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8a7266', margin: '8px 0 8px', paddingLeft: '8px' }}>
+            Legal
+          </p>
+          <div style={cardStyle}>
+            <div style={rowStyle} onClick={() => setShowPrivacy(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ ...iconBoxStyle, background: 'rgba(126,86,46,0.08)' }}>
+                  <FileText size={18} color="#7e562e" />
+                </div>
+                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1c1c1a', margin: 0 }}>Política de Privacidad</p>
+              </div>
+              <ChevronRight size={20} color="#8a7266" />
+            </div>
+
+            <div style={{ height: '1px', background: '#f0ede9', margin: '0 20px' }} />
+
+            <div style={rowStyle} onClick={() => setShowTerms(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ ...iconBoxStyle, background: 'rgba(126,86,46,0.08)' }}>
+                  <ShieldAlert size={18} color="#7e562e" />
+                </div>
+                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1c1c1a', margin: 0 }}>Términos y Condiciones</p>
+              </div>
+              <ChevronRight size={20} color="#8a7266" />
+            </div>
+          </div>
+
+          {/* DANGER ZONE */}
+          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#ba1a1a', margin: '8px 0 8px', paddingLeft: '8px' }}>
+            Zona de Peligro
+          </p>
+          <div style={{ ...cardStyle, marginBottom: '24px' }}>
+            <div style={rowStyle} onClick={() => setShowDeleteConfirm(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ ...iconBoxStyle, background: 'rgba(186,26,26,0.08)' }}>
+                  <Trash2 size={18} color="#ba1a1a" />
+                </div>
+                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#ba1a1a', margin: 0 }}>Eliminar Cuenta</p>
+              </div>
+              <ChevronRight size={20} color="#ba1a1a" />
+            </div>
+          </div>
+
+          {/* VERSION */}
+          <div style={{ textAlign: 'center', marginBottom: '100px' }}>
+            <p style={{ fontSize: '0.75rem', color: '#8a7266', margin: 0, fontWeight: 500 }}>
+              <Info size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+              BEFIT LAB v1.0.0
+            </p>
+          </div>
+
+        </div>
+      </main>
+
+      {/* CHANGE PASSWORD MODAL */}
+      <ModalOverlay show={showChangePassword} onClose={() => { setShowChangePassword(false); setPasswordMsg(''); }}>
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <div style={{
+            width: '56px', height: '56px', borderRadius: '50%',
+            background: 'rgba(0,103,126,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 12px'
+          }}>
+            <Lock size={24} color="#00677e" />
+          </div>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, fontFamily: 'DM Sans', color: '#1c1c1a' }}>Cambiar Contraseña</h2>
+        </div>
+
+        <div style={{ marginBottom: '14px' }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#564338', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', display: 'block' }}>
+            Nueva contraseña
+          </label>
+          <input
+            type="password"
+            value={newPassword}
+            onChange={e => setNewPassword(e.target.value)}
+            placeholder="Mínimo 6 caracteres"
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#564338', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', display: 'block' }}>
+            Confirmar contraseña
+          </label>
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            placeholder="Repite tu contraseña"
+            style={inputStyle}
+          />
+        </div>
+
+        {passwordMsg && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '12px 16px', borderRadius: '16px',
+            background: passwordError ? '#ffdad6' : 'rgba(255,139,66,0.1)',
+            color: passwordError ? '#93000a' : '#9b4500',
+            fontSize: '0.85rem', marginBottom: '16px', fontWeight: 600
+          }}>
+            {passwordError ? <AlertCircle size={16} /> : <Check size={16} />} {passwordMsg}
+          </div>
+        )}
+
+        <button
+          onClick={handleChangePassword}
+          disabled={changingPassword}
+          style={{
+            width: '100%', padding: '16px',
+            borderRadius: '9999px', border: 'none',
+            background: changingPassword ? '#ddc1b3' : '#00677e',
+            color: 'white', fontSize: '1rem',
+            fontWeight: 700, fontFamily: 'DM Sans',
+            cursor: changingPassword ? 'not-allowed' : 'pointer',
+            boxShadow: '0 8px 20px rgba(0,103,126,0.2)'
+          }}
+        >
+          {changingPassword ? 'Actualizando...' : 'Actualizar Contraseña'}
+        </button>
+      </ModalOverlay>
+
+      {/* PRIVACY POLICY MODAL */}
+      <ModalOverlay show={showPrivacy} onClose={() => setShowPrivacy(false)}>
+        <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '0 0 16px', fontFamily: 'DM Sans', color: '#1c1c1a' }}>Política de Privacidad</h2>
+        <div style={{ fontSize: '0.9rem', color: '#564338', lineHeight: 1.7 }}>
+          <p><strong>BEFIT LAB</strong> se compromete a proteger tu privacidad. Esta política describe cómo recopilamos, usamos y protegemos tu información personal.</p>
+          <p><strong>Información que recopilamos:</strong> Nombre, correo electrónico, número de teléfono, datos de membresía y asistencia a clases.</p>
+          <p><strong>Uso de la información:</strong> Utilizamos tus datos para gestionar tu membresía, reservas de clases, comunicaciones del estudio y mejorar nuestros servicios.</p>
+          <p><strong>Protección de datos:</strong> Implementamos medidas de seguridad técnicas y organizativas para proteger tu información personal contra acceso no autorizado.</p>
+          <p><strong>Tus derechos:</strong> Puedes acceder, modificar o eliminar tu información personal en cualquier momento desde la sección "Mi Cuenta" o contactándonos directamente.</p>
+          <p><strong>Contacto:</strong> Para consultas sobre privacidad, escríbenos a contacto@befitlab.com</p>
+        </div>
+      </ModalOverlay>
+
+      {/* TERMS MODAL */}
+      <ModalOverlay show={showTerms} onClose={() => setShowTerms(false)}>
+        <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '0 0 16px', fontFamily: 'DM Sans', color: '#1c1c1a' }}>Términos y Condiciones</h2>
+        <div style={{ fontSize: '0.9rem', color: '#564338', lineHeight: 1.7 }}>
+          <p><strong>1. Membresías:</strong> Las membresías son personales e intransferibles. Las clases no utilizadas no son acumulables al siguiente período.</p>
+          <p><strong>2. Reservaciones:</strong> Las reservas deben cancelarse con al menos 4 horas de anticipación. Cancelaciones tardías se contarán como clase tomada.</p>
+          <p><strong>3. Asistencia:</strong> Te pedimos llegar al menos 5 minutos antes de tu clase. Después de la hora de inicio, no se permitirá el acceso.</p>
+          <p><strong>4. Código de vestimenta:</strong> Se requiere ropa deportiva cómoda y calcetines antiderrapantes.</p>
+          <p><strong>5. Responsabilidad:</strong> BEFIT LAB no se hace responsable por lesiones resultantes del mal uso de los equipos o incumplimiento de las instrucciones del coach.</p>
+          <p><strong>6. Modificaciones:</strong> Nos reservamos el derecho de modificar estos términos en cualquier momento, notificando a los usuarios con anticipación.</p>
+        </div>
+      </ModalOverlay>
+
+      {/* DELETE ACCOUNT MODAL */}
+      <ModalOverlay show={showDeleteConfirm} onClose={() => { setShowDeleteConfirm(false); setDeleteStep(1); }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '64px', height: '64px', borderRadius: '50%',
+            background: '#ffdad6', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 16px'
+          }}>
+            <Trash2 size={28} color="#ba1a1a" />
+          </div>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '0 0 8px', fontFamily: 'DM Sans', color: '#1c1c1a' }}>
+            {deleteStep === 1 ? '¿Eliminar tu cuenta?' : '¿Estás segura?'}
+          </h2>
+          <p style={{ fontSize: '0.9rem', color: '#564338', marginBottom: '24px' }}>
+            {deleteStep === 1
+              ? 'Se eliminarán todos tus datos, reservaciones e historial. Esta acción no se puede deshacer.'
+              : 'Esta es tu última oportunidad. Al confirmar, tu cuenta será eliminada permanentemente.'}
+          </p>
+
+          <button
+            onClick={handleDeleteAccount}
+            style={{
+              width: '100%', padding: '16px',
+              borderRadius: '9999px', border: 'none',
+              background: '#ba1a1a', color: 'white',
+              fontSize: '1rem', fontWeight: 700, fontFamily: 'DM Sans',
+              cursor: 'pointer', marginBottom: '12px',
+              boxShadow: '0 8px 20px rgba(186,26,26,0.2)'
+            }}
+          >
+            {deleteStep === 1 ? 'Sí, eliminar mi cuenta' : 'Confirmar eliminación definitiva'}
+          </button>
+
+          <button
+            onClick={() => { setShowDeleteConfirm(false); setDeleteStep(1); }}
+            style={{
+              width: '100%', padding: '16px',
+              borderRadius: '9999px',
+              border: '1px solid #ddc1b3', background: 'transparent',
+              fontSize: '1rem', fontWeight: 600, fontFamily: 'DM Sans',
+              color: '#564338', cursor: 'pointer'
+            }}
+          >
+            Cancelar
+          </button>
+        </div>
+      </ModalOverlay>
+
+      {/* BOTTOM NAV */}
+      {user && (
+        <nav className={`ios-bottom-nav ${isScrolled ? 'scrolled' : ''}`}>
+          <Link to="/portal" className="nav-item">
+            <Home size={22} strokeWidth={2.5} />
+            <span>Yo</span>
+          </Link>
+          <Link to="/evolucion" className="nav-item">
+            <TrendingUp size={22} strokeWidth={2.5} />
+            <span>Metas</span>
+          </Link>
+          <button className="nav-qr-button" onClick={() => navigate('/portal')}>
+            <QrCode size={24} strokeWidth={2.5} />
+          </button>
+          <Link to="/nutricion" className="nav-item">
+            <Utensils size={22} strokeWidth={2.5} />
+            <span>Comida</span>
+          </Link>
+          <Link to="/agenda" className="nav-item">
+            <CalendarDays size={22} strokeWidth={2.5} />
+            <span>Clases</span>
+          </Link>
+        </nav>
+      )}
+    </div>
+  );
+}
+
+export default Ajustes;

@@ -1,10 +1,13 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import Landing from './pages/Landing';
 import Agenda from './pages/Agenda';
 import Evolucion from './pages/Evolucion';
 import Nutricion from './pages/Nutricion';
 import Portal from './pages/Portal';
+import MiCuenta from './pages/MiCuenta';
+import Ajustes from './pages/Ajustes';
 import Admin from './pages/Admin';
 import Coach from './pages/Coach';
 import Login from './pages/Login';
@@ -47,21 +50,25 @@ const ProtectedRoute = ({ children, requireRole }) => {
 };
 
 function App() {
+  const isNative = Capacitor.isNativePlatform();
+
   return (
     <AuthProvider>
       <Router>
         <Routes>
           {/* Rutas Públicas */}
-          <Route path="/" element={<Landing />} />
+          <Route path="/" element={isNative ? <Navigate to="/login" replace /> : <Landing />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/registro" element={<Register />} />
-          <Route path="/planes" element={<Planes />} />
+          <Route path="/registro" element={isNative ? <Navigate to="/login" replace /> : <Register />} />
+          <Route path="/planes" element={isNative ? <Navigate to="/login" replace /> : <Planes />} />
           <Route path="/agenda" element={<Agenda />} />
           
           {/* Rutas Privadas Clienta */}
           <Route path="/portal" element={<ProtectedRoute requireRole="CLIENT"><Portal /></ProtectedRoute>} />
           <Route path="/nutricion" element={<ProtectedRoute requireRole="CLIENT"><Nutricion /></ProtectedRoute>} />
           <Route path="/evolucion" element={<ProtectedRoute requireRole="CLIENT"><Evolucion /></ProtectedRoute>} />
+          <Route path="/mi-cuenta" element={<ProtectedRoute requireRole="CLIENT"><MiCuenta /></ProtectedRoute>} />
+          <Route path="/ajustes" element={<ProtectedRoute requireRole="CLIENT"><Ajustes /></ProtectedRoute>} />
           
           {/* Rutas Privadas Coach */}
           <Route path="/coach" element={<ProtectedRoute requireRole="COACH"><Coach /></ProtectedRoute>} />

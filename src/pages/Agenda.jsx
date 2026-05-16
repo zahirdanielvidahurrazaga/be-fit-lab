@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Calendar as CalendarIcon, Clock, ChevronRight, User, TrendingUp, Play, Utensils, CheckCircle2, QrCode } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ChevronRight, User, TrendingUp, Play, Utensils, CheckCircle2, QrCode } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
+import { useScrollDetect } from '../hooks/useScrollDetect';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function Agenda() {
   const navigate = useNavigate();
@@ -16,6 +18,7 @@ function Agenda() {
   const [modalData, setModalData] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const isScrolled = useScrollDetect(30);
 
   const handleReserveClick = (classObj) => {
     if (!user) {
@@ -56,25 +59,18 @@ function Agenda() {
 
   return (
     <div className="mobile-app-container">
-      {/* HEADER TIPO iOS */}
-      <header className="ios-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <div 
-              onClick={() => navigate(user ? '/portal' : '/')}
-              style={{ 
-                width: '40px', height: '40px', borderRadius: '12px', 
-                background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(10px)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 15px rgba(55,61,59,0.05)', cursor: 'pointer',
-                border: '1px solid rgba(255,255,255,0.8)'
-              }}>
-              <ChevronLeft size={20} color="var(--primary)" />
-            </div>
-            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.2 }}>{user ? 'Reservas' : 'Horarios'}</h1>
+      {/* HEADER UNIFICADO */}
+      <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
+          <div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>Tus clases</p>
+            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Reservas</h1>
           </div>
-          <div style={{ color: 'var(--primary)' }}>
-             <CalendarIcon size={24} />
+          <div style={{ 
+            width: '42px', height: '42px', borderRadius: '50%', 
+            background: 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <CalendarIcon size={20} color="var(--primary)" />
           </div>
         </div>
       </header>
@@ -116,25 +112,30 @@ function Agenda() {
           )}
 
           {/* Selector de Fecha (Refined Calendar Strip) */}
-          <section>
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--on-surface)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '15px' }}>Selecciona una fecha</h2>
-            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px', scrollbarWidth: 'none' }}>
+          <section style={{ marginTop: '20px' }}>
+            <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px', scrollbarWidth: 'none', paddingLeft: '5px', paddingRight: '5px' }}>
               {days.map((d, i) => (
                 <button 
                   key={i}
                   onClick={() => { setSelectedDayOfWeek(d.dayOfWeek); setSelectedDateIndex(i); }}
                   style={{
-                    flex: '0 0 auto', width: '65px', height: '85px', borderRadius: '18px', border: 'none',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    background: selectedDateIndex === i ? 'var(--primary)' : 'rgba(255,145,77,0.08)',
-                    color: selectedDateIndex === i ? 'white' : 'var(--on-surface-variant)',
-                    cursor: 'pointer', transition: 'all 0.3s ease',
-                    boxShadow: selectedDateIndex === i ? '0 10px 20px rgba(55,61,59,0.1)' : 'none',
-                    transform: selectedDateIndex === i ? 'scale(1.05)' : 'scale(1)'
+                    flex: '0 0 auto', width: '55px', border: 'none', background: 'transparent',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+                    color: 'var(--black)', cursor: 'pointer', transition: 'all 0.3s ease'
                   }}
                 >
-                  <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.1em' }}>{d.name}</span>
-                  <span style={{ fontSize: '1.4rem', fontWeight: 900, fontFamily: 'var(--font-display)' }}>{d.dateNum}</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase' }}>{d.name}</span>
+                  <div style={{ 
+                    width: '45px', height: '45px', borderRadius: '50%', 
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: selectedDateIndex === i ? 'var(--primary)' : 'white',
+                    color: selectedDateIndex === i ? 'white' : 'var(--black)',
+                    border: selectedDateIndex === i ? 'none' : '1px solid rgba(0,0,0,0.1)',
+                    boxShadow: selectedDateIndex === i ? '0 5px 15px rgba(255,139,66,0.3)' : 'none',
+                    fontSize: '1.1rem', fontWeight: 700
+                  }}>
+                    {d.dateNum}
+                  </div>
                 </button>
               ))}
             </div>
@@ -143,10 +144,7 @@ function Agenda() {
 
         <div className="dashboard-content">
           {/* Lista de Clases del Día */}
-          <section>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--on-surface)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Clases Disponibles</h2>
-            </div>
+          <section style={{ marginTop: '10px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                {globalClasses.filter(c => c.day === selectedDayOfWeek).length > 0 ? (
                  globalClasses.filter(c => c.day === selectedDayOfWeek).map(c => (
@@ -174,7 +172,7 @@ function Agenda() {
           <div className="glass-modal">
             {isSuccess ? (
               <div style={{ animation: 'scaleUp 0.3s ease' }}>
-                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,145,77,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
+                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
                   <CheckCircle2 size={35} color="var(--primary)" />
                 </div>
                 <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', marginBottom: '5px' }}>¡Reserva Exitosa!</h2>
@@ -197,61 +195,62 @@ function Agenda() {
       )}
 
       {/* QR BOTTOM SHEET CON DISEÑO BLACK CARD */}
-      {showQR && (
-        <>
-          <div className="qr-sheet-overlay" onClick={() => setShowQR(false)} />
-          <div className="qr-bottom-sheet" style={{ padding: '12px 24px 20px', background: 'var(--surface)' }}>
-            <div className="sheet-handle" />
-            
-            <div className="wallet-card" style={{ 
-              background: 'linear-gradient(135deg, #2C302E 0%, #1A1C1E 100%)', 
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              position: 'relative', overflow: 'hidden',
-              margin: '0 auto 10px',
-              width: '100%'
-            }}>
-              <div style={{ position: 'absolute', top: 0, left: '-100%', width: '50%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent)', transform: 'skewX(-20deg)' }}></div>
-
-              <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--accent), #D4A373)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1A1C1E', fontFamily: 'var(--font-display)', fontSize: '1.2rem' }}>B</div>
-                  <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--accent)', letterSpacing: '2px' }}>BEFIT LAB</span>
-                </div>
-                <QrCode size={20} color="var(--accent)" opacity={0.8} />
-              </div>
+      <AnimatePresence>
+        {showQR && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              className="qr-sheet-overlay" 
+              onClick={() => setShowQR(false)} 
+            />
+            <motion.div 
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="qr-bottom-sheet" 
+              style={{ padding: '12px 24px 40px', background: 'var(--surface)' }}
+            >
+              <div className="sheet-handle" />
               
-              <div className="wallet-body" style={{ padding: '25px 20px', textAlign: 'center' }}>
-                <div style={{ background: 'white', padding: '12px', borderRadius: '16px', display: 'inline-block', boxShadow: '0 10px 20px rgba(0,0,0,0.3)' }}>
-                  <QRCodeCanvas 
-                    value={user?.id || 'befit-client-id'} 
-                    size={160}
-                    level={"H"}
-                    includeMargin={false}
-                    fgColor="#1A1C1E"
-                  />
+              <div className="wallet-card" style={{ 
+                background: 'linear-gradient(135deg, #FFFFFF 0%, #FCF9F5 100%)', 
+                boxShadow: '0 20px 50px rgba(0,0,0,0.06)',
+                border: '1px solid rgba(255,255,255,0.9)',
+                position: 'relative', overflow: 'hidden',
+                margin: '0 auto 10px',
+                width: '100%',
+                borderRadius: '30px'
+              }}>
+                <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0, paddingTop: '20px', paddingLeft: '20px', paddingRight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'white', fontFamily: 'var(--font-display)', fontSize: '1.2rem' }}>B</div>
+                    <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--black)', letterSpacing: '2px' }}>BEFIT LAB</span>
+                  </div>
+                </div>
+                
+                <div className="wallet-body" style={{ padding: '25px 20px', textAlign: 'center' }}>
+                  <div style={{ background: 'white', padding: '12px', borderRadius: '20px', display: 'inline-block', boxShadow: '0 10px 30px rgba(0,0,0,0.04)' }}>
+                    <QRCodeCanvas 
+                      value={user?.id || 'befit-client-id'} 
+                      size={160}
+                      level={"H"}
+                      includeMargin={false}
+                      fgColor="#2D2928"
+                    />
+                  </div>
                 </div>
               </div>
-              
-              <div className="wallet-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px', justifyContent: 'center' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white', fontFamily: 'var(--font-display)' }}>{classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--accent)'}}>sesiones</span></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="sheet-user-info" style={{ marginTop: '10px' }}>
-              <div className="user-name">{user?.user_metadata?.full_name || 'Miembro BeFit'}</div>
-              <div>{user?.email}</div>
-            </div>
-          </div>
-        </>
-      )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* FLOATING BOTTOM NAV — INSTAGRAM STYLE */}
       {user && (
-        <nav className="ios-bottom-nav">
+        <nav className={`ios-bottom-nav ${isScrolled ? 'scrolled' : ''}`}>
           <Link to="/portal" className="nav-item">
             <User size={22} strokeWidth={2.5} />
             <span>Yo</span>
@@ -278,54 +277,55 @@ function Agenda() {
 }
 
 function ClassItem({ classData, full, onReserve }) {
-  const { user, classesRemaining } = useAuth();
-  const { time, title, instructor, level, spots, color } = classData;
+  const { time, title, instructor, spots } = classData;
 
   return (
-    <div style={{ 
-      padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-      background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', 
-      border: '1px solid rgba(0,0,0,0.02)', position: 'relative', overflow: 'hidden',
-      opacity: full ? 0.6 : 1, transition: 'transform 0.2s ease', cursor: 'pointer'
-    }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: color }}></div>
-      
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: color, letterSpacing: '0.1em', background: `${color}15`, padding: '4px 10px', borderRadius: '8px' }}>{time}</span>
-          <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--on-surface-variant)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{level}</span>
+    <motion.div 
+      whileTap={{ scale: 0.98 }}
+      onClick={() => { if(!full && onReserve) onReserve(); }}
+      style={{ 
+        marginBottom: '16px', cursor: full ? 'default' : 'pointer'
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', paddingLeft: '5px' }}>
+        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{time}</span>
+        <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'rgba(0,0,0,0.1)' }}></div>
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase' }}>50 min</span>
+      </div>
+
+      <div style={{ 
+        padding: '20px', display: 'flex', alignItems: 'center', gap: '20px',
+        background: 'white', borderRadius: '28px', boxShadow: '0 10px 30px rgba(155,69,0,0.04)', 
+        border: '1px solid rgba(255,255,255,0.8)', position: 'relative', overflow: 'hidden',
+        opacity: full ? 0.6 : 1, transition: 'all 0.3s ease'
+      }}>
+        <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', background: '#FCF9F5', flexShrink: 0, border: '2px solid white', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
+           <img src={`https://i.pravatar.cc/150?u=${instructor}`} alt={instructor} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
-        <h3 style={{ fontSize: '1.4rem', color: 'var(--black)', margin: '0 0 5px 0', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>{title}</h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>
-           <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: 'white', fontWeight: 800 }}>
-             {instructor[0]}
-           </div>
-           {instructor}
+        
+        <div style={{ flex: 1 }}>
+          <h3 style={{ fontSize: '1.15rem', color: 'var(--black)', margin: '0 0 4px 0', fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1.2 }}>{title}</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+             <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{instructor}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: full ? '#FF4D4D' : '#22C55E' }}></div>
+             <span style={{ fontSize: '0.75rem', color: '#8a7266', fontWeight: 700 }}>
+                {full ? 'Clase llena' : `${spots} lugares disponibles`}
+             </span>
+          </div>
+        </div>
+
+        <div style={{ 
+          width: '40px', height: '40px', borderRadius: '15px', 
+          background: full ? 'rgba(0,0,0,0.03)' : 'rgba(255,139,66,0.1)', 
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: full ? '#8a7266' : 'var(--primary)'
+        }}>
+          <ChevronRight size={20} />
         </div>
       </div>
-      
-      <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-        <button 
-          disabled={full || (user && classesRemaining <= 0)}
-          onClick={() => {
-            if(!full && onReserve) {
-               onReserve();
-            }
-          }}
-          style={{ 
-            padding: '12px 20px', fontSize: '0.8rem', fontWeight: 800, borderRadius: '16px', border: 'none',
-            background: full || (user && classesRemaining <= 0) ? 'rgba(0,0,0,0.05)' : 'var(--black)',
-            color: full || (user && classesRemaining <= 0) ? 'var(--on-surface-variant)' : 'white',
-            cursor: full || (user && classesRemaining <= 0) ? 'not-allowed' : 'pointer',
-            boxShadow: full || (user && classesRemaining <= 0) ? 'none' : '0 10px 20px rgba(0,0,0,0.15)',
-            textTransform: 'uppercase', letterSpacing: '0.05em'
-          }}
-        >
-          {full ? 'Agotado' : (!user ? 'Ver Planes' : (classesRemaining <= 0 ? 'Sin Clases' : 'Reservar'))}
-        </button>
-        {!full && <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 800 }}>{spots} LUGARES</div>}
-      </div>
-    </div>
+    </motion.div>
   );
 }
 

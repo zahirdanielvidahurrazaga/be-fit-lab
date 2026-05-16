@@ -1,123 +1,146 @@
 import React, { useState } from 'react';
-import { ChevronLeft, Activity, Flame, User, Calendar, Utensils, TrendingUp, Award, Target, ChevronRight, QrCode } from 'lucide-react';
+import { Activity, Flame, User, Calendar, Utensils, TrendingUp, Award, Target, ChevronRight, QrCode, Zap, Droplets } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
+import { useScrollDetect } from '../hooks/useScrollDetect';
+import { motion } from 'framer-motion';
 
 function Evolucion() {
   const navigate = useNavigate();
   const { user, classesRemaining } = useAuth();
   const [showQR, setShowQR] = useState(false);
+  const isScrolled = useScrollDetect(30);
+
+  const score = 94;
+  const circumference = 2 * Math.PI * 70; // radius 70
+  const dashOffset = circumference - (score / 100) * circumference;
 
   return (
-    <div className="mobile-app-container">
-      {/* HEADER TIPO iOS */}
-      <header className="ios-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <div 
-              onClick={() => navigate('/portal')}
-              style={{ 
-                width: '40px', height: '40px', borderRadius: '12px', 
-                background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(10px)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 15px rgba(55,61,59,0.05)', cursor: 'pointer',
-                border: '1px solid rgba(255,255,255,0.8)'
-              }}>
-              <ChevronLeft size={20} color="var(--primary)" />
-            </div>
-            <div>
-               <h1 style={{ fontSize: '1.6rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1 }}>Evolución</h1>
-               <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: 0, fontWeight: 600 }}>Logros de {user?.email?.split('@')[0] || 'Amanda'}</p>
-            </div>
+    <div className="mobile-app-container" style={{ background: '#FCF9F5' }}>
+      {/* HEADER UNIFICADO */}
+      <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
+          <div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>Tu progreso</p>
+            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Evolución</h1>
           </div>
-          <div style={{ color: 'var(--primary)', background: 'rgba(255,145,77,0.1)', padding: '10px', borderRadius: '12px' }}>
-            <TrendingUp size={22} />
+          <div style={{ 
+            width: '42px', height: '42px', borderRadius: '50%', 
+            background: 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <TrendingUp size={20} color="var(--primary)" />
           </div>
         </div>
       </header>
 
-      <main className="dashboard-main">
+      <main className="dashboard-main" style={{ paddingTop: '10px' }}>
         <div className="dashboard-sidebar">
-          {/* Resumen General con Imagen */}
-          <div className="wallet-card" style={{ 
-            padding: '25px 20px', borderRadius: '28px',
-            background: 'linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 100%), url("/assets/evolucion_lifestyle.png")',
-            backgroundSize: 'cover', backgroundPosition: 'center',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.15)', border: 'none'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
-              <div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.4rem' }}>SCORE BEFIT</div>
-                <div style={{ fontSize: '3.5rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)', lineHeight: 1 }}>94<span style={{ fontSize: '1.2rem', color: 'var(--accent)', fontWeight: 700 }}>/100</span></div>
-              </div>
-              <div style={{ background: 'rgba(255, 255, 255, 0.2)', backdropFilter: 'blur(5px)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', padding: '6px 12px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.1em' }}> NIVEL PRO</div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)', padding: '15px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
-               <div style={{ background: 'var(--accent)', padding: '8px', borderRadius: '12px' }}>
-                 <Award size={20} color="#1A1C1E" />
-               </div>
-               <p style={{ fontSize: '0.85rem', color: 'white', lineHeight: 1.4, margin: 0 }}>
-                  Has superado el <span style={{ fontWeight: 800, color: 'var(--accent)' }}>85% de tus objetivos</span> este mes.
-               </p>
-            </div>
-          </div>
 
-          {/* INSIGNIAS RÁPIDAS */}
-          <section style={{ marginTop: '20px' }}>
-            <h2 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--on-surface)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '12px' }}>Tus Insignias</h2>
-            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '10px' }} className="no-scrollbar">
-               <BadgeIcon icon="🔥" label="7 Días" color="#FF914D" />
-               <BadgeIcon icon="🧘" label="Flow Pro" color="#EEBA89" />
-               <BadgeIcon icon="💪" label="Fuerza" color="#373D3B" />
-               <BadgeIcon icon="🥗" label="Foodie" color="#76D8C3" />
+          {/* PROGRESS RING — HERO */}
+          <motion.section initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} transition={{duration:0.6}}>
+            <div style={{ 
+              background: 'white', borderRadius: '32px', padding: '30px 20px',
+              boxShadow: '0 15px 40px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.03)',
+              textAlign: 'center', position: 'relative', overflow: 'hidden'
+            }}>
+              {/* Decorative glow */}
+              <div style={{ position: 'absolute', top: '-30%', left: '50%', transform: 'translateX(-50%)', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(255,139,66,0.08) 0%, transparent 70%)', borderRadius: '50%' }}></div>
+
+              {/* SVG Ring */}
+              <div style={{ position: 'relative', width: '180px', height: '180px', margin: '0 auto 20px' }}>
+                <svg width="180" height="180" viewBox="0 0 180 180" style={{ transform: 'rotate(-90deg)' }}>
+                  {/* Background circle */}
+                  <circle cx="90" cy="90" r="70" fill="none" stroke="rgba(0,0,0,0.04)" strokeWidth="10" />
+                  {/* Progress circle */}
+                  <circle 
+                    cx="90" cy="90" r="70" fill="none" 
+                    stroke="url(#progressGradient)" strokeWidth="10" 
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={dashOffset}
+                    style={{ transition: 'stroke-dashoffset 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}
+                  />
+                  <defs>
+                    <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#FF8B42" />
+                      <stop offset="100%" stopColor="#EEBA89" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                {/* Center content */}
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '2.8rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--black)', lineHeight: 1 }}>{score}</div>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Score</div>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginBottom: '5px' }}>
+                Has superado el <span style={{ fontWeight: 800, color: 'var(--primary)' }}>85%</span> de tus objetivos
+              </div>
+              <div style={{ 
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                background: 'rgba(255,139,66,0.08)', padding: '6px 14px', borderRadius: '12px',
+                fontSize: '0.7rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em'
+              }}>
+                <Award size={14} /> Nivel PRO
+              </div>
             </div>
-          </section>
+          </motion.section>
+
+          {/* BADGES */}
+          <motion.section initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5, delay:0.15}} style={{ marginTop: '20px' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '12px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Insignias</h2>
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '5px' }}>
+               <BadgeIcon icon="🔥" label="7 Días" />
+               <BadgeIcon icon="🧘" label="Flow Pro" />
+               <BadgeIcon icon="💪" label="Fuerza" />
+               <BadgeIcon icon="🥗" label="Foodie" />
+               <BadgeIcon icon="⭐" label="VIP" />
+            </div>
+          </motion.section>
         </div>
 
         <div className="dashboard-content">
-          {/* Métricas de Cuerpo */}
-          <section>
-            <h2 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--on-surface)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '15px' }}>Composición Corporal</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-               <MetricBox label="PESO" value="62.4" unit="kg" trend="-0.5" />
-               <MetricBox label="GRASA" value="21.8" unit="%" trend="-1.2" />
-               <MetricBox label="CADERA" value="94.5" unit="cm" trend="+0.8" highlight />
-               <MetricBox label="MÚSCULO" value="32.1" unit="%" trend="+1.5" highlight />
+          {/* BODY METRICS — CLEAN LIST STYLE */}
+          <motion.section initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5, delay:0.2}}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '15px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Composición</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <MetricRow label="Peso" value="62.4" unit="kg" trend="-0.5" icon={<Droplets size={18} />} />
+              <MetricRow label="Grasa" value="21.8" unit="%" trend="-1.2" icon={<Flame size={18} />} />
+              <MetricRow label="Músculo" value="32.1" unit="%" trend="+1.5" icon={<Zap size={18} />} positive />
+              <MetricRow label="Cadera" value="94.5" unit="cm" trend="+0.8" icon={<Target size={18} />} positive />
             </div>
-          </section>
+          </motion.section>
 
-          {/* Gráfico de Tendencia */}
-          <section style={{ marginTop: '25px' }}>
-            <div className="ios-glass-card" style={{ padding: '22px' }}>
-               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                     <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,145,77,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Target size={18} color="var(--primary)" />
-                     </div>
-                     <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--on-surface)', margin: 0 }}>Fuerza Semanal</h2>
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 800, background: 'rgba(255,145,77,0.08)', padding: '4px 8px', borderRadius: '6px' }}>+12% vs ant.</div>
-               </div>
-               
-               <div style={{ height: '160px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '10px' }}>
-                  {[40, 70, 45, 90, 65, 80, 50].map((h, i) => (
-                  <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                     <div style={{ 
-                        width: '100%', 
-                        height: `${h}%`, 
-                        background: i === 3 ? 'var(--primary)' : 'rgba(55, 61, 59, 0.05)', 
-                        borderRadius: '6px',
-                        transition: 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                     }} />
-                     <span style={{ fontSize: '0.65rem', fontWeight: 800, color: i === 3 ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
-                        {['L', 'M', 'M', 'J', 'V', 'S', 'D'][i]}
-                     </span>
-                  </div>
-                  ))}
-               </div>
+          {/* WEEKLY CHART */}
+          <motion.section initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5, delay:0.3}} style={{ marginTop: '25px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Actividad semanal</h2>
+              <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 800, background: 'rgba(255,139,66,0.08)', padding: '4px 10px', borderRadius: '8px' }}>+12%</div>
             </div>
-          </section>
+            <div style={{ 
+              background: 'white', borderRadius: '24px', padding: '20px',
+              boxShadow: '0 8px 25px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.03)'
+            }}>
+              <div style={{ height: '140px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px' }}>
+                {[40, 70, 45, 90, 65, 80, 50].map((h, i) => (
+                  <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ 
+                      width: '100%', maxWidth: '28px', margin: '0 auto',
+                      height: `${h}%`, 
+                      background: i === 3 ? 'linear-gradient(to top, var(--primary), var(--accent))' : 'rgba(0,0,0,0.04)', 
+                      borderRadius: '8px',
+                      boxShadow: i === 3 ? '0 4px 12px rgba(255,139,66,0.3)' : 'none'
+                    }} />
+                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: i === 3 ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+                      {['L', 'M', 'M', 'J', 'V', 'S', 'D'][i]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.section>
         </div>
       </main>
 
@@ -126,45 +149,33 @@ function Evolucion() {
           <div className="qr-sheet-overlay" onClick={() => setShowQR(false)} />
           <div className="qr-bottom-sheet" style={{ padding: '12px 24px 20px', background: 'var(--surface)' }}>
             <div className="sheet-handle" />
-            
             <div className="wallet-card" style={{ 
-              background: 'linear-gradient(135deg, #2C302E 0%, #1A1C1E 100%)', 
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'linear-gradient(135deg, #FFFFFF 0%, #FCF9F5 100%)', 
+              boxShadow: '0 20px 50px rgba(0,0,0,0.06)',
+              border: '1px solid rgba(255,255,255,0.9)',
               position: 'relative', overflow: 'hidden',
-              margin: '0 auto 10px',
-              width: '100%'
+              margin: '0 auto 10px', width: '100%', borderRadius: '30px'
             }}>
-              <div style={{ position: 'absolute', top: 0, left: '-100%', width: '50%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent)', transform: 'skewX(-20deg)' }}></div>
-
-              <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
+              <div style={{ position: 'absolute', top: 0, left: '-100%', width: '50%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)', transform: 'skewX(-20deg)' }}></div>
+              <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0, paddingTop: '20px', paddingLeft: '20px', paddingRight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--accent), #D4A373)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1A1C1E', fontFamily: 'var(--font-display)', fontSize: '1.2rem' }}>B</div>
-                  <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--accent)', letterSpacing: '2px' }}>BEFIT LAB</span>
+                  <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'white', fontFamily: 'var(--font-display)', fontSize: '1.2rem', boxShadow: '0 4px 10px rgba(255,139,66,0.3)' }}>B</div>
+                  <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--black)', letterSpacing: '2px' }}>BEFIT LAB</span>
                 </div>
-                <QrCode size={20} color="var(--accent)" opacity={0.8} />
+                <QrCode size={20} color="var(--primary)" opacity={0.8} />
               </div>
-              
               <div className="wallet-body" style={{ padding: '25px 20px', textAlign: 'center' }}>
-                <div style={{ background: 'white', padding: '12px', borderRadius: '16px', display: 'inline-block', boxShadow: '0 10px 20px rgba(0,0,0,0.3)' }}>
-                  <QRCodeCanvas 
-                    value={user?.id || 'befit-client-id'} 
-                    size={160}
-                    level={"H"}
-                    includeMargin={false}
-                    fgColor="#1A1C1E"
-                  />
+                <div style={{ background: 'white', padding: '12px', borderRadius: '20px', display: 'inline-block', boxShadow: '0 10px 30px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.02)' }}>
+                  <QRCodeCanvas value={user?.id || 'befit-client-id'} size={160} level={"H"} includeMargin={false} fgColor="#2D2928" />
                 </div>
               </div>
-              
-              <div className="wallet-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px', justifyContent: 'center' }}>
+              <div className="wallet-footer" style={{ borderTop: '1px dashed rgba(0,0,0,0.05)', paddingTop: '20px', paddingBottom: '20px', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white', fontFamily: 'var(--font-display)' }}>{classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--accent)'}}>sesiones</span></div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--primary)'}}>sesiones</span></div>
                 </div>
               </div>
             </div>
-
             <div className="sheet-user-info" style={{ marginTop: '10px' }}>
               <div className="user-name">{user?.user_metadata?.full_name || 'Miembro BeFit'}</div>
               <div>{user?.email}</div>
@@ -172,7 +183,8 @@ function Evolucion() {
           </div>
         </>
       )}
-      <nav className="ios-bottom-nav">
+
+      <nav className={`ios-bottom-nav ${isScrolled ? 'scrolled' : ''}`}>
         <Link to="/portal" className="nav-item"><User size={22} strokeWidth={2.5} /><span>Yo</span></Link>
         <Link to="/evolucion" className="nav-item active"><TrendingUp size={22} strokeWidth={2.5} /><span>Metas</span></Link>
         <button className="nav-qr-button" onClick={() => setShowQR(true)}><QrCode size={24} strokeWidth={2.5} /></button>
@@ -183,43 +195,57 @@ function Evolucion() {
   );
 }
 
-function BadgeIcon({ icon, label, color }) {
-   return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-         <div style={{ 
-            width: '56px', height: '56px', borderRadius: '18px', 
-            background: 'var(--surface)', border: `1px solid ${color}33`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
-         }}>
-            {icon}
-         </div>
-         <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--on-surface-variant)' }}>{label}</span>
+/* BADGE ICON */
+function BadgeIcon({ icon, label }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+      <div style={{ 
+        width: '56px', height: '56px', borderRadius: '50%', 
+        background: 'white', border: '1px solid rgba(0,0,0,0.05)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '1.5rem', boxShadow: '0 6px 18px rgba(0,0,0,0.04)'
+      }}>
+        {icon}
       </div>
-   );
+      <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--on-surface-variant)' }}>{label}</span>
+    </div>
+  );
 }
 
-function MetricBox({ label, value, unit, trend, highlight }) {
+/* METRIC ROW — Clean list item */
+function MetricRow({ label, value, unit, trend, icon, positive }) {
+  const isUp = trend.startsWith('+');
   return (
     <div style={{ 
-      padding: '20px', borderRadius: '20px', 
-      background: highlight ? 'linear-gradient(135deg, rgba(255,145,77,0.05), rgba(238,186,137,0.15))' : 'white',
-      border: highlight ? '1px solid rgba(255,145,77,0.2)' : '1px solid rgba(0,0,0,0.03)',
-      boxShadow: '0 10px 30px rgba(0,0,0,0.03)'
+      background: 'white', borderRadius: '20px', padding: '16px 18px',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      boxShadow: '0 6px 18px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.03)'
     }}>
-      <div style={{ fontSize: '0.65rem', fontWeight: 800, color: highlight ? 'var(--primary)' : 'var(--on-surface-variant)', marginBottom: '0.8rem', letterSpacing: '0.1em' }}>{label}</div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '0.8rem' }}>
-        <span style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{value}</span>
-        <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>{unit}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ 
+          width: '42px', height: '42px', borderRadius: '14px', 
+          background: positive ? 'rgba(255,139,66,0.08)' : 'rgba(0,0,0,0.03)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: positive ? 'var(--primary)' : 'var(--on-surface-variant)'
+        }}>
+          {icon}
+        </div>
+        <div>
+          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px', marginTop: '2px' }}>
+            <span style={{ fontSize: '1.4rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--black)', lineHeight: 1 }}>{value}</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{unit}</span>
+          </div>
+        </div>
       </div>
       <div style={{ 
-         fontSize: '0.7rem', fontWeight: 800, 
-         color: trend.startsWith('+') ? (highlight ? 'var(--primary)' : '#22C55E') : 'var(--primary)',
-         display: 'flex', alignItems: 'center', gap: '3px',
-         background: trend.startsWith('+') ? (highlight ? 'rgba(255,145,77,0.1)' : 'rgba(34,197,94,0.1)') : 'rgba(255,145,77,0.1)',
-         padding: '4px 8px', borderRadius: '8px', display: 'inline-flex'
+        fontSize: '0.7rem', fontWeight: 800, 
+        color: isUp ? (positive ? 'var(--primary)' : '#22C55E') : 'var(--primary)',
+        background: isUp ? (positive ? 'rgba(255,139,66,0.08)' : 'rgba(34,197,94,0.08)') : 'rgba(255,139,66,0.08)',
+        padding: '5px 10px', borderRadius: '10px',
+        display: 'flex', alignItems: 'center', gap: '3px'
       }}>
-        {trend.startsWith('+') ? '↑' : '↓'} {trend.replace('+', '').replace('-', '')} {unit}
+        {isUp ? '↑' : '↓'} {trend.replace('+', '').replace('-', '')}{unit}
       </div>
     </div>
   );

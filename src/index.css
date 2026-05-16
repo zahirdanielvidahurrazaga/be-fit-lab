@@ -2,31 +2,31 @@
 
 :root {
   /* Tonal Layering - BEFIT LAB WARM LUXURY */
-  --surface: #EFE9E4; /* Beige/Arena base */
-  --surface-low: #E4DCD3; /* Ligeramente más oscuro para contrastar */
-  --surface-lowest: #FFFFFF; /* Tarjetas y módulos frontales */
+  --surface: #FCF9F5; /* Perla cálido súper limpio */
+  --surface-low: #F5EFEB;
+  --surface-lowest: #FFFFFF;
   
-  --primary: #FF914D; /* Durazno/Terracota vibrante */
-  --primary-dim: #E67A38;
+  --primary: #FF8B42; /* Naranja signature refinado */
+  --primary-dim: #F0762B;
   --on-primary: #FFFFFF; 
-  --accent: #EEBA89; 
-  --on-accent: #373D3B;
-  --black: #1A1C1E;
+  --accent: #FFD4BA; /* Durazno suave premium */
+  --on-accent: #4A4443;
+  --black: #2D2928; /* Gris muy oscuro en lugar de negro puro */
   
-  --on-surface: #373D3B; /* Marrón Carbón para texto */
-  --on-surface-variant: #5E5343; /* Texto secundario */
+  --on-surface: #4A4443; /* Texto principal elegante */
+  --on-surface-variant: #8C8079; /* Texto secundario */
   
   /* App Shell Luxury Tokens (Portal) */
-  --app-bg: #F5EFEB; /* Un beige aún más rico y lujoso para el fondo de la app */
-  --app-surface: rgba(255, 255, 255, 0.7); /* Transparente para glassmorphism */
+  --app-bg: #FCF9F5;
+  --app-surface: rgba(255, 255, 255, 0.85); 
   --app-surface-solid: #FFFFFF;
-  --app-accent: #FF914D;
-  --app-on-surface: #373D3B;
-  --app-on-surface-variant: #7D7365;
+  --app-accent: #FF8B42;
+  --app-on-surface: #4A4443;
+  --app-on-surface-variant: #8C8079;
   
-  --shape-xl: 36px;
-  --shape-lg: 20px;
-  --shape-md: 12px;
+  --shape-xl: 40px;
+  --shape-lg: 28px;
+  --shape-md: 16px;
   
   --font-display: 'Playfair Display', serif; /* Cambiado a Serif elegante para títulos */
   --font-body: 'Inter', sans-serif; /* Claridad funcional */
@@ -94,20 +94,20 @@ h1, h2, h3, h4, h5 {
 
 /* Glassmorphism Styles Cálido */
 .glass-card {
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 8px 32px 0 rgba(55, 61, 59, 0.05);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.03);
 }
 
 .warm-glass-card {
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  border-radius: 24px;
-  box-shadow: 0 10px 40px rgba(55, 61, 59, 0.04);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 30px;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.02);
 }
 
 .glass-button {
@@ -669,13 +669,17 @@ h1, h2, h3, h4, h5 {
 }
 
 .ios-header {
-  padding: 20px 15px 15px;
+  padding: 30px 20px 10px;
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(245, 239, 235, 0.95);
-  backdrop-filter: blur(15px);
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+  background: rgba(252, 249, 245, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
 }
 
 @media (min-width: 768px) {
@@ -952,59 +956,57 @@ h1, h2, h3, h4, h5 {
   background: rgba(0, 0, 0, 0.05);
 }
 
-/* ===== INSTAGRAM-STYLE FLOATING PILL NAV ===== */
+/* ===== PREMIUM DARK NAV (WITH SCROLL EFFECT) ===== */
 .ios-bottom-nav {
   position: fixed;
-  bottom: 24px;
+  bottom: 25px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scale(1);
   width: calc(100% - 40px);
-  max-width: 500px;
-  height: 68px;
-  background: rgba(20, 20, 20, 0.45);
-  backdrop-filter: blur(40px) saturate(220%);
-  -webkit-backdrop-filter: blur(40px) saturate(220%);
-  display: grid;
-  grid-template-columns: 1fr 1fr auto 1fr 1fr;
+  max-width: 450px;
+  height: 72px;
+  background: rgba(28, 28, 26, 0.85);
+  backdrop-filter: blur(25px) saturate(150%);
+  -webkit-backdrop-filter: blur(25px) saturate(150%);
+  display: flex;
+  justify-content: space-around;
   align-items: center;
-  padding: 0 10px;
-  border-radius: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0 15px;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 2000;
-  box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.4),
-    0 4px 12px rgba(0, 0, 0, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  transition: all 0.3s ease;
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.3);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ios-bottom-nav.scrolled {
+  transform: translateX(-50%) scale(0.92);
+  bottom: 15px;
+  background: rgba(50, 50, 48, 0.8); /* Un poco más claro y traslúcido */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .ios-bottom-nav .nav-item {
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.5);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
   text-decoration: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 6px 4px;
-  border-radius: 18px;
-  position: relative;
-  width: 100%;
-  height: 48px;
+  transition: all 0.2s ease;
+  flex: 1;
 }
 
 .ios-bottom-nav .nav-item span {
-  font-size: 0.58rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .ios-bottom-nav .nav-item.active {
-  color: #FFFFFF;
-  background: rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: #FF8B42;
 }
 
 /* QR Center Button */
@@ -1021,7 +1023,7 @@ h1, h2, h3, h4, h5 {
   justify-self: center;
   box-shadow: 
     0 6px 20px rgba(255, 145, 77, 0.5),
-    0 0 0 3px rgba(20, 20, 20, 0.3);
+    0 0 0 3px rgba(255, 255, 255, 0.8);
   cursor: pointer;
   transform: translateY(0);
   transition: transform 0.2s ease;
@@ -1194,7 +1196,7 @@ h1, h2, h3, h4, h5 {
   border: 1px solid rgba(255, 255, 255, 0.9);
   border-radius: 20px;
   padding: 10px;
-  box-shadow: 0 10px 30px rgba(55, 61, 59, 0.1);
+  box-shadow: 0 10px 30px rgba(155, 69, 0, 0.08);
   animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   z-index: 100;
   min-width: 200px;
@@ -1206,21 +1208,20 @@ h1, h2, h3, h4, h5 {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.9rem;
   transition: background 0.2s;
-  color: var(--on-surface);
+  color: #564338;
 }
 .profile-dropdown-item:hover {
-  background: rgba(55, 61, 59, 0.05);
+  background: rgba(255, 139, 66, 0.08);
+  color: #FF8B42;
 }
 .profile-dropdown-item.danger {
-  color: #FF4D4D;
+  color: #ba1a1a;
 }
 .profile-dropdown-item.danger:hover {
-  background: rgba(255, 77, 77, 0.1);
+  background: rgba(186, 26, 26, 0.1);
 }
-
   
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }  
-@keyframes scaleUp { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } } 
