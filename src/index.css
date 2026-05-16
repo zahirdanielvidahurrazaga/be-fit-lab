@@ -1,23 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&family=DM+Sans:wght@400;700;900&display=swap');
 
 :root {
-  /* Tonal Layering - BEFIT LAB WARM LUXURY */
-  --surface: #FCF9F5; /* Perla cálido súper limpio */
+  /* Tonal Layering - BEFIT LAB WARM LUXURY (Light) */
+  --surface: #FCF9F5; 
   --surface-low: #F5EFEB;
   --surface-lowest: #FFFFFF;
   
-  --primary: #FF8B42; /* Naranja signature refinado */
+  --primary: #FF8B42; 
   --primary-dim: #F0762B;
   --on-primary: #FFFFFF; 
-  --accent: #FFD4BA; /* Durazno suave premium */
+  --accent: #FFD4BA; 
   --on-accent: #4A4443;
-  --black: #2D2928; /* Gris muy oscuro en lugar de negro puro */
+  --black: #2D2928; 
   
-  --on-surface: #4A4443; /* Texto principal elegante */
-  --on-surface-variant: #8C8079; /* Texto secundario */
+  --on-surface: #4A4443; 
+  --on-surface-variant: #8C8079; 
   
-  /* App Shell Luxury Tokens (Portal) */
+  /* App Shell */
   --app-bg: #FCF9F5;
+  --app-bg-gradient: radial-gradient(circle at top right, rgba(255,255,255,0.9), transparent 50%),
+                     radial-gradient(circle at bottom left, rgba(238,186,137,0.2), transparent 50%);
   --app-surface: rgba(255, 255, 255, 0.85); 
   --app-surface-solid: #FFFFFF;
   --app-accent: #FF8B42;
@@ -28,9 +30,39 @@
   --shape-lg: 28px;
   --shape-md: 16px;
   
-  --font-display: 'Playfair Display', serif; /* Cambiado a Serif elegante para títulos */
-  --font-body: 'Inter', sans-serif; /* Claridad funcional */
+  --font-display: 'Playfair Display', serif;
+  --font-body: 'Inter', sans-serif;
 }
+
+[data-theme='dark'] {
+  /* Tonal Layering - BEFIT LAB EBONY LUXURY (Premium Dark) */
+  --surface: #0D0D0C; 
+  --surface-low: #1A1A18;
+  --surface-lowest: #050505;
+  
+  --primary: #FF8B42; 
+  --primary-dim: #E67A38;
+  --on-primary: #FFFFFF; 
+  --accent: #2D2621; 
+  --on-accent: #FFD4BA;
+  --black: #FFFFFF; 
+  --app-bg: #0D0D0C;
+  --app-bg-gradient: linear-gradient(180deg, #1C1C1A 0%, #0D0D0C 100%);
+  --app-surface: rgba(28, 28, 26, 0.8);
+  --app-surface-solid: #1C1C1A;
+  --surface-low: rgba(45, 41, 40, 0.6);
+  --on-surface: #FFFFFF;
+  --on-surface-variant: #A19B98;
+  --black: #FFFFFF;
+  --white: #000000;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --card-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  --nav-bg: rgba(13, 13, 12, 0.7);
+  --nav-border: rgba(255, 255, 255, 0.1);
+}
+
+
+
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -94,20 +126,20 @@ h1, h2, h3, h4, h5 {
 
 /* Glassmorphism Styles Cálido */
 .glass-card {
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--app-surface);
   backdrop-filter: blur(25px);
   -webkit-backdrop-filter: blur(25px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.8));
+  box-shadow: var(--card-shadow, 0 10px 40px 0 rgba(0, 0, 0, 0.03));
 }
 
 .warm-glass-card {
-  background: rgba(255, 255, 255, 0.75);
+  background: var(--app-surface);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.9));
   border-radius: 30px;
-  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--card-shadow, 0 15px 50px rgba(0, 0, 0, 0.02));
 }
 
 .glass-button {
@@ -175,14 +207,14 @@ h1, h2, h3, h4, h5 {
   width: 100%;
   padding: 1.2rem 1rem 1.2rem 3rem;
   border-radius: 16px;
-  border: 1px solid rgba(55, 61, 59, 0.1);
-  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--border-subtle, rgba(55, 61, 59, 0.1));
+  background: var(--surface-low, rgba(255, 255, 255, 0.8));
   backdrop-filter: blur(10px);
   font-size: 1rem;
   color: var(--on-surface);
   outline: none;
   transition: all 0.3s ease;
-  box-shadow: inset 0 2px 4px rgba(55, 61, 59, 0.02);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .premium-input:focus {
@@ -644,8 +676,7 @@ h1, h2, h3, h4, h5 {
   min-height: 100vh;
   position: relative;
   background-color: var(--app-bg);
-  background-image: radial-gradient(circle at top right, rgba(255,255,255,0.9), transparent 50%),
-                    radial-gradient(circle at bottom left, rgba(238,186,137,0.2), transparent 50%);
+  background-image: var(--app-bg-gradient);
   overflow-x: hidden;
 }
 
@@ -887,27 +918,28 @@ h1, h2, h3, h4, h5 {
 }
 
 .ios-glass-card {
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--app-surface);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.8));
   border-radius: 24px;
-  box-shadow: 0 8px 32px rgba(55, 61, 59, 0.04);
+  box-shadow: var(--card-shadow, 0 8px 32px rgba(55, 61, 59, 0.04));
 }
 
 .ios-glass-btn {
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--app-surface);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.8));
   border-radius: 20px;
   padding: 16px;
   display: flex;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 4px 15px rgba(55, 61, 59, 0.03);
+  box-shadow: var(--card-shadow, 0 4px 15px rgba(55, 61, 59, 0.03));
   cursor: pointer;
   transition: transform 0.2s;
+  color: var(--on-surface);
 }
 
 .ios-glass-btn:active {
@@ -959,36 +991,38 @@ h1, h2, h3, h4, h5 {
 /* ===== PREMIUM DARK NAV (WITH SCROLL EFFECT) ===== */
 .ios-bottom-nav {
   position: fixed;
-  bottom: 25px;
+  bottom: 30px;
   left: 50%;
   transform: translateX(-50%) scale(1);
   width: calc(100% - 40px);
   max-width: 450px;
   height: 72px;
-  background: rgba(28, 28, 26, 0.85);
-  backdrop-filter: blur(25px) saturate(150%);
-  -webkit-backdrop-filter: blur(25px) saturate(150%);
+  background: var(--nav-bg);
+  backdrop-filter: blur(30px) saturate(160%);
+  -webkit-backdrop-filter: blur(30px) saturate(160%);
   display: flex;
   justify-content: space-around;
   align-items: center;
   padding: 0 15px;
   border-radius: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--nav-border);
   z-index: 2000;
-  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.3);
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .ios-bottom-nav.scrolled {
-  transform: translateX(-50%) scale(0.92);
-  bottom: 15px;
-  background: rgba(50, 50, 48, 0.8); /* Un poco más claro y traslúcido */
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  transform: translateX(-50%) scale(0.9);
+  bottom: 20px;
+  height: 64px;
+  background: var(--nav-bg);
+  opacity: 0.9;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
 
 .ios-bottom-nav .nav-item {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--on-surface-variant);
+  opacity: 0.6;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1006,7 +1040,8 @@ h1, h2, h3, h4, h5 {
 }
 
 .ios-bottom-nav .nav-item.active {
-  color: #FF8B42;
+  color: var(--primary);
+  opacity: 1;
 }
 
 /* QR Center Button */
@@ -1050,21 +1085,22 @@ h1, h2, h3, h4, h5 {
   left: 0;
   right: 0;
   max-height: 70vh;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--surface);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
   border-radius: 28px 28px 0 0;
   z-index: 3001;
   padding: 12px 24px 40px;
   animation: slideUpSheet 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 -10px 50px rgba(0, 0, 0, 0.15);
-  border-top: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 -10px 50px rgba(0, 0, 0, 0.3);
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.8));
 }
 
 .qr-bottom-sheet .sheet-handle {
   width: 40px;
   height: 4px;
-  background: rgba(0, 0, 0, 0.12);
+  background: var(--on-surface-variant, rgba(0, 0, 0, 0.12));
+  opacity: 0.3;
   border-radius: 4px;
   margin: 0 auto 24px;
 }
@@ -1081,12 +1117,12 @@ h1, h2, h3, h4, h5 {
 }
 
 .qr-bottom-sheet .qr-wrapper {
-  background: white;
+  background: white; /* El QR siempre debe tener fondo blanco para escaneo */
   border-radius: 20px;
   padding: 24px;
   margin: 0 auto 24px;
   max-width: 240px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
@@ -1114,6 +1150,20 @@ h1, h2, h3, h4, h5 {
   to { transform: translateY(100%); }
 }
 
+.ios-header {
+  padding: 30px 20px 10px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--ios-header-bg, rgba(252, 249, 245, 0.85));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
 /* --- INTEGRATED MODALS (GLASSMORPHISM) --- */
 .modal-overlay {
   position: fixed;
@@ -1121,7 +1171,7 @@ h1, h2, h3, h4, h5 {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   display: flex;
@@ -1138,65 +1188,44 @@ h1, h2, h3, h4, h5 {
   left: 0;
   width: 100vw;
   max-height: 90vh;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--surface);
   backdrop-filter: blur(25px);
   -webkit-backdrop-filter: blur(25px);
   z-index: 9999;
   padding: 30px 20px 40px;
   border-radius: 30px 30px 0 0;
-  box-shadow: 0 -10px 40px rgba(55, 61, 59, 0.15);
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.2);
   animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   overflow-y: auto;
+  border-top: 1px solid rgba(255,255,255,0.1);
 }
 
 .glass-modal {
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--surface);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 28px;
   padding: 30px;
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 20px 50px rgba(55, 61, 59, 0.15);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.3);
   animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   text-align: center;
-}
-
-.modal-close-pill {
-  width: 50px;
-  height: 5px;
-  background: rgba(55, 61, 59, 0.2);
-  border-radius: 10px;
-  margin: 0 auto 20px;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
-@keyframes scaleUp {
-  from { opacity: 0; transform: scale(0.95) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  color: var(--on-surface);
 }
 
 .profile-dropdown {
   position: absolute;
   top: 70px;
   right: 20px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--app-surface-solid);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
   padding: 10px;
-  box-shadow: 0 10px 30px rgba(155, 69, 0, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   z-index: 100;
   min-width: 200px;
@@ -1211,7 +1240,7 @@ h1, h2, h3, h4, h5 {
   font-weight: 700;
   font-size: 0.9rem;
   transition: background 0.2s;
-  color: #564338;
+  color: var(--on-surface);
 }
 .profile-dropdown-item:hover {
   background: rgba(255, 139, 66, 0.08);

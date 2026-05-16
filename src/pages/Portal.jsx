@@ -33,7 +33,7 @@ function Portal() {
   const greeting = new Date().getHours() < 12 ? 'Buenos días' : new Date().getHours() < 18 ? 'Buenas tardes' : 'Buenas noches';
 
   return (
-    <div className="mobile-app-container" style={{ background: '#FCF9F5' }}>
+    <div className="mobile-app-container" style={{ background: 'var(--app-bg)' }}>
 
       {/* HEADER UNIFICADO */}
       <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent' }}>
@@ -83,12 +83,13 @@ function Portal() {
           {/* MEMBERSHIP CARD - Minimal */}
           <motion.section initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5}}>
             <div style={{ 
-              background: 'var(--black)', borderRadius: '28px', padding: '25px',
+              background: 'linear-gradient(135deg, #1C1C1A 0%, #0D0D0C 100%)', borderRadius: '28px', padding: '25px',
               color: 'white', position: 'relative', overflow: 'hidden',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.15)'
+              boxShadow: 'var(--card-shadow)',
+              border: '1px solid rgba(255,255,255,0.05)'
             }}>
               {/* Subtle glow */}
-              <div style={{ position: 'absolute', top: '-50%', right: '-30%', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(255,139,66,0.15) 0%, transparent 70%)', borderRadius: '50%' }}></div>
+              <div style={{ position: 'absolute', top: '-50%', right: '-30%', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(255,139,66,0.1) 0%, transparent 70%)', borderRadius: '50%' }}></div>
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px', position: 'relative', zIndex: 1 }}>
                 <div>
@@ -124,10 +125,10 @@ function Portal() {
                 onClick={() => navigate('/nutricion')}
                 style={{ 
                   flex: '0 0 auto', width: '140px', height: '180px', borderRadius: '24px', 
-                  background: 'linear-gradient(135deg, #FF8B42 0%, #EEBA89 100%)',
+                  background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
                   padding: '20px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
                   cursor: 'pointer', position: 'relative', overflow: 'hidden',
-                  boxShadow: '0 12px 30px rgba(255,139,66,0.25)'
+                  boxShadow: '0 12px 30px rgba(255,139,66,0.2)'
                 }}
               >
                 <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '80px', height: '80px', background: 'rgba(255,255,255,0.15)', borderRadius: '50%' }}></div>
@@ -143,17 +144,18 @@ function Portal() {
                 onClick={() => navigate('/evolucion')}
                 style={{ 
                   flex: '0 0 auto', width: '140px', height: '180px', borderRadius: '24px', 
-                  background: 'linear-gradient(135deg, #2D2928 0%, #4A4544 100%)',
+                  background: 'var(--surface-low)',
                   padding: '20px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
                   cursor: 'pointer', position: 'relative', overflow: 'hidden',
-                  boxShadow: '0 12px 30px rgba(0,0,0,0.15)'
+                  border: '1px solid var(--border-subtle)',
+                  boxShadow: 'var(--card-shadow)'
                 }}
               >
-                <div style={{ position: 'absolute', bottom: '-20px', left: '-20px', width: '80px', height: '80px', background: 'rgba(255,139,66,0.12)', borderRadius: '50%' }}></div>
+                <div style={{ position: 'absolute', bottom: '-20px', left: '-20px', width: '80px', height: '80px', background: 'rgba(255,139,66,0.08)', borderRadius: '50%' }}></div>
                 <Activity size={28} color="var(--primary)" strokeWidth={2} />
                 <div>
-                  <div style={{ color: 'white', fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>Evolución</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: 600, marginTop: '3px' }}>Tu progreso</div>
+                  <div style={{ color: 'var(--on-surface)', fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>Evolución</div>
+                  <div style={{ color: 'var(--on-surface-variant)', fontSize: '0.7rem', fontWeight: 600, marginTop: '3px' }}>Tu progreso</div>
                 </div>
               </div>
 
@@ -162,11 +164,11 @@ function Portal() {
                 onClick={() => navigate('/agenda')}
                 style={{ 
                   flex: '0 0 auto', width: '140px', height: '180px', borderRadius: '24px', 
-                  background: 'linear-gradient(135deg, #FCF9F5 0%, #FFFFFF 100%)',
+                  background: 'var(--surface-low)',
                   padding: '20px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
                   cursor: 'pointer', position: 'relative', overflow: 'hidden',
-                  border: '1px solid rgba(0,0,0,0.06)',
-                  boxShadow: '0 12px 30px rgba(0,0,0,0.05)'
+                  border: '1px solid var(--border-subtle)',
+                  boxShadow: 'var(--card-shadow)'
                 }}
               >
                 <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '80px', height: '80px', background: 'rgba(255,139,66,0.06)', borderRadius: '50%' }}></div>
@@ -204,10 +206,10 @@ function Portal() {
               ) : (
                 <div style={{ 
                   padding: '40px 20px', textAlign: 'center', color: 'var(--on-surface-variant)', 
-                  background: 'white', borderRadius: '24px', border: '1px dashed rgba(0,0,0,0.08)'
+                  background: 'var(--app-surface-solid)', borderRadius: '24px', border: '1px dashed var(--border-subtle)'
                 }}>
-                  <Calendar size={36} color="rgba(0,0,0,0.08)" style={{ margin: '0 auto 12px' }} />
-                  <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: 'var(--black)' }}>Sin clases agendadas</p>
+                  <Calendar size={36} color="var(--on-surface-variant)" style={{ opacity: 0.2, margin: '0 auto 12px' }} />
+                  <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: 'var(--on-surface)' }}>Sin clases agendadas</p>
                   <p style={{ margin: '5px 0 0', fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>Reserva tu próxima sesión</p>
                   <Link to="/agenda" style={{ 
                     display: 'inline-block', marginTop: '15px', color: 'white', fontWeight: 700, 
@@ -261,9 +263,9 @@ function Portal() {
             <div className="sheet-handle" />
             
             <div className="wallet-card" style={{ 
-              background: 'linear-gradient(135deg, #FFFFFF 0%, #FCF9F5 100%)', 
-              boxShadow: '0 20px 50px rgba(0,0,0,0.06)',
-              border: '1px solid rgba(255,255,255,0.9)',
+              background: 'var(--surface-low)', 
+              boxShadow: 'var(--card-shadow)',
+              border: '1px solid var(--border-subtle)',
               position: 'relative', overflow: 'hidden',
               margin: '0 auto 10px',
               width: '100%',
@@ -280,13 +282,13 @@ function Portal() {
               </div>
               
               <div className="wallet-body" style={{ padding: '25px 20px', textAlign: 'center' }}>
-                <div style={{ background: 'white', padding: '12px', borderRadius: '20px', display: 'inline-block', boxShadow: '0 10px 30px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.02)' }}>
+                <div style={{ background: 'white', padding: '12px', borderRadius: '20px', display: 'inline-block', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', border: 'none' }}>
                   <QRCodeCanvas 
                     value={user?.id || 'befit-client-id'} 
                     size={160}
                     level={"H"}
                     includeMargin={false}
-                    fgColor="#2D2928"
+                    fgColor="#000000"
                   />
                 </div>
               </div>
@@ -339,8 +341,8 @@ function TicketCard({ title, time, instructor, color, onClick }) {
     <div 
       onClick={onClick}
       style={{ 
-        background: 'white', borderRadius: '24px', overflow: 'hidden',
-        boxShadow: '0 8px 25px rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.03)',
+        background: 'var(--app-surface-solid)', borderRadius: '24px', overflow: 'hidden',
+        boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)',
         cursor: 'pointer', transition: 'transform 0.2s ease'
       }}
     >
@@ -385,9 +387,9 @@ function TicketCard({ title, time, instructor, color, onClick }) {
 function StatPill({ icon, value, label, color }) {
   return (
     <div style={{ 
-      flex: 1, background: 'white', borderRadius: '20px', padding: '16px 12px', 
-      textAlign: 'center', border: '1px solid rgba(0,0,0,0.03)',
-      boxShadow: '0 6px 18px rgba(0,0,0,0.03)'
+      flex: 1, background: 'var(--app-surface-solid)', borderRadius: '20px', padding: '16px 12px', 
+      textAlign: 'center', border: '1px solid var(--border-subtle)',
+      boxShadow: 'var(--card-shadow)'
     }}>
       <div style={{ color: color, marginBottom: '8px', display: 'flex', justifyContent: 'center' }}>{icon}</div>
       <div style={{ fontSize: '1.3rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--black)', lineHeight: 1 }}>{value}</div>

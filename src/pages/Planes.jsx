@@ -45,10 +45,10 @@ function Planes() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F4F7F6', padding: '4rem 2rem', fontFamily: 'var(--font-body)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--app-bg)', padding: '4rem 2rem', fontFamily: 'var(--font-body)' }}>
       <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', color: '#1A1C1E' }}>Elige tu Plan BEFIT</h1>
-        <p style={{ color: '#6B7280', fontSize: '1.1rem' }}>Membresías diseñadas para transformar tu estilo de vida.</p>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', color: 'var(--black)' }}>Elige tu Plan BEFIT</h1>
+        <p style={{ color: 'var(--on-surface-variant)', fontSize: '1.1rem' }}>Membresías diseñadas para transformar tu estilo de vida.</p>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
@@ -198,13 +198,13 @@ function Planes() {
 function PlanCard({ title, price, features, recommended, onCheckout }) {
   return (
     <div style={{ 
-      background: 'white', 
+      background: 'var(--app-surface-solid)', 
       borderRadius: '20px', 
       width: '320px', 
       overflow: 'hidden',
-      boxShadow: recommended ? '0 20px 40px rgba(201, 114, 93, 0.15)' : '0 10px 30px rgba(0,0,0,0.05)',
+      boxShadow: recommended ? '0 20px 40px rgba(0,0,0,0.2)' : '0 10px 30px rgba(0,0,0,0.1)',
       transform: recommended ? 'scale(1.05)' : 'scale(1)',
-      border: recommended ? '2px solid var(--primary)' : '1px solid rgba(0,0,0,0.05)',
+      border: recommended ? '2px solid var(--primary)' : '1px solid rgba(255,255,255,0.05)',
       display: 'flex',
       flexDirection: 'column'
     }}>
@@ -213,11 +213,11 @@ function PlanCard({ title, price, features, recommended, onCheckout }) {
           MÁS POPULAR
         </div>
       )}
-      <div style={{ padding: '2rem', textAlign: 'center', borderBottom: '1px solid #F3F4F6' }}>
-        <h3 style={{ margin: '0 0 1rem 0', color: '#1A1C1E', fontSize: '1.2rem' }}>{title}</h3>
+      <div style={{ padding: '2rem', textAlign: 'center', borderBottom: '1px solid var(--accent)' }}>
+        <h3 style={{ margin: '0 0 1rem 0', color: 'var(--on-surface)', fontSize: '1.2rem' }}>{title}</h3>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: '4px' }}>
-          <span style={{ fontSize: '2.5rem', fontWeight: 800, color: '#1A1C1E' }}>${price}</span>
-          <span style={{ color: '#6B7280', fontWeight: 500 }}>MXN /mes</span>
+          <span style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--on-surface)' }}>${price}</span>
+          <span style={{ color: 'var(--on-surface-variant)', fontWeight: 500 }}>MXN /mes</span>
         </div>
       </div>
       <div style={{ padding: '2rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -225,7 +225,7 @@ function PlanCard({ title, price, features, recommended, onCheckout }) {
           {features.map((f, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
               <Check size={18} color="var(--primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
-              <span style={{ color: '#4B5563', fontSize: '0.9rem', lineHeight: 1.4 }}>{f}</span>
+              <span style={{ color: 'var(--on-surface-variant)', fontSize: '0.9rem', lineHeight: 1.4 }}>{f}</span>
             </div>
           ))}
         </div>

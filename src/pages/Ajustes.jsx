@@ -103,12 +103,13 @@ function Ajustes() {
 
   // Styles
   const cardStyle = {
-    background: 'white',
+    background: 'var(--app-surface-solid)',
     borderRadius: '24px',
     padding: '6px 0',
     marginBottom: '16px',
-    boxShadow: '0 8px 30px rgba(155,69,0,0.05)',
-    overflow: 'hidden'
+    boxShadow: '0 8px 30px rgba(0,0,0,0.05)',
+    overflow: 'hidden',
+    border: '1px solid rgba(255,255,255,0.05)'
   };
 
   const rowStyle = {
@@ -130,11 +131,11 @@ function Ajustes() {
     width: '100%',
     padding: '14px 18px',
     borderRadius: '9999px',
-    border: '1px solid #ddc1b3',
-    background: '#FCF9F5',
+    border: '1px solid var(--accent)',
+    background: 'var(--surface)',
     fontSize: '0.95rem',
     fontFamily: 'DM Sans, sans-serif',
-    color: '#1c1c1a',
+    color: 'var(--on-surface)',
     outline: 'none',
     boxSizing: 'border-box'
   };
@@ -144,7 +145,7 @@ function Ajustes() {
       onClick={onToggle}
       style={{
         width: '52px', height: '30px', borderRadius: '15px',
-        background: value ? '#FF8B42' : '#ddc1b3',
+        background: value ? 'var(--primary)' : 'rgba(140, 128, 121, 0.3)',
         padding: '3px', cursor: 'pointer',
         transition: 'background 0.3s ease',
         display: 'flex', alignItems: 'center'
@@ -166,17 +167,18 @@ function Ajustes() {
     return (
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        background: 'rgba(0,0,0,0.4)', zIndex: 9999,
+        background: 'rgba(0,0,0,0.6)', zIndex: 9999,
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)'
+        backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)'
       }} onClick={onClose}>
         <div
           style={{
-            background: '#FCF9F5', borderRadius: '28px 28px 0 0',
+            background: 'var(--surface)', borderRadius: '28px 28px 0 0',
             width: '100%', maxWidth: '430px',
             maxHeight: '85vh', overflow: 'auto',
             padding: '24px 20px 40px',
-            animation: 'slideUp 0.3s ease'
+            animation: 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+            borderTop: '1px solid rgba(255,255,255,0.1)'
           }}
           onClick={e => e.stopPropagation()}
         >
@@ -187,7 +189,7 @@ function Ajustes() {
   };
 
   return (
-    <div className="mobile-app-container" style={{ background: '#FCF9F5' }}>
+    <div className="mobile-app-container" style={{ background: 'var(--app-bg)' }}>
       {/* HEADER UNIFICADO */}
       <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
@@ -220,33 +222,33 @@ function Ajustes() {
         <div className="dashboard-sidebar">
 
           {/* PREFERENCIAS */}
-          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8a7266', margin: '0 0 8px', paddingLeft: '8px' }}>
+          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '0 0 8px', paddingLeft: '8px' }}>
             Preferencias
           </p>
           <div style={cardStyle}>
             <div style={rowStyle}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div style={{ ...iconBoxStyle, background: 'rgba(255,139,66,0.1)' }}>
-                  <Bell size={18} color="#FF8B42" />
+                  <Bell size={18} color="var(--primary)" />
                 </div>
                 <div>
-                  <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1c1c1a', margin: 0 }}>Notificaciones</p>
-                  <p style={{ fontSize: '0.75rem', color: '#8a7266', margin: '2px 0 0' }}>Recordatorio 1hr antes</p>
+                  <p style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--on-surface)', margin: 0 }}>Notificaciones</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: '2px 0 0' }}>Recordatorio 1hr antes</p>
                 </div>
               </div>
               <ToggleSwitch value={notifications} onToggle={toggleNotifications} />
             </div>
 
-            <div style={{ height: '1px', background: '#f0ede9', margin: '0 20px' }} />
+            <div style={{ height: '1px', background: 'rgba(140, 128, 121, 0.15)', margin: '0 20px' }} />
 
             <div style={rowStyle}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ ...iconBoxStyle, background: 'rgba(45,41,40,0.08)' }}>
-                  <Moon size={18} color="#2D2928" />
+                <div style={{ ...iconBoxStyle, background: 'rgba(140, 128, 121, 0.1)' }}>
+                  <Moon size={18} color="var(--on-surface)" />
                 </div>
                 <div>
-                  <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1c1c1a', margin: 0 }}>Modo Oscuro</p>
-                  <p style={{ fontSize: '0.75rem', color: '#8a7266', margin: '2px 0 0' }}>Apariencia de la app</p>
+                  <p style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--on-surface)', margin: 0 }}>Modo Oscuro</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: '2px 0 0' }}>Apariencia de la app</p>
                 </div>
               </div>
               <ToggleSwitch value={darkMode} onToggle={toggleDarkMode} />
@@ -254,68 +256,68 @@ function Ajustes() {
           </div>
 
           {/* SEGURIDAD */}
-          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8a7266', margin: '8px 0 8px', paddingLeft: '8px' }}>
+          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '8px 0 8px', paddingLeft: '8px' }}>
             Seguridad
           </p>
           <div style={cardStyle}>
             <div style={rowStyle} onClick={() => setShowChangePassword(true)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ ...iconBoxStyle, background: 'rgba(0,103,126,0.08)' }}>
-                  <Lock size={18} color="#00677e" />
+                <div style={{ ...iconBoxStyle, background: 'rgba(0,103,126,0.1)' }}>
+                  <Lock size={18} color="#00A3C4" />
                 </div>
-                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1c1c1a', margin: 0 }}>Cambiar Contraseña</p>
+                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--on-surface)', margin: 0 }}>Cambiar Contraseña</p>
               </div>
-              <ChevronRight size={20} color="#8a7266" />
+              <ChevronRight size={20} color="var(--on-surface-variant)" />
             </div>
           </div>
 
           {/* LEGAL */}
-          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8a7266', margin: '8px 0 8px', paddingLeft: '8px' }}>
+          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '8px 0 8px', paddingLeft: '8px' }}>
             Legal
           </p>
           <div style={cardStyle}>
             <div style={rowStyle} onClick={() => setShowPrivacy(true)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ ...iconBoxStyle, background: 'rgba(126,86,46,0.08)' }}>
-                  <FileText size={18} color="#7e562e" />
+                <div style={{ ...iconBoxStyle, background: 'rgba(126,86,46,0.1)' }}>
+                  <FileText size={18} color="#A19289" />
                 </div>
-                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1c1c1a', margin: 0 }}>Política de Privacidad</p>
+                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--on-surface)', margin: 0 }}>Política de Privacidad</p>
               </div>
-              <ChevronRight size={20} color="#8a7266" />
+              <ChevronRight size={20} color="var(--on-surface-variant)" />
             </div>
 
-            <div style={{ height: '1px', background: '#f0ede9', margin: '0 20px' }} />
+            <div style={{ height: '1px', background: 'rgba(140, 128, 121, 0.15)', margin: '0 20px' }} />
 
             <div style={rowStyle} onClick={() => setShowTerms(true)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ ...iconBoxStyle, background: 'rgba(126,86,46,0.08)' }}>
-                  <ShieldAlert size={18} color="#7e562e" />
+                <div style={{ ...iconBoxStyle, background: 'rgba(126,86,46,0.1)' }}>
+                  <ShieldAlert size={18} color="#A19289" />
                 </div>
-                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1c1c1a', margin: 0 }}>Términos y Condiciones</p>
+                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--on-surface)', margin: 0 }}>Términos y Condiciones</p>
               </div>
-              <ChevronRight size={20} color="#8a7266" />
+              <ChevronRight size={20} color="var(--on-surface-variant)" />
             </div>
           </div>
 
           {/* DANGER ZONE */}
-          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#ba1a1a', margin: '8px 0 8px', paddingLeft: '8px' }}>
+          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#ff4d4d', margin: '8px 0 8px', paddingLeft: '8px' }}>
             Zona de Peligro
           </p>
           <div style={{ ...cardStyle, marginBottom: '24px' }}>
             <div style={rowStyle} onClick={() => setShowDeleteConfirm(true)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ ...iconBoxStyle, background: 'rgba(186,26,26,0.08)' }}>
-                  <Trash2 size={18} color="#ba1a1a" />
+                <div style={{ ...iconBoxStyle, background: 'rgba(255,77,77,0.1)' }}>
+                  <Trash2 size={18} color="#ff4d4d" />
                 </div>
-                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#ba1a1a', margin: 0 }}>Eliminar Cuenta</p>
+                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#ff4d4d', margin: 0 }}>Eliminar Cuenta</p>
               </div>
-              <ChevronRight size={20} color="#ba1a1a" />
+              <ChevronRight size={20} color="#ff4d4d" />
             </div>
           </div>
 
           {/* VERSION */}
           <div style={{ textAlign: 'center', marginBottom: '100px' }}>
-            <p style={{ fontSize: '0.75rem', color: '#8a7266', margin: 0, fontWeight: 500 }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: 0, fontWeight: 500 }}>
               <Info size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
               BEFIT LAB v1.0.0
             </p>

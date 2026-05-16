@@ -52,6 +52,16 @@ const ProtectedRoute = ({ children, requireRole }) => {
 function App() {
   const isNative = Capacitor.isNativePlatform();
 
+  // Inicializar Modo Oscuro desde LocalStorage
+  React.useEffect(() => {
+    const savedDark = localStorage.getItem('befit_darkmode');
+    if (savedDark === 'true') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  }, []);
+
   return (
     <AuthProvider>
       <Router>

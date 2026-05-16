@@ -58,7 +58,7 @@ function Agenda() {
   });
 
   return (
-    <div className="mobile-app-container">
+    <div className="mobile-app-container" style={{ background: 'var(--app-bg)' }}>
       {/* HEADER UNIFICADO */}
       <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
@@ -166,13 +166,13 @@ function Agenda() {
                     flex: '0 0 auto', width: '64px', height: '90px', border: 'none',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px',
                     borderRadius: '24px',
-                    background: selectedDateIndex === i ? 'var(--primary)' : 'white',
-                    color: selectedDateIndex === i ? 'white' : 'var(--black)',
+                    background: selectedDateIndex === i ? 'var(--primary)' : 'var(--app-surface-solid)',
+                    color: selectedDateIndex === i ? 'white' : 'var(--on-surface)',
                     boxShadow: selectedDateIndex === i 
                       ? '0 10px 20px rgba(255,139,66,0.3)' 
-                      : '0 4px 12px rgba(0,0,0,0.03)',
+                      : 'var(--card-shadow)',
                     cursor: 'pointer', transition: 'all 0.3s ease',
-                    border: selectedDateIndex === i ? 'none' : '1px solid rgba(0,0,0,0.02)'
+                    border: selectedDateIndex === i ? 'none' : '1px solid var(--border-subtle)'
                   }}
                 >
                   <span style={{ 
@@ -211,7 +211,7 @@ function Agenda() {
                    />
                  ))
                ) : (
-                 <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.9rem', fontStyle: 'italic', background: 'rgba(55,61,59,0.03)', borderRadius: '16px' }}>
+                 <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.9rem', fontStyle: 'italic', background: 'var(--surface-low)', borderRadius: '16px', border: '1px solid var(--border-subtle)' }}>
                    No hay clases programadas para este día.
                  </div>
                )}
@@ -271,9 +271,9 @@ function Agenda() {
               <div className="sheet-handle" />
               
               <div className="wallet-card" style={{ 
-                background: 'linear-gradient(135deg, #FFFFFF 0%, #FCF9F5 100%)', 
-                boxShadow: '0 20px 50px rgba(0,0,0,0.06)',
-                border: '1px solid rgba(255,255,255,0.9)',
+                background: 'var(--surface-low)', 
+                boxShadow: 'var(--card-shadow)',
+                border: '1px solid var(--border-subtle)',
                 position: 'relative', overflow: 'hidden',
                 margin: '0 auto 10px',
                 width: '100%',
@@ -287,13 +287,13 @@ function Agenda() {
                 </div>
                 
                 <div className="wallet-body" style={{ padding: '25px 20px', textAlign: 'center' }}>
-                  <div style={{ background: 'white', padding: '12px', borderRadius: '20px', display: 'inline-block', boxShadow: '0 10px 30px rgba(0,0,0,0.04)' }}>
+                  <div style={{ background: 'white', padding: '12px', borderRadius: '20px', display: 'inline-block', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', border: 'none' }}>
                     <QRCodeCanvas 
                       value={user?.id || 'befit-client-id'} 
                       size={160}
                       level={"H"}
                       includeMargin={false}
-                      fgColor="#2D2928"
+                      fgColor="#000000"
                     />
                   </div>
                 </div>
@@ -350,8 +350,8 @@ function ClassItem({ classData, full, onReserve }) {
 
       <div style={{ 
         padding: '20px', display: 'flex', alignItems: 'center', gap: '20px',
-        background: 'white', borderRadius: '28px', boxShadow: '0 10px 30px rgba(155,69,0,0.04)', 
-        border: '1px solid rgba(255,255,255,0.8)', position: 'relative', overflow: 'hidden',
+        background: 'var(--app-surface-solid)', borderRadius: '28px', boxShadow: 'var(--card-shadow)', 
+        border: '1px solid var(--border-subtle)', position: 'relative', overflow: 'hidden',
         opacity: full ? 0.6 : 1, transition: 'all 0.3s ease'
       }}>
         <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', background: '#FCF9F5', flexShrink: 0, border: '2px solid white', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>

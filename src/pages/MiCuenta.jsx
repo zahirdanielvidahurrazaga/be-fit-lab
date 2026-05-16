@@ -83,17 +83,18 @@ function MiCuenta() {
 
   // Styles
   const cardStyle = {
-    background: 'white',
+    background: 'var(--app-surface-solid)',
     borderRadius: '24px',
     padding: '20px',
     marginBottom: '16px',
-    boxShadow: '0 8px 30px rgba(155,69,0,0.05)'
+    boxShadow: 'var(--card-shadow)',
+    border: '1px solid var(--border-subtle)'
   };
 
   const labelStyle = {
     fontSize: '0.75rem',
     fontWeight: 700,
-    color: '#564338',
+    color: 'var(--on-surface-variant)',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
     marginBottom: '6px',
@@ -104,11 +105,11 @@ function MiCuenta() {
     width: '100%',
     padding: '14px 18px',
     borderRadius: '9999px',
-    border: '1px solid #ddc1b3',
-    background: '#FCF9F5',
+    border: '1px solid var(--border-subtle)',
+    background: 'var(--surface-low)',
     fontSize: '0.95rem',
     fontFamily: 'DM Sans, sans-serif',
-    color: '#1c1c1a',
+    color: 'var(--on-surface)',
     outline: 'none',
     transition: 'border-color 0.2s ease',
     boxSizing: 'border-box'
@@ -116,13 +117,14 @@ function MiCuenta() {
 
   const inputReadOnlyStyle = {
     ...inputStyle,
-    background: '#f0ede9',
-    color: '#8a7266',
+    background: 'var(--surface-low)',
+    color: 'var(--on-surface-variant)',
+    opacity: 0.6,
     cursor: 'not-allowed'
   };
 
   return (
-    <div className="mobile-app-container" style={{ background: '#FCF9F5' }}>
+    <div className="mobile-app-container" style={{ background: 'var(--app-bg)' }}>
       {/* HEADER UNIFICADO */}
       <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
@@ -170,18 +172,17 @@ function MiCuenta() {
               <div style={{
                 position: 'absolute', bottom: '0', right: '0',
                 width: '32px', height: '32px', borderRadius: '50%',
-                background: 'white', border: '2px solid #FCF9F5',
+                background: 'var(--app-surface-solid)', border: '2px solid var(--app-bg)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)', cursor: 'pointer'
+                boxShadow: 'var(--card-shadow)', cursor: 'pointer'
               }}>
-                <Camera size={14} color="#FF8B42" />
+                <Camera size={14} color="var(--primary)" />
               </div>
             </div>
           </div>
 
-          {/* DATOS PERSONALES */}
           <div style={cardStyle}>
-            <h3 style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8a7266', margin: '0 0 16px' }}>
+            <h3 style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '0 0 16px' }}>
               Datos Personales
             </h3>
 
@@ -264,9 +265,8 @@ function MiCuenta() {
             </div>
           </div>
 
-          {/* HISTORIAL DE CLASES */}
           <div style={cardStyle}>
-            <h3 style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8a7266', margin: '0 0 16px' }}>
+            <h3 style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '0 0 16px' }}>
               Historial de Clases
             </h3>
 
@@ -283,9 +283,9 @@ function MiCuenta() {
                 }}>
                   <div style={{
                     width: '40px', height: '40px', borderRadius: '14px',
-                    background: '#f6f3ef', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    background: 'var(--surface-low)', display: 'flex', alignItems: 'center', justifyContent: 'center'
                   }}>
-                    <Check size={18} color="#FF8B42" />
+                    <Check size={18} color="var(--primary)" />
                   </div>
                   <div style={{ flex: 1 }}>
                     <p style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1c1c1a', margin: 0 }}>
@@ -300,9 +300,8 @@ function MiCuenta() {
             )}
           </div>
 
-          {/* CONTACTO DE EMERGENCIA */}
           <div style={cardStyle}>
-            <h3 style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8a7266', margin: '0 0 16px' }}>
+            <h3 style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '0 0 16px' }}>
               <Shield size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
               Contacto de Emergencia
             </h3>
@@ -388,9 +387,9 @@ function MiCuenta() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{
                 width: '40px', height: '40px', borderRadius: '14px',
-                background: '#f6f3ef', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                background: 'var(--surface-low)', display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                <Shield size={18} color="#564338" />
+                <Shield size={18} color="var(--on-surface-variant)" />
               </div>
               <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1c1c1a' }}>Ajustes</span>
             </div>

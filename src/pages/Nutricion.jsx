@@ -31,7 +31,7 @@ function Nutricion() {
   const meals = recipes || [];
 
   return (
-    <div className="mobile-app-container" style={{ background: '#FCF9F5' }}>
+    <div className="mobile-app-container" style={{ background: 'var(--app-bg)' }}>
       {/* HEADER UNIFICADO */}
       <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
@@ -91,15 +91,15 @@ function Nutricion() {
 
           {/* HIDRATACIÓN - Minimal Circle Progress */}
           <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div className="ios-glass-card" style={{ padding: '18px', borderRadius: '24px', background: 'white' }}>
+            <div className="ios-glass-card" style={{ padding: '18px', borderRadius: '24px', background: 'var(--app-surface-solid)' }}>
               <div style={{ color: '#007AFF', marginBottom: '10px' }}><Droplets size={20} /></div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 900 }}>1.8<span style={{ fontSize: '0.7rem', color: '#8a7266', marginLeft: '4px' }}>Liters</span></div>
-              <div style={{ fontSize: '0.7rem', color: '#8a7266', fontWeight: 600, marginTop: '4px' }}>72% de la meta</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--on-surface)' }}>1.8<span style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', marginLeft: '4px' }}>Liters</span></div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginTop: '4px' }}>72% de la meta</div>
             </div>
-            <div className="ios-glass-card" style={{ padding: '18px', borderRadius: '24px', background: 'white' }}>
+            <div className="ios-glass-card" style={{ padding: '18px', borderRadius: '24px', background: 'var(--app-surface-solid)' }}>
               <div style={{ color: '#FF8B42', marginBottom: '10px' }}><Flame size={20} /></div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 900 }}>450<span style={{ fontSize: '0.7rem', color: '#8a7266', marginLeft: '4px' }}>Kcal</span></div>
-              <div style={{ fontSize: '0.7rem', color: '#8a7266', fontWeight: 600, marginTop: '4px' }}>Quemadas hoy</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--on-surface)' }}>450<span style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', marginLeft: '4px' }}>Kcal</span></div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginTop: '4px' }}>Quemadas hoy</div>
             </div>
           </div>
         </div>
@@ -146,9 +146,9 @@ function Nutricion() {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="modal-drawer" 
               onClick={(e) => e.stopPropagation()} 
-              style={{ paddingBottom: '40px', background: '#FCF9F5' }}
+              style={{ paddingBottom: '40px', background: 'var(--surface)' }}
             >
-              <div className="modal-close-pill"></div>
+              <div className="sheet-handle"></div>
               
               <div style={{ height: '240px', borderRadius: '28px', overflow: 'hidden', marginBottom: '24px', position: 'relative', boxShadow: '0 15px 35px rgba(0,0,0,0.1)' }}>
                 <img src={recipeData?.img} alt="Recipe" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -173,11 +173,11 @@ function Nutricion() {
                    </div>
                 </div>
 
-                <div style={{ background: 'white', borderRadius: '24px', padding: '24px', boxShadow: '0 10px 30px rgba(155,69,0,0.04)', marginBottom: '24px' }}>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '16px', color: 'var(--black)' }}>Ingredientes</h4>
+                <div style={{ background: 'var(--app-surface-solid)', borderRadius: '24px', padding: '24px', boxShadow: 'var(--card-shadow)', marginBottom: '24px', border: '1px solid var(--border-subtle)' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '16px', color: 'var(--on-surface)' }}>Ingredientes</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
                     {recipeData?.ingredients.map((ing, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: '#FCF9F5', borderRadius: '14px', fontSize: '0.9rem', color: '#564338', fontWeight: 500 }}>
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: 'var(--surface-low)', borderRadius: '14px', fontSize: '0.9rem', color: 'var(--on-surface)', fontWeight: 500 }}>
                         <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary)' }}></div>
                         {ing}
                       </div>
@@ -231,21 +231,21 @@ function Nutricion() {
             >
               <div className="sheet-handle" />
               <div className="wallet-card" style={{ 
-                background: 'linear-gradient(135deg, #FFFFFF 0%, #FCF9F5 100%)', 
-                boxShadow: '0 20px 50px rgba(0,0,0,0.06)',
-                border: '1px solid rgba(255,255,255,0.9)',
+                background: 'var(--surface-low)', 
+                boxShadow: 'var(--card-shadow)',
+                border: '1px solid var(--border-subtle)',
                 position: 'relative', overflow: 'hidden',
                 margin: '0 auto 10px', width: '100%', borderRadius: '30px'
               }}>
                 <div className="wallet-header" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'white', fontFamily: 'var(--font-display)', fontSize: '1.2rem' }}>B</div>
-                    <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--black)', letterSpacing: '2px' }}>BEFIT LAB</span>
+                    <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--on-surface)', letterSpacing: '2px' }}>BEFIT LAB</span>
                   </div>
                 </div>
                 <div className="wallet-body" style={{ padding: '10px 20px 30px', textAlign: 'center' }}>
-                  <div style={{ background: 'white', padding: '12px', borderRadius: '20px', display: 'inline-block', boxShadow: '0 10px 30px rgba(0,0,0,0.04)' }}>
-                    <QRCodeCanvas value={user?.id || 'befit-client-id'} size={160} level={"H"} includeMargin={false} fgColor="#2D2928" />
+                  <div style={{ background: 'white', padding: '12px', borderRadius: '20px', display: 'inline-block', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
+                    <QRCodeCanvas value={user?.id || 'befit-client-id'} size={160} level={"H"} includeMargin={false} fgColor="#000000" />
                   </div>
                 </div>
               </div>
@@ -274,8 +274,8 @@ function MealItem({ meal, isFavorite, onFavorite, onClick }) {
       onClick={onClick}
       style={{ 
         padding: '16px', display: 'flex', gap: '16px', alignItems: 'center', cursor: 'pointer', 
-        background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(155,69,0,0.04)',
-        border: '1px solid rgba(255,255,255,0.8)', position: 'relative'
+        background: 'var(--app-surface-solid)', borderRadius: '24px', boxShadow: 'var(--card-shadow)',
+        border: '1px solid var(--border-subtle)', position: 'relative'
       }}
     >
       <div style={{ width: '90px', height: '90px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0 }}>

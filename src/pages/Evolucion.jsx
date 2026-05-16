@@ -17,7 +17,7 @@ function Evolucion() {
   const dashOffset = circumference - (score / 100) * circumference;
 
   return (
-    <div className="mobile-app-container" style={{ background: '#FCF9F5' }}>
+    <div className="mobile-app-container">
       {/* HEADER UNIFICADO */}
       <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
@@ -40,8 +40,8 @@ function Evolucion() {
           {/* PROGRESS RING — HERO */}
           <motion.section initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} transition={{duration:0.6}}>
             <div style={{ 
-              background: 'white', borderRadius: '32px', padding: '30px 20px',
-              boxShadow: '0 15px 40px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.03)',
+              background: 'var(--app-surface-solid)', borderRadius: '32px', padding: '30px 20px',
+              boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)',
               textAlign: 'center', position: 'relative', overflow: 'hidden'
             }}>
               {/* Decorative glow */}
@@ -51,7 +51,7 @@ function Evolucion() {
               <div style={{ position: 'relative', width: '180px', height: '180px', margin: '0 auto 20px' }}>
                 <svg width="180" height="180" viewBox="0 0 180 180" style={{ transform: 'rotate(-90deg)' }}>
                   {/* Background circle */}
-                  <circle cx="90" cy="90" r="70" fill="none" stroke="rgba(0,0,0,0.04)" strokeWidth="10" />
+                  <circle cx="90" cy="90" r="70" fill="none" stroke="var(--border-subtle)" strokeWidth="10" />
                   {/* Progress circle */}
                   <circle 
                     cx="90" cy="90" r="70" fill="none" 
@@ -120,8 +120,8 @@ function Evolucion() {
               <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 800, background: 'rgba(255,139,66,0.08)', padding: '4px 10px', borderRadius: '8px' }}>+12%</div>
             </div>
             <div style={{ 
-              background: 'white', borderRadius: '24px', padding: '20px',
-              boxShadow: '0 8px 25px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.03)'
+              background: 'var(--app-surface-solid)', borderRadius: '24px', padding: '20px',
+              boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)'
             }}>
               <div style={{ height: '140px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px' }}>
                 {[40, 70, 45, 90, 65, 80, 50].map((h, i) => (
@@ -129,7 +129,7 @@ function Evolucion() {
                     <div style={{ 
                       width: '100%', maxWidth: '28px', margin: '0 auto',
                       height: `${h}%`, 
-                      background: i === 3 ? 'linear-gradient(to top, var(--primary), var(--accent))' : 'rgba(0,0,0,0.04)', 
+                      background: i === 3 ? 'linear-gradient(to top, var(--primary), var(--accent))' : 'var(--border-subtle)', 
                       borderRadius: '8px',
                       boxShadow: i === 3 ? '0 4px 12px rgba(255,139,66,0.3)' : 'none'
                     }} />
@@ -150,9 +150,9 @@ function Evolucion() {
           <div className="qr-bottom-sheet" style={{ padding: '12px 24px 20px', background: 'var(--surface)' }}>
             <div className="sheet-handle" />
             <div className="wallet-card" style={{ 
-              background: 'linear-gradient(135deg, #FFFFFF 0%, #FCF9F5 100%)', 
-              boxShadow: '0 20px 50px rgba(0,0,0,0.06)',
-              border: '1px solid rgba(255,255,255,0.9)',
+              background: 'var(--surface-low)', 
+              boxShadow: 'var(--card-shadow)',
+              border: '1px solid var(--border-subtle)',
               position: 'relative', overflow: 'hidden',
               margin: '0 auto 10px', width: '100%', borderRadius: '30px'
             }}>
@@ -201,9 +201,9 @@ function BadgeIcon({ icon, label }) {
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
       <div style={{ 
         width: '56px', height: '56px', borderRadius: '50%', 
-        background: 'white', border: '1px solid rgba(0,0,0,0.05)',
+        background: 'var(--app-surface-solid)', border: '1px solid var(--border-subtle)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '1.5rem', boxShadow: '0 6px 18px rgba(0,0,0,0.04)'
+        fontSize: '1.5rem', boxShadow: 'var(--card-shadow)'
       }}>
         {icon}
       </div>
@@ -217,14 +217,14 @@ function MetricRow({ label, value, unit, trend, icon, positive }) {
   const isUp = trend.startsWith('+');
   return (
     <div style={{ 
-      background: 'white', borderRadius: '20px', padding: '16px 18px',
+      background: 'var(--app-surface-solid)', borderRadius: '20px', padding: '16px 18px',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      boxShadow: '0 6px 18px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.03)'
+      boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         <div style={{ 
           width: '42px', height: '42px', borderRadius: '14px', 
-          background: positive ? 'rgba(255,139,66,0.08)' : 'rgba(0,0,0,0.03)',
+          background: positive ? 'rgba(255,139,66,0.08)' : 'var(--border-subtle)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: positive ? 'var(--primary)' : 'var(--on-surface-variant)'
         }}>
