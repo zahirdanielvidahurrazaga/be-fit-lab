@@ -13,6 +13,8 @@ import Coach from './pages/Coach';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Planes from './pages/Planes';
+import Privacidad from './pages/Privacidad';
+import Terminos from './pages/Terminos';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './index.css';
 
@@ -82,6 +84,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={isNative ? <Navigate to="/login" replace /> : <Register />} />
           <Route path="/planes" element={isNative ? <Navigate to="/login" replace /> : <Planes />} />
+          <Route path="/privacidad" element={<Privacidad />} />
+          <Route path="/terminos" element={<Terminos />} />
           <Route path="/agenda" element={<Agenda />} />
           
           {/* Rutas Privadas Clienta */}

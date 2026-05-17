@@ -12,6 +12,17 @@ dist
 dist-ssr
 *.local
 
+# ==============================
+# SEGURIDAD: Archivos sensibles
+# ==============================
+.env
+.env.local
+.env.production
+*.sql
+old_admin.txt
+cotizacion.html
+check_error.js
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -1,5 +1,17 @@
 {
   "appId": "com.befitlab.app",
   "appName": "Be Fit Lab",
-  "webDir": "dist"
+  "webDir": "dist",
+  "server": {
+    "allowNavigation": ["fifaowaiokauhuqklzwe.supabase.co"],
+    "hostname": "befitlab.app",
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "allowsLinkPreview": false
+  },
+  "android": {
+    "allowMixedContent": false
+  }
 }

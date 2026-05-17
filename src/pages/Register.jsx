@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { User, Mail, Lock, ArrowRight, ChevronLeft, CheckCircle2 } from 'lucide-react';
@@ -11,6 +11,7 @@ function Register() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { activatePlan } = useAuth();
@@ -21,6 +22,12 @@ function Register() {
     setLoading(true);
     setError(null);
     
+    if (!acceptTerms) {
+      setError("Debes aceptar los Términos y la Política de Privacidad para continuar.");
+      setLoading(false);
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden.");
       setLoading(false);
@@ -183,7 +190,20 @@ function Register() {
               />
             </div>
 
-            <button type="submit" className="glass-button-dark" style={{ width: '100%', marginTop: '2rem' }} disabled={loading}>
+            {/* CONSENTIMIENTO LEGAL */}
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginTop: '1.5rem', cursor: 'pointer', fontSize: '0.82rem', color: '#4B5563', lineHeight: 1.5 }}>
+              <input 
+                type="checkbox" 
+                checked={acceptTerms} 
+                onChange={(e) => setAcceptTerms(e.target.checked)} 
+                style={{ marginTop: '3px', accentColor: 'var(--primary)', width: '18px', height: '18px', flexShrink: 0 }}
+              />
+              <span>
+                Acepto los <Link to="/terminos" target="_blank" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>Términos y Condiciones</Link> y la <Link to="/privacidad" target="_blank" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>Política de Privacidad</Link> de Be Fit Lab.
+              </span>
+            </label>
+
+            <button type="submit" className="glass-button-dark" style={{ width: '100%', marginTop: '1.5rem', opacity: acceptTerms ? 1 : 0.5 }} disabled={loading || !acceptTerms}>
               {loading ? 'Creando cuenta...' : 'Completar Registro'} <ArrowRight size={20} />
             </button>
           </form>

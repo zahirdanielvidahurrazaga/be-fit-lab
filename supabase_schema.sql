@@ -192,3 +192,41 @@ WHERE id NOT IN (SELECT id FROM public.users);
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS phone text;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS emergency_contact_name text;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS emergency_contact_phone text;
+
+-- ==========================================
+-- SEGURIDAD: Columna checked_in para asistencia
+-- ==========================================
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS checked_in boolean DEFAULT false;
+
+-- ==========================================
+-- SEGURIDAD: Políticas RLS para Admin
+-- ==========================================
+
+-- Admin puede ver todos los usuarios (necesario para panel de gestión)
+DROP POLICY IF EXISTS "Admins can view all users" ON public.users;
+CREATE POLICY "Admins can view all users" ON public.users 
+FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'ADMIN')
+);
+
+-- Admin puede actualizar cualquier usuario (necesario para activar planes)
+DROP POLICY IF EXISTS "Admins can update any user" ON public.users;
+CREATE POLICY "Admins can update any user" ON public.users 
+FOR UPDATE USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'ADMIN')
+);
+
+-- Admin puede ver todas las reservaciones (necesario para check-in)
+DROP POLICY IF EXISTS "Admins can view all reservations" ON public.reservations;
+CREATE POLICY "Admins can view all reservations" ON public.reservations 
+FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'ADMIN')
+);
+
+-- Admin puede actualizar reservaciones (necesario para marcar asistencia)
+DROP POLICY IF EXISTS "Admins can update reservations" ON public.reservations;
+CREATE POLICY "Admins can update reservations" ON public.reservations 
+FOR UPDATE USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'ADMIN')
+);
+
