@@ -318,13 +318,6 @@ function Coach() {
             <span>Mi Agenda</span>
           </div>
 
-          <div 
-            onClick={() => setActiveTab('estatus')}
-            className={`sidebar-nav-item ${activeTab === 'estatus' ? 'active' : ''}`}
-          >
-            <Activity size={18} />
-            <span>Mi Estatus</span>
-          </div>
 
           <div 
             onClick={() => setActiveTab('buscar')}
@@ -358,7 +351,6 @@ function Coach() {
       <main className="coach-main-content">
         <div style={{ width: '100%', maxWidth: '1200px', margin: '0 auto', animation: 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}>
           {activeTab === 'agenda' && renderAgenda()}
-          {activeTab === 'estatus' && renderEstatus()}
           {activeTab === 'buscar' && renderBuscar()}
         </div>
       </main>
@@ -371,13 +363,6 @@ function Coach() {
         >
           <Calendar size={22} strokeWidth={2.5} />
           <span>Agenda</span>
-        </div>
-        <div 
-          onClick={() => setActiveTab('estatus')} 
-          className={`nav-item ${activeTab === 'estatus' ? 'active' : ''}`}
-        >
-          <Activity size={22} strokeWidth={2.5} />
-          <span>Estatus</span>
         </div>
         <div 
           onClick={() => setActiveTab('buscar')} 
