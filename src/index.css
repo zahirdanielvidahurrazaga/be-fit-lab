@@ -743,18 +743,18 @@ h1, h2, h3, h4, h5 {
 
   /* Admin: full-width single column layout for desktop */
   .admin-dashboard-main {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-    padding: 0 0 120px;
+    display: block;
+    width: 100%;
     max-width: 100%;
+    padding: 0;
   }
   
   .admin-dashboard-main .admin-content-area {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30px;
-    align-items: start;
+    display: block;
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px 120px;
   }
   
   .ios-bottom-nav {
@@ -1263,3 +1263,170 @@ h1, h2, h3, h4, h5 {
 }
   
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }  
+
+/* ===== ADMIN DASHBOARD RESPONSIVE REDESIGN ===== */
+.admin-responsive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(295px, 1fr));
+  gap: 20px;
+  width: 100%;
+}
+
+.admin-double-column {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .admin-double-column {
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 32px;
+    align-items: start;
+  }
+}
+
+/* ===== ADMIN DUAL DASHBOARD SYSTEM (DESKTOP SIDEBAR) ===== */
+
+/* Contenedor Admin General */
+.admin-app-container {
+  min-height: 100vh;
+  background-color: var(--surface-lowest);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sidebar de Escritorio (Oculto en Móvil) */
+.admin-desktop-sidebar {
+  display: none;
+}
+
+/* Clases de Ocultamiento */
+.mobile-only-header,
+.mobile-only-nav {
+  display: flex !important;
+}
+
+@media (min-width: 768px) {
+  .admin-app-container {
+    flex-direction: row;
+  }
+
+  /* Mostrar y Diseñar Sidebar en Desktop */
+  .admin-desktop-sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 280px;
+    background: #1A1C1E; /* Fondo oscuro premium satinado */
+    color: white;
+    padding: 40px 24px;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.05);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .sidebar-brand {
+    margin-bottom: 40px;
+    padding-left: 8px;
+  }
+
+  .sidebar-title {
+    font-size: 1.6rem;
+    font-family: var(--font-display);
+    font-weight: 800;
+    margin: 0;
+    line-height: 1.1;
+    color: white;
+    letter-spacing: -0.02em;
+  }
+
+  .sidebar-subtitle {
+    font-size: 0.72rem;
+    color: var(--primary);
+    margin: 4px 0 0;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+  }
+
+  .sidebar-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-radius: 16px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sidebar-nav-item:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .sidebar-nav-item.active {
+    color: white;
+    background: linear-gradient(135deg, #FF914D, #FF6B00);
+    box-shadow: 0 10px 25px rgba(255, 107, 0, 0.35);
+  }
+
+  .sidebar-footer {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-radius: 16px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #FF4D4D;
+    background: rgba(255, 77, 77, 0.06);
+    transition: all 0.25s ease;
+    margin-top: auto;
+  }
+
+  .sidebar-footer:hover {
+    background: rgba(255, 77, 77, 0.12);
+    transform: translateY(-2px);
+  }
+
+  /* Contenido Principal en Desktop */
+  .admin-main-content {
+    flex: 1;
+    margin-left: 280px; /* Dejar espacio libre para el sidebar */
+    padding: 40px 50px 80px;
+    background: var(--surface-lowest);
+    min-height: 100vh;
+  }
+
+  /* Ocultar elementos móviles en Desktop */
+  .mobile-only-header {
+    display: none !important;
+  }
+  .mobile-only-nav {
+    display: none !important;
+  }
+
+  /* --- ARREGLO DE CORRECCIÓN DE SCROLL DETECT NAV EN PC --- */
+  .ios-bottom-nav.scrolled {
+    height: 64px !important;
+    bottom: 20px !important;
+    transform: translateX(-50%) scale(0.92) !important;
+    opacity: 0.95 !important;
+  }
+}
