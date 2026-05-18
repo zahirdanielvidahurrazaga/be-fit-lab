@@ -1308,6 +1308,13 @@ h1, h2, h3, h4, h5 {
   display: flex !important;
 }
 
+/* Contenido Principal en Móvil (Padding y alineación perfecta de tarjetas) */
+.admin-main-content {
+  flex: 1;
+  padding: 20px 20px 120px;
+  width: 100%;
+}
+
 @media (min-width: 768px) {
   .admin-app-container {
     flex-direction: row;
