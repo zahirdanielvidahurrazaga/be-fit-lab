@@ -3,9 +3,11 @@ import { LogOut, Users, Activity, QrCode, CheckCircle2, Plus, Minus, Calendar, B
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useScrollDetect } from '../hooks/useScrollDetect';
 
 function Admin() {
   const { user, logout, globalClasses, recipes, updateClassSpots, checkInClient, addClass, deleteClass, addRecipe, deleteRecipe, allUsers, activatePlan, fetchClassesByDayOfWeek, fetchGlobalClasses } = useAuth();
+  const isScrolled = useScrollDetect(30);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('mostrador');
   
@@ -552,7 +554,7 @@ function Admin() {
       </main>
 
       {/* ====== BOTTOM NAV PREMIUM — INSTAGRAM STYLE ====== */}
-      <nav className="ios-bottom-nav">
+      <nav className={`ios-bottom-nav ${isScrolled ? 'scrolled' : ''}`}>
         <div onClick={() => setActiveTab('clases')} className={`nav-item ${activeTab === 'clases' ? 'active' : ''}`}>
           <Calendar size={22} strokeWidth={2.5} />
           <span>Clases</span>
@@ -562,7 +564,14 @@ function Admin() {
           <span>Ventas</span>
         </div>
         
-        <button className="nav-qr-button" onClick={() => setActiveTab('mostrador')}>
+        <button 
+          className="nav-qr-button" 
+          onClick={() => setActiveTab('mostrador')}
+          style={activeTab === 'mostrador' ? {
+            background: 'linear-gradient(135deg, #FF914D, #FF6B00)',
+            boxShadow: '0 0 25px rgba(255, 145, 77, 0.8), 0 0 0 4px rgba(255, 255, 255, 1)'
+          } : {}}
+        >
           <QrCode size={24} strokeWidth={2.5} />
         </button>
 
