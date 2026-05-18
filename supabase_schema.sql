@@ -199,34 +199,47 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS emergency_contact_phone text;
 ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS checked_in boolean DEFAULT false;
 
 -- ==========================================
--- SEGURIDAD: Políticas RLS para Admin
+-- SEGURIDAD: Políticas RLS para Admin (Optimizadas sin recursión)
 -- ==========================================
+
+-- Función auxiliar libre de recursión (usando SECURITY DEFINER para saltarse RLS internamente)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.users
+    WHERE id = auth.uid() AND role = 'ADMIN'
+  );
+$$ LANGUAGE sql;
 
 -- Admin puede ver todos los usuarios (necesario para panel de gestión)
 DROP POLICY IF EXISTS "Admins can view all users" ON public.users;
 CREATE POLICY "Admins can view all users" ON public.users 
 FOR SELECT USING (
-  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'ADMIN')
+  public.is_admin()
 );
 
 -- Admin puede actualizar cualquier usuario (necesario para activar planes)
 DROP POLICY IF EXISTS "Admins can update any user" ON public.users;
 CREATE POLICY "Admins can update any user" ON public.users 
 FOR UPDATE USING (
-  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'ADMIN')
+  public.is_admin()
 );
 
 -- Admin puede ver todas las reservaciones (necesario para check-in)
 DROP POLICY IF EXISTS "Admins can view all reservations" ON public.reservations;
 CREATE POLICY "Admins can view all reservations" ON public.reservations 
 FOR SELECT USING (
-  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'ADMIN')
+  public.is_admin()
 );
 
 -- Admin puede actualizar reservaciones (necesario para marcar asistencia)
 DROP POLICY IF EXISTS "Admins can update reservations" ON public.reservations;
 CREATE POLICY "Admins can update reservations" ON public.reservations 
 FOR UPDATE USING (
-  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'ADMIN')
+  public.is_admin()
 );
+
 

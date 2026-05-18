@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { User, Mail, Lock, ArrowRight, ChevronLeft, CheckCircle2 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 
 function Register() {
   const [name, setName] = useState('');
@@ -16,6 +17,7 @@ function Register() {
   const location = useLocation();
   const { activatePlan } = useAuth();
   const purchasedPlan = location.state?.purchasedPlan;
+  const isNative = Capacitor.isNativePlatform() || localStorage.getItem('simulateNative') === 'true';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -77,42 +79,45 @@ function Register() {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'url("/hero_bg.png")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+    <div style={{ position: 'relative', width: '100%', overflowX: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'url("/hero_bg.png")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
       
       {/* Overlay */}
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)', zIndex: 0 }}></div>
 
       {/* BOTÓN VOLVER AL SITIO */}
-      <div 
-        onClick={() => navigate('/')} 
-        style={{ 
-          position: 'absolute', top: '20px', left: '20px', zIndex: 10,
-          display: 'flex', alignItems: 'center', gap: '6px',
-          padding: '10px 18px', borderRadius: '50px',
-          background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(20px)',
-          color: 'white', fontSize: '0.85rem', fontWeight: 600,
-          cursor: 'pointer', border: '1px solid rgba(255,255,255,0.2)',
-          transition: 'all 0.3s ease'
-        }}>
-        <ChevronLeft size={18} />
-        Volver al sitio
-      </div>
+      {!isNative && (
+        <div 
+          onClick={() => navigate('/')} 
+          style={{ 
+            position: 'absolute', top: '20px', left: '20px', zIndex: 10,
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '10px 18px', borderRadius: '50px',
+            background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(20px)',
+            color: 'white', fontSize: '0.85rem', fontWeight: 600,
+            cursor: 'pointer', border: '1px solid rgba(255,255,255,0.2)',
+            transition: 'all 0.3s ease'
+          }}>
+          <ChevronLeft size={18} />
+          Volver al sitio
+        </div>
+      )}
 
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', zIndex: 1 }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isNative ? '20px 16px' : '40px 20px', zIndex: 1 }}>
         <div style={{ 
           width: '100%', 
-          maxWidth: '450px', 
+          maxWidth: '440px', 
           background: 'rgba(255, 255, 255, 0.65)', 
           backdropFilter: 'blur(30px)', 
           WebkitBackdropFilter: 'blur(30px)',
-          padding: '3rem', 
+          padding: isNative ? '2.5rem 1.25rem' : '3rem 2rem', 
           borderRadius: '30px',
           border: '1px solid rgba(255,255,255,0.5)',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+          boxSizing: 'border-box'
         }}>
           
           {/* FORMULARIO DE REGISTRO */}
-          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
             {purchasedPlan ? (
                <>
                  <div style={{ display: 'inline-block', padding: '6px 12px', background: 'rgba(238,186,137,0.2)', color: 'var(--accent)', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '10px' }}>

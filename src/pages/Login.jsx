@@ -177,7 +177,7 @@ function Login() {
   // UI: LOGIN PRINCIPAL
   // ==============================
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'url("/hero_bg.png")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+    <div style={{ position: 'relative', width: '100%', overflowX: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'url("/hero_bg.png")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
       
       {/* Overlay */}
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)', zIndex: 0 }}></div>
@@ -200,20 +200,21 @@ function Login() {
         </div>
       )}
 
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', zIndex: 1 }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isNative ? '20px 16px' : '40px 20px', zIndex: 1 }}>
         <div style={{ 
           width: '100%', 
-          maxWidth: '450px', 
+          maxWidth: '440px', 
           background: 'rgba(255, 255, 255, 0.65)', 
           backdropFilter: 'blur(30px)', 
           WebkitBackdropFilter: 'blur(30px)',
-          padding: '3rem', 
+          padding: isNative ? '2.5rem 1.25rem' : '3rem 2rem', 
           borderRadius: '30px',
           border: '1px solid rgba(255,255,255,0.5)',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+          boxSizing: 'border-box'
         }}>
           
-          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
             <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.2rem', color: '#1A1C1E', marginBottom: '0.5rem' }}>Bienvenida de nuevo</h1>
             <p style={{ color: '#4B5563', fontWeight: 500 }}>Ingresa tus credenciales para acceder a tu portal.</p>
           </div>
@@ -288,18 +289,18 @@ function Login() {
               
               <div style={{ marginTop: '2.5rem', paddingTop: '2rem', borderTop: '1px solid rgba(0,0,0,0.05)', textAlign: 'center' }}>
                 <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lleva tu entrenamiento a otro nivel</p>
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
                   <img 
                     src="/assets/appstore.svg" 
                     alt="Download on the App Store" 
-                    style={{ height: '42px', cursor: 'pointer', transition: 'transform 0.2s ease' }} 
+                    style={{ height: '36px', width: '120px', objectFit: 'contain', cursor: 'pointer', transition: 'transform 0.2s ease' }} 
                     onMouseOver={(e) => e.currentTarget.style.transform='scale(1.05)'} 
                     onMouseOut={(e) => e.currentTarget.style.transform='scale(1)'} 
                   />
                   <img 
                     src="/assets/googleplay.svg" 
                     alt="Get it on Google Play" 
-                    style={{ height: '42px', cursor: 'pointer', transition: 'transform 0.2s ease' }} 
+                    style={{ height: '36px', width: '120px', objectFit: 'contain', cursor: 'pointer', transition: 'transform 0.2s ease' }} 
                     onMouseOver={(e) => e.currentTarget.style.transform='scale(1.05)'} 
                     onMouseOut={(e) => e.currentTarget.style.transform='scale(1)'} 
                   />
