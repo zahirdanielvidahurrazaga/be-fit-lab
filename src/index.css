@@ -1437,3 +1437,133 @@ h1, h2, h3, h4, h5 {
     opacity: 0.95 !important;
   }
 }
+
+/* ===== COACH DUAL DASHBOARD SYSTEM (DESKTOP SIDEBAR) ===== */
+
+/* Contenedor Coach General */
+.coach-app-container {
+  min-height: 100vh;
+  background-color: var(--surface-lowest);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sidebar de Escritorio (Oculto en Móvil) */
+.coach-desktop-sidebar {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .coach-app-container {
+    flex-direction: row;
+  }
+
+  /* Mostrar y Diseñar Sidebar en Desktop */
+  .coach-desktop-sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 280px;
+    background: #1A1C1E; /* Fondo oscuro premium satinado */
+    color: white;
+    padding: 40px 24px;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.05);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* Reutilizar marcas y navegación del admin para coherencia de marca */
+  .coach-desktop-sidebar .sidebar-brand {
+    margin-bottom: 40px;
+    padding-left: 8px;
+  }
+
+  .coach-desktop-sidebar .sidebar-title {
+    font-size: 1.6rem;
+    font-family: var(--font-display);
+    font-weight: 800;
+    margin: 0;
+    line-height: 1.1;
+    color: white;
+    letter-spacing: -0.02em;
+  }
+
+  .coach-desktop-sidebar .sidebar-subtitle {
+    font-size: 0.72rem;
+    color: var(--primary);
+    margin: 4px 0 0;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .coach-desktop-sidebar .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+  }
+
+  .coach-desktop-sidebar .sidebar-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-radius: 16px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .coach-desktop-sidebar .sidebar-nav-item:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .coach-desktop-sidebar .sidebar-nav-item.active {
+    color: white;
+    background: linear-gradient(135deg, #FF914D, #FF6B00);
+    box-shadow: 0 10px 25px rgba(255, 107, 0, 0.35);
+  }
+
+  .coach-desktop-sidebar .sidebar-footer {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-radius: 16px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #FF4D4D;
+    background: rgba(255, 77, 77, 0.06);
+    transition: all 0.25s ease;
+    margin-top: auto;
+  }
+
+  .coach-desktop-sidebar .sidebar-footer:hover {
+    background: rgba(255, 77, 77, 0.12);
+    transform: translateY(-2px);
+  }
+
+  /* Contenido Principal en Desktop */
+  .coach-main-content {
+    flex: 1;
+    margin-left: 280px; /* Dejar espacio libre para el sidebar */
+    padding: 40px 50px 80px;
+    background: var(--surface-lowest);
+    min-height: 100vh;
+  }
+}
+
+/* Contenido Principal en Móvil (Padding y alineación perfecta) */
+.coach-main-content {
+  flex: 1;
+  padding: 20px 20px 120px;
+  width: 100%;
+}
