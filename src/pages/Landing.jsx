@@ -67,7 +67,7 @@ function Landing() {
       {/* Navigation VIP */}
       <nav className={`glass-nav ${isMenuOpen ? 'nav-open-mobile' : ''}`}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 600, letterSpacing: '0.05em', zIndex: 1001, position: 'relative' }}>
-          BEFIT <span style={{ color: 'var(--primary)' }}>LAB</span>
+          BE FIT <span style={{ color: 'var(--primary)' }}>LAB</span>
         </div>
         
         {/* Desktop Links */}
@@ -232,7 +232,7 @@ function Landing() {
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--primary)', border: '2px solid var(--surface-lowest)', marginLeft: '-15px', color:'white', display:'flex', alignItems:'center', justifyContent:'center', fontSize: '12px' }}>+1k</div>
             </div>
             <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>
-              Mujeres ya transformando <br/> su cuerpo con BEFIT LAB.
+              Mujeres ya transformando <br/> su cuerpo con BE FIT LAB.
             </p>
           </div>
         </motion.div>
@@ -276,7 +276,7 @@ function Landing() {
             <div className="badge-peach" style={{marginBottom: '1.5rem'}}><Calendar size={16} /> Horarios y Reservas</div>
             <h2 style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>Tu tiempo, tus reglas.</h2>
             <p style={{ fontSize: '1.1rem', color: '#4B5563', lineHeight: 1.8, marginBottom: '2rem' }}>
-              En BEFIT LAB olvidamos las agendas de papel. Nuestra App te permite reservar tu lugar en Reformer Pilates o Yoga Flow con un solo toque. Consulta la disponibilidad en tiempo real y gestiona tus clases 24/7.
+              En BE FIT LAB olvidamos las agendas de papel. Nuestra App te permite reservar tu lugar en Reformer Pilates o Yoga Flow con un solo toque. Consulta la disponibilidad en tiempo real y gestiona tus clases 24/7.
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
               <div>
@@ -339,7 +339,7 @@ function Landing() {
           <div className="badge-peach" style={{margin: '0 auto 1.5rem'}}><Utensils size={16} /> Nutrición Consciente</div>
           <h2 style={{ fontSize: '3.5rem', marginBottom: '2rem' }}>Alimenta tu esfuerzo.</h2>
           <p style={{ fontSize: '1.2rem', color: '#4B5563', maxWidth: '800px', margin: '0 auto 4rem' }}>
-            La nutrición es el combustible de tu cambio. En BEFIT LAB, tu membresía incluye acceso a planes alimenticios diseñados para complementar tu entrenamiento.
+            La nutrición es el combustible de tu cambio. En BE FIT LAB, tu membresía incluye acceso a planes alimenticios diseñados para complementar tu entrenamiento.
           </p>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '3rem', alignItems: 'center' }}>

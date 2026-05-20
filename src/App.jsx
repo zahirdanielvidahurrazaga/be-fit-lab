@@ -15,6 +15,7 @@ import Register from './pages/Register';
 import Planes from './pages/Planes';
 import Privacidad from './pages/Privacidad';
 import Terminos from './pages/Terminos';
+import Welcome from './pages/Welcome';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './index.css';
 
@@ -80,7 +81,8 @@ function App() {
         <ScrollToTop />
         <Routes>
           {/* Rutas Públicas */}
-          <Route path="/" element={isNative ? <Navigate to="/login" replace /> : <Landing />} />
+          <Route path="/" element={isNative ? <Navigate to="/welcome" replace /> : <Landing />} />
+          <Route path="/welcome" element={<Welcome />} />
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={isNative ? <Navigate to="/login" replace /> : <Register />} />
           <Route path="/planes" element={isNative ? <Navigate to="/login" replace /> : <Planes />} />

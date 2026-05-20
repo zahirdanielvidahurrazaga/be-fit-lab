@@ -331,7 +331,7 @@ function Portal() {
               <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0, paddingTop: '20px', paddingLeft: '20px', paddingRight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'white', fontFamily: 'var(--font-display)', fontSize: '1.2rem', boxShadow: '0 4px 10px rgba(255,139,66,0.3)' }}>B</div>
-                  <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--black)', letterSpacing: '2px' }}>BEFIT LAB</span>
+                  <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--black)', letterSpacing: '2px' }}>BE FIT LAB</span>
                 </div>
                 <QrCode size={20} color="var(--primary)" opacity={0.8} />
               </div>
@@ -357,7 +357,7 @@ function Portal() {
             </div>
 
             <div className="sheet-user-info" style={{ marginTop: '10px' }}>
-              <div className="user-name">{user?.user_metadata?.full_name || 'Miembro BeFit'}</div>
+              <div className="user-name">{user?.user_metadata?.full_name || 'Miembro Be Fit'}</div>
               <div>{user?.email}</div>
             </div>
           </motion.div>
@@ -431,7 +431,7 @@ function TicketCard({ title, time, instructor, color, onClick }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <MapPin size={14} color="var(--on-surface-variant)" />
-          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--on-surface-variant)' }}>BEFIT LAB</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--on-surface-variant)' }}>BE FIT LAB</span>
         </div>
       </div>
     </div>

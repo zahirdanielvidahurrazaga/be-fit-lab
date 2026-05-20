@@ -47,7 +47,7 @@ function Planes() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--app-bg)', padding: '4rem 2rem', fontFamily: 'var(--font-body)' }}>
       <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', color: 'var(--black)' }}>Elige tu Plan BEFIT</h1>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', color: 'var(--black)' }}>Elige tu Plan BE FIT</h1>
         <p style={{ color: 'var(--on-surface-variant)', fontSize: '1.1rem' }}>Membresías diseñadas para transformar tu estilo de vida.</p>
       </div>
 

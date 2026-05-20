@@ -9,7 +9,7 @@ function Privacidad() {
     <div style={{ minHeight: '100vh', background: 'var(--app-bg)', fontFamily: 'var(--font-body)' }}>
       {/* Header */}
       <div style={{ 
-        padding: '20px', display: 'flex', alignItems: 'center', gap: '12px',
+        padding: 'max(20px, env(safe-area-inset-top, 20px)) 20px 15px 20px', display: 'flex', alignItems: 'center', gap: '12px',
         borderBottom: '1px solid rgba(0,0,0,0.06)', background: 'white',
         position: 'sticky', top: 0, zIndex: 10
       }}>
@@ -30,7 +30,7 @@ function Privacidad() {
         <p style={{ color: '#6B7280', fontSize: '0.8rem', marginBottom: '2rem' }}>Última actualización: Mayo 2026</p>
 
         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginBottom: '0.5rem' }}>1. Responsable del Tratamiento</h2>
-        <p><strong>BEFIT LAB</strong> (en adelante "el Responsable") con domicilio en la Ciudad de Puebla, México, es responsable del tratamiento de tus datos personales conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP).</p>
+        <p><strong>Be Fit Lab</strong> (en adelante "el Responsable") con domicilio en la Ciudad de Puebla, México, es responsable del tratamiento de tus datos personales conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP).</p>
 
         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>2. Datos que Recopilamos</h2>
         <ul style={{ paddingLeft: '1.5rem' }}>
@@ -84,7 +84,7 @@ function Privacidad() {
         <p>Para cualquier consulta sobre esta política de privacidad, escríbenos a: <strong>contacto@befitlab.com</strong></p>
 
         <div style={{ marginTop: '3rem', padding: '20px', background: 'rgba(255,145,77,0.06)', borderRadius: '16px', border: '1px solid rgba(255,145,77,0.15)', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700, margin: 0 }}>BEFIT LAB © {new Date().getFullYear()} — Todos los derechos reservados.</p>
+          <p style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700, margin: 0 }}>Be Fit Lab © {new Date().getFullYear()} — Todos los derechos reservados.</p>
         </div>
       </div>
     </div>

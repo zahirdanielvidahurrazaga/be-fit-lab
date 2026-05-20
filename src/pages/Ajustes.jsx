@@ -16,8 +16,7 @@ function Ajustes() {
 
   // Modals
   const [showChangePassword, setShowChangePassword] = useState(false);
-  const [showPrivacy, setShowPrivacy] = useState(false);
-  const [showTerms, setShowTerms] = useState(false);
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteStep, setDeleteStep] = useState(1);
 
@@ -276,7 +275,7 @@ function Ajustes() {
             Legal
           </p>
           <div style={cardStyle}>
-            <div style={rowStyle} onClick={() => setShowPrivacy(true)}>
+            <div style={rowStyle} onClick={() => navigate('/privacidad')}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div style={{ ...iconBoxStyle, background: 'rgba(126,86,46,0.1)' }}>
                   <FileText size={18} color="#A19289" />
@@ -288,7 +287,7 @@ function Ajustes() {
 
             <div style={{ height: '1px', background: 'rgba(140, 128, 121, 0.15)', margin: '0 20px' }} />
 
-            <div style={rowStyle} onClick={() => setShowTerms(true)}>
+            <div style={rowStyle} onClick={() => navigate('/terminos')}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div style={{ ...iconBoxStyle, background: 'rgba(126,86,46,0.1)' }}>
                   <ShieldAlert size={18} color="#A19289" />
@@ -319,7 +318,7 @@ function Ajustes() {
           <div style={{ textAlign: 'center', marginBottom: '100px' }}>
             <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: 0, fontWeight: 500 }}>
               <Info size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-              BEFIT LAB v1.0.0
+              BE FIT LAB v1.0.0
             </p>
           </div>
 
@@ -394,31 +393,6 @@ function Ajustes() {
         </button>
       </ModalOverlay>
 
-      {/* PRIVACY POLICY MODAL */}
-      <ModalOverlay show={showPrivacy} onClose={() => setShowPrivacy(false)}>
-        <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '0 0 16px', fontFamily: 'DM Sans', color: '#1c1c1a' }}>Política de Privacidad</h2>
-        <div style={{ fontSize: '0.9rem', color: '#564338', lineHeight: 1.7 }}>
-          <p><strong>BEFIT LAB</strong> se compromete a proteger tu privacidad. Esta política describe cómo recopilamos, usamos y protegemos tu información personal.</p>
-          <p><strong>Información que recopilamos:</strong> Nombre, correo electrónico, número de teléfono, datos de membresía y asistencia a clases.</p>
-          <p><strong>Uso de la información:</strong> Utilizamos tus datos para gestionar tu membresía, reservas de clases, comunicaciones del estudio y mejorar nuestros servicios.</p>
-          <p><strong>Protección de datos:</strong> Implementamos medidas de seguridad técnicas y organizativas para proteger tu información personal contra acceso no autorizado.</p>
-          <p><strong>Tus derechos:</strong> Puedes acceder, modificar o eliminar tu información personal en cualquier momento desde la sección "Mi Cuenta" o contactándonos directamente.</p>
-          <p><strong>Contacto:</strong> Para consultas sobre privacidad, escríbenos a contacto@befitlab.com</p>
-        </div>
-      </ModalOverlay>
-
-      {/* TERMS MODAL */}
-      <ModalOverlay show={showTerms} onClose={() => setShowTerms(false)}>
-        <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '0 0 16px', fontFamily: 'DM Sans', color: '#1c1c1a' }}>Términos y Condiciones</h2>
-        <div style={{ fontSize: '0.9rem', color: '#564338', lineHeight: 1.7 }}>
-          <p><strong>1. Membresías:</strong> Las membresías son personales e intransferibles. Las clases no utilizadas no son acumulables al siguiente período.</p>
-          <p><strong>2. Reservaciones:</strong> Las reservas deben cancelarse con al menos 4 horas de anticipación. Cancelaciones tardías se contarán como clase tomada.</p>
-          <p><strong>3. Asistencia:</strong> Te pedimos llegar al menos 5 minutos antes de tu clase. Después de la hora de inicio, no se permitirá el acceso.</p>
-          <p><strong>4. Código de vestimenta:</strong> Se requiere ropa deportiva cómoda y calcetines antiderrapantes.</p>
-          <p><strong>5. Responsabilidad:</strong> BEFIT LAB no se hace responsable por lesiones resultantes del mal uso de los equipos o incumplimiento de las instrucciones del coach.</p>
-          <p><strong>6. Modificaciones:</strong> Nos reservamos el derecho de modificar estos términos en cualquier momento, notificando a los usuarios con anticipación.</p>
-        </div>
-      </ModalOverlay>
 
       {/* DELETE ACCOUNT MODAL */}
       <ModalOverlay show={showDeleteConfirm} onClose={() => { setShowDeleteConfirm(false); setDeleteStep(1); }}>

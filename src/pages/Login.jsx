@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Lock, Mail, ArrowRight, ChevronLeft, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
+import { motion } from 'framer-motion';
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutos
@@ -177,10 +178,10 @@ function Login() {
   // UI: LOGIN PRINCIPAL
   // ==============================
   return (
-    <div style={{ position: 'relative', width: '100%', overflowX: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'url("/hero_bg.png")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+    <div style={{ position: 'relative', width: '100%', overflowX: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'url("/welcome_bg.png")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
       
       {/* Overlay */}
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)', zIndex: 0 }}></div>
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.25) 35%, rgba(0,0,0,0.55) 65%, rgba(0,0,0,0.85) 100%)', backdropFilter: 'blur(8px)', zIndex: 0 }}></div>
 
       {/* BOTÓN VOLVER AL SITIO */}
       {!isNative && (
@@ -200,7 +201,7 @@ function Login() {
         </div>
       )}
 
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isNative ? '20px 16px' : '40px 20px', zIndex: 1 }}>
+      <motion.div initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.34, 1.56, 0.64, 1] }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isNative ? '20px 16px' : '40px 20px', zIndex: 1 }}>
         <div style={{ 
           width: '100%', 
           maxWidth: '440px', 
@@ -310,7 +311,7 @@ function Login() {
           )}
 
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
