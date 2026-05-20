@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -17,6 +17,17 @@ function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const isNative = Capacitor.isNativePlatform() || localStorage.getItem('simulateNative') === 'true';
+
+  // Forzar light en Login/Welcome, restaurar al salir
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', 'light');
+    return () => {
+      const savedDark = localStorage.getItem('befit_darkmode');
+      if (savedDark === 'true') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    };
+  }, []);
 
   // ==============================
   // RATE LIMITING (Anti-Fuerza Bruta)

@@ -144,17 +144,9 @@ function Nutricion() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              drag="y"
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.2}
-              onDragEnd={(e, info) => {
-                if (info.offset.y > 100 || info.velocity.y > 500) {
-                  setShowRecipe(false);
-                }
-              }}
               className="modal-drawer" 
               onClick={(e) => e.stopPropagation()} 
-              style={{ paddingBottom: '40px', background: 'var(--surface)' }}
+              style={{ paddingBottom: '40px', background: 'var(--surface)', overflowY: 'auto', maxHeight: '92vh', WebkitOverflowScrolling: 'touch' }}
             >
               <div className="sheet-handle"></div>
               
