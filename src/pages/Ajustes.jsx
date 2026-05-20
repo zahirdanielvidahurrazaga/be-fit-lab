@@ -27,13 +27,21 @@ function Ajustes() {
   const [passwordError, setPasswordError] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
 
-  // Load settings from localStorage
+  // Load settings from localStorage (per-user dark mode)
   useEffect(() => {
     const savedNotif = localStorage.getItem('befit_notifications');
-    const savedDark = localStorage.getItem('befit_darkmode');
     if (savedNotif !== null) setNotifications(savedNotif === 'true');
-    if (savedDark !== null) setDarkMode(savedDark === 'true');
-  }, []);
+    if (user?.id) {
+      const savedDark = localStorage.getItem(`befit_darkmode_${user.id}`);
+      if (savedDark === 'true') {
+        setDarkMode(true);
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        setDarkMode(false);
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    }
+  }, [user?.id]);
 
   const toggleNotifications = () => {
     const newVal = !notifications;
@@ -44,8 +52,9 @@ function Ajustes() {
   const toggleDarkMode = () => {
     const newVal = !darkMode;
     setDarkMode(newVal);
-    localStorage.setItem('befit_darkmode', String(newVal));
-    // Apply dark mode to document
+    if (user?.id) {
+      localStorage.setItem(`befit_darkmode_${user.id}`, String(newVal));
+    }
     document.documentElement.setAttribute('data-theme', newVal ? 'dark' : 'light');
   };
 

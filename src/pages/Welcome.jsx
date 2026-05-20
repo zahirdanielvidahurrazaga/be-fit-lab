@@ -9,12 +9,6 @@ function Welcome() {
   // Forzar modo claro
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'light');
-    return () => {
-      const savedDark = localStorage.getItem('befit_darkmode');
-      if (savedDark === 'true') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
-    };
   }, []);
 
   // Splash dura 2.5s, luego pasa a welcome

@@ -488,6 +488,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Manejar el Modo Oscuro por usuario de forma global
+  useEffect(() => {
+    if (user && role === 'CLIENT') {
+      const savedDark = localStorage.getItem(`befit_darkmode_${user.id}`);
+      if (savedDark === 'true') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    } else {
+      // Si no hay usuario, o el rol no es CLIENT, siempre forzar light mode
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  }, [user, role]);
+
   const logout = async () => {
     setUser(null);
     setRole(null);
@@ -495,6 +510,8 @@ export const AuthProvider = ({ children }) => {
     setGlobalClasses([]);
     setMyReservations([]);
     setAllUsers([]);
+    // Forzar light mode al cerrar sesión
+    document.documentElement.setAttribute('data-theme', 'light');
     await supabase.auth.signOut();
   };
 

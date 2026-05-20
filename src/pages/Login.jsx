@@ -18,15 +18,9 @@ function Login() {
   const navigate = useNavigate();
   const isNative = Capacitor.isNativePlatform() || localStorage.getItem('simulateNative') === 'true';
 
-  // Forzar light en Login/Welcome, restaurar al salir
+  // Forzar light en Login/Welcome
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'light');
-    return () => {
-      const savedDark = localStorage.getItem('befit_darkmode');
-      if (savedDark === 'true') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
-    };
   }, []);
 
   // ==============================
