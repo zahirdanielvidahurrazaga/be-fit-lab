@@ -237,9 +237,99 @@ FOR SELECT USING (
 
 -- Admin puede actualizar reservaciones (necesario para marcar asistencia)
 DROP POLICY IF EXISTS "Admins can update reservations" ON public.reservations;
-CREATE POLICY "Admins can update reservations" ON public.reservations 
+CREATE POLICY "Admins can update reservations" ON public.reservations
 FOR UPDATE USING (
   public.is_admin()
 );
+
+-- ==========================================
+-- V2: DEVICE TOKENS (Push Notifications)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.device_tokens (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  token text NOT NULL,
+  platform text NOT NULL CHECK (platform IN ('ios', 'android', 'web')),
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE(user_id, token)
+);
+
+ALTER TABLE public.device_tokens ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own tokens" ON public.device_tokens
+FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Admins can read all tokens" ON public.device_tokens
+FOR SELECT USING (public.is_admin());
+
+-- ==========================================
+-- V2: NOTIFICATION LOG (Historial de envíos)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.notification_logs (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
+  type text NOT NULL, -- 'class_reminder', 'plan_expiring', 'class_cancelled', 'welcome', 'broadcast'
+  title text,
+  body text,
+  sent_at timestamptz DEFAULT now(),
+  status text DEFAULT 'sent' CHECK (status IN ('sent', 'failed', 'skipped'))
+);
+
+ALTER TABLE public.notification_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admins can read notification logs" ON public.notification_logs
+FOR SELECT USING (public.is_admin());
+
+CREATE POLICY "Service can insert logs" ON public.notification_logs
+FOR INSERT WITH CHECK (true);
+
+-- ==========================================
+-- V2: CALENDAR EVENT IDS (para eliminar eventos al cancelar)
+-- ==========================================
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS calendar_event_id text;
+
+-- ==========================================
+-- V2: WALLET PASS SERIAL (para actualizar passes dinámicamente)
+-- ==========================================
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS wallet_pass_serial text;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS wallet_pass_updated_at timestamptz;
+
+-- ==========================================
+-- V2: BODY MEASUREMENTS (Báscula inteligente vía Bluetooth)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.body_measurements (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  measured_at timestamptz DEFAULT now(),
+
+  -- Básicos (todas las básculas)
+  weight_kg numeric(5,2),
+  bmi numeric(4,2),
+
+  -- Composición corporal (básculas de bioimpedancia)
+  body_fat_pct numeric(4,2),
+  muscle_mass_kg numeric(5,2),
+  muscle_pct numeric(4,2),
+  water_pct numeric(4,2),
+  bone_mass_kg numeric(4,2),
+  visceral_fat integer,
+  metabolic_age integer,
+  bmr integer -- Tasa metabólica basal en kcal
+
+  -- Medidas adicionales (ingresadas manualmente)
+  -- waist_cm, hip_cm, etc. se pueden agregar cuando se necesite
+);
+
+ALTER TABLE public.body_measurements ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own measurements" ON public.body_measurements
+FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Admins can view all measurements" ON public.body_measurements
+FOR SELECT USING (public.is_admin());
+
+-- Índice para consultas por usuario y fecha
+CREATE INDEX IF NOT EXISTS idx_body_measurements_user_date
+ON public.body_measurements(user_id, measured_at DESC);
 
 

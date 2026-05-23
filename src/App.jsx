@@ -17,6 +17,7 @@ import Privacidad from './pages/Privacidad';
 import Terminos from './pages/Terminos';
 import Welcome from './pages/Welcome';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { useLocalNotifications } from './hooks/useLocalNotifications';
 import './index.css';
 
 const ScrollToTop = () => {
@@ -63,7 +64,8 @@ const ProtectedRoute = ({ children, requireRole }) => {
 };
 
 function App() {
-  const isNative = Capacitor.isNativePlatform() || localStorage.getItem('simulateNative') === 'true';
+  const isNative = Capacitor.isNativePlatform();
+  useLocalNotifications();
 
   // Inicializar siempre en light — el dark mode per-usuario se aplica en Ajustes/Portal
   React.useEffect(() => {

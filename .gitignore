@@ -23,6 +23,13 @@ old_admin.txt
 cotizacion.html
 check_error.js
 
+# Certificados y llaves privadas (NUNCA al repo)
+*.key
+*.p12
+*.pem
+*.cer
+*.csr
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

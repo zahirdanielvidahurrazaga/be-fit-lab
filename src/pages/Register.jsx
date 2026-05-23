@@ -17,7 +17,7 @@ function Register() {
   const location = useLocation();
   const { activatePlan } = useAuth();
   const purchasedPlan = location.state?.purchasedPlan;
-  const isNative = Capacitor.isNativePlatform() || localStorage.getItem('simulateNative') === 'true';
+  const isNative = Capacitor.isNativePlatform();
 
   const handleSubmit = async (e) => {
     e.preventDefault();

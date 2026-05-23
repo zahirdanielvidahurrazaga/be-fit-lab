@@ -1,5 +1,8 @@
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { registerPushToken, unregisterPushToken } from '../hooks/usePushNotifications';
+import { scheduleClassReminder, cancelClassReminder, notifyReservationConfirmed, scheduleCancelDeadlineReminder, getNextClassOccurrence } from '../hooks/useLocalNotifications';
+import { removeClassFromCalendar } from '../hooks/useCalendar';
 
 const AuthContext = createContext({});
 
@@ -17,6 +20,7 @@ export const AuthProvider = ({ children }) => {
   const [recipes, setRecipes] = useState([]);
   const [myReservations, setMyReservations] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
+  const [avatarUrl, setAvatarUrl] = useState(null);
 
   // Flag para evitar que onAuthStateChange sobreescriba un plan recién activado
   const planJustActivatedRef = useRef(false);
@@ -43,6 +47,9 @@ export const AuthProvider = ({ children }) => {
       if (session?.user) {
         setUser(session.user);
         await fetchUserData(session.user);
+        registerPushToken(session.user.id);
+        const saved = localStorage.getItem(`avatar_${session.user.id}`);
+        if (saved) setAvatarUrl(saved);
       } else {
         setLoading(false);
       }
@@ -52,6 +59,7 @@ export const AuthProvider = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user);
+        registerPushToken(session.user.id);
         // NO re-fetch si acabamos de activar un plan (evita sobreescribir con datos viejos de la BD)
         if (!planJustActivatedRef.current) {
           fetchUserData(session.user);
@@ -235,7 +243,6 @@ export const AuthProvider = ({ children }) => {
         
       if (userError && userError.code === 'PGRST116') {
         // La fila no existe (posible error del trigger o usuario antiguo). La creamos ahora mismo.
-        console.log("Fila de usuario no encontrada. Creando fila...");
         const newRow = {
           id: currentUser.id,
           email: currentUser.email,
@@ -277,7 +284,8 @@ export const AuthProvider = ({ children }) => {
           time: r.classes?.time,
           instructor: r.classes?.instructor,
           color: r.classes?.color,
-          checkedIn: r.checked_in
+          checkedIn: r.checked_in,
+          calendarEventId: r.calendar_event_id ?? null
         }));
         setMyReservations(formattedReservations);
       }
@@ -301,20 +309,27 @@ export const AuthProvider = ({ children }) => {
         setGlobalClasses(prev => prev.map(c => 
           c.id === classObj.id ? { ...c, spots: c.spots - 1 } : c
         ));
-        setMyReservations(prev => [...prev, { 
+        setMyReservations(prev => [...prev, {
           id: Date.now(), // temporary id
-          classId: classObj.id, 
-          title: classObj.title, 
-          time: classObj.time, 
-          instructor: classObj.instructor, 
-          color: classObj.color, 
-          checkedIn: false 
+          classId: classObj.id,
+          title: classObj.title,
+          time: classObj.time,
+          instructor: classObj.instructor,
+          color: classObj.color,
+          checkedIn: false,
+          calendarEventId: null,
         }]);
 
         // DB Updates via secure RPC
         const { error: rpcError } = await supabase.rpc('book_class_secure', { p_class_id: classObj.id });
 
         if (rpcError) throw rpcError;
+
+        // Notificaciones locales
+        const reservationForNotif = { classId: classObj.id, title: classObj.title, time: classObj.time, instructor: classObj.instructor };
+        notifyReservationConfirmed(reservationForNotif);
+        scheduleClassReminder(reservationForNotif, classObj.day);
+        scheduleCancelDeadlineReminder(reservationForNotif, classObj.day);
 
         return true;
       } catch (err) {
@@ -329,10 +344,25 @@ export const AuthProvider = ({ children }) => {
   };
 
   const cancelClass = async (classId) => {
-    if (!user) return;
-    
+    if (!user) return { success: false, reason: 'no_user' };
+
     const classObj = globalClasses.find(c => c.id === classId);
-    
+
+    // Bloquear cancelación si faltan 5 horas o menos para la clase
+    if (classObj?.day !== undefined && classObj?.time) {
+      const nextOccurrence = getNextClassOccurrence(classObj.day, classObj.time);
+      const fiveHoursBefore = new Date(nextOccurrence.getTime() - 5 * 60 * 60 * 1000);
+      if (new Date() >= fiveHoursBefore) {
+        return { success: false, reason: 'too_late' };
+      }
+    }
+
+    const reservation = myReservations.find(r => r.classId === classId);
+
+    if (reservation?.calendarEventId) {
+      removeClassFromCalendar(reservation.calendarEventId);
+    }
+
     try {
       // Optimistic UI Update
       setClassesRemaining(prev => prev + 1);
@@ -345,14 +375,25 @@ export const AuthProvider = ({ children }) => {
 
       // DB Updates via secure RPC
       const { error } = await supabase.rpc('cancel_class_secure', { p_class_id: classId });
-        
+
       if (error) throw error;
 
+      // Cancelar el recordatorio programado
+      cancelClassReminder(classId);
+
+      return { success: true };
     } catch (err) {
       console.error("Error cancelando reserva:", err);
       fetchGlobalClasses();
       fetchUserData(user);
+      return { success: false, reason: 'error' };
     }
+  };
+
+  const updateReservationCalendarId = (classId, eventId) => {
+    setMyReservations(prev => prev.map(r =>
+      r.classId === classId ? { ...r, calendarEventId: eventId } : r
+    ));
   };
 
   const updateClassSpots = async (id, newSpots) => {
@@ -504,6 +545,7 @@ export const AuthProvider = ({ children }) => {
   }, [user, role]);
 
   const logout = async () => {
+    if (user) unregisterPushToken(user.id);
     setUser(null);
     setRole(null);
     setPlan(null);
@@ -516,11 +558,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ 
+    <AuthContext.Provider value={{
       user, role, plan, membershipStatus, loading, profileName,
       classesRemaining, myReservations, globalClasses, recipes, allUsers,
+      avatarUrl, setAvatarUrl,
       login, logout, forceCleanSession, fetchAllUsers, refreshUserData,
-      bookClass, cancelClass, checkInClient, updateClassSpots,
+      bookClass, cancelClass, checkInClient, updateClassSpots, updateReservationCalendarId,
       activatePlan, addClass, deleteClass, addRecipe, deleteRecipe,
       fetchClassReservations, fetchClassesByDayOfWeek, fetchGlobalClasses
     }}>

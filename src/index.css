@@ -67,7 +67,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
-  background-color: var(--surface);
+  background-color: var(--app-bg);
   color: var(--on-surface);
   font-family: var(--font-body);
   line-height: 1.6;
@@ -709,7 +709,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .ios-header {
-  padding: 30px 20px 10px;
+  padding: env(safe-area-inset-top, 44px) 20px 10px;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -1000,7 +1000,7 @@ h1, h2, h3, h4, h5 {
 /* ===== PREMIUM DARK NAV (WITH SCROLL EFFECT) ===== */
 .ios-bottom-nav {
   position: fixed;
-  bottom: 30px;
+  bottom: max(30px, calc(env(safe-area-inset-bottom) + 10px));
   left: 50%;
   transform: translateX(-50%) scale(1);
   width: calc(100% - 40px);
@@ -1022,7 +1022,7 @@ h1, h2, h3, h4, h5 {
 
 .ios-bottom-nav.scrolled {
   transform: translateX(-50%) scale(0.9);
-  bottom: 20px;
+  bottom: max(20px, calc(env(safe-area-inset-bottom) + 8px));
   height: 64px;
   background: var(--nav-bg);
   opacity: 0.9;
@@ -1160,7 +1160,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .ios-header {
-  padding: max(55px, calc(env(safe-area-inset-top, 20px) + 15px)) 20px 10px;
+  padding: env(safe-area-inset-top, 44px) 20px 10px;
   position: sticky;
   top: 0;
   z-index: 100;

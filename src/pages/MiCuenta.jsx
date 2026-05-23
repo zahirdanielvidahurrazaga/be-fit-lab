@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Camera, Mail, Phone, Shield, Clock, ChevronRight, ChevronLeft, Check, AlertCircle, Utensils, TrendingUp, CalendarDays, QrCode, Home } from 'lucide-react';
+import { User, Camera, Mail, Phone, Shield, Clock, ChevronRight, ChevronLeft, Check, AlertCircle, Utensils, TrendingUp, CalendarDays, QrCode, X, Home } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useScrollDetect } from '../hooks/useScrollDetect';
+import { Camera as CapCamera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function MiCuenta() {
   const navigate = useNavigate();
-  const { user, plan, classesRemaining, membershipStatus, myReservations, refreshUserData } = useAuth();
+  const { user, plan, classesRemaining, membershipStatus, myReservations, refreshUserData, avatarUrl, setAvatarUrl } = useAuth();
   const isScrolled = useScrollDetect(30);
 
   // Form state
@@ -19,6 +21,7 @@ function MiCuenta() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [classHistory, setClassHistory] = useState([]);
+  const [pendingAvatar, setPendingAvatar] = useState(null);
 
   // Load user data
   useEffect(() => {
@@ -27,6 +30,44 @@ function MiCuenta() {
       loadClassHistory();
     }
   }, [user]);
+
+  const compressAvatar = (dataUrl) =>
+    new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const SIZE = 300;
+        const ratio = Math.min(SIZE / img.width, SIZE / img.height);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.75));
+      };
+      img.src = dataUrl;
+    });
+
+  const handleCameraClick = async () => {
+    try {
+      const photo = await CapCamera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Prompt,
+        presentationStyle: 'popover',
+      });
+      if (photo.dataUrl) setPendingAvatar(photo.dataUrl);
+    } catch {
+      // usuario canceló
+    }
+  };
+
+  const confirmAvatar = async () => {
+    if (!pendingAvatar) return;
+    const compressed = await compressAvatar(pendingAvatar);
+    setAvatarUrl(compressed);
+    localStorage.setItem(`avatar_${user.id}`, compressed);
+    setPendingAvatar(null);
+  };
 
   const loadProfile = async () => {
     const { data, error } = await supabase
@@ -126,8 +167,74 @@ function MiCuenta() {
 
   return (
     <div className="mobile-app-container" style={{ background: 'var(--app-bg)' }}>
+
+      {/* PREVIEW FOTO — modal de confirmación */}
+      <AnimatePresence>
+        {pendingAvatar && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 9999,
+              background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(20px)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '32px'
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 200 }}
+              style={{
+                width: '200px', height: '200px', borderRadius: '50%',
+                overflow: 'hidden', border: '4px solid #FF8B42',
+                boxShadow: '0 0 0 8px rgba(255,139,66,0.15), 0 30px 60px rgba(0,0,0,0.5)'
+              }}
+            >
+              <img src={pendingAvatar} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </motion.div>
+
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ color: 'white', fontWeight: 700, fontSize: '1.1rem', margin: '0 0 6px' }}>¿Usar esta foto?</p>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', margin: 0 }}>Aparecerá en tu perfil y en el menú</p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <button
+                onClick={() => setPendingAvatar(null)}
+                style={{
+                  padding: '14px 28px', borderRadius: '99px', border: '1px solid rgba(255,255,255,0.2)',
+                  background: 'rgba(255,255,255,0.1)', color: 'white', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '8px'
+                }}
+              >
+                <X size={16} /> Cancelar
+              </button>
+              <button
+                onClick={confirmAvatar}
+                style={{
+                  padding: '14px 28px', borderRadius: '99px', border: 'none',
+                  background: '#FF8B42', color: 'white', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
+                  boxShadow: '0 8px 20px rgba(255,139,66,0.4)',
+                  display: 'flex', alignItems: 'center', gap: '8px'
+                }}
+              >
+                <Check size={16} /> Usar foto
+              </button>
+            </div>
+
+            <button
+              onClick={handleCameraClick}
+              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}
+            >
+              Elegir otra foto
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* HEADER UNIFICADO */}
-      <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent', maxWidth: '600px', margin: '0 auto' }}>
+      <header className="ios-header" style={{ paddingBottom: '5px', background: 'transparent', maxWidth: '600px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div 
@@ -164,19 +271,26 @@ function MiCuenta() {
                 width: '100px', height: '100px', borderRadius: '50%',
                 background: 'linear-gradient(135deg, #FF8B42, #EEBA89)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 12px 30px rgba(255,139,66,0.3)'
+                boxShadow: '0 12px 30px rgba(255,139,66,0.3)',
+                overflow: 'hidden'
               }}>
-                <span style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white', fontFamily: 'DM Sans' }}>
-                  {fullName ? fullName.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || '?'}
-                </span>
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Foto de perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white', fontFamily: 'DM Sans' }}>
+                    {fullName ? fullName.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || '?'}
+                  </span>
+                )}
               </div>
-              <div style={{
-                position: 'absolute', bottom: '0', right: '0',
-                width: '32px', height: '32px', borderRadius: '50%',
-                background: 'var(--app-surface-solid)', border: '2px solid var(--app-bg)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: 'var(--card-shadow)', cursor: 'pointer'
-              }}>
+              <div
+                onClick={handleCameraClick}
+                style={{
+                  position: 'absolute', bottom: '0', right: '0',
+                  width: '32px', height: '32px', borderRadius: '50%',
+                  background: 'var(--app-surface-solid)', border: '2px solid var(--app-bg)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: 'var(--card-shadow)', cursor: 'pointer'
+                }}>
                 <Camera size={14} color="var(--primary)" />
               </div>
             </div>

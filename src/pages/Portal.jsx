@@ -1,18 +1,40 @@
 import React, { useState } from 'react';
-import { Calendar, Utensils, TrendingUp, User, QrCode, ChevronRight, Activity, Flame, Sparkles, Clock, MapPin, X } from 'lucide-react';
+import { Calendar, Utensils, TrendingUp, User, QrCode, ChevronRight, Activity, Flame, Sparkles, Clock, MapPin, X, Lock, Wallet } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getNextClassOccurrence } from '../hooks/useLocalNotifications';
+import { addToAppleWallet, getWalletPlatform } from '../hooks/useWallet';
 import { QRCodeCanvas } from 'qrcode.react';
 import { motion } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { Capacitor } from '@capacitor/core';
 
 function Portal() {
-  const isNative = Capacitor.isNativePlatform() || localStorage.getItem('simulateNative') === 'true';
+  const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, logout, classesRemaining, myReservations, cancelClass, profileName } = useAuth();
+  const { user, plan, logout, classesRemaining, myReservations, cancelClass, profileName, globalClasses, avatarUrl } = useAuth();
   
+  const walletPlatform = getWalletPlatform();
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [walletAdded, setWalletAdded] = useState(() => !!localStorage.getItem('befit_wallet_added'));
+  const [walletError, setWalletError] = useState(null);
+
+  const handleAddToWallet = async () => {
+    if (!user?.id || walletLoading) return;
+    setWalletLoading(true);
+    setWalletError(null);
+    const result = await addToAppleWallet(user.id);
+    setWalletLoading(false);
+    if (result.success) {
+      setWalletAdded(true);
+      localStorage.setItem('befit_wallet_added', '1');
+    } else {
+      setWalletError(result.reason || 'Error desconocido');
+    }
+  };
+
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [cancelError, setCancelError] = useState(false);
   const [showAppBanner, setShowAppBanner] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState(null);
@@ -24,11 +46,23 @@ function Portal() {
     setShowCancelModal(true);
   };
 
-  const confirmCancellation = () => {
-    if (selectedReservation) {
-      cancelClass(selectedReservation.classId);
+  const confirmCancellation = async () => {
+    if (!selectedReservation) return;
+    const result = await cancelClass(selectedReservation.classId);
+    if (result?.reason === 'too_late') {
+      setCancelError(true);
+      return; // Mantener el modal abierto con el error
     }
+    setCancelError(false);
     setShowCancelModal(false);
+  };
+
+  const canCancelReservation = (res) => {
+    const classObj = globalClasses?.find(c => c.id === res.classId);
+    if (!classObj || classObj.day === undefined || !classObj.time) return true;
+    const nextOccurrence = getNextClassOccurrence(classObj.day, classObj.time);
+    const fiveHoursBefore = new Date(nextOccurrence.getTime() - 5 * 60 * 60 * 1000);
+    return new Date() < fiveHoursBefore;
   };
 
   const rawName = profileName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Cliente';
@@ -39,22 +73,28 @@ function Portal() {
     <div className="mobile-app-container" style={{ background: 'var(--app-bg)' }}>
 
       {/* HEADER UNIFICADO */}
-      <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent' }}>
+      <header className="ios-header" style={{ paddingBottom: '5px', background: 'transparent' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
           <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
             <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>{greeting}</p>
             <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>{userName}</h1>
           </motion.div>
           <div style={{ position: 'relative' }}>
-            <div 
+            <div
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              style={{ 
-                width: '42px', height: '42px', borderRadius: '50%', 
-                background: 'rgba(255,139,66,0.1)',
+              style={{
+                width: '42px', height: '42px', borderRadius: '50%',
+                background: avatarUrl ? 'transparent' : 'rgba(255,139,66,0.1)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer'
+                cursor: 'pointer', overflow: 'hidden',
+                border: avatarUrl ? '2px solid #FF8B42' : 'none',
+                boxShadow: avatarUrl ? '0 4px 12px rgba(255,139,66,0.3)' : 'none'
               }}>
-              <User size={20} color="var(--primary)" />
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <User size={20} color="var(--primary)" />
+              )}
             </div>
 
             {/* DROPDOWN PERFIL */}
@@ -234,13 +274,14 @@ function Portal() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {myReservations && myReservations.length > 0 ? (
                 myReservations.map((res, index) => (
-                  <TicketCard 
+                  <TicketCard
                     key={index}
-                    title={res.title} 
-                    time={res.time} 
-                    instructor={res.instructor} 
-                    color={res.color || 'var(--primary)'} 
-                    onClick={() => handleCancelClick(res)} 
+                    title={res.title}
+                    time={res.time}
+                    instructor={res.instructor}
+                    color={res.color || 'var(--primary)'}
+                    canCancel={canCancelReservation(res)}
+                    onClick={() => handleCancelClick(res)}
                   />
                 ))
               ) : (
@@ -277,19 +318,44 @@ function Portal() {
 
       {/* MODAL INTEGRADO PARA CANCELAR */}
       {showCancelModal && (
-        <div className="modal-overlay" onClick={() => setShowCancelModal(false)}>
+        <div className="modal-overlay" onClick={() => { setShowCancelModal(false); setCancelError(false); }}>
           <div className="glass-modal" onClick={(e) => e.stopPropagation()}>
             <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', marginBottom: '15px' }}>Detalle de Reserva</h2>
-            <div style={{ background: 'rgba(55,61,59,0.03)', padding: '15px', borderRadius: '16px', marginBottom: '20px', textAlign: 'left' }}>
-               <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--on-surface)' }}>{selectedReservation?.title}</div>
-               <div style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 600, marginTop: '5px' }}>{selectedReservation?.time}</div>
+            <div style={{ background: 'rgba(55,61,59,0.03)', padding: '15px', borderRadius: '16px', marginBottom: '16px', textAlign: 'left' }}>
+              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--on-surface)' }}>{selectedReservation?.title}</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 600, marginTop: '5px' }}>{selectedReservation?.time}</div>
             </div>
-            <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem', marginBottom: '20px', lineHeight: 1.5 }}>
-              ¿Deseas cancelar esta asistencia? La clase se devolverá a tu paquete si cancelas con 12hrs de anticipación.
-            </p>
+
+            {cancelError ? (
+              <div style={{ background: 'rgba(255,77,77,0.08)', border: '1px solid rgba(255,77,77,0.2)', borderRadius: '16px', padding: '14px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <Lock size={16} color="#FF4D4D" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#FF4D4D', fontWeight: 600, lineHeight: 1.5 }}>
+                  Ya no es posible cancelar esta clase — faltan menos de 5 horas para que inicie.
+                </p>
+              </div>
+            ) : (
+              <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem', marginBottom: '16px', lineHeight: 1.5 }}>
+                ¿Deseas cancelar esta asistencia? La clase se devolverá a tu paquete. Solo puedes cancelar con <strong>más de 5 horas de anticipación</strong>.
+              </p>
+            )}
+
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => setShowCancelModal(false)} className="btn-outline" style={{ flex: 1, padding: '12px', fontSize: '0.9rem' }}>Volver</button>
-              <button onClick={confirmCancellation} className="btn-primary" style={{ flex: 1, padding: '12px', fontSize: '0.9rem', justifyContent: 'center', background: '#FF4D4D', boxShadow: '0 10px 25px rgba(255,77,77,0.3)' }}>Cancelar Clase</button>
+              <button
+                onClick={() => { setShowCancelModal(false); setCancelError(false); }}
+                className="btn-outline"
+                style={{ flex: 1, padding: '12px', fontSize: '0.9rem' }}
+              >
+                Volver
+              </button>
+              {!cancelError && (
+                <button
+                  onClick={confirmCancellation}
+                  className="btn-primary"
+                  style={{ flex: 1, padding: '12px', fontSize: '0.9rem', justifyContent: 'center', background: '#FF4D4D', boxShadow: '0 10px 25px rgba(255,77,77,0.3)' }}
+                >
+                  Cancelar Clase
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -360,6 +426,33 @@ function Portal() {
               <div className="user-name">{user?.user_metadata?.full_name || 'Miembro Be Fit'}</div>
               <div>{user?.email}</div>
             </div>
+
+            {/* Botón Apple Wallet */}
+            {walletPlatform === 'apple' && (
+              <>
+                <button
+                  onClick={handleAddToWallet}
+                  disabled={walletLoading}
+                  style={{
+                    marginTop: '16px', width: '100%', padding: '14px',
+                    borderRadius: '14px', border: 'none', cursor: walletLoading ? 'default' : 'pointer',
+                    background: walletAdded ? '#1a1a1a' : '#000000',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                    transition: 'opacity 0.2s', opacity: walletLoading ? 0.7 : 1,
+                  }}
+                >
+                  <Wallet size={18} color="white" />
+                  <span style={{ color: 'white', fontWeight: 700, fontSize: '0.95rem', fontFamily: 'var(--font-body)' }}>
+                    {walletLoading ? 'Generando…' : walletAdded ? 'Actualizar Wallet' : 'Agregar a Apple Wallet'}
+                  </span>
+                </button>
+                {walletError && (
+                  <p style={{ marginTop: '8px', fontSize: '0.78rem', color: '#EF4444', textAlign: 'center' }}>
+                    {walletError}
+                  </p>
+                )}
+              </>
+            )}
           </motion.div>
         </>
       )}
@@ -367,7 +460,13 @@ function Portal() {
       {/* FLOATING BOTTOM NAV — INSTAGRAM STYLE */}
       <nav className={`ios-bottom-nav ${isScrolled ? 'scrolled' : ''}`}>
         <Link to="/portal" className="nav-item active">
-          <User size={22} strokeWidth={2.5} />
+          {avatarUrl ? (
+            <div style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--primary)', flexShrink: 0 }}>
+              <img src={avatarUrl} alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          ) : (
+            <User size={22} strokeWidth={2.5} />
+          )}
           <span>Yo</span>
         </Link>
         <Link to="/evolucion" className="nav-item">
@@ -391,23 +490,21 @@ function Portal() {
 }
 
 /* TICKET-STYLE CLASS CARD */
-function TicketCard({ title, time, instructor, color, onClick }) {
+function TicketCard({ title, time, instructor, color, canCancel, onClick }) {
   return (
-    <div 
+    <div
       onClick={onClick}
-      style={{ 
+      style={{
         background: 'var(--app-surface-solid)', borderRadius: '24px', overflow: 'hidden',
         boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)',
-        cursor: 'pointer', transition: 'transform 0.2s ease'
+        cursor: 'pointer', transition: 'transform 0.2s ease',
+        opacity: canCancel ? 1 : 0.85,
       }}
     >
       {/* Top Section */}
       <div style={{ padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ 
-            width: '50px', height: '50px', borderRadius: '50%', overflow: 'hidden',
-            background: 'var(--surface)', flexShrink: 0
-          }}>
+          <div style={{ width: '50px', height: '50px', borderRadius: '50%', overflow: 'hidden', background: 'var(--surface)', flexShrink: 0 }}>
             <img src={`https://i.pravatar.cc/150?u=${instructor}`} alt={instructor} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <div>
@@ -417,25 +514,34 @@ function TicketCard({ title, time, instructor, color, onClick }) {
             </div>
           </div>
         </div>
-        <ChevronRight size={18} color="var(--on-surface-variant)" opacity={0.3} />
+        {canCancel
+          ? <ChevronRight size={18} color="var(--on-surface-variant)" opacity={0.3} />
+          : <Lock size={15} color="var(--on-surface-variant)" opacity={0.4} />
+        }
       </div>
 
       {/* Dashed Divider */}
-      <div style={{ borderTop: '1px dashed rgba(0,0,0,0.08)', marginLeft: '20px', marginRight: '20px' }}></div>
-      
-      {/* Bottom Section - Ticket Info */}
+      <div style={{ borderTop: '1px dashed rgba(0,0,0,0.08)', marginLeft: '20px', marginRight: '20px' }} />
+
+      {/* Bottom Section */}
       <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Clock size={14} color="var(--primary)" />
           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)' }}>{time}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <MapPin size={14} color="var(--on-surface-variant)" />
-          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--on-surface-variant)' }}>BE FIT LAB</span>
-        </div>
+        {canCancel ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <MapPin size={14} color="var(--on-surface-variant)" />
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--on-surface-variant)' }}>BEFIT LAB</span>
+          </div>
+        ) : (
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', background: 'rgba(0,0,0,0.04)', padding: '4px 10px', borderRadius: '8px' }}>
+            Sin cancelación
+          </span>
+        )}
       </div>
     </div>
-  )
+  );
 }
 
 /* STAT PILL */

@@ -47,5 +47,23 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Be Fit Lab usa tus datos de actividad para mostrarte tus calorías quemadas, pasos del día y progreso semanal directamente en la app.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Be Fit Lab registra tus clases de pilates como entrenamientos en Apple Health para que tengas un historial completo de tu actividad.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Be Fit Lab agrega tus clases reservadas a tu calendario para que nunca olvides una sesión.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>Be Fit Lab puede crear recordatorios de tus clases próximas.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Recibe recordatorios de tus clases, actualizaciones de tu plan y novedades del estudio.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Be Fit Lab usa tu cámara para actualizar tu foto de perfil.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Be Fit Lab accede a tu galería para que puedas elegir tu foto de perfil.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Be Fit Lab puede guardar fotos en tu biblioteca.</string>
 </dict>
 </plist>

@@ -16,7 +16,7 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
-  const isNative = Capacitor.isNativePlatform() || localStorage.getItem('simulateNative') === 'true';
+  const isNative = Capacitor.isNativePlatform();
 
   // Forzar light en Login/Welcome
   useEffect(() => {

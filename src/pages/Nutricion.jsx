@@ -1,18 +1,37 @@
 import React, { useState } from 'react';
-import { ChefHat, Flame, Clock, User, Calendar, Utensils, TrendingUp, CheckCircle2, Droplets, Play, QrCode, ChevronRight, Heart, Info, Scale } from 'lucide-react';
+import { ChefHat, Flame, Clock, User, Calendar, Utensils, TrendingUp, CheckCircle2, Droplets, Play, QrCode, ChevronRight, Heart, Info, Scale, Wallet } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { motion, AnimatePresence } from 'framer-motion';
+import { addToAppleWallet, getWalletPlatform } from '../hooks/useWallet';
 
 function Nutricion() {
   const navigate = useNavigate();
-  const { user, recipes, classesRemaining } = useAuth();
+  const { user, recipes, classesRemaining, avatarUrl } = useAuth();
   const [showRecipe, setShowRecipe] = useState(false);
   const [recipeData, setRecipeData] = useState(null);
   const [showQR, setShowQR] = useState(false);
   const [favorites, setFavorites] = useState([]);
+  const walletPlatform = getWalletPlatform();
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [walletAdded, setWalletAdded] = useState(() => !!localStorage.getItem('befit_wallet_added'));
+  const [walletError, setWalletError] = useState(null);
+
+  const handleAddToWallet = async () => {
+    if (!user?.id || walletLoading) return;
+    setWalletLoading(true);
+    setWalletError(null);
+    const result = await addToAppleWallet(user.id);
+    setWalletLoading(false);
+    if (result.success) {
+      setWalletAdded(true);
+      localStorage.setItem('befit_wallet_added', '1');
+    } else {
+      setWalletError(result.reason || 'Error desconocido');
+    }
+  };
   const isScrolled = useScrollDetect(30);
 
   const handleMealClick = (meal) => {
@@ -33,7 +52,7 @@ function Nutricion() {
   return (
     <div className="mobile-app-container" style={{ background: 'var(--app-bg)' }}>
       {/* HEADER UNIFICADO */}
-      <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent' }}>
+      <header className="ios-header" style={{ paddingBottom: '5px', background: 'transparent' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
           <div>
             <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>Plan Nutricional</p>
@@ -216,6 +235,37 @@ function Nutricion() {
         )}
       </AnimatePresence>
 
+      {/* DISCLAIMER NUTRICIONAL */}
+      <div style={{ padding: '0 16px 140px', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
+        <div style={{
+          background: 'rgba(255,139,66,0.06)', borderRadius: '20px', padding: '16px 18px',
+          border: '1px solid rgba(255,139,66,0.15)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '10px' }}>
+            <Info size={16} color="#FF8B42" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--on-surface-variant)', fontWeight: 600, lineHeight: 1.5 }}>
+              La información nutricional mostrada es de referencia general y no sustituye el consejo de un profesional de la salud. Consulta a un nutriólogo para recomendaciones personalizadas.
+            </p>
+          </div>
+          <p style={{ margin: '0 0 6px', fontSize: '0.72rem', color: 'var(--on-surface-variant)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Fuentes de referencia:</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {[
+              { label: 'WHO — Healthy Diet (Fact Sheet)', url: 'https://www.who.int/news-room/fact-sheets/detail/healthy-diet' },
+              { label: 'Harvard T.H. Chan — The Nutrition Source', url: 'https://nutritionsource.hsph.harvard.edu/' },
+              { label: 'USDA FoodData Central', url: 'https://fdc.nal.usda.gov/' },
+            ].map(({ label, url }) => (
+              <button
+                key={url}
+                onClick={() => window.open(url, '_system')}
+                style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline', lineHeight: 1.4 }}
+              >
+                · {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* QR BOTTOM SHEET */}
       <AnimatePresence>
         {showQR && (
@@ -282,6 +332,32 @@ function Nutricion() {
                 <div className="user-name">{user?.user_metadata?.full_name || 'Miembro Be Fit'}</div>
                 <div>{user?.email}</div>
               </div>
+
+              {walletPlatform === 'apple' && (
+                <>
+                  <button
+                    onClick={handleAddToWallet}
+                    disabled={walletLoading}
+                    style={{
+                      marginTop: '16px', width: '100%', padding: '14px',
+                      borderRadius: '14px', border: 'none', cursor: walletLoading ? 'default' : 'pointer',
+                      background: walletAdded ? '#1a1a1a' : '#000000',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                      transition: 'opacity 0.2s', opacity: walletLoading ? 0.7 : 1,
+                    }}
+                  >
+                    <Wallet size={18} color="white" />
+                    <span style={{ color: 'white', fontWeight: 700, fontSize: '0.95rem', fontFamily: 'var(--font-body)' }}>
+                      {walletLoading ? 'Generando…' : walletAdded ? 'Actualizar Wallet' : 'Agregar a Apple Wallet'}
+                    </span>
+                  </button>
+                  {walletError && (
+                    <p style={{ marginTop: '8px', fontSize: '0.78rem', color: '#EF4444', textAlign: 'center' }}>
+                      {walletError}
+                    </p>
+                  )}
+                </>
+              )}
             </motion.div>
           </>
         )}
@@ -289,7 +365,16 @@ function Nutricion() {
 
       {/* NAV */}
       <nav className={`ios-bottom-nav ${isScrolled ? 'scrolled' : ''}`}>
-        <Link to="/portal" className="nav-item"><User size={22} strokeWidth={2.5} /><span>Yo</span></Link>
+        <Link to="/portal" className="nav-item">
+          {avatarUrl ? (
+            <div style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--on-surface-variant)', flexShrink: 0 }}>
+              <img src={avatarUrl} alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          ) : (
+            <User size={22} strokeWidth={2.5} />
+          )}
+          <span>Yo</span>
+        </Link>
         <Link to="/evolucion" className="nav-item"><TrendingUp size={22} strokeWidth={2.5} /><span>Metas</span></Link>
         <button className="nav-qr-button" onClick={() => setShowQR(true)}><QrCode size={24} strokeWidth={2.5} /></button>
         <Link to="/nutricion" className="nav-item active"><Utensils size={22} strokeWidth={2.5} /><span>Comida</span></Link>

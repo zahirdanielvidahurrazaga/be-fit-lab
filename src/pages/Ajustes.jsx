@@ -199,7 +199,7 @@ function Ajustes() {
   return (
     <div className="mobile-app-container" style={{ background: 'var(--app-bg)' }}>
       {/* HEADER UNIFICADO */}
-      <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent', maxWidth: '600px', margin: '0 auto' }}>
+      <header className="ios-header" style={{ paddingBottom: '5px', background: 'transparent', maxWidth: '600px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div

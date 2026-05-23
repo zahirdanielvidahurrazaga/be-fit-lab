@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar as CalendarIcon, Clock, ChevronRight, User, TrendingUp, Play, Utensils, CheckCircle2, QrCode } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ChevronRight, User, TrendingUp, Play, Utensils, CheckCircle2, QrCode, CalendarPlus, Wallet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
+import { addToAppleWallet, getWalletPlatform } from '../hooks/useWallet';
+import { addClassToCalendar } from '../hooks/useCalendar';
+import { supabase } from '../lib/supabase';
 
 function Agenda() {
-  const isNative = Capacitor.isNativePlatform() || localStorage.getItem('simulateNative') === 'true';
+  const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, classesRemaining, bookClass, globalClasses } = useAuth();
+  const { user, plan, classesRemaining, bookClass, globalClasses, updateReservationCalendarId, avatarUrl } = useAuth();
   
   // Use day-of-week (0=Dom, 1=Lun, ..., 6=Sab) to match DB 'day' column
   const today = new Date();
@@ -19,8 +22,27 @@ function Agenda() {
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [addedToCalendar, setAddedToCalendar] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const walletPlatform = getWalletPlatform();
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [walletAdded, setWalletAdded] = useState(() => !!localStorage.getItem('befit_wallet_added'));
+  const [walletError, setWalletError] = useState(null);
   const isScrolled = useScrollDetect(30);
+
+  const handleAddToWallet = async () => {
+    if (!user?.id || walletLoading) return;
+    setWalletLoading(true);
+    setWalletError(null);
+    const result = await addToAppleWallet(user.id);
+    setWalletLoading(false);
+    if (result.success) {
+      setWalletAdded(true);
+      localStorage.setItem('befit_wallet_added', '1');
+    } else {
+      setWalletError(result.reason || 'Error desconocido');
+    }
+  };
 
   const handleReserveClick = (classObj) => {
     if (!user) {
@@ -36,16 +58,34 @@ function Agenda() {
     setIsSuccess(false);
   };
 
-  const confirmReservation = () => {
-    const success = bookClass(modalData);
-
+  const confirmReservation = async () => {
+    const success = await bookClass(modalData);
     if (success) {
       setIsSuccess(true);
-      setTimeout(() => {
-        setShowModal(false);
-        setIsSuccess(false);
-      }, 2000);
+      setAddedToCalendar(false);
     }
+  };
+
+  const handleAddToCalendar = async () => {
+    if (!modalData) return;
+    const selectedDay = days[selectedDateIndex];
+    const eventId = await addClassToCalendar(modalData, selectedDay?.date);
+
+    if (eventId && user?.id) {
+      await supabase
+        .from('reservations')
+        .update({ calendar_event_id: eventId })
+        .eq('user_id', user.id)
+        .eq('class_id', modalData.id);
+      updateReservationCalendarId(modalData.id, eventId);
+    }
+
+    setAddedToCalendar(true);
+    setTimeout(() => {
+      setShowModal(false);
+      setIsSuccess(false);
+      setAddedToCalendar(false);
+    }, 1200);
   };
 
   const days = Array.from({ length: 7 }, (_, i) => {
@@ -62,7 +102,7 @@ function Agenda() {
   return (
     <div className="mobile-app-container" style={{ background: 'var(--app-bg)' }}>
       {/* HEADER UNIFICADO */}
-      <header className="ios-header" style={{ paddingTop: '20px', paddingBottom: '5px', background: 'transparent' }}>
+      <header className="ios-header" style={{ paddingBottom: '5px', background: 'transparent' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
           <div>
             <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>Tus clases</p>
@@ -237,12 +277,30 @@ function Agenda() {
         <div className="modal-overlay">
           <div className="glass-modal">
             {isSuccess ? (
-              <div style={{ animation: 'scaleUp 0.3s ease' }}>
+              <div style={{ animation: 'scaleUp 0.3s ease', textAlign: 'center' }}>
                 <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
-                  <CheckCircle2 size={35} color="var(--primary)" />
+                  {addedToCalendar ? <CalendarPlus size={32} color="var(--primary)" /> : <CheckCircle2 size={35} color="var(--primary)" />}
                 </div>
-                <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', marginBottom: '5px' }}>¡Reserva Exitosa!</h2>
-                <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.9rem', marginBottom: '0' }}>Se ha descontado 1 clase.</p>
+                <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', marginBottom: '5px' }}>
+                  {addedToCalendar ? '¡Agregada al calendario!' : '¡Reserva Exitosa!'}
+                </h2>
+                <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.9rem', marginBottom: addedToCalendar ? '0' : '20px' }}>
+                  {addedToCalendar ? 'Recibirás un recordatorio antes de tu clase.' : 'Se ha descontado 1 clase de tu membresía.'}
+                </p>
+                {!addedToCalendar && isNative && (
+                  <button
+                    onClick={handleAddToCalendar}
+                    style={{
+                      width: '100%', padding: '13px', borderRadius: '9999px', border: 'none',
+                      background: 'var(--primary)', color: 'white',
+                      fontSize: '0.95rem', fontWeight: 700, fontFamily: 'var(--font-body)',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                      boxShadow: '0 8px 20px rgba(255,139,66,0.3)'
+                    }}
+                  >
+                    <CalendarPlus size={18} /> Agregar a mi calendario
+                  </button>
+                )}
               </div>
             ) : (
               <div>
@@ -332,6 +390,32 @@ function Agenda() {
                 <div className="user-name">{user?.user_metadata?.full_name || 'Miembro Be Fit'}</div>
                 <div>{user?.email}</div>
               </div>
+
+              {walletPlatform === 'apple' && (
+                <>
+                  <button
+                    onClick={handleAddToWallet}
+                    disabled={walletLoading}
+                    style={{
+                      marginTop: '16px', width: '100%', padding: '14px',
+                      borderRadius: '14px', border: 'none', cursor: walletLoading ? 'default' : 'pointer',
+                      background: walletAdded ? '#1a1a1a' : '#000000',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                      transition: 'opacity 0.2s', opacity: walletLoading ? 0.7 : 1,
+                    }}
+                  >
+                    <Wallet size={18} color="white" />
+                    <span style={{ color: 'white', fontWeight: 700, fontSize: '0.95rem', fontFamily: 'var(--font-body)' }}>
+                      {walletLoading ? 'Generando…' : walletAdded ? 'Actualizar Wallet' : 'Agregar a Apple Wallet'}
+                    </span>
+                  </button>
+                  {walletError && (
+                    <p style={{ marginTop: '8px', fontSize: '0.78rem', color: '#EF4444', textAlign: 'center' }}>
+                      {walletError}
+                    </p>
+                  )}
+                </>
+              )}
             </motion.div>
           </>
         )}
@@ -341,7 +425,13 @@ function Agenda() {
       {user && (
         <nav className={`ios-bottom-nav ${isScrolled ? 'scrolled' : ''}`}>
           <Link to="/portal" className="nav-item">
-            <User size={22} strokeWidth={2.5} />
+            {avatarUrl ? (
+              <div style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--on-surface-variant)', flexShrink: 0 }}>
+                <img src={avatarUrl} alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            ) : (
+              <User size={22} strokeWidth={2.5} />
+            )}
             <span>Yo</span>
           </Link>
           <Link to="/evolucion" className="nav-item">

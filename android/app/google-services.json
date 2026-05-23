@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "358003650701",
+    "project_id": "be-fit-lab-83cb3",
+    "storage_bucket": "be-fit-lab-83cb3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:358003650701:android:81a672197bc67199da72c4",
+        "android_client_info": {
+          "package_name": "com.befitlab.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBXXPlMFO3TV7OcAzZieQQONoN976lmncE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

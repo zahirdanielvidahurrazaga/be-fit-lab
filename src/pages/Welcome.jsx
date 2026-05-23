@@ -23,7 +23,7 @@ function Welcome() {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#050505' }}>
+    <div style={{ position: 'fixed', inset: 0, width: '100%', height: '100dvh', overflow: 'hidden', backgroundColor: '#050505' }}>
 
       {/* ===== FONDO: Imagen Ultra-HD (siempre presente, opacity controlada) ===== */}
       <div style={{
