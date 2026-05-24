@@ -1,19 +1,21 @@
 #!/bin/sh
 set -e
 
-# Install Homebrew if missing
-if ! command -v brew &>/dev/null; then
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+export HOMEBREW_NO_AUTO_UPDATE=1
+export HOMEBREW_NO_INSTALL_CLEANUP=1
+export NONINTERACTIVE=1
+
+# Add Homebrew to PATH (both Intel and Apple Silicon)
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/local/sbin:$PATH"
+
+# Install Node.js if not available
+if ! command -v node > /dev/null 2>&1; then
+    brew install node
 fi
 
-# Install Node.js if missing
-if ! command -v node &>/dev/null; then
-  brew install node
-fi
+echo "Node: $(node --version)"
+echo "npm: $(npm --version)"
 
-# Go to repo root (3 levels up from ios/App/ci_scripts)
+# Install npm dependencies from project root
 cd "$CI_PRIMARY_REPOSITORY_PATH"
-
-# Install dependencies and sync Capacitor iOS
 npm install
-npx cap sync ios
