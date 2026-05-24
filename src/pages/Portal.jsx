@@ -3,7 +3,7 @@ import { Calendar, Utensils, TrendingUp, User, QrCode, ChevronRight, Activity, F
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getNextClassOccurrence } from '../hooks/useLocalNotifications';
-import { addToAppleWallet, getWalletPlatform } from '../hooks/useWallet';
+import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
 import { QRCodeCanvas } from 'qrcode.react';
 import { motion } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
@@ -23,7 +23,9 @@ function Portal() {
     if (!user?.id || walletLoading) return;
     setWalletLoading(true);
     setWalletError(null);
-    const result = await addToAppleWallet(user.id);
+    const result = walletPlatform === 'google'
+      ? await addToGoogleWallet(user.id)
+      : await addToAppleWallet(user.id);
     setWalletLoading(false);
     if (result.success) {
       setWalletAdded(true);
@@ -427,7 +429,7 @@ function Portal() {
               <div>{user?.email}</div>
             </div>
 
-            {/* Botón Apple Wallet */}
+            {/* Botón Wallet */}
             {walletPlatform === 'apple' && (
               <>
                 <button
@@ -444,6 +446,31 @@ function Portal() {
                   <Wallet size={18} color="white" />
                   <span style={{ color: 'white', fontWeight: 700, fontSize: '0.95rem', fontFamily: 'var(--font-body)' }}>
                     {walletLoading ? 'Generando…' : walletAdded ? 'Actualizar Wallet' : 'Agregar a Apple Wallet'}
+                  </span>
+                </button>
+                {walletError && (
+                  <p style={{ marginTop: '8px', fontSize: '0.78rem', color: '#EF4444', textAlign: 'center' }}>
+                    {walletError}
+                  </p>
+                )}
+              </>
+            )}
+            {walletPlatform === 'google' && (
+              <>
+                <button
+                  onClick={handleAddToWallet}
+                  disabled={walletLoading}
+                  style={{
+                    marginTop: '16px', width: '100%', padding: '14px',
+                    borderRadius: '14px', border: 'none', cursor: walletLoading ? 'default' : 'pointer',
+                    background: '#1a73e8',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                    transition: 'opacity 0.2s', opacity: walletLoading ? 0.7 : 1,
+                  }}
+                >
+                  <Wallet size={18} color="white" />
+                  <span style={{ color: 'white', fontWeight: 700, fontSize: '0.95rem', fontFamily: 'var(--font-body)' }}>
+                    {walletLoading ? 'Generando…' : 'Agregar a Google Wallet'}
                   </span>
                 </button>
                 {walletError && (

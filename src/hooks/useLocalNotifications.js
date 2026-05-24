@@ -55,7 +55,6 @@ export async function scheduleClassReminder(reservation, dayOfWeek) {
         body: `${reservation.title} con ${reservation.instructor || 'Be Fit Lab'} — ¡Prepárate!`,
         schedule: { at: reminderTime, allowWhileIdle: true },
         sound: 'default',
-        smallIcon: 'ic_stat_befit',
         iconColor: '#FF8B42',
         extra: { classId: reservation.classId },
       }],
@@ -86,7 +85,6 @@ export async function scheduleCancelDeadlineReminder(reservation, dayOfWeek) {
         body: `Tu clase de ${reservation.title} empieza en 5 horas. Después ya no podrás cancelar.`,
         schedule: { at: deadlineTime, allowWhileIdle: true },
         sound: 'default',
-        smallIcon: 'ic_stat_befit',
         iconColor: '#FF8B42',
         extra: { classId: reservation.classId },
       }],
@@ -121,12 +119,11 @@ export async function notifyReservationConfirmed(reservation) {
   try {
     await LocalNotifications.schedule({
       notifications: [{
-        id: Date.now(),
+        id: buildNotificationId(reservation.classId + '_confirm'),
         title: '¡Clase reservada!',
         body: `${reservation.title} confirmada. Te avisamos 1 hora antes y cuando ya no puedas cancelar.`,
         schedule: { at: new Date(Date.now() + 500) },
         sound: 'default',
-        smallIcon: 'ic_stat_befit',
         iconColor: '#FF8B42',
       }],
     });

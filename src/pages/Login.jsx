@@ -94,7 +94,7 @@ function Login() {
         setLockoutUntil(Date.now() + LOCKOUT_DURATION_MS);
         setError(`Cuenta bloqueada temporalmente por seguridad. Intenta de nuevo en 15 minutos.`);
       } else {
-        setError(`Credenciales incorrectas. ${MAX_LOGIN_ATTEMPTS - newAttempts} intentos restantes.`);
+        setError(`Error (${authError.message}). ${MAX_LOGIN_ATTEMPTS - newAttempts} intentos restantes.`);
       }
       setLoading(false);
     } else {

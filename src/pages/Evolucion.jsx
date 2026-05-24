@@ -8,7 +8,7 @@ import { useHealth } from '../hooks/useHealth';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
-import { addToAppleWallet, getWalletPlatform } from '../hooks/useWallet';
+import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
 
 const isNative = Capacitor.isNativePlatform();
 
@@ -25,7 +25,9 @@ function Evolucion() {
     if (!user?.id || walletLoading) return;
     setWalletLoading(true);
     setWalletError(null);
-    const result = await addToAppleWallet(user.id);
+    const result = walletPlatform === 'google'
+      ? await addToGoogleWallet(user.id)
+      : await addToAppleWallet(user.id);
     setWalletLoading(false);
     if (result.success) {
       setWalletAdded(true);
@@ -298,7 +300,9 @@ function Evolucion() {
                   }}
                 >
                   <Heart size={36} color="var(--primary)" style={{ opacity: 0.6, marginBottom: '12px' }} />
-                  <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--on-surface)', margin: '0 0 4px' }}>Conecta Apple Health</p>
+                  <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--on-surface)', margin: '0 0 4px' }}>
+                    {Capacitor.getPlatform() === 'android' ? 'Conecta Health Connect' : 'Conecta Apple Health'}
+                  </p>
                   <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: 0 }}>
                     Toca para ver tus pasos, calorías y frecuencia cardíaca
                   </p>
@@ -381,6 +385,31 @@ function Evolucion() {
                   <Wallet size={18} color="white" />
                   <span style={{ color: 'white', fontWeight: 700, fontSize: '0.95rem', fontFamily: 'var(--font-body)' }}>
                     {walletLoading ? 'Generando…' : walletAdded ? 'Actualizar Wallet' : 'Agregar a Apple Wallet'}
+                  </span>
+                </button>
+                {walletError && (
+                  <p style={{ marginTop: '8px', fontSize: '0.78rem', color: '#EF4444', textAlign: 'center' }}>
+                    {walletError}
+                  </p>
+                )}
+              </>
+            )}
+            {walletPlatform === 'google' && (
+              <>
+                <button
+                  onClick={handleAddToWallet}
+                  disabled={walletLoading}
+                  style={{
+                    marginTop: '16px', width: '100%', padding: '14px',
+                    borderRadius: '14px', border: 'none', cursor: walletLoading ? 'default' : 'pointer',
+                    background: '#1a73e8',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                    transition: 'opacity 0.2s', opacity: walletLoading ? 0.7 : 1,
+                  }}
+                >
+                  <Wallet size={18} color="white" />
+                  <span style={{ color: 'white', fontWeight: 700, fontSize: '0.95rem', fontFamily: 'var(--font-body)' }}>
+                    {walletLoading ? 'Generando…' : 'Agregar a Google Wallet'}
                   </span>
                 </button>
                 {walletError && (

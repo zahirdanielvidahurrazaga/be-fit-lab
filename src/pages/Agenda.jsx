@@ -6,7 +6,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
-import { addToAppleWallet, getWalletPlatform } from '../hooks/useWallet';
+import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
 import { addClassToCalendar } from '../hooks/useCalendar';
 import { supabase } from '../lib/supabase';
 
@@ -23,6 +23,7 @@ function Agenda() {
   const [modalData, setModalData] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [addedToCalendar, setAddedToCalendar] = useState(false);
+  const [calendarError, setCalendarError] = useState(null);
   const [showQR, setShowQR] = useState(false);
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
@@ -34,7 +35,9 @@ function Agenda() {
     if (!user?.id || walletLoading) return;
     setWalletLoading(true);
     setWalletError(null);
-    const result = await addToAppleWallet(user.id);
+    const result = walletPlatform === 'google'
+      ? await addToGoogleWallet(user.id)
+      : await addToAppleWallet(user.id);
     setWalletLoading(false);
     if (result.success) {
       setWalletAdded(true);
@@ -56,6 +59,7 @@ function Agenda() {
     setModalData(classObj);
     setShowModal(true);
     setIsSuccess(false);
+    setCalendarError(null);
   };
 
   const confirmReservation = async () => {
@@ -68,10 +72,16 @@ function Agenda() {
 
   const handleAddToCalendar = async () => {
     if (!modalData) return;
+
     const selectedDay = days[selectedDateIndex];
     const eventId = await addClassToCalendar(modalData, selectedDay?.date);
 
-    if (eventId && user?.id) {
+    if (!eventId) {
+      setCalendarError('No se pudo agregar. Otorga el permiso de calendario en Configuración.');
+      return;
+    }
+
+    if (user?.id) {
       await supabase
         .from('reservations')
         .update({ calendar_event_id: eventId })
@@ -85,7 +95,7 @@ function Agenda() {
       setShowModal(false);
       setIsSuccess(false);
       setAddedToCalendar(false);
-    }, 1200);
+    }, 1500);
   };
 
   const days = Array.from({ length: 7 }, (_, i) => {
@@ -288,18 +298,35 @@ function Agenda() {
                   {addedToCalendar ? 'Recibirás un recordatorio antes de tu clase.' : 'Se ha descontado 1 clase de tu membresía.'}
                 </p>
                 {!addedToCalendar && isNative && (
-                  <button
-                    onClick={handleAddToCalendar}
-                    style={{
-                      width: '100%', padding: '13px', borderRadius: '9999px', border: 'none',
-                      background: 'var(--primary)', color: 'white',
-                      fontSize: '0.95rem', fontWeight: 700, fontFamily: 'var(--font-body)',
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                      boxShadow: '0 8px 20px rgba(255,139,66,0.3)'
-                    }}
-                  >
-                    <CalendarPlus size={18} /> Agregar a mi calendario
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <button
+                      onClick={handleAddToCalendar}
+                      style={{
+                        width: '100%', padding: '13px', borderRadius: '9999px', border: 'none',
+                        background: 'var(--primary)', color: 'white',
+                        fontSize: '0.95rem', fontWeight: 700, fontFamily: 'var(--font-body)',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        boxShadow: '0 8px 20px rgba(255,139,66,0.3)'
+                      }}
+                    >
+                      <CalendarPlus size={18} /> Agregar a mi calendario
+                    </button>
+                    <button
+                      onClick={() => { setShowModal(false); setIsSuccess(false); setCalendarError(null); }}
+                      style={{
+                        width: '100%', padding: '11px', borderRadius: '9999px',
+                        background: 'transparent', color: 'var(--on-surface-variant)',
+                        border: '1px solid var(--border-subtle)',
+                        fontSize: '0.9rem', fontWeight: 600, fontFamily: 'var(--font-body)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Ahora no
+                    </button>
+                  </div>
+                )}
+                {calendarError && (
+                  <p style={{ color: '#EF4444', fontSize: '0.85rem', marginTop: '15px' }}>{calendarError}</p>
                 )}
               </div>
             ) : (
@@ -407,6 +434,31 @@ function Agenda() {
                     <Wallet size={18} color="white" />
                     <span style={{ color: 'white', fontWeight: 700, fontSize: '0.95rem', fontFamily: 'var(--font-body)' }}>
                       {walletLoading ? 'Generando…' : walletAdded ? 'Actualizar Wallet' : 'Agregar a Apple Wallet'}
+                    </span>
+                  </button>
+                  {walletError && (
+                    <p style={{ marginTop: '8px', fontSize: '0.78rem', color: '#EF4444', textAlign: 'center' }}>
+                      {walletError}
+                    </p>
+                  )}
+                </>
+              )}
+              {walletPlatform === 'google' && (
+                <>
+                  <button
+                    onClick={handleAddToWallet}
+                    disabled={walletLoading}
+                    style={{
+                      marginTop: '16px', width: '100%', padding: '14px',
+                      borderRadius: '14px', border: 'none', cursor: walletLoading ? 'default' : 'pointer',
+                      background: '#1a73e8',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                      transition: 'opacity 0.2s', opacity: walletLoading ? 0.7 : 1,
+                    }}
+                  >
+                    <Wallet size={18} color="white" />
+                    <span style={{ color: 'white', fontWeight: 700, fontSize: '0.95rem', fontFamily: 'var(--font-body)' }}>
+                      {walletLoading ? 'Generando…' : 'Agregar a Google Wallet'}
                     </span>
                   </button>
                   {walletError && (

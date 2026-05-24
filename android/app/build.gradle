@@ -1,5 +1,15 @@
 apply plugin: 'com.android.application'
 
+// Fix permanente: fuerza reemplazo de web assets antes de cada build
+// Usa cmd en lugar de Java para borrar — OneDrive bloquea el borrado desde JVM
+task refreshWebAssets(type: Exec) {
+    def assetsDir = "${projectDir}\\src\\main\\assets\\public"
+    def distDir   = "${rootProject.projectDir}\\..\\dist"
+    commandLine 'cmd', '/c',
+        "if exist \"${assetsDir}\" rmdir /s /q \"${assetsDir}\" & robocopy \"${distDir}\" \"${assetsDir}\" /E /R:1 /W:1 & if %ERRORLEVEL% LEQ 1 exit 0"
+}
+preBuild.dependsOn refreshWebAssets
+
 android {
     namespace = "com.befitlab.app"
     compileSdk = rootProject.ext.compileSdkVersion

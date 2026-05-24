@@ -56,8 +56,9 @@ function MiCuenta() {
         presentationStyle: 'popover',
       });
       if (photo.dataUrl) setPendingAvatar(photo.dataUrl);
-    } catch {
-      // usuario canceló
+    } catch (e) {
+      console.error(e);
+      alert('Aviso de Cámara: ' + e.message);
     }
   };
 

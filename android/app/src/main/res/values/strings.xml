@@ -4,4 +4,19 @@
     <string name="title_activity_main">Be Fit Lab</string>
     <string name="package_name">com.befitlab.app</string>
     <string name="custom_url_scheme">com.befitlab.app</string>
+
+    <!-- Cámara y galería -->
+    <string name="perm_camera_rationale">Be Fit Lab usa tu cámara para actualizar tu foto de perfil.</string>
+    <string name="perm_gallery_rationale">Be Fit Lab accede a tu galería para que puedas elegir tu foto de perfil.</string>
+
+    <!-- Notificaciones -->
+    <string name="perm_notifications_rationale">Recibe recordatorios de tus clases, actualizaciones de tu plan y novedades del estudio.</string>
+
+    <!-- Calendario -->
+    <string name="perm_calendar_rationale">Be Fit Lab agrega tus clases reservadas a tu calendario para que nunca olvides una sesión.</string>
+
+    <!-- Health Connect -->
+    <string name="health_rationale_title">Datos de salud en Be Fit Lab</string>
+    <string name="health_rationale_message">Be Fit Lab usa Health Connect para mostrarte tus calorías quemadas, pasos del día y frecuencia cardíaca directamente en la app.\n\nTambién registra tus clases de pilates como entrenamientos para que tengas un historial completo de tu actividad.\n\nTus datos de salud nunca se comparten con terceros.</string>
+    <string name="health_rationale_ok">Entendido</string>
 </resources>

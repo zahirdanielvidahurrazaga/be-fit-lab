@@ -9,9 +9,10 @@ const CLASS_DURATION_MS = 60 * 60 * 1000; // 1 hora
 export async function requestCalendarPermission() {
   if (!isNative()) return false;
   try {
-    const { result } = await CapacitorCalendar.requestWriteOnlyCalendarAccess();
+    const { result } = await CapacitorCalendar.requestFullCalendarAccess();
     return result === 'granted';
-  } catch {
+  } catch (err) {
+    console.error('Error pidiendo permisos de calendario:', err);
     return false;
   }
 }

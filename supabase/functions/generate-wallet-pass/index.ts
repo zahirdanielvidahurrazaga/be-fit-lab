@@ -16,7 +16,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const { userId } = await req.json();
+    const { userId, platform } = await req.json();
     if (!userId) throw new Error('userId requerido');
 
     const supabase = createClient(
@@ -32,6 +32,73 @@ serve(async (req) => {
 
     if (userError || !userData) throw new Error('Usuario no encontrado');
 
+    const memberName = userData.full_name || userData.email.split('@')[0];
+    const plan       = userData.membership_plan || 'Sin Plan';
+    const classes    = String(userData.classes_remaining ?? 0);
+    const status     = userData.membership_status === 'ACTIVE' ? 'Activa ✓' : 'Inactiva';
+    const serial     = `BEFIT-${userId.substring(0, 8).toUpperCase()}`;
+
+    // ── Android: Google Wallet JWT ────────────────────────────────────────────
+    if (platform === 'android') {
+      const serviceEmail = Deno.env.get('GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL');
+      const privateKeyPem = Deno.env.get('GOOGLE_WALLET_PRIVATE_KEY')?.replace(/\\n/g, '\n');
+      const issuerId = Deno.env.get('GOOGLE_WALLET_ISSUER_ID');
+
+      if (!serviceEmail || !privateKeyPem || !issuerId) {
+        throw new Error('Faltan secrets: GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL, GOOGLE_WALLET_PRIVATE_KEY, GOOGLE_WALLET_ISSUER_ID');
+      }
+
+      const classId  = `${issuerId}.befitlab_membership`;
+      const objectId = `${issuerId}.${serial}`;
+      const now      = Math.floor(Date.now() / 1000);
+
+      const jwtPayload = {
+        iss: serviceEmail,
+        aud: 'google',
+        typ: 'savetowallet',
+        iat: now,
+        origins: [],
+        payload: {
+          genericObjects: [{
+            id: objectId,
+            classId,
+            genericType: 'GENERIC_TYPE_UNSPECIFIED',
+            state: 'ACTIVE',
+            hexBackgroundColor: '#1C1C1A',
+            logo: {
+              sourceUri: { uri: 'https://fifaowaiokauhuqklzwe.supabase.co/storage/v1/object/public/wallet-passes/befit-logo.png' },
+              contentDescription: { defaultValue: { language: 'es', value: 'Be Fit Lab' } },
+            },
+            cardTitle:  { defaultValue: { language: 'es', value: 'BE FIT LAB'  } },
+            subheader:  { defaultValue: { language: 'es', value: 'Membresía'   } },
+            header:     { defaultValue: { language: 'es', value: memberName    } },
+            textModulesData: [
+              { id: 'plan',    header: 'PLAN',             body: plan    },
+              { id: 'classes', header: 'CLASES RESTANTES', body: classes },
+              { id: 'status',  header: 'ESTADO',           body: status  },
+            ],
+            barcode: {
+              type: 'QR_CODE',
+              value: userId,
+              alternateText: serial,
+            },
+            heroImage: {
+              sourceUri: { uri: 'https://fifaowaiokauhuqklzwe.supabase.co/storage/v1/object/public/wallet-passes/befit-hero.png' },
+              contentDescription: { defaultValue: { language: 'es', value: 'Be Fit Lab' } },
+            },
+          }],
+        },
+      };
+
+      const token = await signRS256JWT(jwtPayload, privateKeyPem);
+      const saveUrl = `https://pay.google.com/gp/v/save/${token}`;
+
+      return new Response(
+        JSON.stringify({ saveUrl }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     const p12Base64   = Deno.env.get('WALLET_P12_BASE64');
     const p12Password = Deno.env.get('WALLET_P12_PASSWORD');
     const passTypeId  = Deno.env.get('WALLET_PASS_TYPE_ID');
@@ -42,11 +109,7 @@ serve(async (req) => {
       throw new Error('Faltan secrets: WALLET_P12_BASE64, WALLET_P12_PASSWORD, WALLET_PASS_TYPE_ID, WALLET_TEAM_ID, WALLET_WWDR_PEM');
     }
 
-    const serialNumber = `BEFIT-${userId.substring(0, 8).toUpperCase()}`;
-    const memberName   = userData.full_name || userData.email.split('@')[0];
-    const plan         = userData.membership_plan || 'Sin Plan';
-    const classes      = String(userData.classes_remaining ?? 0);
-    const status       = userData.membership_status === 'ACTIVE' ? 'Activa ✓' : 'Inactiva';
+    const serialNumber = serial;
 
     // ── 1. pass.json ─────────────────────────────────────────────────────────────
     const passJson = JSON.stringify({
@@ -368,4 +431,31 @@ function crc32(data: Uint8Array): number {
     for (let i = 0; i < 8; i++) crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
   }
   return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+// ── Google Wallet JWT (RS256) ─────────────────────────────────────────────────
+async function signRS256JWT(payload: object, privateKeyPem: string): Promise<string> {
+  const enc = new TextEncoder();
+  const header  = b64url(enc.encode(JSON.stringify({ alg: 'RS256', typ: 'JWT' })));
+  const body    = b64url(enc.encode(JSON.stringify(payload)));
+  const unsigned = `${header}.${body}`;
+
+  const pemB64 = privateKeyPem
+    .replace(/-----BEGIN (?:RSA )?PRIVATE KEY-----/g, '')
+    .replace(/-----END (?:RSA )?PRIVATE KEY-----/g, '')
+    .replace(/\s+/g, '');
+  const keyBytes = Uint8Array.from(atob(pemB64), c => c.charCodeAt(0));
+
+  const key = await crypto.subtle.importKey(
+    'pkcs8', keyBytes,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false, ['sign'],
+  );
+  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, enc.encode(unsigned));
+  return `${unsigned}.${b64url(new Uint8Array(sig))}`;
+}
+
+function b64url(input: Uint8Array): string {
+  return btoa(String.fromCharCode(...input))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
