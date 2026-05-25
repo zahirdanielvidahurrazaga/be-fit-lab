@@ -296,19 +296,25 @@ function Login() {
               <div style={{ marginTop: '2.5rem', paddingTop: '2rem', borderTop: '1px solid rgba(0,0,0,0.05)', textAlign: 'center' }}>
                 <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lleva tu entrenamiento a otro nivel</p>
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <img 
-                    src="/assets/appstore.svg" 
-                    alt="Download on the App Store" 
-                    style={{ height: '36px', width: '120px', objectFit: 'contain', cursor: 'pointer', transition: 'transform 0.2s ease' }} 
-                    onMouseOver={(e) => e.currentTarget.style.transform='scale(1.05)'} 
-                    onMouseOut={(e) => e.currentTarget.style.transform='scale(1)'} 
-                  />
-                  <img 
-                    src="/assets/googleplay.svg" 
-                    alt="Get it on Google Play" 
-                    style={{ height: '36px', width: '120px', objectFit: 'contain', cursor: 'pointer', transition: 'transform 0.2s ease' }} 
-                    onMouseOver={(e) => e.currentTarget.style.transform='scale(1.05)'} 
-                    onMouseOut={(e) => e.currentTarget.style.transform='scale(1)'} 
+                  <a
+                    href="https://apps.apple.com/mx/app/be-fit-lab/id6772008660"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Descargar Be Fit Lab en App Store"
+                  >
+                    <img
+                      src="/assets/appstore.svg"
+                      alt="Download on the App Store"
+                      style={{ height: '36px', width: '120px', objectFit: 'contain', cursor: 'pointer', transition: 'transform 0.2s ease', display: 'block' }}
+                      onMouseOver={(e) => e.currentTarget.style.transform='scale(1.05)'}
+                      onMouseOut={(e) => e.currentTarget.style.transform='scale(1)'}
+                    />
+                  </a>
+                  <img
+                    src="/assets/googleplay.svg"
+                    alt="Próximamente en Google Play"
+                    title="Próximamente en Google Play"
+                    style={{ height: '36px', width: '120px', objectFit: 'contain', cursor: 'not-allowed', opacity: 0.45, filter: 'grayscale(1)', transition: 'opacity 0.2s ease' }}
                   />
                 </div>
               </div>

@@ -134,19 +134,25 @@ function Portal() {
               <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 500, opacity: 0.9 }}>Descarga nuestra aplicación móvil exclusiva para socias. Reserva más rápido, usa tu código QR y sigue tu nutrición.</p>
             </div>
             <div style={{ display: 'flex', gap: '12px', marginTop: '5px' }}>
-              <img 
-                src="/assets/appstore.svg" 
-                alt="Download on the App Store" 
-                style={{ height: '42px', cursor: 'pointer', transition: 'transform 0.2s ease' }} 
-                onMouseOver={(e) => e.currentTarget.style.transform='scale(1.05)'} 
-                onMouseOut={(e) => e.currentTarget.style.transform='scale(1)'} 
-              />
-              <img 
-                src="/assets/googleplay.svg" 
-                alt="Get it on Google Play" 
-                style={{ height: '42px', cursor: 'pointer', transition: 'transform 0.2s ease' }} 
-                onMouseOver={(e) => e.currentTarget.style.transform='scale(1.05)'} 
-                onMouseOut={(e) => e.currentTarget.style.transform='scale(1)'} 
+              <a
+                href="https://apps.apple.com/mx/app/be-fit-lab/id6772008660"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Descargar Be Fit Lab en App Store"
+              >
+                <img
+                  src="/assets/appstore.svg"
+                  alt="Download on the App Store"
+                  style={{ height: '42px', cursor: 'pointer', transition: 'transform 0.2s ease', display: 'block' }}
+                  onMouseOver={(e) => e.currentTarget.style.transform='scale(1.05)'}
+                  onMouseOut={(e) => e.currentTarget.style.transform='scale(1)'}
+                />
+              </a>
+              <img
+                src="/assets/googleplay.svg"
+                alt="Próximamente en Google Play"
+                title="Próximamente en Google Play"
+                style={{ height: '42px', cursor: 'not-allowed', opacity: 0.45, filter: 'grayscale(1)', transition: 'opacity 0.2s ease' }}
               />
             </div>
           </div>

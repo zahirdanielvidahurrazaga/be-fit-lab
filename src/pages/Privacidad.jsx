@@ -39,10 +39,26 @@ function Privacidad() {
           <li>Número de teléfono (opcional)</li>
           <li>Datos de membresía y asistencia a clases</li>
           <li>Contacto de emergencia (opcional)</li>
+          <li>Foto de perfil (opcional, almacenada de forma segura)</li>
         </ul>
-        <p><strong>No recopilamos</strong> datos financieros, bancarios, datos biométricos, ni datos sensibles de salud.</p>
+        <p><strong>No recopilamos</strong> datos financieros, bancarios ni de tarjetas de crédito.</p>
 
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>3. Finalidad del Tratamiento</h2>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>3. Datos de Salud (Health Connect)</h2>
+        <p>Con tu consentimiento explícito, Be Fit Lab utiliza <strong>Health Connect de Google</strong> para acceder a los siguientes datos de salud almacenados en tu dispositivo:</p>
+        <ul style={{ paddingLeft: '1.5rem' }}>
+          <li><strong>Lectura:</strong> pasos diarios, calorías activas quemadas, frecuencia cardíaca, sesiones de ejercicio.</li>
+          <li><strong>Escritura:</strong> tus clases de pilates como sesiones de ejercicio, calorías quemadas durante la clase.</li>
+        </ul>
+        <p>Estos datos se procesan localmente en tu dispositivo y se muestran únicamente dentro de la app para visualización personal. <strong>Nunca compartimos, vendemos ni transferimos tus datos de salud a terceros, anunciantes ni servidores externos.</strong> Puedes revocar el acceso en cualquier momento desde la app de Health Connect o en Configuración → Salud y Forma física.</p>
+
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>4. Otros Permisos del Dispositivo</h2>
+        <ul style={{ paddingLeft: '1.5rem' }}>
+          <li><strong>Cámara y galería:</strong> únicamente para que tomes o selecciones tu foto de perfil.</li>
+          <li><strong>Calendario:</strong> con tu consentimiento, agregamos tus clases reservadas al calendario de tu dispositivo. No leemos otros eventos.</li>
+          <li><strong>Notificaciones:</strong> recordatorios de tus clases, confirmaciones de reserva y avisos del estudio.</li>
+        </ul>
+
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>5. Finalidad del Tratamiento</h2>
         <p>Tus datos personales serán utilizados para las siguientes finalidades:</p>
         <ul style={{ paddingLeft: '1.5rem' }}>
           <li>Gestión de tu cuenta y membresía activa.</li>
@@ -51,10 +67,10 @@ function Privacidad() {
           <li>Mejora continua de nuestros servicios y experiencia de usuario.</li>
         </ul>
 
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>4. Transferencias Internacionales</h2>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>6. Transferencias Internacionales</h2>
         <p>Tus datos son almacenados en servidores de <strong>Supabase Inc.</strong> (infraestructura de Amazon Web Services) ubicados en Estados Unidos. Esta transferencia se realiza bajo medidas de seguridad equivalentes a las exigidas por la LFPDPPP.</p>
 
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>5. Derechos ARCO</h2>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>7. Derechos ARCO</h2>
         <p>Tienes derecho a <strong>Acceder, Rectificar, Cancelar u Oponerte</strong> al tratamiento de tus datos personales. Para ejercer cualquiera de estos derechos:</p>
         <ul style={{ paddingLeft: '1.5rem' }}>
           <li>Desde la app: Sección "Mi Cuenta" → "Ajustes" → "Eliminar Cuenta".</li>
@@ -62,10 +78,10 @@ function Privacidad() {
         </ul>
         <p>Tu solicitud será atendida en un plazo máximo de 20 días hábiles.</p>
 
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>6. Retención de Datos</h2>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>8. Retención de Datos</h2>
         <p>Tus datos serán conservados mientras mantengas una cuenta activa. Al solicitar la eliminación de tu cuenta, tus datos serán eliminados permanentemente de nuestros sistemas en un plazo de 30 días.</p>
 
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>7. Medidas de Seguridad</h2>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>9. Medidas de Seguridad</h2>
         <p>Implementamos las siguientes medidas técnicas y organizativas:</p>
         <ul style={{ paddingLeft: '1.5rem' }}>
           <li>Cifrado de contraseñas mediante algoritmos hash seguros.</li>
@@ -74,13 +90,13 @@ function Privacidad() {
           <li>Autenticación segura con tokens JWT.</li>
         </ul>
 
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>8. Cookies y Tecnologías</h2>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>10. Cookies y Tecnologías</h2>
         <p>Esta aplicación utiliza almacenamiento local del navegador (localStorage) exclusivamente para mantener tu sesión activa y tus preferencias de configuración. No utilizamos cookies de terceros ni tecnologías de rastreo publicitario.</p>
 
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>9. Modificaciones</h2>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>11. Modificaciones</h2>
         <p>Nos reservamos el derecho de modificar esta política en cualquier momento. Los cambios serán notificados a través de la aplicación.</p>
 
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>10. Contacto</h2>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>12. Contacto</h2>
         <p>Para cualquier consulta sobre esta política de privacidad, escríbenos a: <strong>contacto@befitlab.com</strong></p>
 
         <div style={{ marginTop: '3rem', padding: '20px', background: 'rgba(255,145,77,0.06)', borderRadius: '16px', border: '1px solid rgba(255,145,77,0.15)', textAlign: 'center' }}>
