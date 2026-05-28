@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Flame, Heart, PlayCircle, Smartphone, Menu, X, Calendar, TrendingUp,
-         Utensils, CheckCircle2, ChevronDown, MapPin, Phone, Instagram, MessageCircle, Star } from 'lucide-react';
+         Utensils, CheckCircle2, ChevronDown, MapPin, Phone, MessageCircle, Star } from 'lucide-react';
+
+// Instagram icon (lucide-react v1.x doesn't export it)
+const InstagramIcon = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+    <circle cx="12" cy="12" r="4"/>
+    <circle cx="17.5" cy="6.5" r="0.5" fill={color} stroke="none"/>
+  </svg>
+);
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -529,7 +538,7 @@ function Landing() {
                 </div>
               </div>
               <div style={{ display:'flex', gap:'14px', alignItems:'flex-start' }}>
-                <div style={{ background:'rgba(255,139,66,0.1)', width:'42px', height:'42px', borderRadius:'12px', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><Instagram size={20} color="var(--primary)"/></div>
+                <div style={{ background:'rgba(255,139,66,0.1)', width:'42px', height:'42px', borderRadius:'12px', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><InstagramIcon size={20} color="var(--primary)"/></div>
                 <div>
                   <div style={{ fontWeight:700, marginBottom:'2px' }}>Instagram</div>
                   <a href="https://instagram.com/" target="_blank" rel="noopener noreferrer" style={{ fontSize:'0.9rem', color:'var(--primary)', fontWeight:600 }}>@befitlab</a>
@@ -565,7 +574,7 @@ function Landing() {
               <img src="/logo.png" alt="Be Fit Lab" style={{ height:'40px', width:'auto', marginBottom:'16px', filter:'brightness(0) invert(1)', display:'block' }} />
               <p style={{ color:'rgba(255,255,255,0.45)', fontSize:'0.85rem', lineHeight:1.7, maxWidth:'220px' }}>The glutes specialists. Transformación real a través del movimiento consciente.</p>
               <div style={{ display:'flex', gap:'12px', marginTop:'20px' }}>
-                <a href="https://instagram.com/" target="_blank" rel="noopener noreferrer" style={{ width:'36px', height:'36px', background:'rgba(255,255,255,0.08)', borderRadius:'10px', display:'flex', alignItems:'center', justifyContent:'center' }}><Instagram size={18} color="rgba(255,255,255,0.6)"/></a>
+                <a href="https://instagram.com/" target="_blank" rel="noopener noreferrer" style={{ width:'36px', height:'36px', background:'rgba(255,255,255,0.08)', borderRadius:'10px', display:'flex', alignItems:'center', justifyContent:'center' }}><InstagramIcon size={18} color="rgba(255,255,255,0.6)"/></a>
                 <a href={`https://wa.me/${WA_NUMBER}`} target="_blank" rel="noopener noreferrer" style={{ width:'36px', height:'36px', background:'rgba(255,255,255,0.08)', borderRadius:'10px', display:'flex', alignItems:'center', justifyContent:'center' }}><MessageCircle size={18} color="rgba(255,255,255,0.6)"/></a>
               </div>
             </div>
