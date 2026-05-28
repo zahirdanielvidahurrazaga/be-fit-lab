@@ -42,7 +42,7 @@ function Welcome() {
         }} />
       </div>
 
-      {/* ===== SPLASH: Fondo negro + Logo "B" con gradiente durazno ===== */}
+      {/* ===== SPLASH: Fondo negro + Logo oficial ===== */}
       <AnimatePresence>
         {phase === 'splash' && (
           <motion.div
@@ -53,44 +53,26 @@ function Welcome() {
             style={{
               position: 'absolute', inset: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#050505', zIndex: 10
+              background: '#ffffff', zIndex: 10
             }}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.9, ease: 'easeOut' }}
+              transition={{ delay: 0.2, duration: 0.9, ease: [0.34, 1.56, 0.64, 1] }}
               style={{ textAlign: 'center' }}
             >
-              <div style={{
-                width: '80px', height: '80px', margin: '0 auto 24px',
-                background: 'linear-gradient(135deg, #FFBD8A 0%, #FF914D 40%, #E8734A 80%, #C4572E 100%)',
-                borderRadius: '22px',
-                boxShadow: '0 20px 50px rgba(255, 145, 77, 0.35), 0 8px 20px rgba(255, 145, 77, 0.2)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}>
-                <span style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '2.4rem', fontWeight: 800, color: 'white',
-                  textShadow: '0 2px 8px rgba(0,0,0,0.15)'
-                }}>B</span>
-              </div>
-              <motion.h1
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6, duration: 0.7 }}
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  color: 'white', fontSize: '1.4rem', fontWeight: 300,
-                  margin: 0, letterSpacing: '8px', textTransform: 'uppercase'
-                }}
-              >BE FIT LAB</motion.h1>
+              <img
+                src="/logo.png"
+                alt="Be Fit Lab"
+                style={{ width: '220px', height: 'auto', display: 'block', margin: '0 auto' }}
+              />
               <motion.div
                 initial={{ width: 0, opacity: 0 }}
                 animate={{ width: '50px', opacity: 1 }}
-                transition={{ delay: 1.2, duration: 0.6 }}
+                transition={{ delay: 1.1, duration: 0.6 }}
                 style={{
-                  height: '1.5px', margin: '16px auto 0',
+                  height: '1.5px', margin: '20px auto 0',
                   background: 'linear-gradient(90deg, transparent, rgba(255,145,77,0.6), transparent)',
                   borderRadius: '2px'
                 }}
