@@ -8,11 +8,12 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { motion } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { Capacitor } from '@capacitor/core';
+import BadgeUnlockOverlay from '../components/BadgeUnlockOverlay';
 
 function Portal() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, logout, classesRemaining, myReservations, cancelClass, profileName, globalClasses, avatarUrl } = useAuth();
+  const { user, plan, logout, classesRemaining, myReservations, cancelClass, profileName, globalClasses, avatarUrl, newUnlockedBadge, setNewUnlockedBadge } = useAuth();
   
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
@@ -73,6 +74,7 @@ function Portal() {
 
   return (
     <div className="mobile-app-container" style={{ background: 'var(--app-bg)' }}>
+      <BadgeUnlockOverlay badge={newUnlockedBadge} onClose={() => setNewUnlockedBadge(null)} />
 
       {/* HEADER UNIFICADO */}
       <header className="ios-header" style={{ paddingBottom: '5px', background: 'transparent' }}>

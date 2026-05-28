@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Lock, ArrowRight, ChevronLeft, CheckCircle2 } from 'lucide-react';
+import { User, Mail, Lock, ArrowRight, ChevronLeft, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 
 function Register() {
@@ -13,6 +13,8 @@ function Register() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { activatePlan } = useAuth();
@@ -170,29 +172,49 @@ function Register() {
             <div className="premium-input-group">
               <label>Contraseña Segura</label>
               <Lock size={20} className="premium-input-icon" />
-              <input 
-                type="password" 
+              <input
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 className="premium-input"
+                style={{ paddingRight: '3rem' }}
                 autoComplete="new-password"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                style={{ position: 'absolute', right: '1rem', top: '42px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--on-surface-variant)', opacity: 0.7, padding: 0, display: 'flex', alignItems: 'center' }}
+                tabIndex={-1}
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
 
             <div className="premium-input-group">
               <label>Confirmar Contraseña</label>
               <Lock size={20} className="premium-input-icon" />
-              <input 
-                type="password" 
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
                 className="premium-input"
+                style={{ paddingRight: '3rem' }}
                 autoComplete="new-password"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(v => !v)}
+                style={{ position: 'absolute', right: '1rem', top: '42px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--on-surface-variant)', opacity: 0.7, padding: 0, display: 'flex', alignItems: 'center' }}
+                tabIndex={-1}
+                aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
 
             {/* CONSENTIMIENTO LEGAL */}

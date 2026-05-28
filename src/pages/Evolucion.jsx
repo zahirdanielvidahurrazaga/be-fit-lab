@@ -14,7 +14,7 @@ const isNative = Capacitor.isNativePlatform();
 
 function Evolucion() {
   const navigate = useNavigate();
-  const { user, classesRemaining, avatarUrl } = useAuth();
+  const { user, classesRemaining, avatarUrl, customBadges, badgeConfigs, profileName } = useAuth();
   const [showQR, setShowQR] = useState(false);
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
@@ -44,6 +44,10 @@ function Evolucion() {
 
   const { healthData, healthPermission, healthLoading, requestPermissions, fetchTodayData } = useHealth();
 
+  const [classHistory, setClassHistory] = useState([]);
+  const [badges, setBadges] = useState([{ icon: '🔒', label: 'Cargando...' }]);
+  const [weeklyActivity, setWeeklyActivity] = useState([]);
+
   // Calcular score basado en clases restantes y mediciones disponibles
   const score = latestMeasurement ? Math.min(99, 70 + Math.round((classesRemaining / 30) * 20) + 4) : 72;
   const circumference = 2 * Math.PI * 70;
@@ -53,7 +57,114 @@ function Evolucion() {
   useEffect(() => {
     if (!user) return;
     fetchMeasurements();
+    fetchClassHistory();
   }, [user]);
+
+  const calculateBadges = (history) => {
+    let calculated = [];
+
+    // Evaluar reglas dinámicas del Admin
+    if (badgeConfigs) {
+      badgeConfigs.forEach(rule => {
+        let isEarned = false;
+        
+        switch(rule.rule_type) {
+          case 'TOTAL_CLASSES':
+            isEarned = (history?.length || 0) >= rule.rule_value;
+            break;
+          case 'DIFFERENT_COACHES':
+            const coaches = new Set((history || []).map(h => h.classes?.instructor).filter(Boolean));
+            isEarned = coaches.size >= rule.rule_value;
+            break;
+          case 'PROFILE_COMPLETE':
+            isEarned = !!(profileName && profileName.trim() !== '' && avatarUrl);
+            break;
+          case 'WEEKLY_CLASSES':
+            const weekCounts = {};
+            (history || []).forEach(h => {
+               const d = new Date(h.created_at);
+               // Aproximación: agrupación por semana (1000*60*60*24*7)
+               const weekKey = `${d.getFullYear()}-${Math.floor(d.getTime() / (1000*60*60*24*7))}`;
+               weekCounts[weekKey] = (weekCounts[weekKey] || 0) + 1;
+            });
+            const maxWeekly = Math.max(0, ...Object.values(weekCounts));
+            isEarned = maxWeekly >= rule.rule_value;
+            break;
+          case 'MANUAL':
+            isEarned = customBadges?.some(cb => cb.label === rule.label);
+            break;
+        }
+
+        calculated.push({
+          ...rule,
+          locked: !isEarned
+        });
+      });
+    }
+
+    // Añadir insignias manuales extra que no estén en las reglas
+    if (customBadges) {
+      customBadges.forEach(cb => {
+        if (!calculated.some(c => c.label === cb.label)) {
+          calculated.push({ ...cb, locked: false });
+        }
+      });
+    }
+
+    setBadges(calculated);
+  };
+
+  const calculateWeeklyActivity = (history) => {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    const activity = [];
+    const dayNames = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+    
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      
+      const classesOnDay = history.filter(item => {
+        const itemDate = new Date(item.created_at);
+        itemDate.setHours(0,0,0,0);
+        return itemDate.getTime() === d.getTime();
+      }).length;
+      
+      let height = classesOnDay * 50; 
+      if (height > 100) height = 100;
+      
+      activity.push({
+        label: dayNames[d.getDay()],
+        height: height,
+        isToday: i === 0,
+        count: classesOnDay
+      });
+    }
+    setWeeklyActivity(activity);
+  };
+
+  const fetchClassHistory = async () => {
+    try {
+      const { data } = await supabase
+        .from('reservations')
+        .select('*, classes(title, time, day)')
+        .eq('user_id', user.id)
+        .eq('checked_in', true)
+        .order('created_at', { ascending: false });
+        
+      if (data) {
+        setClassHistory(data);
+        calculateWeeklyActivity(data);
+      }
+    } catch (err) {
+      console.error('Error cargando historial:', err);
+    }
+  };
+
+  useEffect(() => {
+    calculateBadges(classHistory);
+  }, [classHistory, customBadges, badgeConfigs, profileName, avatarUrl]);
 
   const fetchMeasurements = async () => {
     setLoadingMeasurements(true);
@@ -139,12 +250,12 @@ function Evolucion() {
           {/* BADGES */}
           <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }} style={{ marginTop: '20px' }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '12px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Insignias</h2>
-            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '5px' }}>
-              <BadgeIcon icon="🔥" label="7 Días" />
-              <BadgeIcon icon="🧘" label="Flow Pro" />
-              <BadgeIcon icon="💪" label="Fuerza" />
-              <BadgeIcon icon="🥗" label="Foodie" />
-              <BadgeIcon icon="⭐" label="VIP" />
+            <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '10px' }}>
+              {badges.length > 0 ? badges.map((b, i) => (
+                <BadgeIcon key={i} icon={b.icon} label={b.label} locked={b.locked} />
+              )) : (
+                <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontStyle: 'italic' }}>No hay insignias configuradas aún.</p>
+              )}
             </div>
           </motion.section>
         </div>
@@ -258,22 +369,38 @@ function Evolucion() {
           <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} style={{ marginTop: '25px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
               <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Actividad semanal</h2>
-              <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 800, background: 'rgba(255,139,66,0.08)', padding: '4px 10px', borderRadius: '8px' }}>+12%</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 800, background: 'rgba(255,139,66,0.08)', padding: '4px 10px', borderRadius: '8px' }}>
+                {classHistory.length} clases totales
+              </div>
             </div>
             <div style={{ background: 'var(--app-surface-solid)', borderRadius: '24px', padding: '20px', boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)' }}>
               <div style={{ height: '140px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px' }}>
-                {[40, 70, 45, 90, 65, 80, 50].map((h, i) => (
+                {weeklyActivity.length > 0 ? weeklyActivity.map((dayData, i) => (
                   <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                     <div style={{
-                      width: '100%', maxWidth: '28px', margin: '0 auto', height: `${h}%`,
-                      background: i === 3 ? 'linear-gradient(to top, var(--primary), var(--accent))' : 'var(--border-subtle)',
-                      borderRadius: '8px', boxShadow: i === 3 ? '0 4px 12px rgba(255,139,66,0.3)' : 'none'
+                      width: '100%', maxWidth: '28px', margin: '0 auto', height: `${Math.max(dayData.height, 5)}%`,
+                      background: dayData.isToday ? 'linear-gradient(to top, var(--primary), var(--accent))' : (dayData.height > 0 ? '#EEBA89' : 'var(--border-subtle)'),
+                      borderRadius: '8px', boxShadow: dayData.isToday ? '0 4px 12px rgba(255,139,66,0.3)' : 'none',
+                      opacity: dayData.height === 0 && !dayData.isToday ? 0.4 : 1
                     }} />
-                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: i === 3 ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
-                      {['L', 'M', 'M', 'J', 'V', 'S', 'D'][i]}
+                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: dayData.isToday ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+                      {dayData.label}
                     </span>
                   </div>
-                ))}
+                )) : (
+                  [40, 70, 45, 90, 65, 80, 50].map((h, i) => (
+                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <div style={{
+                        width: '100%', maxWidth: '28px', margin: '0 auto', height: `${h}%`,
+                        background: i === 6 ? 'linear-gradient(to top, var(--primary), var(--accent))' : 'var(--border-subtle)',
+                        borderRadius: '8px', boxShadow: i === 6 ? '0 4px 12px rgba(255,139,66,0.3)' : 'none'
+                      }} />
+                      <span style={{ fontSize: '0.65rem', fontWeight: 800, color: i === 6 ? 'var(--primary)' : 'var(--on-surface-variant)' }}>
+                        {['L', 'M', 'M', 'J', 'V', 'S', 'D'][i]}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </motion.section>
@@ -364,9 +491,9 @@ function Evolucion() {
                 </div>
               </div>
             </div>
-            <div className="sheet-user-info" style={{ marginTop: '10px' }}>
-              <div className="user-name">{user?.user_metadata?.full_name || 'Miembro Be Fit'}</div>
-              <div>{user?.email}</div>
+            <div className="sheet-user-info" style={{ marginTop: '10px', textAlign: 'center' }}>
+              <div className="user-name" style={{ fontWeight: 800 }}>{user?.user_metadata?.full_name || 'Miembro Be Fit'}</div>
+              <div style={{ color: 'var(--on-surface-variant)' }}>{user?.email}</div>
             </div>
 
             {walletPlatform === 'apple' && (
@@ -443,13 +570,14 @@ function Evolucion() {
   );
 }
 
-function BadgeIcon({ icon, label }) {
+function BadgeIcon({ icon, label, locked }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flexShrink: 0, opacity: locked ? 0.4 : 1, filter: locked ? 'grayscale(100%)' : 'none', position: 'relative' }}>
       <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--app-surface-solid)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', boxShadow: 'var(--card-shadow)' }}>
         {icon}
       </div>
-      <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--on-surface-variant)' }}>{label}</span>
+      <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--on-surface-variant)', maxWidth: '70px', textAlign: 'center', lineHeight: 1.1 }}>{label}</span>
+      {locked && <div style={{ position: 'absolute', top: '0px', right: '0px', background: 'var(--surface)', borderRadius: '50%', padding: '2px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', fontSize: '0.7rem' }}>🔒</div>}
     </div>
   );
 }

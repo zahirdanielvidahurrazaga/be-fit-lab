@@ -1,15 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LogOut, Users, Activity, QrCode, CheckCircle2, Plus, Minus, Calendar, BarChart3, Phone, Mail, TrendingUp, DollarSign, Utensils } from 'lucide-react';
+import { LogOut, Users, Activity, QrCode, CheckCircle2, Plus, Minus, Calendar, CalendarPlus, ChevronRight, BarChart3, Phone, Mail, TrendingUp, DollarSign, Utensils, Award, Pencil, Menu } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 
+const daysOfWeek = [
+  { num: 1, label: 'Lunes' },
+  { num: 2, label: 'Martes' },
+  { num: 3, label: 'Miércoles' },
+  { num: 4, label: 'Jueves' },
+  { num: 5, label: 'Viernes' },
+  { num: 6, label: 'Sábado' },
+  { num: 0, label: 'Domingo' }
+];
+
 function Admin() {
-  const { user, logout, globalClasses, recipes, updateClassSpots, checkInClient, addClass, deleteClass, addRecipe, deleteRecipe, allUsers, activatePlan, fetchClassesByDayOfWeek, fetchGlobalClasses } = useAuth();
+  const { user, logout, globalClasses, recipes, updateClassSpots, checkInClient, addClass, deleteClass, addRecipe, deleteRecipe, allUsers, coaches, activatePlan, fetchClassesByDayOfWeek, fetchGlobalClasses, assignCustomBadge, removeCustomBadge, badgeConfigs, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig, addMultipleClasses } = useAuth();
   const isScrolled = useScrollDetect(30);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('mostrador');
+  const [showTopMenu, setShowTopMenu] = useState(false);
   
   // Gestión de días
   const currentDay = new Date().getDay(); // 0 = Dom, 1 = Lun, ... 6 = Sab
@@ -34,19 +45,87 @@ function Admin() {
 
   // Formularios de Creación
   const [showAddClass, setShowAddClass] = useState(false);
-  const [newClass, setNewClass] = useState({ title: '', time: '', day: currentDay, instructor: '', spots: 10, level: 'Todos los niveles' });
+  const [classMode, setClassMode] = useState('single');
+  const [newClass, setNewClass] = useState({
+    title: '', time: '', instructor: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza',
+    description: '',
+    date: new Date().toISOString().split('T')[0],
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
+    daysOfWeek: []
+  });
   
   const [showAddRecipe, setShowAddRecipe] = useState(false);
   const [newRecipe, setNewRecipe] = useState({ title: '', time: 'Desayuno', kcal: '', time_prep: '', img: '', ingredients: '', steps: '' });
 
+  // Insignias
+  const [selectedBadgeUser, setSelectedBadgeUser] = useState('');
+  const [newCustomBadge, setNewCustomBadge] = useState({ icon: '🏆', label: '' });
+  const [newRuleBadge, setNewRuleBadge] = useState({ icon: '🔥', label: '', description: '', rule_type: 'TOTAL_CLASSES', rule_value: 1 });
+  const [editingBadgeId, setEditingBadgeId] = useState(null);
+
   const handleLogout = () => { logout(); navigate('/'); };
 
-  // Filtrar clases por el día seleccionado
-  const displayClasses = globalClasses.filter(c => c.day === selectedDay);
+  // Estado del Calendario Interactivo
+  const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState(null); // 'YYYY-MM-DD' o null
+  const [calendarView, setCalendarView] = useState('month'); // 'month' | 'day'
   
-  // Métricas del día seleccionado
-  const totalAlumnasHoy = displayClasses.reduce((acc, c) => acc + ((c.max_spots || 10) - c.spots), 0);
-  const totalMaxSpots = displayClasses.reduce((acc, c) => acc + (c.max_spots || 10), 0);
+  // Helpers del Calendario
+  const currentYear = currentMonthDate.getFullYear();
+  const currentMonth = currentMonthDate.getMonth();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
+  const startDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1; // Ajuste para que empiece en Lunes
+  
+  const nextMonth = () => setCurrentMonthDate(new Date(currentYear, currentMonth + 1, 1));
+  const prevMonth = () => setCurrentMonthDate(new Date(currentYear, currentMonth - 1, 1));
+  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+  const getWeekDays = (dateStr) => {
+    if (!dateStr || dateStr === 'bulk') return [];
+    const selectedDate = new Date(dateStr + "T12:00:00");
+    const day = selectedDate.getDay();
+    const diffToMonday = selectedDate.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), diffToMonday);
+    
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      weekDays.push({
+        dateStr: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+        dayNum: d.getDate(),
+        dayName: ['D', 'L', 'M', 'M', 'J', 'V', 'S'][d.getDay()]
+      });
+    }
+    return weekDays;
+  };
+
+  const getDayOfWeekFromDateStr = (dateStr) => {
+    return new Date(dateStr + "T12:00:00").getDay();
+  };
+
+  const getClassesForDate = (dateStr) => {
+    if (!dateStr || dateStr === 'bulk') return [];
+    const dayOfWeek = getDayOfWeekFromDateStr(dateStr);
+    return globalClasses.filter(c => 
+      c.date === dateStr || 
+      (!c.date && (c.day === dayOfWeek || c.day === String(dayOfWeek)))
+    );
+  };
+
+  const currentMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+  
+  // Clases para el día seleccionado en el modal
+  const selectedDayClasses = getClassesForDate(selectedCalendarDay);
+  
+  // Métricas del día de hoy (para dashboard)
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayClasses = getClassesForDate(todayStr);
+  
+  const totalAlumnasHoy = todayClasses.reduce((acc, c) => acc + ((c.max_spots || 10) - c.spots), 0);
+  const totalMaxSpots = todayClasses.reduce((acc, c) => acc + (c.max_spots || 10), 0);
   const avgOccupancy = totalMaxSpots > 0 ? Math.round((totalAlumnasHoy / totalMaxSpots) * 100) : 0;
 
   // Alumnas reales de DB
@@ -72,7 +151,19 @@ function Admin() {
   const handleQRScan = async (e) => {
     e.preventDefault();
     if (scannedQR.trim() !== '') {
-      const result = await checkInClient(scannedQR);
+      // Evitar doble escaneo accidental (cooldown de 1 hora por usuaria)
+      const lastScanStr = localStorage.getItem(`last_checkin_${scannedQR.trim()}`);
+      if (lastScanStr && (Date.now() - parseInt(lastScanStr)) < 1000 * 60 * 60) {
+        showToast("Esta alumna ya registró asistencia hace poco.", "error");
+        setQrMessage("Ya registrado recientemente");
+        setScannedQR('');
+        return;
+      }
+
+      const result = await checkInClient(scannedQR.trim());
+      if (result.success) {
+         localStorage.setItem(`last_checkin_${scannedQR.trim()}`, Date.now().toString());
+      }
       setQrMessage(result.message);
       setScannedClient(result.clientInfo);
       setScannedQR('');
@@ -134,14 +225,48 @@ function Admin() {
       return;
     }
 
-    const result = await addClass({ 
-      title: newClass.title,
-      time: newClass.time,
-      instructor: newClass.instructor,
-      day: parseInt(newClass.day), 
-      spots: parseInt(newClass.spots),
-      level: newClass.level
-    });
+    let result;
+    if (classMode === 'single') {
+      if (!newClass.date) return showToast("Selecciona una fecha.", "error");
+      const d = new Date(newClass.date + "T12:00:00");
+      result = await addClass({
+        title: newClass.title,
+        time: newClass.time,
+        instructor: newClass.instructor,
+        category: newClass.category,
+        description: newClass.description || null,
+        date: newClass.date,
+        day: d.getDay(),
+        spots: parseInt(newClass.spots),
+        level: newClass.level
+      });
+    } else {
+      if (!newClass.startDate || !newClass.endDate || newClass.daysOfWeek.length === 0) {
+        return showToast("Selecciona el rango de fechas y los días.", "error");
+      }
+      const start = new Date(newClass.startDate + "T12:00:00");
+      const end = new Date(newClass.endDate + "T12:00:00");
+      const classesToCreate = [];
+      let current = new Date(start);
+      while (current <= end) {
+        if (newClass.daysOfWeek.includes(current.getDay())) {
+          classesToCreate.push({
+            title: newClass.title,
+            time: newClass.time,
+            instructor: newClass.instructor,
+            category: newClass.category,
+            description: newClass.description || null,
+            date: current.toISOString().split('T')[0],
+            day: current.getDay(),
+            spots: parseInt(newClass.spots),
+            level: newClass.level
+          });
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      if (classesToCreate.length === 0) return showToast("No hay días coincidentes en el rango.", "error");
+      result = await addMultipleClasses(classesToCreate);
+    }
     
     if (result && !result.success) {
       showToast("Error: " + (result.error?.message || "No se pudo guardar"), "error");
@@ -149,9 +274,16 @@ function Admin() {
       return;
     }
 
-    showToast("¡Clase creada con éxito!");
+    showToast("¡Clase(s) creadas con éxito!");
     setShowAddClass(false);
-    setNewClass({ title: '', time: '', day: selectedDay, instructor: '', spots: 10, level: 'Todos los niveles' });
+    setNewClass({
+      title: '', time: '', instructor: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza',
+      description: '',
+      date: new Date().toISOString().split('T')[0],
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date().toISOString().split('T')[0],
+      daysOfWeek: []
+    });
     fetchGlobalClasses(); // Refresh
   };
 
@@ -164,8 +296,86 @@ function Admin() {
     setNewRecipe({ title: '', time: 'Desayuno', kcal: '', time_prep: '', img: '', ingredients: '', steps: '' });
   };
 
+  const handleAssignBadge = async () => {
+    if (!selectedBadgeUser || !newCustomBadge.label) {
+      showToast("Selecciona alumna y escribe el nombre de la insignia", "error");
+      return;
+    }
+    const res = await assignCustomBadge(selectedBadgeUser, newCustomBadge);
+    if (res.success) {
+      showToast("Insignia asignada con éxito");
+      setNewCustomBadge({ icon: '🏆', label: '' });
+    } else {
+      showToast("Error al asignar insignia", "error");
+    }
+  };
+
+  const handleRemoveBadge = async (label) => {
+    const res = await removeCustomBadge(selectedBadgeUser, label);
+    if (res.success) showToast("Insignia removida");
+  };
+
+  const handleSaveRuleBadge = async () => {
+    if (!newRuleBadge.label) {
+      showToast("Escribe el nombre de la insignia", "error");
+      return;
+    }
+    const payload = {
+      icon: newRuleBadge.icon,
+      label: newRuleBadge.label,
+      description: newRuleBadge.description,
+      rule_type: newRuleBadge.rule_type,
+      rule_value: newRuleBadge.rule_value,
+      is_active: true
+    };
+    
+    let res;
+    if (editingBadgeId) {
+      res = await updateBadgeConfig(editingBadgeId, payload);
+    } else {
+      res = await createBadgeConfig(payload);
+    }
+    
+    if (res.success) {
+      showToast(editingBadgeId ? "Regla actualizada con éxito" : "Regla creada con éxito");
+      setNewRuleBadge({ icon: '🔥', label: '', description: '', rule_type: 'TOTAL_CLASSES', rule_value: 1 });
+      setEditingBadgeId(null);
+    } else {
+      showToast("Error al guardar regla", "error");
+    }
+  };
+
+  const cancelEditBadge = () => {
+    setEditingBadgeId(null);
+    setNewRuleBadge({ icon: '🔥', label: '', description: '', rule_type: 'TOTAL_CLASSES', rule_value: 1 });
+  };
+  
+  const handleEditRuleBadge = (badge) => {
+    setEditingBadgeId(badge.id);
+    setNewRuleBadge(badge);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteRuleBadge = async (id) => {
+    const res = await deleteBadgeConfig(id);
+    if (res.success) showToast("Regla eliminada");
+  };
+
   const inputStyle = { width: '100%', padding: '14px 16px', borderRadius: '14px', border: '1px solid rgba(55,61,59,0.08)', background: 'var(--surface-lowest)', fontFamily: 'var(--font-body)', fontSize: '0.9rem', outline: 'none', transition: 'border 0.2s' };
   const labelStyle = { fontSize: '0.78rem', fontWeight: 700, color: 'var(--on-surface-variant)', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' };
+
+  const getRuleDescription = (type, value) => {
+    switch (type) {
+      case 'TOTAL_CLASSES': return `Meta: Asistir a ${value} clases en total`;
+      case 'WEEKLY_CLASSES': return `Meta: Asistir a ${value} clases en una misma semana`;
+      case 'DIFFERENT_COACHES': return `Meta: Tomar clase con ${value} coaches diferentes`;
+      case 'PROFILE_COMPLETE': return 'Meta: Completar perfil (Foto y datos)';
+      case 'MANUAL': return 'Otorgamiento manual (Eventos/Retos)';
+      default: return `Meta: ${value} (${type})`;
+    }
+  };
+
+  // coaches are now fetched directly from useAuth
 
   const daysOfWeek = [
     { num: 1, label: 'LUN' },
@@ -180,14 +390,43 @@ function Admin() {
   return (
     <div className="admin-app-container">
       {/* HEADER PREMIUM (MOBILE ONLY) */}
-      <header className="ios-header mobile-only-header" style={{ background: 'var(--surface-lowest)', paddingBottom: '10px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+      <header className="ios-header mobile-only-header" style={{ background: 'var(--surface-lowest)', paddingBottom: '10px', borderBottom: '1px solid rgba(0,0,0,0.05)', position: 'relative', zIndex: 50 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <div>
             <h1 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Gestión Lab</h1>
             <p style={{ fontSize: '0.8rem', color: 'var(--primary)', margin: '4px 0 0', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>CONTROL CENTER</p>
           </div>
-          <div onClick={handleLogout} style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,59,48,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <LogOut size={20} color="#ff3b30" />
+          
+          <div style={{ position: 'relative' }}>
+            <div onClick={() => setShowTopMenu(!showTopMenu)} style={{ width: '40px', height: '40px', borderRadius: '50%', background: showTopMenu ? 'var(--primary)' : 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
+              <Menu size={20} color={showTopMenu ? 'white' : 'var(--black)'} />
+            </div>
+            
+            <AnimatePresence>
+              {showTopMenu && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }} 
+                  animate={{ opacity: 1, y: 0, scale: 1 }} 
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }} 
+                  transition={{ duration: 0.2 }}
+                  style={{ position: 'absolute', top: '50px', right: 0, background: 'white', borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.15)', padding: '8px', width: '200px', border: '1px solid rgba(0,0,0,0.05)', zIndex: 100 }}
+                >
+                  <div onClick={() => { setActiveTab('reportes'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
+                    <BarChart3 size={18} color="var(--primary)" /> Reportes
+                  </div>
+                  <div onClick={() => { setActiveTab('insignias'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
+                    <Award size={18} color="var(--primary)" /> Insignias
+                  </div>
+                  <div onClick={() => { setActiveTab('nutricion'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
+                    <Utensils size={18} color="var(--primary)" /> Comida
+                  </div>
+                  <div style={{ height: '1px', background: 'rgba(0,0,0,0.05)', margin: '8px' }} />
+                  <div onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: '#ff3b30', fontWeight: 600 }}>
+                    <LogOut size={18} /> Cerrar Sesión
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </header>
@@ -218,6 +457,10 @@ function Admin() {
           <div onClick={() => setActiveTab('nutricion')} className={`sidebar-nav-item ${activeTab === 'nutricion' ? 'active' : ''}`}>
             <Utensils size={20} />
             <span>Nutrición</span>
+          </div>
+          <div onClick={() => setActiveTab('insignias')} className={`sidebar-nav-item ${activeTab === 'insignias' ? 'active' : ''}`}>
+            <Award size={20} />
+            <span>Insignias</span>
           </div>
         </nav>
         
@@ -391,83 +634,254 @@ function Admin() {
               </motion.div>
             )}
   
-            {/* ============ TAB: CLASES (Antes Cupos) ============ */}
+            {/* ============ TAB: CLASES (Calendario Interactivo) ============ */}
             {activeTab === 'clases' && (
               <motion.div key="clases" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
                 <section>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                    <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', margin: 0 }}>Gestión de Clases</h2>
-                    <button onClick={() => setShowAddClass(!showAddClass)} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '8px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
-                      <Plus size={16} /> Nueva
-                    </button>
-                  </div>
-  
-                  {/* Selector de Días */}
-                  <div style={{ marginBottom: '20px' }}>
-                    <div className="day-selector">
-                      {daysOfWeek.map((day) => (
+                  {calendarView === 'month' ? (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                        <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: 0, fontWeight: 800 }}>Calendario</h2>
                         <button 
-                          key={day.num}
-                          className={`day-pill ${selectedDay === day.num ? 'active' : ''}`}
-                          onClick={() => setSelectedDay(day.num)}
+                          onClick={() => {
+                            setNewClass(prev => ({...prev, date: todayStr, startDate: todayStr, endDate: todayStr}));
+                            setClassMode('range');
+                            setSelectedCalendarDay('bulk');
+                            setCalendarView('day');
+                          }} 
+                          style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(255,139,66,0.3)' }}
                         >
-                          <span style={{ fontSize: '0.6rem' }}>{day.label}</span>
+                          <CalendarPlus size={18} /> Carga Masiva
                         </button>
-                      ))}
-                    </div>
-                  </div>
-  
-                  {showAddClass && (
-                    <div className="ios-glass-card" style={{ padding: '15px', marginBottom: '15px', background: 'white' }}>
-                      <input placeholder="Título (ej. Full Body)" value={newClass.title} onChange={e => setNewClass({...newClass, title: e.target.value})} style={{...inputStyle, marginBottom: '10px'}} />
-                      <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                        <input placeholder="Hora (ej. 07:00 AM)" value={newClass.time} onChange={e => setNewClass({...newClass, time: e.target.value})} style={inputStyle} />
-                        <select value={newClass.day} onChange={e => setNewClass({...newClass, day: e.target.value})} style={{...inputStyle, WebkitAppearance: 'none'}}>
-                          {daysOfWeek.map(d => (
-                            <option key={d.num} value={d.num}>{d.label}</option>
+                      </div>
+      
+                      {/* Navegación del Calendario */}
+                      <div className="ios-glass-card" style={{ padding: '20px', background: 'white', margin: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                          <button onClick={prevMonth} style={{ background: 'rgba(0,0,0,0.04)', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                            <ChevronRight size={20} color="var(--black)" style={{ transform: 'rotate(180deg)' }} />
+                          </button>
+                          <h3 style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)', margin: 0, textTransform: 'capitalize' }}>
+                            {monthNames[currentMonth]} {currentYear}
+                          </h3>
+                          <button onClick={nextMonth} style={{ background: 'rgba(0,0,0,0.04)', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                            <ChevronRight size={20} color="var(--black)" />
+                          </button>
+                        </div>
+
+                        {/* Días de la semana */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px', marginBottom: '10px', textAlign: 'center' }}>
+                          {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
+                            <div key={i} style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--on-surface-variant)' }}>{d}</div>
                           ))}
-                        </select>
+                        </div>
+
+                        {/* Cuadrícula de Días */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px' }}>
+                          {Array.from({ length: startDay }).map((_, i) => (
+                            <div key={`empty-${i}`} style={{ aspectRatio: '1', borderRadius: '12px' }} />
+                          ))}
+                          
+                          {Array.from({ length: daysInMonth }).map((_, i) => {
+                            const dayNum = i + 1;
+                            const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                            const isToday = dateStr === todayStr;
+                            const classesOnDay = getClassesForDate(dateStr);
+                            const hasClasses = classesOnDay.length > 0;
+                            
+                            return (
+                              <motion.button
+                                key={dayNum}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => {
+                                  setNewClass(prev => ({...prev, date: dateStr}));
+                                  setClassMode('single');
+                                  setSelectedCalendarDay(dateStr);
+                                  setCalendarView('day');
+                                }}
+                                style={{ 
+                                  aspectRatio: '1', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative',
+                                  background: isToday ? 'var(--primary)' : (hasClasses ? 'rgba(0,0,0,0.03)' : 'transparent'),
+                                  color: isToday ? 'white' : 'var(--black)',
+                                  fontWeight: isToday ? 800 : (hasClasses ? 700 : 500)
+                                }}
+                              >
+                                <span style={{ fontSize: '1rem' }}>{dayNum}</span>
+                                {hasClasses && (
+                                  <div style={{ display: 'flex', gap: '2px', position: 'absolute', bottom: '6px' }}>
+                                    {classesOnDay.slice(0, 3).map((_, idx) => (
+                                      <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', background: isToday ? 'white' : 'var(--primary)' }} />
+                                    ))}
+                                  </div>
+                                )}
+                              </motion.button>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                        <input placeholder="Instructor" value={newClass.instructor} onChange={e => setNewClass({...newClass, instructor: e.target.value})} style={inputStyle} />
-                        <input type="number" placeholder="Cupos" value={newClass.spots} onChange={e => setNewClass({...newClass, spots: e.target.value})} style={inputStyle} />
+                    </>
+                  ) : (
+                    <motion.div initial={{opacity:0, x:20}} animate={{opacity:1, x:0}} transition={{duration:0.2}}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                        <button onClick={() => setCalendarView('month')} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: 'var(--primary)', fontWeight: 700, fontSize: '1.1rem', cursor: 'pointer', padding: 0 }}>
+                          <ChevronRight size={22} style={{ transform: 'rotate(180deg)' }} /> 
+                          {selectedCalendarDay !== 'bulk' ? monthNames[new Date(selectedCalendarDay + "T12:00:00").getMonth()] : 'Atrás'}
+                        </button>
                       </div>
-                      <select value={newClass.level} onChange={e => setNewClass({...newClass, level: e.target.value})} style={{...inputStyle, marginBottom: '15px', WebkitAppearance: 'none'}}>
-                        <option value="Todos los niveles">Todos los niveles</option>
-                        <option value="Principiante">Principiante</option>
-                        <option value="Intermedio">Intermedio</option>
-                        <option value="Avanzado">Avanzado</option>
-                      </select>
-                      <button onClick={handleCreateClass} style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer' }}>Guardar Clase</button>
-                    </div>
+                      
+                      {selectedCalendarDay !== 'bulk' && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px', marginBottom: '25px', background: 'white', padding: '15px 10px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
+                          {getWeekDays(selectedCalendarDay).map((d, i) => {
+                            const isSelected = d.dateStr === selectedCalendarDay;
+                            const classesOnDay = getClassesForDate(d.dateStr);
+                            const hasClasses = classesOnDay.length > 0;
+                            
+                            return (
+                              <div 
+                                key={i} 
+                                onClick={() => {
+                                  setSelectedCalendarDay(d.dateStr);
+                                  setNewClass(prev => ({...prev, date: d.dateStr}));
+                                }}
+                                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                              >
+                                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--on-surface-variant)' }}>{d.dayName}</span>
+                                <div style={{ 
+                                  width: '36px', height: '36px', borderRadius: '50%', 
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  background: isSelected ? 'var(--primary)' : 'transparent',
+                                  color: isSelected ? 'white' : 'var(--black)',
+                                  fontWeight: isSelected ? 800 : 600,
+                                  fontSize: '1.1rem'
+                                }}>
+                                  {d.dayNum}
+                                </div>
+                                <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: hasClasses ? (isSelected ? 'white' : 'var(--primary)') : 'transparent', marginTop: '-2px' }} />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      
+                      {/* Lista de clases del día */}
+                      {selectedCalendarDay !== 'bulk' && (
+                        <div style={{ marginBottom: '25px' }}>
+                          <h4 style={{ fontSize: '1.1rem', margin: '0 0 15px 0', color: 'var(--black)', fontFamily: 'var(--font-display)', textTransform: 'capitalize' }}>
+                            {new Date(selectedCalendarDay + "T12:00:00").toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
+                          </h4>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {selectedDayClasses.length > 0 ? selectedDayClasses.map((c) => (
+                              <div key={c.id} style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', borderRadius: '16px', border: '1px solid var(--border-subtle)', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+                                <div style={{ flex: 1 }}>
+                                  <h3 style={{ fontSize: '1.05rem', margin: '0 0 4px 0', fontFamily: 'var(--font-display)' }}>{c.title}</h3>
+                                  <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: 0, fontWeight: 600 }}>{c.time} • {c.instructor}</p>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <button onClick={() => updateClassSpots(c.id, Math.max(0, c.spots - 1))} style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                    <Minus size={14} color="var(--black)" />
+                                  </button>
+                                  <span style={{ fontSize: '1.1rem', fontWeight: 800, color: c.spots === 0 ? '#FF4D4D' : 'var(--primary)', minWidth: '24px', textAlign: 'center' }}>{c.spots}</span>
+                                  <button onClick={() => updateClassSpots(c.id, c.spots + 1)} style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                    <Plus size={14} color="var(--black)" />
+                                  </button>
+                                  <button onClick={() => deleteClass(c.id)} style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: '#FF4D4D15', color: '#FF4D4D', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '5px', cursor: 'pointer' }}>
+                                    <Minus size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                            )) : (
+                              <p style={{ textAlign: 'center', color: '#888', fontStyle: 'italic', fontSize: '0.9rem', padding: '20px' }}>Sin clases programadas.</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Formulario de Creación */}
+                      <div style={{ background: 'white', padding: '20px', borderRadius: '20px', border: '1px solid var(--border-subtle)', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
+                        <h4 style={{ fontSize: '1rem', marginBottom: '15px', color: 'var(--black)' }}>
+                          {selectedCalendarDay === 'bulk' ? 'Configurar Rango Masivo' : 'Añadir clase a este día'}
+                        </h4>
+
+                        {classMode === 'range' && (
+                          <div style={{ marginBottom: '15px' }}>
+                            <label style={labelStyle}>Rango de Fechas</label>
+                            <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                              <div style={{flex: 1}}>
+                                <span style={{fontSize: '0.7rem', color: '#666'}}>Desde</span>
+                                <input type="date" value={newClass.startDate} onChange={e => setNewClass({...newClass, startDate: e.target.value})} style={inputStyle} />
+                              </div>
+                              <div style={{flex: 1}}>
+                                <span style={{fontSize: '0.7rem', color: '#666'}}>Hasta</span>
+                                <input type="date" value={newClass.endDate} onChange={e => setNewClass({...newClass, endDate: e.target.value})} style={inputStyle} />
+                              </div>
+                            </div>
+                            <label style={labelStyle}>Días a repetir</label>
+                            <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                              {daysOfWeek.map(d => (
+                                <button 
+                                  key={d.num}
+                                  onClick={() => setNewClass(prev => ({
+                                    ...prev,
+                                    daysOfWeek: prev.daysOfWeek.includes(d.num) ? prev.daysOfWeek.filter(n => n !== d.num) : [...prev.daysOfWeek, d.num]
+                                  }))}
+                                  style={{ 
+                                    padding: '6px 12px', borderRadius: '20px', border: '1px solid', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold',
+                                    borderColor: newClass.daysOfWeek.includes(d.num) ? 'var(--primary)' : 'var(--border-subtle)',
+                                    background: newClass.daysOfWeek.includes(d.num) ? 'var(--primary)' : 'white',
+                                    color: newClass.daysOfWeek.includes(d.num) ? 'white' : '#666',
+                                    transition: 'all 0.2s'
+                                  }}
+                                >
+                                  {d.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <input placeholder="Título (ej. Full Body)" value={newClass.title} onChange={e => setNewClass({...newClass, title: e.target.value})} style={{...inputStyle, marginBottom: '10px'}} />
+                        <textarea
+                          placeholder="Descripción (ej. Clase de reformer para trabajar core y glúteos...)"
+                          value={newClass.description}
+                          onChange={e => setNewClass({...newClass, description: e.target.value})}
+                          rows={2}
+                          style={{...inputStyle, resize: 'none', fontFamily: 'inherit', marginBottom: '10px'}}
+                        />
+                        <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                          <input placeholder="Hora (ej. 07:00 AM)" value={newClass.time} onChange={e => setNewClass({...newClass, time: e.target.value})} style={inputStyle} />
+                          <select value={newClass.instructor} onChange={e => setNewClass({...newClass, instructor: e.target.value})} style={{...inputStyle, WebkitAppearance: 'none'}}>
+                            <option value="">Coach...</option>
+                            {coaches.map(c => <option key={c.id} value={c.full_name || c.email}>{c.full_name || c.email}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                          <input type="number" placeholder="Cupos" value={newClass.spots} onChange={e => setNewClass({...newClass, spots: e.target.value})} style={inputStyle} />
+                          <select value={newClass.level} onChange={e => setNewClass({...newClass, level: e.target.value})} style={{...inputStyle, WebkitAppearance: 'none'}}>
+                            <option value="Todos los niveles">Todos los niveles</option>
+                            <option value="Principiante">Principiante</option>
+                            <option value="Intermedio">Intermedio</option>
+                            <option value="Avanzado">Avanzado</option>
+                          </select>
+                        </div>
+                        <div style={{ marginBottom: '15px' }}>
+                          <select value={newClass.category} onChange={e => setNewClass({...newClass, category: e.target.value})} style={{...inputStyle, WebkitAppearance: 'none'}}>
+                            <option value="Fuerza">Fuerza</option>
+                            <option value="Resistencia">Resistencia</option>
+                            <option value="Relajacion">Relajación o estiramiento</option>
+                            <option value="Gym libre">Gym libre</option>
+                          </select>
+                        </div>
+                        
+                        <button onClick={async (e) => {
+                          await handleCreateClass(e);
+                          if (classMode === 'range') setCalendarView('month');
+                        }} style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'var(--primary)', color: 'white', fontWeight: 800, border: 'none', cursor: 'pointer' }}>
+                          {classMode === 'single' ? 'Guardar Clase' : 'Generar Clases Múltiples'}
+                        </button>
+                      </div>
+                    </motion.div>
                   )}
-  
-                  <div className="admin-responsive-grid">
-                    {displayClasses.length > 0 ? displayClasses.map((c) => (
-                      <div key={c.id} className="ios-glass-card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface)', margin: 0 }}>
-                        <div style={{ flex: 1 }}>
-                          <h3 style={{ fontSize: '1rem', margin: '0 0 4px 0', fontFamily: 'var(--font-display)' }}>{c.title}</h3>
-                          <p style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', margin: 0 }}>{c.time} • {c.instructor}</p>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <button onClick={() => updateClassSpots(c.id, Math.max(0, c.spots - 1))} style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: 'rgba(55,61,59,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                            <Minus size={14} color="var(--on-surface)" />
-                          </button>
-                          <span style={{ fontSize: '1.2rem', fontWeight: 800, color: c.spots === 0 ? '#FF4D4D' : 'var(--primary)', minWidth: '25px', textAlign: 'center' }}>{c.spots}</span>
-                          <button onClick={() => updateClassSpots(c.id, c.spots + 1)} style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: 'rgba(55,61,59,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                            <Plus size={14} color="var(--on-surface)" />
-                          </button>
-                          <button onClick={() => deleteClass(c.id)} style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: '#FF4D4D15', color: '#FF4D4D', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '5px', cursor: 'pointer' }}>
-                            <Minus size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    )) : (
-                      <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.9rem', fontStyle: 'italic', background: 'rgba(55,61,59,0.03)', borderRadius: '16px' }}>
-                        No hay clases programadas para este día.
-                      </div>
-                    )}
-                  </div>
                 </section>
               </motion.div>
             )}
@@ -601,6 +1015,142 @@ function Admin() {
               </motion.div>
             )}
   
+            {/* ============ TAB: INSIGNIAS ============ */}
+            {activeTab === 'insignias' && (
+              <motion.div key="insignias" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
+                <div className="admin-double-column">
+                  
+                  {/* Columna Izquierda: Reglas Automáticas */}
+                  <section>
+                    <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', marginBottom: '20px' }}>Creador de Insignias Automáticas</h2>
+                    <div className="ios-glass-card" style={{ background: 'var(--surface)', border: 'none', padding: '22px', margin: 0, marginBottom: '20px' }}>
+                      <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+                        <div style={{ width: '80px' }}>
+                          <label style={labelStyle}>Icono</label>
+                          <input type="text" value={newRuleBadge.icon} onChange={e => setNewRuleBadge({...newRuleBadge, icon: e.target.value})} style={{...inputStyle, textAlign: 'center', fontSize: '1.5rem'}} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={labelStyle}>Nombre (Ej. Fuego Continuo)</label>
+                          <input type="text" value={newRuleBadge.label} onChange={e => setNewRuleBadge({...newRuleBadge, label: e.target.value})} style={inputStyle} />
+                        </div>
+                      </div>
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={labelStyle}>Descripción Corta</label>
+                        <input type="text" placeholder="Asiste a 3 clases en una semana" value={newRuleBadge.description} onChange={e => setNewRuleBadge({...newRuleBadge, description: e.target.value})} style={inputStyle} />
+                      </div>
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={labelStyle}>¿Qué se debe cumplir?</label>
+                        <select value={newRuleBadge.rule_type} onChange={e => setNewRuleBadge({...newRuleBadge, rule_type: e.target.value})} style={{...inputStyle, WebkitAppearance: 'none'}}>
+                          <option value="TOTAL_CLASSES">Total de clases asistidas</option>
+                          <option value="WEEKLY_CLASSES">Clases en una misma semana</option>
+                          <option value="DIFFERENT_COACHES">Coaches diferentes tomados</option>
+                          <option value="PROFILE_COMPLETE">Completar el perfil (Foto y datos)</option>
+                          <option value="MANUAL">Otorgamiento Manual (Eventos/Retos)</option>
+                        </select>
+                      </div>
+                      {newRuleBadge.rule_type !== 'PROFILE_COMPLETE' && newRuleBadge.rule_type !== 'MANUAL' && (
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={labelStyle}>Valor Objetivo (Ej. 3, 10, 100)</label>
+                          <input type="number" min="1" value={newRuleBadge.rule_value} onChange={e => setNewRuleBadge({...newRuleBadge, rule_value: parseInt(e.target.value)})} style={inputStyle} />
+                        </div>
+                      )}
+                      
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button onClick={handleSaveRuleBadge} style={{ flex: 1, padding: '15px', borderRadius: '14px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '0.95rem' }}>
+                          {editingBadgeId ? 'Guardar Cambios' : 'Crear Insignia'}
+                        </button>
+                        {editingBadgeId && (
+                          <button onClick={cancelEditBadge} style={{ padding: '15px 25px', borderRadius: '14px', background: 'var(--surface-lowest)', color: 'var(--on-surface)', border: '1px solid var(--border-subtle)', fontWeight: 700, cursor: 'pointer', fontSize: '0.95rem' }}>
+                            Cancelar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <h2 style={{ fontSize: '1.1rem', fontFamily: 'var(--font-display)', marginBottom: '15px' }}>Reglas Activas</h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {badgeConfigs.map(badge => (
+                        <div key={badge.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface)', padding: '15px', borderRadius: '14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ fontSize: '1.8rem' }}>{badge.icon}</span>
+                            <div>
+                              <div style={{ fontWeight: 700, color: 'var(--black)', fontSize: '0.95rem' }}>{badge.label}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>
+                                {getRuleDescription(badge.rule_type, badge.rule_value)}
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button onClick={() => handleEditRuleBadge(badge)} style={{ background: 'rgba(255,139,66,0.1)', color: 'var(--primary)', border: 'none', width: '32px', height: '32px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                              <Pencil size={14} />
+                            </button>
+                            <button onClick={() => handleDeleteRuleBadge(badge.id)} style={{ background: '#FF4D4D15', color: '#FF4D4D', border: 'none', width: '32px', height: '32px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                              <Minus size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      {badgeConfigs.length === 0 && <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontStyle: 'italic' }}>No hay reglas configuradas.</p>}
+                    </div>
+                  </section>
+
+                  {/* Columna Derecha: Asignación Manual */}
+                  <section>
+                    <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', marginBottom: '20px' }}>Otorgamiento Manual</h2>
+                    <div className="ios-glass-card" style={{ background: 'var(--surface)', border: 'none', padding: '22px', margin: 0 }}>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', marginBottom: '15px' }}>
+                        Asigna insignias configuradas como "Manual" o insignias personalizadas temporales a alumnas específicas.
+                      </p>
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={labelStyle}>Seleccionar Alumna</label>
+                        <select value={selectedBadgeUser} onChange={(e)=>setSelectedBadgeUser(e.target.value)} style={{ ...inputStyle, WebkitAppearance: 'none' }}>
+                          <option value="">Buscar alumna...</option>
+                          {alumnas.map(a => <option key={a.id} value={a.id}>{a.name} ({a.email})</option>)}
+                        </select>
+                      </div>
+
+                      {selectedBadgeUser && (
+                        <>
+                          <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+                            <div style={{ width: '80px' }}>
+                              <label style={labelStyle}>Icono</label>
+                              <input type="text" value={newCustomBadge.icon} onChange={e => setNewCustomBadge({...newCustomBadge, icon: e.target.value})} style={{...inputStyle, textAlign: 'center', fontSize: '1.5rem'}} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <label style={labelStyle}>Nombre de Insignia</label>
+                              <input type="text" placeholder="Ej. Reto Verano 2026" value={newCustomBadge.label} onChange={e => setNewCustomBadge({...newCustomBadge, label: e.target.value})} style={inputStyle} />
+                            </div>
+                          </div>
+                          <button onClick={handleAssignBadge} style={{ width: '100%', padding: '15px', borderRadius: '14px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '0.95rem', marginBottom: '20px' }}>
+                            Otorgar a Alumna
+                          </button>
+
+                          <h3 style={{ fontSize: '0.9rem', color: 'var(--on-surface-variant)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tiene actualmente:</h3>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {allUsers.find(u => u.id === selectedBadgeUser)?.custom_badges?.filter(b => !b._internal_notified_id)?.length > 0 ? (
+                              allUsers.find(u => u.id === selectedBadgeUser).custom_badges.filter(b => !b._internal_notified_id).map((badge, idx) => (
+                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface-lowest)', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <span style={{ fontSize: '1.5rem' }}>{badge.icon}</span>
+                                    <span style={{ fontWeight: 700, color: 'var(--black)' }}>{badge.label}</span>
+                                  </div>
+                                  <button onClick={() => handleRemoveBadge(badge.label)} style={{ background: '#FF4D4D15', color: '#FF4D4D', border: 'none', width: '30px', height: '30px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                    <Minus size={14} />
+                                  </button>
+                                </div>
+                              ))
+                            ) : (
+                              <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontStyle: 'italic', margin: 0 }}>Ninguna insignia manual.</p>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </section>
+                </div>
+              </motion.div>
+            )}
+
             {/* ============ TAB: REPORTES (Métricas de Negocio) PREMIUM ============ */}
             {activeTab === 'reportes' && (
               <motion.div key="reportes" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
@@ -664,10 +1214,6 @@ function Admin() {
           <Calendar size={22} strokeWidth={2.5} />
           <span>Clases</span>
         </div>
-        <div onClick={() => setActiveTab('ventas')} className={`nav-item ${activeTab === 'ventas' ? 'active' : ''}`}>
-          <DollarSign size={22} strokeWidth={2.5} />
-          <span>Ventas</span>
-        </div>
         
         <button 
           className="nav-qr-button" 
@@ -680,13 +1226,9 @@ function Admin() {
           <QrCode size={24} strokeWidth={2.5} />
         </button>
 
-        <div onClick={() => setActiveTab('reportes')} className={`nav-item ${activeTab === 'reportes' ? 'active' : ''}`}>
-          <BarChart3 size={22} strokeWidth={2.5} />
-          <span>Reportes</span>
-        </div>
-        <div onClick={() => setActiveTab('nutricion')} className={`nav-item ${activeTab === 'nutricion' ? 'active' : ''}`}>
-          <Utensils size={22} strokeWidth={2.5} />
-          <span>Nutrición</span>
+        <div onClick={() => setActiveTab('ventas')} className={`nav-item ${activeTab === 'ventas' ? 'active' : ''}`}>
+          <DollarSign size={22} strokeWidth={2.5} />
+          <span>Ventas</span>
         </div>
       </nav>
 

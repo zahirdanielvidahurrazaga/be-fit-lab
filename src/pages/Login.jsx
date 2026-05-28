@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Lock, Mail, ArrowRight, ChevronLeft, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Lock, Mail, ArrowRight, ChevronLeft, CheckCircle2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { motion } from 'framer-motion';
 
@@ -26,6 +26,8 @@ function Login() {
   // ==============================
   // RATE LIMITING (Anti-Fuerza Bruta)
   // ==============================
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState(null);
 
@@ -99,6 +101,14 @@ function Login() {
       setLoading(false);
     } else {
       setLoginAttempts(0);
+      // Persistencia de sesión
+      if (isNative || rememberMe) {
+        localStorage.setItem('befit_remember_me', '1');
+        sessionStorage.removeItem('befit_session_active');
+      } else {
+        localStorage.removeItem('befit_remember_me');
+        sessionStorage.setItem('befit_session_active', '1');
+      }
       navigate('/portal');
     }
   };
@@ -257,28 +267,51 @@ function Login() {
             <div className="premium-input-group">
               <label>Contraseña</label>
               <Lock size={20} className="premium-input-icon" />
-              <input 
-                type="password" 
+              <input
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 className="premium-input"
+                style={{ paddingRight: '3rem' }}
                 required
                 disabled={isLockedOut()}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                style={{ position: 'absolute', right: '1rem', top: '42px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--on-surface-variant)', opacity: 0.7, padding: 0, display: 'flex', alignItems: 'center' }}
+                tabIndex={-1}
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
 
             {/* OLVIDÉ MI CONTRASEÑA */}
-            <div style={{ textAlign: 'right', marginTop: '8px' }}>
-              <span 
-                onClick={() => setShowForgotPassword(true)} 
+            <div style={{ textAlign: 'right', marginTop: '-8px', marginBottom: '16px' }}>
+              <span
+                onClick={() => setShowForgotPassword(true)}
                 style={{ color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
               >
                 ¿Olvidaste tu contraseña?
               </span>
             </div>
 
-            <button type="submit" className="glass-button-dark" style={{ width: '100%', marginTop: '1.5rem' }} disabled={loading || isLockedOut()}>
+            {/* MANTENER SESIÓN (solo web/PWA) */}
+            {!isNative && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', cursor: 'pointer', fontSize: '0.85rem', color: '#4B5563', fontWeight: 500 }}>
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  style={{ width: '18px', height: '18px', accentColor: 'var(--primary)', flexShrink: 0 }}
+                />
+                Mantener sesión iniciada
+              </label>
+            )}
+
+            <button type="submit" className="glass-button-dark" style={{ width: '100%' }} disabled={loading || isLockedOut()}>
               {loading ? 'Validando...' : isLockedOut() ? `Bloqueado (${getRemainingLockoutTime()} min)` : 'Iniciar Sesión'} <ArrowRight size={20} />
             </button>
           </form>

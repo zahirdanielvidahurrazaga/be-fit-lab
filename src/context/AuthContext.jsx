@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { registerPushToken, unregisterPushToken } from '../hooks/usePushNotifications';
 import { scheduleClassReminder, cancelClassReminder, notifyReservationConfirmed, scheduleCancelDeadlineReminder, getNextClassOccurrence } from '../hooks/useLocalNotifications';
 import { removeClassFromCalendar } from '../hooks/useCalendar';
+import { Capacitor } from '@capacitor/core';
 
 const AuthContext = createContext({});
 
@@ -13,13 +14,17 @@ export const AuthProvider = ({ children }) => {
   const [plan, setPlan] = useState(null);
   const [membershipStatus, setMembershipStatus] = useState('INACTIVE');
   const [loading, setLoading] = useState(true);
+  const [customBadges, setCustomBadges] = useState([]);
+  const [newUnlockedBadge, setNewUnlockedBadge] = useState(null);
 
   // ESTADO GLOBAL DE RESERVAS (Supabase)
+  const [badgeConfigs, setBadgeConfigs] = useState([]);
   const [classesRemaining, setClassesRemaining] = useState(0);
   const [globalClasses, setGlobalClasses] = useState([]);
   const [recipes, setRecipes] = useState([]);
   const [myReservations, setMyReservations] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
+  const [coaches, setCoaches] = useState([]);
   const [avatarUrl, setAvatarUrl] = useState(null);
 
   // Flag para evitar que onAuthStateChange sobreescriba un plan recién activado
@@ -38,18 +43,125 @@ export const AuthProvider = ({ children }) => {
     setMembershipStatus('INACTIVE');
     setClassesRemaining(0);
     setMyReservations([]);
+    setCustomBadges([]);
+    setBadgeConfigs([]);
     setLoading(false);
   };
+
+  const evaluateBadgesForUnlock = async (userId) => {
+    if (!badgeConfigs || badgeConfigs.length === 0) return;
+    const { data: history } = await supabase.from('reservations').select('*, classes(instructor)').eq('user_id', userId).eq('checked_in', true);
+    let unlockedNow = [];
+    badgeConfigs.forEach(rule => {
+      if (rule.rule_type === 'MANUAL' || rule.rule_type === 'PROFILE_COMPLETE') return;
+      let isEarned = false;
+      if (rule.rule_type === 'TOTAL_CLASSES') {
+        isEarned = (history?.length || 0) >= rule.rule_value;
+      } else if (rule.rule_type === 'DIFFERENT_COACHES') {
+        const coaches = new Set((history || []).map(h => h.classes?.instructor).filter(Boolean));
+        isEarned = coaches.size >= rule.rule_value;
+      } else if (rule.rule_type === 'WEEKLY_CLASSES') {
+        const weekCounts = {};
+        (history || []).forEach(h => {
+           const d = new Date(h.created_at);
+           const weekKey = `${d.getFullYear()}-${Math.floor(d.getTime() / (1000*60*60*24*7))}`;
+           weekCounts[weekKey] = (weekCounts[weekKey] || 0) + 1;
+        });
+        const maxWeekly = Math.max(0, ...Object.values(weekCounts));
+        isEarned = maxWeekly >= rule.rule_value;
+      }
+      if (isEarned) unlockedNow.push(rule);
+    });
+    const stored = JSON.parse(localStorage.getItem(`befit_earned_badges_${userId}`) || '[]');
+    const newBadges = unlockedNow.filter(b => !stored.includes(b.id));
+    if (newBadges.length > 0) {
+      setNewUnlockedBadge(newBadges[0]);
+      localStorage.setItem(`befit_earned_badges_${userId}`, JSON.stringify([...stored, ...newBadges.map(b => b.id)]));
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase.channel(`public:reservations:user_${user.id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'reservations', filter: `user_id=eq.${user.id}` }, (payload) => {
+        if (payload.new.checked_in && !payload.old.checked_in) {
+           evaluateBadgesForUnlock(user.id);
+        }
+      })
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [user, badgeConfigs]);
+
+  // Refresca sesión y datos cuando la app vuelve al frente (nativa + PWA)
+  useEffect(() => {
+    let lastRefresh = 0;
+    const THROTTLE_MS = 10_000; // máximo una vez cada 10 s para evitar ráfagas
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - lastRefresh < THROTTLE_MS) return;
+      lastRefresh = now;
+
+      // 1. Forzar refresh del token — si expiró, Supabase lo renueva aquí
+      const { data: { session }, error } = await supabase.auth.getSession();
+
+      if (error || !session) {
+        // Token irrecuperable → limpiar estado para que aparezca el login
+        forceCleanSession();
+        return;
+      }
+
+      // 2. Re-cargar datos públicos que pueden estar desactualizados
+      fetchGlobalClasses();
+      fetchRecipes();
+
+      // 3. Re-cargar datos del usuario si sigue logueado
+      if (session.user) {
+        fetchUserData(session.user);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // fetchCoaches moved to run after auth
 
   useEffect(() => {
     // Verificar sesión activa inicial
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const isNative = Capacitor.isNativePlatform();
+      // En nativo siempre garantizar el flag para que futuras aperturas funcionen
+      if (isNative && session?.user) {
+        localStorage.setItem('befit_remember_me', '1');
+      }
+      // En web: auto-signout si el usuario no marcó "mantener sesión" y no hay sesión de tab activa
+      if (!isNative && session?.user && !localStorage.getItem('befit_remember_me') && !sessionStorage.getItem('befit_session_active')) {
+        await supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
       if (session?.user) {
         setUser(session.user);
         await fetchUserData(session.user);
         registerPushToken(session.user.id);
         const saved = localStorage.getItem(`avatar_${session.user.id}`);
-        if (saved) setAvatarUrl(saved);
+        if (saved) {
+          setAvatarUrl(saved);
+          // Sync to DB if not there yet
+          const { data: profile } = await supabase.from('users').select('avatar_url').eq('id', session.user.id).single();
+          if (profile && !profile.avatar_url) {
+            await supabase.from('users').update({ avatar_url: saved }).eq('id', session.user.id);
+          }
+        } else {
+          // Fallback: load from DB
+          const { data: profile } = await supabase.from('users').select('avatar_url').eq('id', session.user.id).single();
+          if (profile?.avatar_url) {
+            setAvatarUrl(profile.avatar_url);
+            localStorage.setItem(`avatar_${session.user.id}`, profile.avatar_url);
+          }
+        }
       } else {
         setLoading(false);
       }
@@ -64,6 +176,8 @@ export const AuthProvider = ({ children }) => {
         if (!planJustActivatedRef.current) {
           fetchUserData(session.user);
         }
+        fetchAllUsers();
+        fetchCoaches();
       } else {
         setRole(null);
         setPlan(null);
@@ -77,13 +191,25 @@ export const AuthProvider = ({ children }) => {
       }
     });
 
-    // Cargar datos globales
+    // Cargar datos globales públicos
     fetchGlobalClasses();
     fetchRecipes();
-    fetchAllUsers();
+    fetchBadgeConfigs();
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchBadgeConfigs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('badges_config')
+        .select('*')
+        .order('created_at', { ascending: true });
+      if (data) setBadgeConfigs(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchAllUsers = async () => {
     try {
@@ -101,11 +227,28 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const fetchCoaches = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, full_name, email, avatar_url, bio, experience')
+        .eq('role', 'COACH')
+        .order('full_name', { ascending: true });
+        
+      if (data) {
+        setCoaches(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const fetchGlobalClasses = async () => {
     try {
       const { data, error } = await supabase
         .from('classes')
         .select('*')
+        .order('date', { ascending: true, nullsFirst: false })
         .order('day', { ascending: true })
         .order('time', { ascending: true });
         
@@ -195,7 +338,19 @@ export const AuthProvider = ({ children }) => {
   const addClass = async (classData) => {
     try {
       const { data, error } = await supabase.from('classes').insert(classData).select().single();
-      if (!error && data) setGlobalClasses(prev => [...prev, data]);
+      if (!error && data) setGlobalClasses(prev => [...prev, data].sort((a,b) => (a.date > b.date ? 1 : -1)));
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
+  const addMultipleClasses = async (classesArray) => {
+    try {
+      const { data, error } = await supabase.from('classes').insert(classesArray).select();
+      if (!error && data) {
+        setGlobalClasses(prev => [...prev, ...data].sort((a,b) => (a.date > b.date ? 1 : -1)));
+      }
       return { success: !error, error };
     } catch (err) {
       return { success: false, error: err };
@@ -232,12 +387,84 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const createBadgeConfig = async (configData) => {
+    try {
+      const { data, error } = await supabase.from('badges_config').insert(configData).select().single();
+      if (!error && data) setBadgeConfigs(prev => [...prev, data]);
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
+  const updateBadgeConfig = async (badgeId, configData) => {
+    try {
+      const { data, error } = await supabase.from('badges_config').update(configData).eq('id', badgeId).select().single();
+      if (!error && data) {
+        setBadgeConfigs(prev => prev.map(b => b.id === badgeId ? data : b));
+      }
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
+  const deleteBadgeConfig = async (badgeId) => {
+    try {
+      const { error } = await supabase.from('badges_config').delete().eq('id', badgeId);
+      if (!error) setBadgeConfigs(prev => prev.filter(b => b.id !== badgeId));
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
+  const assignCustomBadge = async (userId, newBadge) => {
+    try {
+      const userObj = allUsers.find(u => u.id === userId);
+      const currentBadges = userObj?.custom_badges || [];
+      const updatedBadges = [...currentBadges, newBadge];
+      
+      const { error } = await supabase
+        .from('users')
+        .update({ custom_badges: updatedBadges })
+        .eq('id', userId);
+        
+      if (!error) {
+        setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, custom_badges: updatedBadges } : u));
+      }
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
+  const removeCustomBadge = async (userId, badgeLabelToRemove) => {
+    try {
+      const userObj = allUsers.find(u => u.id === userId);
+      const currentBadges = userObj?.custom_badges || [];
+      const updatedBadges = currentBadges.filter(b => b.label !== badgeLabelToRemove);
+      
+      const { error } = await supabase
+        .from('users')
+        .update({ custom_badges: updatedBadges })
+        .eq('id', userId);
+        
+      if (!error) {
+        setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, custom_badges: updatedBadges } : u));
+      }
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
   const fetchUserData = async (currentUser) => {
     try {
       // 1. Obtener rol y clases restantes
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('role, classes_remaining, membership_plan, membership_status, full_name')
+        .select('role, classes_remaining, membership_plan, membership_status, full_name, custom_badges')
         .eq('id', currentUser.id)
         .single();
         
@@ -263,6 +490,7 @@ export const AuthProvider = ({ children }) => {
         setMembershipStatus(userData.membership_status || 'INACTIVE');
         setClassesRemaining(userData.classes_remaining || 0);
         setProfileName(userData.full_name || '');
+        setCustomBadges(userData.custom_badges || []);
       } else {
         setRole('CLIENT');
         setPlan('none');
@@ -469,6 +697,62 @@ export const AuthProvider = ({ children }) => {
           
         if (updateError) throw updateError;
 
+        // --- LÓGICA DE INSIGNIAS Y PUSH NOTIFICATION ---
+        try {
+          const { data: history } = await supabase
+            .from('reservations')
+            .select('*, classes(instructor)')
+            .eq('user_id', qrData)
+            .eq('checked_in', true);
+            
+          const currentCustom = userObj?.custom_badges || [];
+          const notifiedIds = currentCustom.filter(b => b._internal_notified_id).map(b => b._internal_notified_id);
+          
+          let newlyUnlocked = null;
+          for (const rule of badgeConfigs) {
+            if (notifiedIds.includes(rule.id) || rule.rule_type === 'MANUAL' || rule.rule_type === 'PROFILE_COMPLETE') continue;
+            
+            let isEarned = false;
+            if (rule.rule_type === 'TOTAL_CLASSES') {
+              isEarned = (history?.length || 0) >= rule.rule_value;
+            } else if (rule.rule_type === 'DIFFERENT_COACHES') {
+              const coaches = new Set((history || []).map(h => h.classes?.instructor).filter(Boolean));
+              isEarned = coaches.size >= rule.rule_value;
+            } else if (rule.rule_type === 'WEEKLY_CLASSES') {
+              const weekCounts = {};
+              (history || []).forEach(h => {
+                 const d = new Date(h.created_at);
+                 const weekKey = `${d.getFullYear()}-${Math.floor(d.getTime() / (1000*60*60*24*7))}`;
+                 weekCounts[weekKey] = (weekCounts[weekKey] || 0) + 1;
+              });
+              const maxWeekly = Math.max(0, ...Object.values(weekCounts));
+              isEarned = maxWeekly >= rule.rule_value;
+            }
+            
+            if (isEarned) {
+               newlyUnlocked = rule;
+               break; // Solo notificar 1 a la vez
+            }
+          }
+          
+          if (newlyUnlocked) {
+             const updatedCustom = [...currentCustom, { _internal_notified_id: newlyUnlocked.id }];
+             await supabase.from('users').update({ custom_badges: updatedCustom }).eq('id', qrData);
+             
+             await supabase.functions.invoke('send-push', {
+               body: {
+                 userId: qrData,
+                 title: `¡Insignia Desbloqueada! ${newlyUnlocked.icon}`,
+                 body: `¡Felicidades ${clientInfo.name}! Acabas de ganar la insignia: ${newlyUnlocked.label}.`,
+                 type: 'badge_unlocked'
+               }
+             });
+          }
+        } catch (badgeErr) {
+          console.error("Error al evaluar insignias tras check-in:", badgeErr);
+        }
+        // ------------------------------------
+
         return { 
           success: true, 
           message: `Asistencia de ${clientInfo.name} registrada.`, 
@@ -552,6 +836,10 @@ export const AuthProvider = ({ children }) => {
     setGlobalClasses([]);
     setMyReservations([]);
     setAllUsers([]);
+    setBadgeConfigs([]);
+    // Limpiar flags de sesión
+    localStorage.removeItem('befit_remember_me');
+    sessionStorage.removeItem('befit_session_active');
     // Forzar light mode al cerrar sesión
     document.documentElement.setAttribute('data-theme', 'light');
     await supabase.auth.signOut();
@@ -561,11 +849,14 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user, role, plan, membershipStatus, loading, profileName,
       classesRemaining, myReservations, globalClasses, recipes, allUsers,
-      avatarUrl, setAvatarUrl,
+      avatarUrl, setAvatarUrl, customBadges, badgeConfigs,
       login, logout, forceCleanSession, fetchAllUsers, refreshUserData,
       bookClass, cancelClass, checkInClient, updateClassSpots, updateReservationCalendarId,
       activatePlan, addClass, deleteClass, addRecipe, deleteRecipe,
-      fetchClassReservations, fetchClassesByDayOfWeek, fetchGlobalClasses
+      fetchClassReservations, fetchClassesByDayOfWeek, fetchGlobalClasses,
+      assignCustomBadge, removeCustomBadge, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig,
+      newUnlockedBadge, setNewUnlockedBadge,
+      coaches, addMultipleClasses
     }}>
       {children}
     </AuthContext.Provider>

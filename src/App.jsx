@@ -48,8 +48,10 @@ const ProtectedRoute = ({ children, requireRole }) => {
     return <Navigate to="/login" replace />;
   }
 
+  const allowedRoles = Array.isArray(requireRole) ? requireRole : [requireRole];
+
   // Si el rol no coincide con el requerido por la ruta
-  if (requireRole && role !== requireRole) {
+  if (requireRole && !allowedRoles.includes(role)) {
     if (role === 'ADMIN') return <Navigate to="/admin" replace />;
     if (role === 'COACH') return <Navigate to="/coach" replace />;
     return <Navigate to="/portal" replace />;
@@ -57,7 +59,7 @@ const ProtectedRoute = ({ children, requireRole }) => {
 
   // PATRÓN SANTUARIO: Si soy CLIENT pero no tengo plan activo, me quedo en la Landing (donde está el banner)
   // Solo aplicamos esto si estamos en una ruta que requiere ser cliente (portal, nutricion, etc)
-  if (requireRole === 'CLIENT' && role === 'CLIENT' && membershipStatus !== 'ACTIVE') {
+  if (allowedRoles.includes('CLIENT') && role === 'CLIENT' && membershipStatus !== 'ACTIVE') {
     return <Navigate to="/" replace />;
   }
 
@@ -93,8 +95,8 @@ function App() {
           <Route path="/portal" element={<ProtectedRoute requireRole="CLIENT"><Portal /></ProtectedRoute>} />
           <Route path="/nutricion" element={<ProtectedRoute requireRole="CLIENT"><Nutricion /></ProtectedRoute>} />
           <Route path="/evolucion" element={<ProtectedRoute requireRole="CLIENT"><Evolucion /></ProtectedRoute>} />
-          <Route path="/mi-cuenta" element={<ProtectedRoute requireRole="CLIENT"><MiCuenta /></ProtectedRoute>} />
-          <Route path="/ajustes" element={<ProtectedRoute requireRole="CLIENT"><Ajustes /></ProtectedRoute>} />
+          <Route path="/mi-cuenta" element={<ProtectedRoute requireRole={['CLIENT', 'COACH']}><MiCuenta /></ProtectedRoute>} />
+          <Route path="/ajustes" element={<ProtectedRoute requireRole={['CLIENT', 'COACH']}><Ajustes /></ProtectedRoute>} />
           
           {/* Rutas Privadas Coach */}
           <Route path="/coach" element={<ProtectedRoute requireRole="COACH"><Coach /></ProtectedRoute>} />

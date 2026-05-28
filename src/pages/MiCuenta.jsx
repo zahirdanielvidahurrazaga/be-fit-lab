@@ -9,14 +9,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 function MiCuenta() {
   const navigate = useNavigate();
-  const { user, plan, classesRemaining, membershipStatus, myReservations, refreshUserData, avatarUrl, setAvatarUrl } = useAuth();
+  const { user, role, plan, classesRemaining, membershipStatus, myReservations, refreshUserData, avatarUrl, setAvatarUrl } = useAuth();
   const isScrolled = useScrollDetect(30);
 
-  // Form state
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [emergencyName, setEmergencyName] = useState('');
   const [emergencyPhone, setEmergencyPhone] = useState('');
+  const [bio, setBio] = useState('');
+  const [experience, setExperience] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
@@ -67,13 +68,15 @@ function MiCuenta() {
     const compressed = await compressAvatar(pendingAvatar);
     setAvatarUrl(compressed);
     localStorage.setItem(`avatar_${user.id}`, compressed);
+    // Also persist to DB so coach photo shows in class cards
+    await supabase.from('users').update({ avatar_url: compressed }).eq('id', user.id);
     setPendingAvatar(null);
   };
 
   const loadProfile = async () => {
     const { data, error } = await supabase
       .from('users')
-      .select('full_name, phone, emergency_contact_name, emergency_contact_phone')
+      .select('full_name, phone, emergency_contact_name, emergency_contact_phone, bio, experience')
       .eq('id', user.id)
       .single();
 
@@ -82,6 +85,8 @@ function MiCuenta() {
       setPhone(data.phone || '');
       setEmergencyName(data.emergency_contact_name || '');
       setEmergencyPhone(data.emergency_contact_phone || '');
+      setBio(data.bio || '');
+      setExperience(data.experience || '');
     }
   };
 
@@ -102,14 +107,21 @@ function MiCuenta() {
     setError('');
     setSaved(false);
 
+    const updatePayload = {
+      full_name: fullName,
+      phone: phone,
+      emergency_contact_name: emergencyName,
+      emergency_contact_phone: emergencyPhone
+    };
+    
+    if (role === 'COACH') {
+      updatePayload.bio = bio;
+      updatePayload.experience = experience;
+    }
+
     const { error: updateError } = await supabase
       .from('users')
-      .update({
-        full_name: fullName,
-        phone: phone,
-        emergency_contact_name: emergencyName,
-        emergency_contact_phone: emergencyPhone
-      })
+      .update(updatePayload)
       .eq('id', user.id);
 
     if (updateError) {
@@ -342,7 +354,42 @@ function MiCuenta() {
             </div>
           </div>
 
+          {role === 'COACH' && (
+          <div style={cardStyle}>
+            <h3 style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '0 0 16px' }}>
+              Perfil Público
+            </h3>
+
+            <div style={{ marginBottom: '14px' }}>
+              <label style={labelStyle}>Acerca de mí (Biografía)</label>
+              <textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="¡Hola! Soy Coach... Me apasiona el Pilates porque..."
+                rows={4}
+                style={{ ...inputStyle, resize: 'none', fontFamily: 'inherit' }}
+                onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
+                onBlur={(e) => e.target.style.borderColor = '#ddc1b3'}
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Especialidad / Experiencia</label>
+              <input
+                type="text"
+                value={experience}
+                onChange={(e) => setExperience(e.target.value)}
+                placeholder="Ej. Reformer Pro, 5 años de exp."
+                style={inputStyle}
+                onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
+                onBlur={(e) => e.target.style.borderColor = '#ddc1b3'}
+              />
+            </div>
+          </div>
+          )}
+
           {/* MI MEMBRESÍA */}
+          {role !== 'COACH' && (
           <div style={{
             ...cardStyle,
             background: 'linear-gradient(135deg, #2D2928 0%, #3d3532 100%)',
@@ -380,7 +427,9 @@ function MiCuenta() {
               </div>
             </div>
           </div>
+          )}
 
+          {role !== 'COACH' && (
           <div style={cardStyle}>
             <h3 style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '0 0 16px' }}>
               Historial de Clases
@@ -415,6 +464,7 @@ function MiCuenta() {
               ))
             )}
           </div>
+          )}
 
           <div style={cardStyle}>
             <h3 style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '0 0 16px' }}>
