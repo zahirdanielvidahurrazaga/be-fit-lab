@@ -116,8 +116,8 @@ function Welcome() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.5 }}
               style={{
-                fontFamily: 'var(--font-display)', color: 'white',
-                fontSize: '3rem', lineHeight: 1.05, margin: '10px 0', fontWeight: 400
+                fontFamily: "'Playfair Display', serif", color: 'white',
+                fontSize: '3.5rem', lineHeight: 1.05, margin: '10px 0', fontWeight: 400
               }}
             >
               Eleva tu<br/>
