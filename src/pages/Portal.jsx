@@ -108,6 +108,9 @@ function Portal() {
                   <div style={{ fontSize: '0.8rem', fontWeight: 700 }}>{userName}</div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)' }}>Socia Activa</div>
                 </div>
+                <div className="profile-dropdown-item" onClick={() => { navigate('/planes'); setShowProfileMenu(false); }}>
+                   Mi Membresía
+                </div>
                 <div className="profile-dropdown-item" onClick={() => { navigate('/mi-cuenta'); setShowProfileMenu(false); }}>
                    Mi Cuenta
                 </div>
@@ -162,43 +165,74 @@ function Portal() {
 
         <div className="dashboard-sidebar">
 
-          {/* MEMBERSHIP CARD - Premium Glow Redesign */}
+          {/* MEMBERSHIP CARD - Light Premium Redesign */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             style={{ 
-              padding: '28px 24px', borderRadius: '32px', 
-              background: 'linear-gradient(135deg, #2D2928 0%, #4A4544 100%)',
-              color: 'white',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+              padding: '24px', borderRadius: '32px', 
+              background: '#ffffff',
+              border: '1px solid rgba(0,0,0,0.05)',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.06)',
               position: 'relative', overflow: 'hidden'
             }}
           >
-            <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '120px', height: '120px', background: 'rgba(255,139,66,0.15)', borderRadius: '50%', filter: 'blur(30px)' }}></div>
+            {/* Soft background gradient effect */}
+            <div style={{ position: 'absolute', top: 0, right: 0, width: '150px', height: '150px', background: 'radial-gradient(circle, rgba(255,145,77,0.15) 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}></div>
             
             <div style={{ position: 'relative', zIndex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <Sparkles size={14} color="var(--primary)" />
-                <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Membresía Actual</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                    <Sparkles size={14} color="var(--primary)" />
+                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Mi Membresía</span>
+                  </div>
+                  <h2 style={{ fontSize: '1.6rem', color: 'var(--black)', margin: 0, fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>
+                    {plan ? plan.replace('Plan ', '') : 'Sin Plan'}
+                  </h2>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '6px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: plan ? '#22C55E' : '#EF4444' }}></div>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{plan ? 'Suscripción Activa' : 'Inactiva'}</span>
+                  </div>
+                </div>
+                
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--primary)', fontFamily: 'var(--font-display)', lineHeight: 0.9 }}>
+                    {classesRemaining}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>
+                    Clases Restantes
+                  </div>
+                </div>
               </div>
-              
-              <h2 style={{ fontSize: '1.8rem', color: 'white', marginBottom: '24px', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>Premium <span style={{ color: 'var(--primary)' }}>Pass</span></h2>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
-                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)' }}>{classesRemaining}</div>
-                    <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', fontWeight: 800, marginTop: '2px' }}>CLASES</div>
-                 </div>
-                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)' }}>4</div>
-                    <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', fontWeight: 800, marginTop: '2px' }}>RACHA</div>
-                 </div>
-                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary)', fontFamily: 'var(--font-display)' }}>ON</div>
-                    <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', fontWeight: 800, marginTop: '2px' }}>ESTATUS</div>
-                 </div>
+
+              {/* Status & Renewal Info */}
+              <div style={{ background: 'var(--surface-low)', borderRadius: '16px', padding: '16px', marginBottom: '16px', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ background: 'rgba(255,145,77,0.1)', padding: '8px', borderRadius: '10px' }}>
+                    <Calendar size={18} color="var(--primary)" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--black)' }}>Pago Recurrente Stripe</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 500 }}>Tu plan se renueva automáticamente cada mes.</div>
+                  </div>
+                </div>
               </div>
+
+              {/* Action Buttons */}
+              <button 
+                onClick={() => navigate('/planes')}
+                style={{ 
+                  width: '100%', padding: '14px', borderRadius: '16px', 
+                  background: 'var(--app-surface-solid)', color: 'var(--black)', 
+                  border: '1px solid var(--border-subtle)', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer',
+                  display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)', transition: 'all 0.2s'
+                }}
+              >
+                <Wallet size={18} color="var(--primary)" /> Renovar o Cambiar Plan
+              </button>
             </div>
           </motion.div>
 
