@@ -133,7 +133,7 @@ function Welcome() {
                 lineHeight: 1.6, margin: '8px 0 28px', fontWeight: 400
               }}
             >
-              El espacio de bienestar integral que redefine tu versión más fuerte.
+              Comenzar es más de la mitad del camino.
             </motion.p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '10px' }}>

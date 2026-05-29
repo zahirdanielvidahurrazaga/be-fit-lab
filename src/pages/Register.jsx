@@ -89,7 +89,7 @@ function Register() {
 
       {/* BOTÓN VOLVER */}
       <div 
-        onClick={() => navigate(-1)} 
+        onClick={() => navigate('/')} 
         style={{ 
           position: 'absolute', top: 'calc(env(safe-area-inset-top, 20px) + 15px)', left: '20px', zIndex: 10,
           display: 'flex', alignItems: 'center', gap: '6px',

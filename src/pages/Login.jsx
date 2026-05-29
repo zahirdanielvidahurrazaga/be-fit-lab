@@ -198,23 +198,21 @@ function Login() {
       {/* Overlay */}
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.25) 35%, rgba(0,0,0,0.55) 65%, rgba(0,0,0,0.85) 100%)', backdropFilter: 'blur(8px)', zIndex: 0 }}></div>
 
-      {/* BOTÓN VOLVER AL SITIO */}
-      {!isNative && (
-        <div 
-          onClick={() => navigate('/')} 
-          style={{ 
-            position: 'absolute', top: '20px', left: '20px', zIndex: 10,
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '10px 18px', borderRadius: '50px',
-            background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(20px)',
-            color: 'white', fontSize: '0.85rem', fontWeight: 600,
-            cursor: 'pointer', border: '1px solid rgba(255,255,255,0.2)',
-            transition: 'all 0.3s ease'
-          }}>
-          <ChevronLeft size={18} />
-          Volver al sitio
-        </div>
-      )}
+      {/* BOTÓN VOLVER */}
+      <div 
+        onClick={() => navigate('/')} 
+        style={{ 
+          position: 'absolute', top: 'calc(env(safe-area-inset-top, 20px) + 15px)', left: '20px', zIndex: 10,
+          display: 'flex', alignItems: 'center', gap: '6px',
+          padding: '10px 18px', borderRadius: '50px',
+          background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(20px)',
+          color: 'white', fontSize: '0.85rem', fontWeight: 600,
+          cursor: 'pointer', border: '1px solid rgba(255,255,255,0.2)',
+          transition: 'all 0.3s ease'
+        }}>
+        <ChevronLeft size={18} />
+        {isNative ? 'Atrás' : 'Volver al sitio'}
+      </div>
 
       <motion.div initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }} animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }} transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isNative ? '20px 16px' : '40px 20px', zIndex: 1 }}>
         <div style={{ 
