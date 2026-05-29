@@ -58,7 +58,8 @@ const TOUR_STEPS = [
     requireClick: true,
     targetSelector: '.qr-bottom-sheet .btn-outline',
     advanceSelector: '.qr-bottom-sheet .btn-outline',
-    advanceOnEvent: 'click'
+    advanceOnEvent: 'click',
+    position: 'top'
   },
   {
     icon: <Utensils size={40} color="var(--primary)" />,
@@ -132,6 +133,16 @@ const TOUR_STEPS = [
     requireClick: true,
     advanceOnEvent: 'click',
     targetSelector: '.nav-qr-button'
+  },
+  {
+    icon: <QrCode size={40} color="var(--primary)" />,
+    title: 'Cierra tu Pase',
+    description: 'Toca en la zona oscura fuera de la tarjeta para cerrar tu pase QR.',
+    selector: '.qr-sheet-overlay',
+    requireClick: true,
+    advanceOnEvent: 'click',
+    targetSelector: '.qr-sheet-overlay',
+    position: 'top'
   },
   {
     icon: <User size={40} color="var(--primary)" />,
@@ -274,12 +285,16 @@ export function AppTour() {
       scale: 1, 
       y: 0,
       x: '-50%', // Centrado horizontalmente
-      top: targetRect 
-        ? (isBottomHalf ? targetRect.top - 20 : targetRect.bottom + 20) 
-        : '50%',
-      translateY: targetRect 
-        ? (isBottomHalf ? '-100%' : '0%') 
-        : '-50%',
+      top: stepData?.position === 'top' 
+        ? '15%' 
+        : (targetRect 
+          ? (isBottomHalf ? targetRect.top - 20 : targetRect.bottom + 20) 
+          : '50%'),
+      translateY: stepData?.position === 'top'
+        ? '0%'
+        : (targetRect 
+          ? (isBottomHalf ? '-100%' : '0%') 
+          : '-50%'),
       left: '50%'
     },
     exit: { opacity: 0, scale: 0.9, y: 20 }
