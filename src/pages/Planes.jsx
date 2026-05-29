@@ -12,6 +12,7 @@ function Planes() {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState(1); // 1 = form, 2 = success
+  const [showCarousel, setShowCarousel] = useState(false);
 
   const handleOpenCheckout = (plan) => {
     setSelectedPlan(plan);
@@ -110,14 +111,30 @@ function Planes() {
                   </div>
                 </div>
               </div>
+
+              {/* Action Buttons */}
+              <button 
+                onClick={() => setShowCarousel(true)}
+                style={{ 
+                  width: '100%', padding: '14px', borderRadius: '16px', 
+                  background: 'var(--app-surface-solid)', color: 'var(--black)', 
+                  border: '1px solid var(--border-subtle)', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer',
+                  display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)', transition: 'all 0.2s', marginTop: '16px'
+                }}
+              >
+                <Wallet size={18} color="var(--primary)" /> Renovar o Cambiar Plan
+              </button>
             </div>
           </motion.div>
         </div>
       )}
 
-      <div style={{ marginTop: '2rem' }}>
-        <PricingCarousel onSelectPlan={(plan) => handleOpenCheckout({ title: `Plan ${plan.title}`, price: plan.price.replace('$', '') })} />
-      </div>
+      {(!user || showCarousel) && (
+        <div style={{ marginTop: '2rem' }}>
+          <PricingCarousel onSelectPlan={(plan) => handleOpenCheckout({ title: `Plan ${plan.title}`, price: plan.price.replace('$', '') })} />
+        </div>
+      )}
       
       <div style={{ textAlign: 'center', marginTop: '4rem' }}>
         <button onClick={() => navigate(-1)} style={{ padding: '0.8rem 2rem', border: '1px solid #1A1C1E', background: 'transparent', borderRadius: '30px', cursor: 'pointer', fontWeight: 600 }}>Volver</button>
