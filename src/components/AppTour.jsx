@@ -78,9 +78,14 @@ export function AppTour() {
       }
     };
 
+    const el = document.querySelector(step.selector);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
     updateRect();
     
-    // Retry finding element if it takes a moment to render
+    // Retry finding element if it takes a moment to render or scroll
     const timeout = setTimeout(updateRect, 300);
     
     window.addEventListener('resize', updateRect);
@@ -107,24 +112,37 @@ export function AppTour() {
     const step = TOUR_STEPS[currentStep];
     if (!step) return;
     
-    if (step.requireClick && step.advanceOnEvent === 'click' && step.targetSelector) {
-      const handleClick = (e) => {
+    const handleClick = (e) => {
+      // Allow clicks inside the tour modal itself
+      if (e.target.closest('#tour-modal-card')) return;
+
+      // Allow clicks on the target if interaction is required
+      if (step.requireClick && step.targetSelector) {
         const el = e.target.closest(step.targetSelector);
         if (el) {
-          setTimeout(() => {
-            if (currentStep < TOUR_STEPS.length - 1) {
-              setCurrentStep(prev => prev + 1);
-            } else {
-              setShowTour(false);
-              setCurrentStep(0);
-              if (user) localStorage.setItem(`befit_tour_seen_${user.id}`, 'true');
-            }
-          }, 150);
+          if (step.advanceOnEvent === 'click') {
+            setTimeout(() => {
+              if (currentStep < TOUR_STEPS.length - 1) {
+                setCurrentStep(prev => prev + 1);
+              } else {
+                setShowTour(false);
+                setCurrentStep(0);
+                if (user) localStorage.setItem(`befit_tour_seen_${user.id}`, 'true');
+              }
+            }, 150);
+          }
+          return; // Let the click happen!
         }
-      };
-      document.addEventListener('click', handleClick, true); 
-      return () => document.removeEventListener('click', handleClick, true);
-    }
+      }
+
+      // If we reach here, the click is outside allowed areas. Block it!
+      e.stopPropagation();
+      e.preventDefault();
+    };
+
+    // Use capture phase to intercept clicks before they reach elements
+    document.addEventListener('click', handleClick, true); 
+    return () => document.removeEventListener('click', handleClick, true);
   }, [currentStep, showTour, user, setShowTour]);
 
   const stepData = TOUR_STEPS[currentStep];
@@ -174,7 +192,7 @@ export function AppTour() {
   return (
     <AnimatePresence>
       {showTour && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 999998, pointerEvents: 'auto', overflow: 'hidden' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 999998, pointerEvents: 'none', overflow: 'hidden' }}>
           
           {/* Fondo oscuro simple, sin blur para mejor legibilidad */}
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.1)', zIndex: 0 }} />
@@ -200,6 +218,7 @@ export function AppTour() {
           />
 
           <motion.div
+            id="tour-modal-card"
             key="tour-card"
             variants={modalVariants}
             initial="hidden"
@@ -209,6 +228,7 @@ export function AppTour() {
             style={{
               position: 'absolute',
               zIndex: 2,
+              pointerEvents: 'auto',
               background: 'rgba(255, 255, 255, 0.95)',
               borderRadius: '32px', padding: '30px 24px', width: '90%', maxWidth: '340px',
               textAlign: 'center',
