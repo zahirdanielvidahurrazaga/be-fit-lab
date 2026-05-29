@@ -91,7 +91,7 @@ function Register() {
       <div 
         onClick={() => navigate(-1)} 
         style={{ 
-          position: 'absolute', top: '20px', left: '20px', zIndex: 10,
+          position: 'absolute', top: 'calc(env(safe-area-inset-top, 20px) + 15px)', left: '20px', zIndex: 10,
           display: 'flex', alignItems: 'center', gap: '6px',
           padding: '10px 18px', borderRadius: '50px',
           background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(20px)',

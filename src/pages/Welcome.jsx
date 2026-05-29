@@ -136,25 +136,46 @@ function Welcome() {
               El espacio de bienestar integral que redefine tu versión más fuerte.
             </motion.p>
 
-            <motion.button
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.5 }}
-              onClick={handleStart}
-              style={{
-                width: '100%', padding: '18px', borderRadius: '50px',
-                border: '1px solid rgba(255,255,255,0.18)',
-                background: 'rgba(255,255,255,0.08)', color: 'white',
-                fontSize: '1rem', fontWeight: 600,
-                backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                cursor: 'pointer', transition: 'all 0.3s',
-                fontFamily: 'var(--font-body)',
-                boxShadow: '0 4px 30px rgba(0,0,0,0.1)',
-                letterSpacing: '0.5px'
-              }}
-            >
-              Iniciar Sesión
-            </motion.button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '10px' }}>
+              <motion.button
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.5 }}
+                onClick={() => { setPhase('exiting'); setTimeout(() => navigate('/registro'), 500); }}
+                style={{
+                  width: '100%', padding: '18px', borderRadius: '50px',
+                  border: 'none',
+                  background: '#FF8B42', color: 'white',
+                  fontSize: '1rem', fontWeight: 700,
+                  cursor: 'pointer', transition: 'all 0.3s',
+                  fontFamily: 'var(--font-body)',
+                  boxShadow: '0 8px 20px rgba(255,139,66,0.4)',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                Crear Cuenta
+              </motion.button>
+
+              <motion.button
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.5 }}
+                onClick={() => { setPhase('exiting'); setTimeout(() => navigate('/login'), 500); }}
+                style={{
+                  width: '100%', padding: '18px', borderRadius: '50px',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  background: 'rgba(255,255,255,0.08)', color: 'white',
+                  fontSize: '1rem', fontWeight: 600,
+                  backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                  cursor: 'pointer', transition: 'all 0.3s',
+                  fontFamily: 'var(--font-body)',
+                  boxShadow: '0 4px 30px rgba(0,0,0,0.1)',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                Iniciar Sesión
+              </motion.button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
