@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Camera, Mail, Phone, Shield, Clock, ChevronRight, ChevronLeft, Check, AlertCircle, Utensils, TrendingUp, CalendarDays, QrCode, X, Home } from 'lucide-react';
+import { User, Camera, Mail, Phone, Shield, Clock, ChevronRight, ChevronLeft, Check, AlertCircle, Utensils, TrendingUp, CalendarDays, QrCode, X, Home, CreditCard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useScrollDetect } from '../hooks/useScrollDetect';
@@ -451,6 +451,22 @@ function MiCuenta() {
                   clases restantes
                 </p>
               </div>
+            </div>
+
+            {/* Botón Renovar */}
+            <div style={{ position: 'relative', marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '15px' }}>
+              <button 
+                onClick={() => navigate('/planes')}
+                style={{ 
+                  width: '100%', padding: '12px', borderRadius: '12px', border: 'none', 
+                  background: 'rgba(255,139,66,0.2)', color: '#FF8B42', 
+                  fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  transition: 'background 0.2s'
+                }}>
+                <CreditCard size={18} />
+                Renovar o Cambiar Plan
+              </button>
             </div>
           </div>
           )}

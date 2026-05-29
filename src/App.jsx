@@ -58,10 +58,11 @@ const ProtectedRoute = ({ children, requireRole }) => {
     return <Navigate to="/portal" replace />;
   }
 
-  // PATRÓN SANTUARIO: Si soy CLIENT pero no tengo plan activo, me quedo en la Landing (donde está el banner)
+  // PATRÓN SANTUARIO: Si soy CLIENT pero no tengo plan activo, lo redirijo a la página de planes (o landing web)
   // Solo aplicamos esto si estamos en una ruta que requiere ser cliente (portal, nutricion, etc)
   if (allowedRoles.includes('CLIENT') && role === 'CLIENT' && membershipStatus !== 'ACTIVE') {
-    return <Navigate to="/" replace />;
+    const isNativeApp = Capacitor.isNativePlatform();
+    return <Navigate to={isNativeApp ? "/planes" : "/"} replace />;
   }
 
   return children;
@@ -86,8 +87,8 @@ function App() {
           <Route path="/" element={isNative ? <Navigate to="/welcome" replace /> : <Landing />} />
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/registro" element={isNative ? <Navigate to="/login" replace /> : <Register />} />
-          <Route path="/planes" element={isNative ? <Navigate to="/login" replace /> : <Planes />} />
+          <Route path="/registro" element={<Register />} />
+          <Route path="/planes" element={<Planes />} />
           <Route path="/privacidad" element={<Privacidad />} />
           <Route path="/terminos" element={<Terminos />} />
           <Route path="/agenda" element={<Agenda />} />

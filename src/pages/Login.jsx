@@ -316,42 +316,36 @@ function Login() {
             </button>
           </form>
 
-          {isNative ? (
-            <div style={{ textAlign: 'center', marginTop: '2rem', color: '#4B5563', fontSize: '0.85rem', fontWeight: 500, lineHeight: 1.5 }}>
-              Esta aplicación es exclusiva para miembros activos de Be Fit Lab.
-            </div>
-          ) : (
-            <>
-              <div style={{ textAlign: 'center', marginTop: '2rem', color: '#4B5563', fontSize: '0.9rem' }}>
-                ¿No tienes una cuenta? <span onClick={() => navigate('/registro')} style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }}>Regístrate aquí</span>
-              </div>
-              
-              <div style={{ marginTop: '1.8rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(0,0,0,0.05)', textAlign: 'center' }}>
-                <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lleva tu entrenamiento a otro nivel</p>
-                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <a
-                    href="https://apps.apple.com/mx/app/be-fit-lab/id6772008660"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Descargar Be Fit Lab en App Store"
-                  >
-                    <img
-                      src="/assets/appstore.svg"
-                      alt="Download on the App Store"
-                      style={{ height: '36px', width: '120px', objectFit: 'contain', cursor: 'pointer', transition: 'transform 0.2s ease', display: 'block' }}
-                      onMouseOver={(e) => e.currentTarget.style.transform='scale(1.05)'}
-                      onMouseOut={(e) => e.currentTarget.style.transform='scale(1)'}
-                    />
-                  </a>
+          <div style={{ textAlign: 'center', marginTop: '2rem', color: '#4B5563', fontSize: '0.9rem' }}>
+            ¿No tienes una cuenta? <span onClick={() => navigate('/registro')} style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }}>Regístrate aquí</span>
+          </div>
+          
+          {!isNative && (
+            <div style={{ marginTop: '1.8rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(0,0,0,0.05)', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lleva tu entrenamiento a otro nivel</p>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <a
+                  href="https://apps.apple.com/mx/app/be-fit-lab/id6772008660"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Descargar Be Fit Lab en App Store"
+                >
                   <img
-                    src="/assets/googleplay.svg"
-                    alt="Próximamente en Google Play"
-                    title="Próximamente en Google Play"
-                    style={{ height: '36px', width: '120px', objectFit: 'contain', cursor: 'not-allowed', opacity: 0.45, filter: 'grayscale(1)', transition: 'opacity 0.2s ease' }}
+                    src="/assets/appstore.svg"
+                    alt="Download on the App Store"
+                    style={{ height: '36px', width: '120px', objectFit: 'contain', cursor: 'pointer', transition: 'transform 0.2s ease', display: 'block' }}
+                    onMouseOver={(e) => e.currentTarget.style.transform='scale(1.05)'}
+                    onMouseOut={(e) => e.currentTarget.style.transform='scale(1)'}
                   />
-                </div>
+                </a>
+                <img
+                  src="/assets/googleplay.svg"
+                  alt="Próximamente en Google Play"
+                  title="Próximamente en Google Play"
+                  style={{ height: '36px', width: '120px', objectFit: 'contain', cursor: 'not-allowed', opacity: 0.45, filter: 'grayscale(1)', transition: 'opacity 0.2s ease' }}
+                />
               </div>
-            </>
+            </div>
           )}
 
         </div>
