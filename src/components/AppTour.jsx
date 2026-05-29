@@ -53,8 +53,12 @@ const TOUR_STEPS = [
   {
     icon: <Sparkles size={40} color="var(--primary)" />,
     title: '¡Clase Seleccionada!',
-    description: '¡Excelente! Aquí confirmarías tu reserva. Por ahora, dale Siguiente para continuar con el tour.',
-    selector: '.qr-bottom-sheet', // Could just not select anything or select the sheet
+    description: '¡Excelente! Aquí confirmarías tu reserva. Por ahora, dale a "Cancelar" para cerrar este menú y continuar.',
+    selector: '.modal-content',
+    requireClick: true,
+    targetSelector: '.modal-content',
+    advanceSelector: '.btn-outline',
+    advanceOnEvent: 'click'
   },
   {
     icon: <Utensils size={40} color="var(--primary)" />,
