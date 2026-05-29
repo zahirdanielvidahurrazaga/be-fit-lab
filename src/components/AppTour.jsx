@@ -27,8 +27,9 @@ const TOUR_STEPS = [
     icon: <Calendar size={40} color="var(--primary)" />,
     title: 'Próximas Clases',
     description: 'Haz click en "Ver todo" o "Agendar ahora" para ir a la agenda y asegurar tu lugar en tu primera clase.',
-    selector: '#tour-proximas-clases .tour-agendar-btn',
+    selector: '#tour-proximas-clases',
     requireClick: true,
+    targetSelector: '.tour-agendar-btn',
     advanceOnPath: '/agenda'
   },
   {
