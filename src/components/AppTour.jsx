@@ -148,7 +148,6 @@ export function AppTour() {
     }
   };
 
-  const stepData = TOUR_STEPS[currentStep];
 
   // Cálculo de posición del tooltip
   const isBottomHalf = targetRect && targetRect.top > window.innerHeight / 2;
