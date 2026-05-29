@@ -185,7 +185,6 @@ function Portal() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                    <Sparkles size={14} color="var(--primary)" />
                     <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Mi Membresía</span>
                   </div>
                   <h2 style={{ fontSize: '1.6rem', color: 'var(--black)', margin: 0, fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>
@@ -212,10 +211,10 @@ function Portal() {
                 onClick={() => navigate('/planes')}
                 style={{ 
                   width: '100%', padding: '12px', borderRadius: '16px', 
-                  background: 'var(--app-surface-solid)', color: 'var(--black)', 
-                  border: '1px solid var(--border-subtle)', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer',
+                  background: 'rgba(255, 255, 255, 0.4)', color: 'var(--black)', 
+                  border: '1px solid rgba(255, 255, 255, 0.6)', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer',
                   display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)', transition: 'all 0.2s', marginTop: '10px'
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', transition: 'all 0.2s', marginTop: '10px'
                 }}
               >
                 Ver Mi Membresía <ChevronRight size={16} color="var(--primary)" />
