@@ -111,6 +111,10 @@ function Evolucion() {
     // Añadir insignias manuales extra que no estén en las reglas
     if (customBadges) {
       customBadges.forEach(cb => {
+        // Ignorar los objetos que son solo marcadores internos del sistema (sin label ni icon)
+        if (!cb.label && cb._internal_notified_id) return;
+        if (!cb.label && !cb.icon) return;
+
         if (!calculated.some(c => c.label === cb.label)) {
           calculated.push({ ...cb, locked: false });
         }
