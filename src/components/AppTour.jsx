@@ -35,7 +35,7 @@ const TOUR_STEPS = [
   {
     icon: <Calendar size={40} color="var(--primary)" />,
     title: 'Elige un Día',
-    description: 'Selecciona cualquier día en el calendario que tenga clases disponibles (el punto verde) para ver los horarios.',
+    description: 'Selecciona cualquier día en el calendario que tenga clases disponibles (el punto naranja) para ver los horarios.',
     selector: '.tour-calendar-day', // will select the first available day
     requireClick: true,
     advanceOnEvent: 'click',
@@ -49,6 +49,94 @@ const TOUR_STEPS = [
     requireClick: true,
     advanceOnEvent: 'click',
     targetSelector: '.tour-class-card'
+  },
+  {
+    icon: <Sparkles size={40} color="var(--primary)" />,
+    title: '¡Clase Seleccionada!',
+    description: '¡Excelente! Aquí confirmarías tu reserva. Por ahora, dale Siguiente para continuar con el tour.',
+    selector: '.qr-bottom-sheet', // Could just not select anything or select the sheet
+  },
+  {
+    icon: <Utensils size={40} color="var(--primary)" />,
+    title: 'Explora Nutrición',
+    description: 'Ve a la pestaña de "Comida" para explorar tu recetario saludable.',
+    selector: '.ios-bottom-nav a[href="/nutricion"]',
+    requireClick: true,
+    targetSelector: '.ios-bottom-nav a[href="/nutricion"]',
+    advanceOnPath: '/nutricion'
+  },
+  {
+    icon: <Utensils size={40} color="var(--primary)" />,
+    title: 'Recetario',
+    description: 'Aquí encontrarás recetas seleccionadas para complementar tu entrenamiento. ¡Cocinar sano nunca fue tan fácil!',
+    selector: '.recipe-grid'
+  },
+  {
+    icon: <TrendingUp size={40} color="var(--primary)" />,
+    title: 'Tus Metas',
+    description: 'Ahora vamos a la pestaña de "Metas" para definir tu progreso.',
+    selector: '.ios-bottom-nav a[href="/evolucion"]',
+    requireClick: true,
+    targetSelector: '.ios-bottom-nav a[href="/evolucion"]',
+    advanceOnPath: '/evolucion'
+  },
+  {
+    icon: <Target size={40} color="var(--primary)" />,
+    title: 'Define tu Meta',
+    description: 'Haz click en este aro para definir cuántas clases quieres tomar al mes. ¡Tu Score será en base a esta meta real!',
+    selector: '.tour-score-section',
+    requireClick: true,
+    advanceOnEvent: 'click',
+    targetSelector: '.tour-score-section'
+  },
+  {
+    icon: <Target size={40} color="var(--primary)" />,
+    title: 'Guarda tu Meta',
+    description: 'Ingresa el número de clases y dale a "Guardar Meta".',
+    selector: '.goal-modal',
+    requireClick: true,
+    targetSelector: '.goal-modal',
+    advanceSelector: '.goal-modal button',
+    advanceOnEvent: 'click'
+  },
+  {
+    icon: <Award size={40} color="var(--primary)" />,
+    title: 'Tus Insignias',
+    description: 'Gana insignias por tu constancia. Haz click en una para descubrir qué significa.',
+    selector: '.tour-badges-section',
+    requireClick: true,
+    advanceOnEvent: 'click',
+    targetSelector: '.tour-badges-section > div > div'
+  },
+  {
+    icon: <Scale size={40} color="var(--primary)" />,
+    title: 'Composición',
+    description: 'Si tienes báscula inteligente, aquí podrás monitorear métricas como porcentaje de grasa y músculo.',
+    selector: '.tour-body-composition'
+  },
+  {
+    icon: <Activity size={40} color="var(--primary)" />,
+    title: 'Actividad y Salud',
+    description: 'Podrás sincronizar tu celular para registrar calorías quemadas, pasos y monitorear tu actividad semanal.',
+    selector: '.tour-weekly-activity'
+  },
+  {
+    icon: <QrCode size={40} color="var(--primary)" />,
+    title: 'Tu Pase QR',
+    description: 'Haz click en el botón del centro para abrir tu código QR personal para escanearlo en el estudio.',
+    selector: '.nav-qr-button',
+    requireClick: true,
+    advanceOnEvent: 'click',
+    targetSelector: '.nav-qr-button'
+  },
+  {
+    icon: <User size={40} color="var(--primary)" />,
+    title: 'Mi Cuenta',
+    description: '¡Tour finalizado! Regresa a la pestaña "Yo" siempre que quieras ver tu suscripción, historial o ajustes de cuenta.',
+    selector: '.ios-bottom-nav a[href="/portal"]',
+    requireClick: true,
+    targetSelector: '.ios-bottom-nav a[href="/portal"]',
+    advanceOnPath: '/portal'
   }
 ];
 
@@ -122,15 +210,18 @@ export function AppTour() {
         const el = e.target.closest(step.targetSelector);
         if (el) {
           if (step.advanceOnEvent === 'click') {
-            setTimeout(() => {
-              if (currentStep < TOUR_STEPS.length - 1) {
-                setCurrentStep(prev => prev + 1);
-              } else {
-                setShowTour(false);
-                setCurrentStep(0);
-                if (user) localStorage.setItem(`befit_tour_seen_${user.id}`, 'true');
-              }
-            }, 150);
+            const advEl = step.advanceSelector ? e.target.closest(step.advanceSelector) : el;
+            if (advEl) {
+              setTimeout(() => {
+                if (currentStep < TOUR_STEPS.length - 1) {
+                  setCurrentStep(prev => prev + 1);
+                } else {
+                  setShowTour(false);
+                  setCurrentStep(0);
+                  if (user) localStorage.setItem(`befit_tour_seen_${user.id}`, 'true');
+                }
+              }, 150);
+            }
           }
           return; // Let the click happen!
         }

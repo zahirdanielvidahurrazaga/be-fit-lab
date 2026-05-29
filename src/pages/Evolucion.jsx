@@ -42,17 +42,47 @@ function Evolucion() {
   const [loadingMeasurements, setLoadingMeasurements] = useState(true);
   const isScrolled = useScrollDetect(30);
   const [selectedBadge, setSelectedBadge] = useState(null);
+  const [showGoalModal, setShowGoalModal] = useState(false);
+  const [goalInput, setGoalInput] = useState('');
 
   const { healthData, healthPermission, healthLoading, requestPermissions, fetchTodayData } = useHealth();
 
   const [classHistory, setClassHistory] = useState([]);
   const [badges, setBadges] = useState([{ icon: '🔒', label: 'Cargando...' }]);
   const [weeklyActivity, setWeeklyActivity] = useState([]);
+  const [targetMonthlyClasses, setTargetMonthlyClasses] = useState(
+    user?.user_metadata?.target_monthly_classes || 0
+  );
 
-  // Calcular score basado en clases restantes y mediciones disponibles
-  const score = latestMeasurement ? Math.min(99, 70 + Math.round((classesRemaining / 30) * 20) + 4) : 72;
+  // Calcular score basado en historial de últimos 30 días vs meta
+  const [score, setScore] = useState(0);
+
+  useEffect(() => {
+    if (!targetMonthlyClasses) {
+      setScore(0);
+      return;
+    }
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const classesLast30Days = classHistory.filter(h => new Date(h.created_at) >= thirtyDaysAgo).length;
+    const calcScore = Math.min(100, Math.round((classesLast30Days / targetMonthlyClasses) * 100));
+    setScore(calcScore);
+  }, [classHistory, targetMonthlyClasses]);
+
   const circumference = 2 * Math.PI * 70;
-  const dashOffset = circumference - (score / 100) * circumference;
+  const dashOffset = targetMonthlyClasses === 0 ? circumference : circumference - (score / 100) * circumference;
+
+  const handleSaveGoal = async () => {
+    const newGoal = parseInt(goalInput, 10);
+    if (!newGoal || newGoal < 1) return;
+    
+    // Guardar en metadata del usuario
+    await supabase.auth.updateUser({
+      data: { target_monthly_classes: newGoal }
+    });
+    setTargetMonthlyClasses(newGoal);
+    setShowGoalModal(false);
+  };
 
   // Cargar las últimas dos mediciones para calcular tendencias
   useEffect(() => {
@@ -226,11 +256,15 @@ function Evolucion() {
 
           {/* PROGRESS RING */}
           <motion.section initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6 }}>
-            <div style={{
-              background: 'var(--app-surface-solid)', borderRadius: '32px', padding: '30px 20px',
-              boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)',
-              textAlign: 'center', position: 'relative', overflow: 'hidden'
-            }}>
+            <div 
+              className="tour-score-section"
+              onClick={() => setShowGoalModal(true)}
+              style={{
+                background: 'var(--app-surface-solid)', borderRadius: '32px', padding: '30px 20px',
+                boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)',
+                textAlign: 'center', position: 'relative', overflow: 'hidden', cursor: 'pointer'
+              }}
+            >
               <div style={{ position: 'absolute', top: '-30%', left: '50%', transform: 'translateX(-50%)', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(255,139,66,0.08) 0%, transparent 70%)', borderRadius: '50%' }} />
               <div style={{ position: 'relative', width: '180px', height: '180px', margin: '0 auto 20px' }}>
                 <svg width="180" height="180" viewBox="0 0 180 180" style={{ transform: 'rotate(-90deg)' }}>
@@ -244,21 +278,29 @@ function Evolucion() {
                   </defs>
                 </svg>
                 <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                  <div style={{ fontSize: '2.8rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--black)', lineHeight: 1 }}>{score}</div>
+                  <div style={{ fontSize: targetMonthlyClasses === 0 ? '1.8rem' : '2.8rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--black)', lineHeight: 1 }}>
+                    {targetMonthlyClasses === 0 ? '0' : score}
+                  </div>
                   <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Score</div>
                 </div>
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginBottom: '5px' }}>
-                Has superado el <span style={{ fontWeight: 800, color: 'var(--primary)' }}>85%</span> de tus objetivos
+                {targetMonthlyClasses === 0 ? (
+                  <span style={{ color: 'var(--primary)' }}>Toca aquí para definir tu meta</span>
+                ) : (
+                  <>Has superado el <span style={{ fontWeight: 800, color: 'var(--primary)' }}>{score}%</span> de tus objetivos</>
+                )}
               </div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,139,66,0.08)', padding: '6px 14px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                <Award size={14} /> Nivel PRO
-              </div>
+              {targetMonthlyClasses > 0 && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,139,66,0.08)', padding: '6px 14px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <Award size={14} /> Meta: {targetMonthlyClasses} clases/mes
+                </div>
+              )}
             </div>
           </motion.section>
 
           {/* BADGES */}
-          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }} style={{ marginTop: '20px' }}>
+          <motion.section className="tour-badges-section" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }} style={{ marginTop: '20px' }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '12px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Insignias</h2>
             <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '10px' }}>
               {badges.length > 0 ? badges.map((b, i) => (
@@ -272,7 +314,7 @@ function Evolucion() {
 
         <div className="dashboard-content">
           {/* COMPOSICIÓN CORPORAL */}
-          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
+          <motion.section className="tour-body-composition" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
               <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Composición</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -376,7 +418,7 @@ function Evolucion() {
           )}
 
           {/* ACTIVIDAD SEMANAL */}
-          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} style={{ marginTop: '25px' }}>
+          <motion.section className="tour-weekly-activity" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} style={{ marginTop: '25px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
               <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Actividad semanal</h2>
               <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 800, background: 'rgba(255,139,66,0.08)', padding: '4px 10px', borderRadius: '8px' }}>
@@ -646,6 +688,68 @@ function Evolucion() {
                   }
                 })()}
               </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* GOAL MODAL */}
+      <AnimatePresence>
+        {showGoalModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setShowGoalModal(false)}
+            style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)',
+              zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+            }}
+          >
+            <motion.div
+              className="goal-modal"
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'var(--app-surface-solid)', borderRadius: '32px', padding: '40px 30px',
+                width: '100%', maxWidth: '340px', textAlign: 'center', position: 'relative',
+                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)'
+              }}
+            >
+              <button onClick={() => setShowGoalModal(false)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'var(--surface-low)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <X size={18} color="var(--on-surface)" />
+              </button>
+              
+              <div style={{ width: '80px', height: '80px', margin: '0 auto 20px', borderRadius: '50%', background: 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
+                <Target size={40} />
+              </div>
+              
+              <h3 style={{ fontSize: '1.4rem', fontWeight: 900, fontFamily: 'var(--font-display)', margin: '0 0 10px', color: 'var(--black)' }}>Define tu Meta</h3>
+              <p style={{ fontSize: '0.9rem', color: 'var(--on-surface-variant)', lineHeight: 1.5, margin: '0 0 20px' }}>
+                ¿Cuántas clases quieres tomar al mes? Esto nos ayudará a calcular tu Score.
+              </p>
+              
+              <input 
+                type="number"
+                value={goalInput}
+                onChange={(e) => setGoalInput(e.target.value)}
+                placeholder="Ej. 12"
+                style={{
+                  width: '100%', padding: '16px', borderRadius: '16px', border: '1px solid var(--border-subtle)',
+                  background: 'var(--surface)', fontSize: '1.2rem', textAlign: 'center', fontWeight: 800,
+                  color: 'var(--black)', outline: 'none', marginBottom: '20px'
+                }}
+              />
+              
+              <button 
+                onClick={handleSaveGoal}
+                style={{
+                  width: '100%', padding: '16px', borderRadius: '20px', border: 'none',
+                  background: 'var(--primary)', color: 'white', fontWeight: 800, fontSize: '1rem', cursor: 'pointer',
+                  boxShadow: '0 10px 20px rgba(255,139,66,0.3)'
+                }}
+              >
+                Guardar Meta
+              </button>
             </motion.div>
           </motion.div>
         )}
