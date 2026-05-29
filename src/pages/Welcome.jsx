@@ -31,14 +31,17 @@ function Welcome() {
         backgroundImage: 'url(/fotos-hero/IMG_5402.JPG)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        opacity: phase === 'splash' ? 0 : 1,
-        transition: 'opacity 1.2s ease-in-out',
+        opacity: 1,
+        transform: phase === 'splash' ? 'scale(1.1)' : 'scale(1)',
+        transition: 'transform 3.5s ease-out',
         zIndex: 1
       }}>
         {/* Gradiente oscuro sofisticado */}
         <div style={{
           position: 'absolute', inset: 0,
-          background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.25) 35%, rgba(0,0,0,0.55) 65%, rgba(0,0,0,0.85) 100%)'
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.25) 35%, rgba(0,0,0,0.55) 65%, rgba(0,0,0,0.85) 100%)',
+          opacity: phase === 'splash' ? 0 : 1,
+          transition: 'opacity 1.5s ease-in-out'
         }} />
       </div>
 
@@ -53,7 +56,10 @@ function Welcome() {
             style={{
               position: 'absolute', inset: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#ffffff', zIndex: 10
+              background: 'rgba(255, 255, 255, 0.75)',
+              backdropFilter: 'blur(30px) saturate(150%)',
+              WebkitBackdropFilter: 'blur(30px) saturate(150%)',
+              zIndex: 10
             }}
           >
             <motion.div
