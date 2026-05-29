@@ -71,7 +71,7 @@ function Welcome() {
               <img
                 src="/logo2.png"
                 alt="Be Fit Lab"
-                style={{ width: '220px', height: 'auto', display: 'block', margin: '0 auto' }}
+                style={{ width: '280px', height: 'auto', display: 'block', margin: '0 auto' }}
               />
               <motion.div
                 initial={{ width: 0, opacity: 0 }}
