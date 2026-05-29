@@ -114,6 +114,16 @@ const TOUR_STEPS = [
     targetSelector: '.tour-badges-section > div > div'
   },
   {
+    icon: <Award size={40} color="var(--primary)" />,
+    title: 'Cierra la Insignia',
+    description: 'Toca en la zona oscura para cerrar la tarjeta y continuar.',
+    selector: '.badge-modal-overlay',
+    requireClick: true,
+    advanceOnEvent: 'click',
+    targetSelector: '.badge-modal-overlay',
+    position: 'top'
+  },
+  {
     icon: <Scale size={40} color="var(--primary)" />,
     title: 'Composición',
     description: 'Si tienes báscula inteligente, aquí podrás monitorear métricas como porcentaje de grasa y músculo.',
