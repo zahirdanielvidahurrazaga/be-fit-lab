@@ -126,6 +126,16 @@ export const AuthProvider = ({ children }) => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Suscripción global en tiempo real a los cambios en clases
+  useEffect(() => {
+    const channel = supabase.channel('public:classes:all')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, () => {
+        fetchGlobalClasses();
+      })
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // fetchCoaches moved to run after auth
 
   useEffect(() => {
@@ -191,10 +201,11 @@ export const AuthProvider = ({ children }) => {
       }
     });
 
-    // Cargar datos globales públicos
+    // Cargar datos globales públicos (disponibles sin sesión)
     fetchGlobalClasses();
     fetchRecipes();
     fetchBadgeConfigs();
+    fetchCoaches();
 
     return () => subscription.unsubscribe();
   }, []);

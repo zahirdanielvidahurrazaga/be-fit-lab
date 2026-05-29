@@ -16,6 +16,7 @@ import Planes from './pages/Planes';
 import Privacidad from './pages/Privacidad';
 import Terminos from './pages/Terminos';
 import Welcome from './pages/Welcome';
+import Cafeteria from './pages/Cafeteria';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useLocalNotifications } from './hooks/useLocalNotifications';
 import { usePushNotifications } from './hooks/usePushNotifications';
@@ -90,6 +91,7 @@ function App() {
           <Route path="/privacidad" element={<Privacidad />} />
           <Route path="/terminos" element={<Terminos />} />
           <Route path="/agenda" element={<Agenda />} />
+          <Route path="/cafeteria" element={<Cafeteria />} />
           
           {/* Rutas Privadas Clienta */}
           <Route path="/portal" element={<ProtectedRoute requireRole="CLIENT"><Portal /></ProtectedRoute>} />

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { User, Mail, Lock, ArrowRight, ChevronLeft, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
+import { motion } from 'framer-motion';
 
 function Register() {
   const [name, setName] = useState('');
@@ -81,10 +82,10 @@ function Register() {
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%', overflowX: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'url("/hero_bg.png")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+    <div style={{ position: 'relative', width: '100%', overflowX: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'url("/fotos-hero/_DSC0444.jpg")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
       
       {/* Overlay */}
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)', zIndex: 0 }}></div>
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.25) 35%, rgba(0,0,0,0.55) 65%, rgba(0,0,0,0.85) 100%)', backdropFilter: 'blur(8px)', zIndex: 0 }}></div>
 
       {/* BOTÓN VOLVER AL SITIO */}
       {!isNative && (
@@ -104,22 +105,22 @@ function Register() {
         </div>
       )}
 
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isNative ? '20px 16px' : '40px 20px', zIndex: 1 }}>
+      <motion.div initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }} animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }} transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isNative ? '20px 16px' : '40px 20px', zIndex: 1 }}>
         <div style={{ 
           width: '100%', 
-          maxWidth: '440px', 
+          maxWidth: '380px', 
           background: 'rgba(255, 255, 255, 0.65)', 
           backdropFilter: 'blur(30px)', 
           WebkitBackdropFilter: 'blur(30px)',
-          padding: isNative ? '2.5rem 1.25rem' : '3rem 2rem', 
-          borderRadius: '30px',
+          padding: isNative ? '1.8rem 1.2rem' : '2.2rem 1.8rem', 
+          borderRadius: '28px',
           border: '1px solid rgba(255,255,255,0.5)',
           boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
           boxSizing: 'border-box'
         }}>
           
           {/* FORMULARIO DE REGISTRO */}
-          <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '1.8rem' }}>
             {purchasedPlan ? (
                <>
                  <div style={{ display: 'inline-block', padding: '6px 12px', background: 'rgba(238,186,137,0.2)', color: 'var(--accent)', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '10px' }}>
@@ -185,7 +186,7 @@ function Register() {
               <button
                 type="button"
                 onClick={() => setShowPassword(v => !v)}
-                style={{ position: 'absolute', right: '1rem', top: '42px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--on-surface-variant)', opacity: 0.7, padding: 0, display: 'flex', alignItems: 'center' }}
+                style={{ position: 'absolute', right: '1rem', bottom: '13px', zIndex: 2, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--on-surface-variant)', opacity: 0.7, padding: 0, display: 'flex', alignItems: 'center' }}
                 tabIndex={-1}
                 aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
               >
@@ -209,7 +210,7 @@ function Register() {
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(v => !v)}
-                style={{ position: 'absolute', right: '1rem', top: '42px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--on-surface-variant)', opacity: 0.7, padding: 0, display: 'flex', alignItems: 'center' }}
+                style={{ position: 'absolute', right: '1rem', bottom: '13px', zIndex: 2, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--on-surface-variant)', opacity: 0.7, padding: 0, display: 'flex', alignItems: 'center' }}
                 tabIndex={-1}
                 aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
               >
@@ -230,17 +231,17 @@ function Register() {
               </span>
             </label>
 
-            <button type="submit" className="glass-button-dark" style={{ width: '100%', marginTop: '1.5rem', opacity: acceptTerms ? 1 : 0.5 }} disabled={loading || !acceptTerms}>
+            <button type="submit" className="glass-button-dark" style={{ width: '100%', marginTop: '1.5rem', opacity: acceptTerms ? 1 : 0.85, cursor: acceptTerms ? 'pointer' : 'not-allowed' }} disabled={loading || !acceptTerms}>
               {loading ? 'Creando cuenta...' : 'Completar Registro'} <ArrowRight size={20} />
             </button>
           </form>
 
-          <div style={{ textAlign: 'center', marginTop: '2rem', color: '#4B5563', fontSize: '0.9rem' }}>
+          <div style={{ textAlign: 'center', marginTop: '1.5rem', color: '#4B5563', fontSize: '0.9rem' }}>
             ¿Ya tienes una cuenta? <span onClick={() => navigate('/login')} style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }}>Inicia Sesión</span>
           </div>
 
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

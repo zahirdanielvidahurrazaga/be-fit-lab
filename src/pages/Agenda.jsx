@@ -9,54 +9,13 @@ import { Capacitor } from '@capacitor/core';
 import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
 import { addClassToCalendar } from '../hooks/useCalendar';
 import { supabase } from '../lib/supabase';
+import { ScheduleCalendar } from '../components/ScheduleCalendar';
 
 function Agenda() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, classesRemaining, bookClass, globalClasses, updateReservationCalendarId, avatarUrl, coaches } = useAuth();
+  const { user, plan, classesRemaining, bookClass, globalClasses, updateReservationCalendarId, avatarUrl, coaches, badgeConfigs } = useAuth();
   
-  // Calendar states
-  const todayStr = new Date().toISOString().split('T')[0];
-  const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
-  const currentMonth = currentMonthDate.getMonth();
-  const currentYear = currentMonthDate.getFullYear();
-  const [calendarView, setCalendarView] = useState('month'); // 'month' | 'day'
-  const [selectedDateStr, setSelectedDateStr] = useState(todayStr);
-
-  const nextMonth = () => setCurrentMonthDate(new Date(currentYear, currentMonth + 1, 1));
-  const prevMonth = () => setCurrentMonthDate(new Date(currentYear, currentMonth - 1, 1));
-  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
-  const startDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1; // Lunes = 0
-
-  const getWeekDays = (dateStr) => {
-    const d = new Date(dateStr + "T12:00:00");
-    const dayOfWeek = d.getDay() === 0 ? 6 : d.getDay() - 1;
-    const monday = new Date(d);
-    monday.setDate(d.getDate() - dayOfWeek);
-    
-    return Array.from({length: 7}, (_, i) => {
-      const current = new Date(monday);
-      current.setDate(monday.getDate() + i);
-      return {
-        dateStr: current.toISOString().split('T')[0],
-        dayNum: current.getDate(),
-        dayName: ['L', 'M', 'M', 'J', 'V', 'S', 'D'][i]
-      };
-    });
-  };
-
-  const getDayOfWeekFromDateStr = (dateStr) => {
-    return new Date(dateStr + "T12:00:00").getDay();
-  };
-
-  const getClassesForDate = (dateStr) => {
-    if (!dateStr) return [];
-    const dayOfWeek = getDayOfWeekFromDateStr(dateStr);
-    return globalClasses.filter(c => c.date === dateStr || (c.date === null && c.day === dayOfWeek));
-  };
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -112,8 +71,6 @@ function Agenda() {
 
   const handleAddToCalendar = async () => {
     if (!modalData) return;
-
-    const d = new Date(selectedDateStr + "T12:00:00");
     const eventId = await addClassToCalendar(modalData, d);
 
     if (!eventId) {
@@ -239,135 +196,12 @@ function Agenda() {
 
           {/* Calendario Estilo Apple */}
           <section style={{ marginBottom: '10px' }}>
-            {calendarView === 'month' ? (
-              <motion.div key="month-view" initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-10}} transition={{duration:0.2}}>
-                <div className="ios-glass-card" style={{ padding: '20px', background: 'white', margin: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <button onClick={prevMonth} style={{ background: 'rgba(0,0,0,0.04)', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                      <ChevronRight size={20} color="var(--black)" style={{ transform: 'rotate(180deg)' }} />
-                    </button>
-                    <h3 style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)', margin: 0, textTransform: 'capitalize' }}>
-                      {monthNames[currentMonth]} {currentYear}
-                    </h3>
-                    <button onClick={nextMonth} style={{ background: 'rgba(0,0,0,0.04)', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                      <ChevronRight size={20} color="var(--black)" />
-                    </button>
-                  </div>
-
-                  {/* Días de la semana */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px', marginBottom: '10px', textAlign: 'center' }}>
-                    {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
-                      <div key={i} style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--on-surface-variant)' }}>{d}</div>
-                    ))}
-                  </div>
-
-                  {/* Cuadrícula de Días */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px' }}>
-                    {Array.from({ length: startDay }).map((_, i) => (
-                      <div key={`empty-${i}`} style={{ aspectRatio: '1', borderRadius: '12px' }} />
-                    ))}
-                    
-                    {Array.from({ length: daysInMonth }).map((_, i) => {
-                      const dayNum = i + 1;
-                      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-                      const isToday = dateStr === todayStr;
-                      const classesOnDay = getClassesForDate(dateStr);
-                      const hasClasses = classesOnDay.length > 0;
-                      
-                      return (
-                        <motion.button
-                          key={dayNum}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => {
-                            setSelectedDateStr(dateStr);
-                            setCalendarView('day');
-                          }}
-                          style={{ 
-                            aspectRatio: '1', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative',
-                            background: isToday ? 'var(--primary)' : (hasClasses ? 'rgba(0,0,0,0.03)' : 'transparent'),
-                            color: isToday ? 'white' : 'var(--black)',
-                            fontWeight: isToday ? 800 : (hasClasses ? 700 : 500)
-                          }}
-                        >
-                          <span style={{ fontSize: '1rem' }}>{dayNum}</span>
-                          {hasClasses && (
-                            <div style={{ display: 'flex', gap: '2px', position: 'absolute', bottom: '6px' }}>
-                              {classesOnDay.slice(0, 3).map((_, idx) => (
-                                <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', background: isToday ? 'white' : 'var(--primary)' }} />
-                              ))}
-                            </div>
-                          )}
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div key="day-view" initial={{opacity:0, x:20}} animate={{opacity:1, x:0}} transition={{duration:0.2}}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-                  <button onClick={() => setCalendarView('month')} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: 'var(--primary)', fontWeight: 700, fontSize: '1.1rem', cursor: 'pointer', padding: 0 }}>
-                    <ChevronRight size={22} style={{ transform: 'rotate(180deg)' }} /> 
-                    {monthNames[new Date(selectedDateStr + "T12:00:00").getMonth()]}
-                  </button>
-                </div>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px', marginBottom: '25px', background: 'white', padding: '15px 10px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
-                  {getWeekDays(selectedDateStr).map((d, i) => {
-                    const isSelected = d.dateStr === selectedDateStr;
-                    const classesOnDay = getClassesForDate(d.dateStr);
-                    const hasClasses = classesOnDay.length > 0;
-                    
-                    return (
-                      <div 
-                        key={i} 
-                        onClick={() => setSelectedDateStr(d.dateStr)}
-                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-                      >
-                        <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--on-surface-variant)' }}>{d.dayName}</span>
-                        <div style={{ 
-                          width: '36px', height: '36px', borderRadius: '50%', 
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: isSelected ? 'var(--primary)' : 'transparent',
-                          color: isSelected ? 'white' : 'var(--black)',
-                          fontWeight: isSelected ? 800 : 600,
-                          fontSize: '1.1rem'
-                        }}>
-                          {d.dayNum}
-                        </div>
-                        <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: hasClasses ? (isSelected ? 'white' : 'var(--primary)') : 'transparent', marginTop: '-2px' }} />
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Lista de Clases del Día */}
-                <h4 style={{ fontSize: '1.1rem', margin: '0 0 15px 0', color: 'var(--black)', fontFamily: 'var(--font-display)', textTransform: 'capitalize' }}>
-                  {new Date(selectedDateStr + "T12:00:00").toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                  {(() => {
-                    const classesToday = getClassesForDate(selectedDateStr);
-                    return classesToday.length > 0 ? (
-                      classesToday.map(c => (
-                        <ClassItem 
-                          key={c.id}
-                          classData={c}
-                          full={c.spots === 0} 
-                          onReserve={() => handleReserveClick(c)}
-                          coaches={coaches}
-                        />
-                      ))
-                    ) : (
-                      <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.9rem', fontStyle: 'italic', background: 'var(--surface-low)', borderRadius: '16px', border: '1px solid var(--border-subtle)' }}>
-                        No hay clases programadas para este día.
-                      </div>
-                    );
-                  })()}
-                </div>
-              </motion.div>
-            )}
+            <ScheduleCalendar 
+              globalClasses={globalClasses}
+              coaches={coaches}
+              badgeConfigs={badgeConfigs}
+              onReserve={handleReserveClick}
+            />
           </section>
         </div>
 
@@ -585,7 +419,7 @@ function Agenda() {
 
                 <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0, paddingTop: '20px', paddingLeft: '20px', paddingRight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 4px 10px rgba(255,139,66,0.3)', flexShrink: 0 }}><img src="/logo.png" alt="Be Fit Lab" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 4px 10px rgba(255,139,66,0.3)', flexShrink: 0 }}><img src="/logo2.png" alt="Be Fit Lab" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>
                     <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--black)', letterSpacing: '2px' }}>BE FIT LAB</span>
                   </div>
                   <QrCode size={20} color="var(--primary)" opacity={0.8} />
@@ -704,81 +538,4 @@ function Agenda() {
     </div>
   );
 }
-
-function ClassItem({ classData, full, onReserve, coaches }) {
-  const { time, title, instructor, spots, category } = classData;
-
-  const getBackgroundColor = (cat) => {
-    switch(cat) {
-      case 'Fuerza': return '#FFE4E1';
-      case 'Resistencia': return '#E0FFFF';
-      case 'Relajacion': return '#F0FFF0';
-      case 'Gym libre': return '#FFFACD';
-      default: return 'var(--app-surface-solid)';
-    }
-  };
-
-  const bgColor = getBackgroundColor(category);
-
-  return (
-    <motion.div 
-      whileTap={{ scale: 0.98 }}
-      onClick={() => { if(!full && onReserve) onReserve(); }}
-      style={{ 
-        marginBottom: '16px', cursor: full ? 'default' : 'pointer'
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', paddingLeft: '5px' }}>
-        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{time}</span>
-        <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'rgba(0,0,0,0.1)' }}></div>
-        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase' }}>50 min</span>
-      </div>
-
-      <div style={{ 
-        padding: '20px', display: 'flex', alignItems: 'center', gap: '20px',
-        background: bgColor, borderRadius: '28px', boxShadow: 'var(--card-shadow)', 
-        border: '1px solid var(--border-subtle)', position: 'relative', overflow: 'hidden',
-        opacity: full ? 0.6 : 1, transition: 'all 0.3s ease'
-      }}>
-        <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', background: '#FCF9F5', flexShrink: 0, border: '2px solid white', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-           {(() => {
-             const coachInfo = (coaches || []).find(c => c.full_name === instructor || c.email === instructor);
-             const photoUrl = coachInfo?.avatar_url;
-             return photoUrl 
-               ? <img src={photoUrl} alt={instructor} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-               : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: '1.2rem', fontFamily: 'var(--font-display)' }}>{(instructor || 'C').charAt(0).toUpperCase()}</div>;
-           })()}
-        </div>
-        
-        <div style={{ flex: 1 }}>
-          <h3 style={{ fontSize: '1.15rem', color: 'var(--black)', margin: '0 0 2px 0', fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1.2 }}>{title}</h3>
-          {category && (
-            <p style={{ margin: '0 0 4px 0', fontSize: '0.65rem', color: 'var(--on-surface-variant)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Entrenamiento de {category === 'Relajacion' ? 'Relajación' : category}
-            </p>
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-             <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{instructor}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: full ? '#FF4D4D' : '#22C55E' }}></div>
-             <span style={{ fontSize: '0.75rem', color: '#8a7266', fontWeight: 700 }}>
-                {full ? 'Clase llena' : `${spots} lugares disponibles`}
-             </span>
-          </div>
-        </div>
-
-        <div style={{ 
-          width: '40px', height: '40px', borderRadius: '15px', 
-          background: full ? 'rgba(0,0,0,0.03)' : 'rgba(255,139,66,0.1)', 
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: full ? '#8a7266' : 'var(--primary)'
-        }}>
-          <ChevronRight size={20} />
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 export default Agenda;

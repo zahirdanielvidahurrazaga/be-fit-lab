@@ -68,8 +68,26 @@ function MiCuenta() {
     const compressed = await compressAvatar(pendingAvatar);
     setAvatarUrl(compressed);
     localStorage.setItem(`avatar_${user.id}`, compressed);
-    // Also persist to DB so coach photo shows in class cards
-    await supabase.from('users').update({ avatar_url: compressed }).eq('id', user.id);
+
+    const { error: avatarError } = await supabase
+      .from('users')
+      .update({ avatar_url: compressed })
+      .eq('id', user.id);
+
+    if (avatarError) {
+      console.error('Error guardando avatar en DB:', avatarError);
+      setError('Foto guardada localmente, pero no se pudo sincronizar. Verifica la columna avatar_url en Supabase.');
+    }
+
+    if (role === 'COACH' || role === 'ADMIN') {
+      const { data: existing } = await supabase.from('badges_config').select('*').eq('rule_type', 'COACH_PROFILE').single();
+      if (existing) {
+        await supabase.from('badges_config').update({ icon: compressed }).eq('id', existing.id);
+      } else {
+        await supabase.from('badges_config').insert({ rule_type: 'COACH_PROFILE', rule_value: 0, icon: compressed, label: fullName || 'Coach' });
+      }
+    }
+
     setPendingAvatar(null);
   };
 
@@ -127,6 +145,14 @@ function MiCuenta() {
     if (updateError) {
       setError('Error al guardar. Intenta de nuevo.');
     } else {
+      if (role === 'COACH' || role === 'ADMIN') {
+        const { data: existing } = await supabase.from('badges_config').select('*').eq('rule_type', 'COACH_PROFILE').single();
+        if (existing) {
+           await supabase.from('badges_config').update({ label: fullName }).eq('id', existing.id);
+        } else {
+           await supabase.from('badges_config').insert({ rule_type: 'COACH_PROFILE', rule_value: 0, icon: avatarUrl || '', label: fullName });
+        }
+      }
       setSaved(true);
       if (refreshUserData) await refreshUserData();
       setTimeout(() => setSaved(false), 3000);

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Galería Hero Avanzada</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #111; color: white; padding: 2rem; }
+    h1 { text-align: center; margin-bottom: 1rem; }
+    .controls { display: flex; justify-content: center; gap: 1rem; margin-bottom: 3rem; flex-wrap: wrap; }
+    .btn-control { background: #333; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+    .btn-control:hover { background: #444; }
+    .btn-control.active { background: #f47952; color: black; }
+    
+    .grid { display: grid; gap: 3rem 2rem; }
+    /* Mobile */
+    .grid.mobile { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+    /* Desktop */
+    .grid.desktop { grid-template-columns: repeat(auto-fill, minmax(800px, 1fr)); }
+
+    .hero-card { 
+      position: relative; 
+      border-radius: 20px; 
+      overflow: hidden; 
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      border: 1px solid #333;
+    }
+    .grid.mobile .hero-card { aspect-ratio: 9/16; }
+    .grid.desktop .hero-card { aspect-ratio: 16/9; }
+
+    .hero-bg {
+      position: absolute; inset: 0;
+      background-size: cover; background-position: center 30%;
+      transition: filter 0.3s;
+      z-index: 0;
+    }
+    body.bw .hero-bg { filter: grayscale(100%); }
+    body.color .hero-bg { filter: grayscale(0%); }
+
+    .hero-gradient {
+      position: absolute; inset: 0; z-index: 1;
+      background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%);
+    }
+
+    .hero-content {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 2;
+      padding: 2rem 1.5rem; display: flex; flex-direction: column;
+    }
+    .grid.desktop .hero-content {
+      padding: 4rem 5rem; 
+      width: 60%;
+    }
+
+    .badge {
+      align-self: flex-start;
+      background: #fdfbf7; color: black; padding: 6px 12px;
+      border-radius: 50px; font-size: 0.65rem; font-weight: 700;
+      margin-bottom: 1rem; letter-spacing: 0.5px;
+    }
+    .grid.desktop .badge { font-size: 0.9rem; padding: 8px 18px; margin-bottom: 1.5rem; }
+
+    .title {
+      font-size: 2.2rem; line-height: 1.05; margin: 0 0 1.5rem; font-weight: 800; letter-spacing: -1px;
+    }
+    .grid.desktop .title { font-size: 4.5rem; margin-bottom: 2.5rem; }
+    
+    .orange { color: #f47952; font-style: italic; }
+    .btn {
+      background: white; color: black; padding: 0.9rem 1.2rem;
+      border-radius: 50px; text-align: center; font-weight: 700;
+      text-decoration: none; font-size: 0.9rem; margin-bottom: 0.5rem;
+      width: fit-content;
+    }
+    .grid.desktop .btn { font-size: 1.1rem; padding: 1.2rem 2.5rem; }
+
+    .filename {
+      text-align: center; margin-top: 1rem; font-family: monospace; color: #aaa; font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body class="bw">
+  <h1>Galería de Fotos para Hero</h1>
+  <div class="controls">
+    <button class="btn-control active" id="btn-bw" onclick="setColorMode('bw')">Blanco y Negro</button>
+    <button class="btn-control" id="btn-color" onclick="setColorMode('color')">A Color (Sin Filtro)</button>
+    <button class="btn-control active" id="btn-mobile" onclick="setLayout('mobile')">📱 Vista Celular</button>
+    <button class="btn-control" id="btn-desktop" onclick="setLayout('desktop')">💻 Vista Computadora</button>
+  </div>
+  <div class="grid mobile" id="grid"></div>
+  
+  <script>
+    function setColorMode(mode) {
+      document.body.className = mode;
+      document.getElementById('btn-bw').classList.toggle('active', mode === 'bw');
+      document.getElementById('btn-color').classList.toggle('active', mode === 'color');
+    }
+    function setLayout(layout) {
+      const grid = document.getElementById('grid');
+      grid.className = 'grid ' + layout;
+      document.getElementById('btn-mobile').classList.toggle('active', layout === 'mobile');
+      document.getElementById('btn-desktop').classList.toggle('active', layout === 'desktop');
+    }
+
+    const container = document.getElementById('grid');
+    const images = [];
+    for(let i=5375; i<=5410; i++) {
+      images.push(`IMG_${i}.JPG`);
+    }
+    
+    images.forEach(img => {
+      const card = document.createElement('div');
+      card.innerHTML = `
+        <div class="hero-card">
+          <div class="hero-bg" style="background-image: url('/fotos-hero/${img}')"></div>
+          <div class="hero-gradient"></div>
+          <div class="hero-content">
+            <div class="badge">FUERZA • CRECIMIENTO • CONCIENCIA</div>
+            <h2 class="title">Rediseña tu<br><span class="orange">potencial corporal.</span></h2>
+            <a href="#" class="btn">Comenzar Transformación ➔</a>
+          </div>
+        </div>
+        <div class="filename">${img}</div>
+      `;
+      container.appendChild(card);
+    });
+  </script>
+</body>
+</html>
