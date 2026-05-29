@@ -121,7 +121,7 @@ const TOUR_STEPS = [
     requireClick: true,
     advanceOnEvent: 'click',
     targetSelector: '.badge-modal-overlay',
-    position: 'top'
+    position: 'bottom'
   },
   {
     icon: <Scale size={40} color="var(--primary)" />,
@@ -296,11 +296,13 @@ export function AppTour() {
       y: 0,
       x: '-50%', // Centrado horizontalmente
       top: stepData?.position === 'top' 
-        ? '15%' 
-        : (targetRect 
-          ? (isBottomHalf ? targetRect.top - 20 : targetRect.bottom + 20) 
-          : '50%'),
-      translateY: stepData?.position === 'top'
+        ? '8%' 
+        : stepData?.position === 'bottom'
+          ? '82%'
+          : (targetRect 
+            ? (isBottomHalf ? targetRect.top - 20 : targetRect.bottom + 20) 
+            : '50%'),
+      translateY: (stepData?.position === 'top' || stepData?.position === 'bottom')
         ? '0%'
         : (targetRect 
           ? (isBottomHalf ? '-100%' : '0%') 
