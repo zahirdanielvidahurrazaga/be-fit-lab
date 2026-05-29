@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, Wallet, TrendingUp, Calendar, ChevronRight, X, Sparkles, Play } from 'lucide-react';
+import { User, Wallet, TrendingUp, Calendar, ChevronRight, X, Sparkles, Play, Utensils, Target, Award, Scale, Activity, QrCode } from 'lucide-react';
 
 const TOUR_STEPS = [
   {
