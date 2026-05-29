@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Flame, User, Calendar, Utensils, TrendingUp, Award, Target, ChevronRight, QrCode, Zap, Droplets, Scale, RefreshCw, Heart, Clock, Wallet } from 'lucide-react';
+import { Activity, Flame, User, Calendar, Utensils, TrendingUp, Award, Target, ChevronRight, QrCode, Zap, Droplets, Scale, RefreshCw, Heart, Clock, Wallet, X, Check } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -41,6 +41,7 @@ function Evolucion() {
   const [previousMeasurement, setPreviousMeasurement] = useState(null);
   const [loadingMeasurements, setLoadingMeasurements] = useState(true);
   const isScrolled = useScrollDetect(30);
+  const [selectedBadge, setSelectedBadge] = useState(null);
 
   const { healthData, healthPermission, healthLoading, requestPermissions, fetchTodayData } = useHealth();
 
@@ -68,31 +69,36 @@ function Evolucion() {
       badgeConfigs.forEach(rule => {
         let isEarned = false;
         
-        switch(rule.rule_type) {
-          case 'TOTAL_CLASSES':
-            isEarned = (history?.length || 0) >= rule.rule_value;
-            break;
-          case 'DIFFERENT_COACHES':
-            const coaches = new Set((history || []).map(h => h.classes?.instructor).filter(Boolean));
-            isEarned = coaches.size >= rule.rule_value;
-            break;
-          case 'PROFILE_COMPLETE':
-            isEarned = !!(profileName && profileName.trim() !== '' && avatarUrl);
-            break;
-          case 'WEEKLY_CLASSES':
-            const weekCounts = {};
-            (history || []).forEach(h => {
-               const d = new Date(h.created_at);
-               // Aproximación: agrupación por semana (1000*60*60*24*7)
-               const weekKey = `${d.getFullYear()}-${Math.floor(d.getTime() / (1000*60*60*24*7))}`;
-               weekCounts[weekKey] = (weekCounts[weekKey] || 0) + 1;
-            });
-            const maxWeekly = Math.max(0, ...Object.values(weekCounts));
-            isEarned = maxWeekly >= rule.rule_value;
-            break;
-          case 'MANUAL':
-            isEarned = customBadges?.some(cb => cb.label === rule.label);
-            break;
+        // Si el usuario la tiene asignada manualmente, automáticamente la gana
+        if (customBadges?.some(cb => cb.label === rule.label)) {
+          isEarned = true;
+        } else {
+          switch(rule.rule_type) {
+            case 'TOTAL_CLASSES':
+              isEarned = (history?.length || 0) >= rule.rule_value;
+              break;
+            case 'DIFFERENT_COACHES':
+              const coaches = new Set((history || []).map(h => h.classes?.instructor).filter(Boolean));
+              isEarned = coaches.size >= rule.rule_value;
+              break;
+            case 'PROFILE_COMPLETE':
+              isEarned = !!(profileName && profileName.trim() !== '' && avatarUrl);
+              break;
+            case 'WEEKLY_CLASSES':
+              const weekCounts = {};
+              (history || []).forEach(h => {
+                 const d = new Date(h.created_at);
+                 // Aproximación: agrupación por semana (1000*60*60*24*7)
+                 const weekKey = `${d.getFullYear()}-${Math.floor(d.getTime() / (1000*60*60*24*7))}`;
+                 weekCounts[weekKey] = (weekCounts[weekKey] || 0) + 1;
+              });
+              const maxWeekly = Math.max(0, ...Object.values(weekCounts));
+              isEarned = maxWeekly >= rule.rule_value;
+              break;
+            case 'MANUAL':
+              // Se cubre con el chequeo previo de customBadges
+              break;
+          }
         }
 
         calculated.push({
@@ -252,7 +258,7 @@ function Evolucion() {
             <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '12px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Insignias</h2>
             <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '10px' }}>
               {badges.length > 0 ? badges.map((b, i) => (
-                <BadgeIcon key={i} icon={b.icon} label={b.label} locked={b.locked} />
+                <BadgeIcon key={i} icon={b.icon} label={b.label} locked={b.locked} onClick={() => setSelectedBadge(b)} />
               )) : (
                 <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontStyle: 'italic' }}>No hay insignias configuradas aún.</p>
               )}
@@ -566,13 +572,87 @@ function Evolucion() {
         <Link to="/nutricion" className="nav-item"><Utensils size={22} strokeWidth={2.5} /><span>Comida</span></Link>
         <Link to="/agenda" className="nav-item"><Calendar size={22} strokeWidth={2.5} /><span>Clases</span></Link>
       </nav>
+
+      {/* BADGE MODAL */}
+      <AnimatePresence>
+        {selectedBadge && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedBadge(null)}
+            style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)',
+              zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'var(--app-surface-solid)', borderRadius: '32px', padding: '40px 30px',
+                width: '100%', maxWidth: '340px', textAlign: 'center', position: 'relative',
+                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)'
+              }}
+            >
+              <button 
+                onClick={() => setSelectedBadge(null)}
+                style={{ position: 'absolute', top: '15px', right: '15px', background: 'var(--surface-low)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <X size={18} color="var(--on-surface)" />
+              </button>
+
+              <div style={{
+                width: '100px', height: '100px', margin: '0 auto 20px', borderRadius: '50%',
+                background: selectedBadge.locked ? 'var(--surface)' : 'rgba(255,139,66,0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem',
+                border: '2px solid', borderColor: selectedBadge.locked ? 'var(--border-subtle)' : 'var(--primary)',
+                filter: selectedBadge.locked ? 'grayscale(100%)' : 'none', opacity: selectedBadge.locked ? 0.6 : 1,
+                boxShadow: selectedBadge.locked ? 'none' : '0 10px 25px rgba(255,139,66,0.2)'
+              }}>
+                {selectedBadge.icon}
+              </div>
+
+              <h3 style={{ fontSize: '1.4rem', fontWeight: 900, fontFamily: 'var(--font-display)', margin: '0 0 10px', color: 'var(--black)' }}>
+                {selectedBadge.label}
+              </h3>
+              
+              {selectedBadge.locked ? (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--surface)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800, color: 'var(--on-surface-variant)', marginBottom: '15px' }}>
+                  🔒 INSIGNIA BLOQUEADA
+                </div>
+              ) : (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(34,197,94,0.1)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800, color: '#22C55E', marginBottom: '15px' }}>
+                  <Check size={14} /> ¡DESBLOQUEADA!
+                </div>
+              )}
+
+              <p style={{ fontSize: '0.9rem', color: 'var(--on-surface-variant)', lineHeight: 1.5, margin: 0 }}>
+                {selectedBadge.description || (() => {
+                  switch(selectedBadge.rule_type) {
+                    case 'TOTAL_CLASSES': return `Asiste a ${selectedBadge.rule_value} clase${selectedBadge.rule_value > 1 ? 's' : ''} en total.`;
+                    case 'DIFFERENT_COACHES': return `Entrena con ${selectedBadge.rule_value} coaches diferentes.`;
+                    case 'WEEKLY_CLASSES': return `Asiste a ${selectedBadge.rule_value} clases en una sola semana.`;
+                    case 'PROFILE_COMPLETE': return `Completa tu perfil agregando tu nombre y foto.`;
+                    case 'MANUAL': return `Insignia especial otorgada por el equipo Be Fit.`;
+                    default: return `Participa en la comunidad Be Fit.`;
+                  }
+                })()}
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function BadgeIcon({ icon, label, locked }) {
+function BadgeIcon({ icon, label, locked, onClick }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flexShrink: 0, opacity: locked ? 0.4 : 1, filter: locked ? 'grayscale(100%)' : 'none', position: 'relative' }}>
+    <div onClick={onClick} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flexShrink: 0, opacity: locked ? 0.4 : 1, filter: locked ? 'grayscale(100%)' : 'none', position: 'relative' }}>
       <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--app-surface-solid)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', boxShadow: 'var(--card-shadow)' }}>
         {icon}
       </div>
