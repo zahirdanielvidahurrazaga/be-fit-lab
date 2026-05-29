@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
 function Welcome() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [phase, setPhase] = useState('splash'); // 'splash' -> 'welcome' -> 'exiting'
 
   // Forzar modo claro
@@ -11,11 +13,18 @@ function Welcome() {
     document.documentElement.setAttribute('data-theme', 'light');
   }, []);
 
-  // Splash dura 2.5s, luego pasa a welcome
+  // Splash dura 2.5s, luego pasa a welcome o redirige a portal si ya está logueado
   useEffect(() => {
-    const timer = setTimeout(() => setPhase('welcome'), 2500);
+    const timer = setTimeout(() => {
+      if (user) {
+        setPhase('exiting');
+        setTimeout(() => navigate('/portal', { replace: true }), 400);
+      } else {
+        setPhase('welcome');
+      }
+    }, 2500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [user, navigate]);
 
   const handleStart = () => {
     setPhase('exiting');

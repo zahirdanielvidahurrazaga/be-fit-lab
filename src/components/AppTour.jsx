@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { User, Wallet, TrendingUp, Calendar, ChevronRight, X, Sparkles } from 'lucide-react';
 
@@ -34,8 +35,13 @@ const TOUR_STEPS = [
 export function AppTour() {
   const { showTour, setShowTour, user } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
+  const location = useLocation();
 
-  if (!showTour) return null;
+  // Solo mostrar el tour si estamos en una ruta interna (no en login, register o welcome)
+  const isInternalRoute = ['/portal', '/evolucion', '/agenda', '/nutricion', '/mi-cuenta'].includes(location.pathname);
+
+  // Evitamos renderizar si no está activo o si no estamos dentro de la app
+  if (!showTour || !isInternalRoute) return null;
 
   const handleNext = () => {
     if (currentStep < TOUR_STEPS.length - 1) {
