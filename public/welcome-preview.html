@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Welcome Preview - BE FIT LAB</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+    
+    :root {
+      --font-display: 'Outfit', sans-serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+      --primary: #FF914D;
+    }
+
+    body, html {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      background-color: #050505; overflow: hidden;
+      font-family: var(--font-body);
+    }
+
+    /* Photos */
+    #bg-container {
+      position: absolute; inset: 0; z-index: 1;
+    }
+    .bg-image {
+      position: absolute; inset: 0;
+      background-size: cover; background-position: center;
+      opacity: 0; transition: opacity 1.5s ease-in-out, transform 4s linear;
+      transform: scale(1.05);
+    }
+    .bg-image.active {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Gradient overlay */
+    #gradient {
+      position: absolute; inset: 0; z-index: 2;
+      background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.2) 35%, rgba(0,0,0,0.6) 65%, rgba(0,0,0,0.9) 100%);
+    }
+
+    /* Badge */
+    #badge {
+      position: absolute; top: env(safe-area-inset-top, 20px); right: 20px; margin-top: 20px;
+      background: rgba(0,0,0,0.6); color: white; padding: 6px 12px;
+      border-radius: 8px; font-size: 11px; z-index: 100; font-family: monospace;
+      border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(10px);
+    }
+
+    /* Welcome Content */
+    #content {
+      position: absolute; inset: 0; z-index: 5;
+      display: flex; flex-direction: column; justify-content: flex-end;
+      padding: 0 32px 50px; padding-bottom: max(50px, env(safe-area-inset-bottom, 50px));
+    }
+    
+    h1 {
+      font-family: var(--font-display); color: rgba(255,255,255,0.6);
+      letter-spacing: 5px; font-size: 0.85rem; font-weight: 400; margin: 0;
+      text-transform: uppercase;
+    }
+    h2 {
+      font-family: var(--font-display); color: white;
+      font-size: 3rem; line-height: 1.05; margin: 10px 0; font-weight: 400;
+    }
+    p {
+      color: rgba(255,255,255,0.55); font-size: 0.95rem;
+      line-height: 1.6; margin: 8px 0 28px; font-weight: 400;
+    }
+    button {
+      width: 100%; padding: 18px; border-radius: 50px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.08); color: white;
+      font-size: 1rem; font-weight: 600;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      cursor: pointer; font-family: var(--font-body);
+      box-shadow: 0 4px 30px rgba(0,0,0,0.1); letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="badge">Cargando...</div>
+  <div id="bg-container"></div>
+  <div id="gradient"></div>
+
+  <div id="content">
+    <h1>BE FIT LAB</h1>
+    <h2>Eleva tu<br/><span style="color: var(--primary); font-style: italic;">estándar.</span></h2>
+    <p>El espacio de bienestar integral que redefine tu versión más fuerte.</p>
+    <button>Iniciar Sesión</button>
+  </div>
+
+  <script>
+    const HERO_PHOTOS = [
+      './fotos-hero/IMG_5375.JPG', './fotos-hero/IMG_5376.JPG', './fotos-hero/IMG_5377.JPG',
+      './fotos-hero/IMG_5378.JPG', './fotos-hero/IMG_5379.JPG', './fotos-hero/IMG_5380.JPG',
+      './fotos-hero/IMG_5381.JPG', './fotos-hero/IMG_5382.JPG', './fotos-hero/IMG_5383.JPG',
+      './fotos-hero/IMG_5384.JPG', './fotos-hero/IMG_5385.JPG', './fotos-hero/IMG_5386.JPG',
+      './fotos-hero/IMG_5387.JPG', './fotos-hero/IMG_5388.JPG', './fotos-hero/IMG_5389.JPG',
+      './fotos-hero/IMG_5390.JPG', './fotos-hero/IMG_5391.JPG', './fotos-hero/IMG_5392.JPG',
+      './fotos-hero/IMG_5393.JPG', './fotos-hero/IMG_5394.JPG', './fotos-hero/IMG_5395.JPG',
+      './fotos-hero/IMG_5396.JPG', './fotos-hero/IMG_5397.JPG', './fotos-hero/IMG_5398.JPG',
+      './fotos-hero/IMG_5399.JPG', './fotos-hero/IMG_5400.JPG', './fotos-hero/IMG_5401.JPG',
+      './fotos-hero/IMG_5402.JPG', './fotos-hero/IMG_5403.JPG', './fotos-hero/IMG_5404.JPG',
+      './fotos-hero/IMG_5405.JPG', './fotos-hero/IMG_5406.JPG', './fotos-hero/IMG_5407.JPG',
+      './fotos-hero/IMG_5408.JPG', './fotos-hero/IMG_5409.JPG', './fotos-hero/IMG_5410.JPG',
+      './fotos-hero/_DSC0444.jpg', './fotos-hero/_DSC3158.jpg', './fotos-hero/_DSC3454.jpg'
+    ];
+
+    const bgContainer = document.getElementById('bg-container');
+    const badge = document.getElementById('badge');
+
+    // Create img divs
+    HERO_PHOTOS.forEach((src, index) => {
+      const div = document.createElement('div');
+      div.className = 'bg-image';
+      div.id = 'bg-' + index;
+      div.style.backgroundImage = `url('${src}')`;
+      bgContainer.appendChild(div);
+    });
+
+    let currentIndex = 0;
+
+    function showNext() {
+      // remove active from all
+      const divs = document.querySelectorAll('.bg-image');
+      divs.forEach(d => d.classList.remove('active'));
+      
+      // add active to current
+      divs[currentIndex].classList.add('active');
+      badge.textContent = 'Preview: ' + HERO_PHOTOS[currentIndex].split('/').pop();
+      
+      currentIndex = (currentIndex + 1) % HERO_PHOTOS.length;
+    }
+
+    // start
+    showNext();
+    setInterval(showNext, 3500);
+  </script>
+</body>
+</html>

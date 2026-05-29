@@ -28,7 +28,7 @@ function Welcome() {
       {/* ===== FONDO: Imagen Ultra-HD (siempre presente, opacity controlada) ===== */}
       <div style={{
         position: 'absolute', inset: 0,
-        backgroundImage: 'url(/welcome_bg.png)',
+        backgroundImage: 'url(/fotos-hero/IMG_5402.JPG)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         opacity: phase === 'splash' ? 0 : 1,
