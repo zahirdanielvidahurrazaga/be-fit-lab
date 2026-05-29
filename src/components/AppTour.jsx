@@ -64,7 +64,7 @@ export function AppTour() {
     if (!showTour || !isInternalRoute) return;
     
     const step = TOUR_STEPS[currentStep];
-    if (!step.selector) {
+    if (!step || !step.selector) {
       setTargetRect(null);
       return;
     }
@@ -95,6 +95,7 @@ export function AppTour() {
   useEffect(() => {
     if (!showTour) return;
     const step = TOUR_STEPS[currentStep];
+    if (!step) return;
 
     if (step.advanceOnPath && location.pathname === step.advanceOnPath) {
        setCurrentStep(prev => prev + 1);
@@ -104,23 +105,32 @@ export function AppTour() {
   useEffect(() => {
     if (!showTour) return;
     const step = TOUR_STEPS[currentStep];
+    if (!step) return;
     
     if (step.requireClick && step.advanceOnEvent === 'click' && step.targetSelector) {
       const handleClick = (e) => {
-        // Find if they clicked the target or inside it
         const el = e.target.closest(step.targetSelector);
         if (el) {
-          // Advance after a slight delay to let the click UI action happen naturally
-          setTimeout(() => setCurrentStep(prev => prev + 1), 150);
+          setTimeout(() => {
+            if (currentStep < TOUR_STEPS.length - 1) {
+              setCurrentStep(prev => prev + 1);
+            } else {
+              setShowTour(false);
+              setCurrentStep(0);
+              if (user) localStorage.setItem(`befit_tour_seen_${user.id}`, 'true');
+            }
+          }, 150);
         }
       };
-      document.addEventListener('click', handleClick, true); // use capture phase
+      document.addEventListener('click', handleClick, true); 
       return () => document.removeEventListener('click', handleClick, true);
     }
-  }, [currentStep, showTour]);
+  }, [currentStep, showTour, user, setShowTour]);
 
-  // Evitamos renderizar si no está activo o si no estamos dentro de la app
-  if (!showTour || !isInternalRoute) return null;
+  const stepData = TOUR_STEPS[currentStep];
+  
+  // Evitamos renderizar si no está activo, si no estamos dentro de la app, o si el paso es inválido
+  if (!showTour || !isInternalRoute || !stepData) return null;
 
   const handleNext = () => {
     if (currentStep < TOUR_STEPS.length - 1) {
