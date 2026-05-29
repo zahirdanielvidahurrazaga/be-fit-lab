@@ -9,36 +9,68 @@ const TOUR_STEPS = [
     icon: <Sparkles size={40} color="var(--primary)" />,
     title: '¡Te damos la bienvenida!',
     description: 'Prepárate para transformar tu estilo de vida. Te daremos un breve recorrido por tu nueva app Be Fit Lab.',
-  },
-  {
-    icon: <User size={40} color="var(--primary)" />,
-    title: 'Tu Perfil y Portal',
-    description: 'En la pestaña "Yo" encontrarás tu información personal, acceso a tus compras y opciones para configurar tu cuenta.',
+    selector: null
   },
   {
     icon: <Wallet size={40} color="var(--primary)" />,
-    title: 'Membresía a un toque',
+    title: 'Tu Membresía',
     description: 'Revisa tu plan actual, cuántas clases te quedan o actualiza tu membresía de manera rápida y segura.',
+    selector: '.dashboard-sidebar > div:first-child'
   },
   {
     icon: <TrendingUp size={40} color="var(--primary)" />,
     title: 'Sigue tu Evolución',
     description: 'La pestaña "Metas" calcula tu Score y te premia con Insignias por tu disciplina. ¡Mantén tu fuego continuo!',
+    selector: '.ios-bottom-nav a[href="/evolucion"]'
   },
   {
     icon: <Calendar size={40} color="var(--primary)" />,
     title: 'Agenda tus Clases',
     description: 'En "Clases" podrás reservar o cancelar tus sesiones para la semana. ¡Asegura tu lugar con anticipación!',
+    selector: '.ios-bottom-nav a[href="/agenda"]'
   }
 ];
 
 export function AppTour() {
   const { showTour, setShowTour, user } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
+  const [targetRect, setTargetRect] = useState(null);
   const location = useLocation();
 
   // Solo mostrar el tour si estamos en una ruta interna (no en login, register o welcome)
   const isInternalRoute = ['/portal', '/evolucion', '/agenda', '/nutricion', '/mi-cuenta'].includes(location.pathname);
+
+  useEffect(() => {
+    if (!showTour || !isInternalRoute) return;
+    
+    const step = TOUR_STEPS[currentStep];
+    if (!step.selector) {
+      setTargetRect(null);
+      return;
+    }
+
+    const updateRect = () => {
+      const el = document.querySelector(step.selector);
+      if (el) {
+        setTargetRect(el.getBoundingClientRect());
+      } else {
+        setTargetRect(null);
+      }
+    };
+
+    updateRect();
+    
+    // Retry finding element if it takes a moment to render
+    const timeout = setTimeout(updateRect, 300);
+    
+    window.addEventListener('resize', updateRect);
+    window.addEventListener('scroll', updateRect, true);
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener('resize', updateRect);
+      window.removeEventListener('scroll', updateRect, true);
+    };
+  }, [currentStep, showTour, isInternalRoute, location.pathname]);
 
   // Evitamos renderizar si no está activo o si no estamos dentro de la app
   if (!showTour || !isInternalRoute) return null;
@@ -61,44 +93,73 @@ export function AppTour() {
 
   const stepData = TOUR_STEPS[currentStep];
 
+  // Cálculo de posición del tooltip
+  const isBottomHalf = targetRect && targetRect.top > window.innerHeight / 2;
+  
+  // Variantes para el modal dependiendo si hay objetivo o está centrado
+  const modalVariants = {
+    hidden: { opacity: 0, scale: 0.9, y: 20 },
+    visible: { 
+      opacity: 1, 
+      scale: 1, 
+      y: 0,
+      x: '-50%', // Centrado horizontalmente
+      top: targetRect 
+        ? (isBottomHalf ? targetRect.top - 20 : targetRect.bottom + 20) 
+        : '50%',
+      translateY: targetRect 
+        ? (isBottomHalf ? '-100%' : '0%') 
+        : '-50%',
+      left: '50%'
+    },
+    exit: { opacity: 0, scale: 0.9, y: 20 }
+  };
+
   return (
     <AnimatePresence>
       {showTour && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 999999,
-            background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-          }}
-        >
+        <div style={{ position: 'fixed', inset: 0, zIndex: 999998, pointerEvents: 'auto', overflow: 'hidden' }}>
+          
+          {/* Spotlight Overlay con blur de fallback */}
+          <div style={{ position: 'absolute', inset: 0, backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', zIndex: 0 }} />
+          
           <motion.div
-            key={currentStep}
-            initial={{ scale: 0.95, y: 20, opacity: 0 }}
-            animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.95, y: -20, opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            initial={false}
+            animate={{
+              x: targetRect ? targetRect.left - 10 : window.innerWidth / 2,
+              y: targetRect ? targetRect.top - 10 : window.innerHeight / 2,
+              width: targetRect ? targetRect.width + 20 : 0,
+              height: targetRect ? targetRect.height + 20 : 0,
+              borderRadius: targetRect ? 24 : 0
+            }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             style={{
-              background: 'rgba(255, 255, 255, 0.85)',
-              borderRadius: '32px', padding: '40px 30px', width: '100%', maxWidth: '360px',
-              textAlign: 'center', position: 'relative',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              boxShadow: '0 0 0 9999px rgba(0,0,0,0.75)',
+              pointerEvents: 'none', // Permite que los clics lleguen al overlay transparente
+              zIndex: 1
+            }}
+          />
+
+          <motion.div
+            key="tour-card"
+            variants={modalVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            transition={{ type: 'spring', damping: 25, stiffness: 300, mass: 0.8 }}
+            style={{
+              position: 'absolute',
+              zIndex: 2,
+              background: 'rgba(255, 255, 255, 0.95)',
+              borderRadius: '32px', padding: '30px 24px', width: '90%', maxWidth: '340px',
+              textAlign: 'center',
               boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
-              border: '1px solid rgba(255, 255, 255, 0.5)'
+              border: '1px solid rgba(255, 255, 255, 1)'
             }}
           >
-            {/* Botón de cerrar / omitir */}
-            <button 
-              onClick={handleClose}
-              style={{ 
-                position: 'absolute', top: '15px', right: '15px', 
-                background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', 
-                width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' 
-              }}
-            >
-              <X size={18} color="var(--on-surface-variant)" />
-            </button>
 
             {/* Ícono animado */}
             <motion.div 
@@ -152,7 +213,7 @@ export function AppTour() {
             </div>
 
           </motion.div>
-        </motion.div>
+        </div>
       )}
     </AnimatePresence>
   );
