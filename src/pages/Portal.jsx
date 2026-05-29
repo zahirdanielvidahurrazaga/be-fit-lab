@@ -298,10 +298,10 @@ function Portal() {
         <div className="dashboard-content" style={{ zIndex: 1, position: 'relative' }}>
 
           {/* PRÓXIMA CLASE - TICKET STYLE */}
-          <motion.section initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5, delay:0.25}}>
+          <motion.section id="tour-proximas-clases" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5, delay:0.25}}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
               <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Próximas clases</h2>
-              <Link to="/agenda" style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textDecoration: 'none' }}>Ver todo →</Link>
+              <Link className="tour-agendar-btn" to="/agenda" style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textDecoration: 'none' }}>Ver todo →</Link>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -325,7 +325,7 @@ function Portal() {
                   <Calendar size={36} color="var(--on-surface-variant)" style={{ opacity: 0.2, margin: '0 auto 12px' }} />
                   <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: 'var(--on-surface)' }}>Sin clases agendadas</p>
                   <p style={{ margin: '5px 0 0', fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>Reserva tu próxima sesión</p>
-                  <Link to="/agenda" style={{ 
+                  <Link className="tour-agendar-btn" to="/agenda" style={{ 
                     display: 'inline-block', marginTop: '15px', color: 'white', fontWeight: 700, 
                     textDecoration: 'none', background: 'var(--primary)', padding: '10px 24px', 
                     borderRadius: '14px', fontSize: '0.85rem',
@@ -337,7 +337,7 @@ function Portal() {
           </motion.section>
 
           {/* WEEKLY STATS MINI */}
-          <motion.section initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5, delay:0.35}} style={{ marginTop: '25px' }}>
+          <motion.section id="tour-tu-semana" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5, delay:0.35}} style={{ marginTop: '25px' }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '15px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Tu semana</h2>
             <div style={{ display: 'flex', gap: '10px' }}>
               <StatPill icon={<Flame size={16} />} value="1.2k" label="kcal" color="var(--primary)" />

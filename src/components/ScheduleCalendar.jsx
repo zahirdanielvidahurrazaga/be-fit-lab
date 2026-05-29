@@ -84,6 +84,7 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, onReser
                 
                 return (
                   <motion.button
+                    className={hasClasses ? "tour-calendar-day" : ""}
                     key={dayNum}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => {
@@ -129,6 +130,7 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, onReser
               
               return (
                 <div 
+                  className={hasClasses ? "tour-calendar-day" : ""}
                   key={i} 
                   onClick={() => setSelectedDateStr(d.dateStr)}
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
@@ -197,6 +199,7 @@ export function ClassItem({ classData, full, onReserve, coaches, badgeConfigs })
 
   return (
     <motion.div 
+      className="tour-class-card"
       whileTap={{ scale: 0.98 }}
       onClick={() => { if(!full && onReserve) onReserve(); }}
       style={{ 

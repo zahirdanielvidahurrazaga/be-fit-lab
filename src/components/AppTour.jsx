@@ -19,15 +19,35 @@ const TOUR_STEPS = [
   },
   {
     icon: <TrendingUp size={40} color="var(--primary)" />,
-    title: 'Sigue tu Evolución',
-    description: 'La pestaña "Metas" calcula tu Score y te premia con Insignias por tu disciplina. ¡Mantén tu fuego continuo!',
-    selector: '.ios-bottom-nav a[href="/evolucion"]'
+    title: 'Tu Semana',
+    description: 'Aquí verás un resumen rápido de tu actividad: calorías quemadas, clases asistidas y puntos acumulados.',
+    selector: '#tour-tu-semana'
   },
   {
     icon: <Calendar size={40} color="var(--primary)" />,
-    title: 'Agenda tus Clases',
-    description: 'En "Clases" podrás reservar o cancelar tus sesiones para la semana. ¡Asegura tu lugar con anticipación!',
-    selector: '.ios-bottom-nav a[href="/agenda"]'
+    title: 'Próximas Clases',
+    description: 'Haz click en "Ver todo" o "Agendar ahora" para ir a la agenda y asegurar tu lugar en tu primera clase.',
+    selector: '#tour-proximas-clases .tour-agendar-btn',
+    requireClick: true,
+    advanceOnPath: '/agenda'
+  },
+  {
+    icon: <Calendar size={40} color="var(--primary)" />,
+    title: 'Elige un Día',
+    description: 'Selecciona cualquier día en el calendario que tenga clases disponibles (el punto verde) para ver los horarios.',
+    selector: '.tour-calendar-day', // will select the first available day
+    requireClick: true,
+    advanceOnEvent: 'click',
+    targetSelector: '.tour-calendar-day'
+  },
+  {
+    icon: <Play size={40} color="var(--primary)" />,
+    title: 'Reserva tu Lugar',
+    description: 'Finalmente, haz click en una clase para ver sus detalles, conocer a tu coach y confirmar tu asistencia.',
+    selector: '.tour-class-card',
+    requireClick: true,
+    advanceOnEvent: 'click',
+    targetSelector: '.tour-class-card'
   }
 ];
 
@@ -71,6 +91,33 @@ export function AppTour() {
       window.removeEventListener('scroll', updateRect, true);
     };
   }, [currentStep, showTour, isInternalRoute, location.pathname]);
+
+  useEffect(() => {
+    if (!showTour) return;
+    const step = TOUR_STEPS[currentStep];
+
+    if (step.advanceOnPath && location.pathname === step.advanceOnPath) {
+       setCurrentStep(prev => prev + 1);
+    }
+  }, [location.pathname, showTour, currentStep]);
+
+  useEffect(() => {
+    if (!showTour) return;
+    const step = TOUR_STEPS[currentStep];
+    
+    if (step.requireClick && step.advanceOnEvent === 'click' && step.targetSelector) {
+      const handleClick = (e) => {
+        // Find if they clicked the target or inside it
+        const el = e.target.closest(step.targetSelector);
+        if (el) {
+          // Advance after a slight delay to let the click UI action happen naturally
+          setTimeout(() => setCurrentStep(prev => prev + 1), 150);
+        }
+      };
+      document.addEventListener('click', handleClick, true); // use capture phase
+      return () => document.removeEventListener('click', handleClick, true);
+    }
+  }, [currentStep, showTour]);
 
   // Evitamos renderizar si no está activo o si no estamos dentro de la app
   if (!showTour || !isInternalRoute) return null;
@@ -120,8 +167,8 @@ export function AppTour() {
       {showTour && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 999998, pointerEvents: 'auto', overflow: 'hidden' }}>
           
-          {/* Spotlight Overlay con blur de fallback */}
-          <div style={{ position: 'absolute', inset: 0, backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', zIndex: 0 }} />
+          {/* Fondo oscuro simple, sin blur para mejor legibilidad */}
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.1)', zIndex: 0 }} />
           
           <motion.div
             initial={false}
@@ -184,19 +231,21 @@ export function AppTour() {
               {stepData.description}
             </p>
 
-            {/* Botón de acción */}
-            <button 
-              onClick={handleNext}
-              style={{
-                width: '100%', padding: '16px', borderRadius: '20px', border: 'none',
-                background: 'var(--primary)', color: 'white', fontWeight: 800, fontSize: '1rem',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer',
-                boxShadow: '0 10px 20px rgba(255,139,66,0.3)', transition: 'transform 0.1s'
-              }}
-            >
-              {currentStep === TOUR_STEPS.length - 1 ? '¡Comenzar!' : 'Siguiente'} 
-              {currentStep < TOUR_STEPS.length - 1 && <ChevronRight size={20} />}
-            </button>
+            {/* Botón de acción u oculto si es interactivo */}
+            {!stepData.requireClick && (
+              <button 
+                onClick={handleNext}
+                style={{
+                  width: '100%', padding: '16px', borderRadius: '20px', border: 'none',
+                  background: 'var(--primary)', color: 'white', fontWeight: 800, fontSize: '1rem',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer',
+                  boxShadow: '0 10px 20px rgba(255,139,66,0.3)', transition: 'transform 0.1s'
+                }}
+              >
+                {currentStep === TOUR_STEPS.length - 1 ? '¡Comenzar!' : 'Siguiente'} 
+                {currentStep < TOUR_STEPS.length - 1 && <ChevronRight size={20} />}
+              </button>
+            )}
 
             {/* Indicadores de progreso */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '24px' }}>
