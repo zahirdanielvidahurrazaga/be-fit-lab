@@ -34,7 +34,7 @@ const PLANS = [
   },
 ];
 
-export function PricingCarousel() {
+export function PricingCarousel({ onSelectPlan }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const navigate = useNavigate();
@@ -150,7 +150,9 @@ export function PricingCarousel() {
                     onClick={(e) => {
                       e.stopPropagation();
                       if(isActive) {
-                        if (plan.paymentUrl && plan.paymentUrl !== '#') {
+                        if (onSelectPlan) {
+                          onSelectPlan(plan);
+                        } else if (plan.paymentUrl && plan.paymentUrl !== '#') {
                           window.location.href = plan.paymentUrl;
                         } else {
                           alert('¡Próximamente! Esperando enlace de pago...');

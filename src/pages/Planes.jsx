@@ -3,6 +3,7 @@ import { Check, CreditCard, X, Lock, Mail, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { PricingCarousel } from '../components/PricingCarousel';
 
 function Planes() {
   const navigate = useNavigate();
@@ -51,33 +52,8 @@ function Planes() {
         <p style={{ color: 'var(--on-surface-variant)', fontSize: '1.1rem' }}>Membresías diseñadas para transformar tu estilo de vida.</p>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-        
-        {/* Plan FIT */}
-        <PlanCard 
-          title="Plan FIT Presencial" 
-          price="1,200" 
-          features={["Acceso a 20 clases", "Recetario (+100 recetas)", "Registro de métricas"]}
-          onCheckout={() => handleOpenCheckout({ title: 'Plan FIT', price: '1,200' })}
-        />
-
-        {/* Plan Premium (Recomendado) */}
-        <PlanCard 
-          title="Plan Premium Presencial" 
-          price="1,800" 
-          recommended={true}
-          features={["Acceso a 30 clases", "Recetario (+100 recetas)", "Registro de métricas", "3 invitadas al mes sin costo", "Contacto constante"]}
-          onCheckout={() => handleOpenCheckout({ title: 'Plan Premium', price: '1,800' })}
-        />
-
-        {/* Plan Basico */}
-        <PlanCard 
-          title="Plan Básico Presencial" 
-          price="950" 
-          features={["Acceso a 15 clases", "Recetario (+100 recetas)", "Registro de métricas"]}
-          onCheckout={() => handleOpenCheckout({ title: 'Plan Básico', price: '950' })}
-        />
-
+      <div style={{ marginTop: '2rem' }}>
+        <PricingCarousel onSelectPlan={(plan) => handleOpenCheckout({ title: `Plan ${plan.title}`, price: plan.price.replace('$', '') })} />
       </div>
       
       <div style={{ textAlign: 'center', marginTop: '4rem' }}>
@@ -193,53 +169,6 @@ function Planes() {
 
     </div>
   );
-}
-
-function PlanCard({ title, price, features, recommended, onCheckout }) {
-  return (
-    <div style={{ 
-      background: 'var(--app-surface-solid)', 
-      borderRadius: '20px', 
-      width: '320px', 
-      overflow: 'hidden',
-      boxShadow: recommended ? '0 20px 40px rgba(0,0,0,0.2)' : '0 10px 30px rgba(0,0,0,0.1)',
-      transform: recommended ? 'scale(1.05)' : 'scale(1)',
-      border: recommended ? '2px solid var(--primary)' : '1px solid rgba(255,255,255,0.05)',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      {recommended && (
-        <div style={{ background: 'var(--primary)', color: 'white', textAlign: 'center', padding: '0.5rem', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '1px' }}>
-          MÁS POPULAR
-        </div>
-      )}
-      <div style={{ padding: '2rem', textAlign: 'center', borderBottom: '1px solid var(--accent)' }}>
-        <h3 style={{ margin: '0 0 1rem 0', color: 'var(--on-surface)', fontSize: '1.2rem' }}>{title}</h3>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: '4px' }}>
-          <span style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--on-surface)' }}>${price}</span>
-          <span style={{ color: 'var(--on-surface-variant)', fontWeight: 500 }}>MXN /mes</span>
-        </div>
-      </div>
-      <div style={{ padding: '2rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
-          {features.map((f, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-              <Check size={18} color="var(--primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
-              <span style={{ color: 'var(--on-surface-variant)', fontSize: '0.9rem', lineHeight: 1.4 }}>{f}</span>
-            </div>
-          ))}
-        </div>
-        <button onClick={onCheckout} style={{ 
-          marginTop: '2rem', width: '100%', padding: '1rem', borderRadius: '30px', 
-          background: recommended ? 'var(--primary)' : '#1A1C1E', color: 'white', 
-          border: 'none', fontWeight: 600, cursor: 'pointer',
-          display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'
-        }}>
-          Pagar con Stripe <CreditCard size={18} />
-        </button>
-      </div>
-    </div>
-  )
 }
 
 export default Planes;
