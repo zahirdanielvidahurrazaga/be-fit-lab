@@ -78,14 +78,12 @@ export function PricingCarousel({ onSelectPlan }) {
             <motion.div
               key={plan.title}
               animate={{ x, scale, zIndex, opacity }}
-              transition={{ type: 'spring', stiffness: 250, damping: 25 }}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
               style={{
                 position: 'absolute',
                 width: '100%',
                 height: '560px',
-                background: isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
-                backdropFilter: isActive ? 'none' : 'blur(24px)',
-                WebkitBackdropFilter: isActive ? 'none' : 'blur(24px)',
+                background: isActive ? '#ffffff' : 'rgba(240, 240, 245, 0.95)',
                 borderRadius: '32px',
                 boxShadow: isActive ? '0 40px 80px rgba(255, 122, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.8)' : '0 10px 30px rgba(0,0,0,0.05)',
                 display: 'flex',
@@ -94,8 +92,7 @@ export function PricingCarousel({ onSelectPlan }) {
                 cursor: isActive ? 'default' : 'pointer',
                 border: '1px solid rgba(255,255,255,0.8)',
                 pointerEvents: 'auto',
-                WebkitFontSmoothing: 'antialiased',
-                transformStyle: 'preserve-3d'
+                WebkitFontSmoothing: 'antialiased'
               }}
               onClick={() => {
                 if (!isActive) {

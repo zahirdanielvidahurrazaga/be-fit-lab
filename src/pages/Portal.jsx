@@ -207,31 +207,18 @@ function Portal() {
                 </div>
               </div>
 
-              {/* Status & Renewal Info */}
-              <div style={{ background: 'var(--surface-low)', borderRadius: '16px', padding: '16px', marginBottom: '16px', border: '1px solid var(--border-subtle)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ background: 'rgba(255,145,77,0.1)', padding: '8px', borderRadius: '10px' }}>
-                    <Calendar size={18} color="var(--primary)" />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--black)' }}>Pago Recurrente Stripe</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 500 }}>Tu plan se renueva automáticamente cada mes.</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
+              {/* Action Button - Simplified for Dashboard */}
               <button 
                 onClick={() => navigate('/planes')}
                 style={{ 
-                  width: '100%', padding: '14px', borderRadius: '16px', 
+                  width: '100%', padding: '12px', borderRadius: '16px', 
                   background: 'var(--app-surface-solid)', color: 'var(--black)', 
-                  border: '1px solid var(--border-subtle)', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer',
+                  border: '1px solid var(--border-subtle)', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer',
                   display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)', transition: 'all 0.2s'
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)', transition: 'all 0.2s', marginTop: '10px'
                 }}
               >
-                <Wallet size={18} color="var(--primary)" /> Renovar o Cambiar Plan
+                Ver Mi Membresía <ChevronRight size={16} color="var(--primary)" />
               </button>
             </div>
           </motion.div>

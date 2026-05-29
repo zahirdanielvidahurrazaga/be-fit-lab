@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Check, CreditCard, X, Lock, Mail, User } from 'lucide-react';
+import { Check, CreditCard, X, Lock, Mail, User, Calendar, Sparkles, Wallet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { PricingCarousel } from '../components/PricingCarousel';
+import { motion } from 'framer-motion';
 
 function Planes() {
   const navigate = useNavigate();
-  const { user, activatePlan } = useAuth();
+  const { user, activatePlan, plan, classesRemaining } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState(1); // 1 = form, 2 = success
@@ -55,6 +56,64 @@ function Planes() {
           {user ? 'Administra tu plan y descubre nuevas opciones.' : 'Membresías diseñadas para transformar tu estilo de vida.'}
         </p>
       </div>
+
+      {user && (
+        <div style={{ maxWidth: '500px', margin: '0 auto 3rem', width: '100%' }}>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            style={{ 
+              padding: '24px', borderRadius: '32px', 
+              background: '#ffffff',
+              border: '1px solid rgba(0,0,0,0.05)',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.06)',
+              position: 'relative', overflow: 'hidden'
+            }}
+          >
+            <div style={{ position: 'absolute', top: 0, right: 0, width: '150px', height: '150px', background: 'radial-gradient(circle, rgba(255,145,77,0.15) 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}></div>
+            
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                    <Sparkles size={14} color="var(--primary)" />
+                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Membresía Actual</span>
+                  </div>
+                  <h2 style={{ fontSize: '1.6rem', color: 'var(--black)', margin: 0, fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>
+                    {plan ? plan.replace('Plan ', '') : 'Sin Plan'}
+                  </h2>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '6px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: plan ? '#22C55E' : '#EF4444' }}></div>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{plan ? 'Suscripción Activa' : 'Inactiva'}</span>
+                  </div>
+                </div>
+                
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--primary)', fontFamily: 'var(--font-display)', lineHeight: 0.9 }}>
+                    {classesRemaining}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>
+                    Clases Restantes
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--surface-low)', borderRadius: '16px', padding: '16px', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ background: 'rgba(255,145,77,0.1)', padding: '8px', borderRadius: '10px' }}>
+                    <Calendar size={18} color="var(--primary)" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--black)' }}>Pago Recurrente Stripe</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 500 }}>Tu plan se renueva automáticamente cada mes.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       <div style={{ marginTop: '2rem' }}>
         <PricingCarousel onSelectPlan={(plan) => handleOpenCheckout({ title: `Plan ${plan.title}`, price: plan.price.replace('$', '') })} />
