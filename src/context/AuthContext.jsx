@@ -16,6 +16,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [customBadges, setCustomBadges] = useState([]);
   const [newUnlockedBadge, setNewUnlockedBadge] = useState(null);
+  const [showTour, setShowTour] = useState(false);
 
   // ESTADO GLOBAL DE RESERVAS (Supabase)
   const [badgeConfigs, setBadgeConfigs] = useState([]);
@@ -172,6 +173,12 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem(`avatar_${session.user.id}`, profile.avatar_url);
           }
         }
+        
+        // Disparar tour si no lo ha visto
+        if (!localStorage.getItem(`befit_tour_seen_${session.user.id}`)) {
+          // Un pequeño delay para que la UI cargue primero
+          setTimeout(() => setShowTour(true), 1500);
+        }
       } else {
         setLoading(false);
       }
@@ -188,6 +195,10 @@ export const AuthProvider = ({ children }) => {
         }
         fetchAllUsers();
         fetchCoaches();
+
+        if (!localStorage.getItem(`befit_tour_seen_${session.user.id}`)) {
+          setTimeout(() => setShowTour(true), 1500);
+        }
       } else {
         setRole(null);
         setPlan(null);
@@ -867,6 +878,7 @@ export const AuthProvider = ({ children }) => {
       fetchClassReservations, fetchClassesByDayOfWeek, fetchGlobalClasses,
       assignCustomBadge, removeCustomBadge, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig,
       newUnlockedBadge, setNewUnlockedBadge,
+      showTour, setShowTour,
       coaches, addMultipleClasses
     }}>
       {children}

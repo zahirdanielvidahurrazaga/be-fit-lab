@@ -20,6 +20,7 @@ import Cafeteria from './pages/Cafeteria';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useLocalNotifications } from './hooks/useLocalNotifications';
 import { usePushNotifications } from './hooks/usePushNotifications';
+import { AppTour } from './components/AppTour';
 import './index.css';
 
 const ScrollToTop = () => {
@@ -107,6 +108,7 @@ function App() {
           {/* Rutas Privadas Admin */}
           <Route path="/admin" element={<ProtectedRoute requireRole="ADMIN"><Admin /></ProtectedRoute>} />
         </Routes>
+        <AppTour />
       </Router>
     </AuthProvider>
   );

@@ -13,7 +13,7 @@ import BadgeUnlockOverlay from '../components/BadgeUnlockOverlay';
 function Portal() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, logout, classesRemaining, myReservations, cancelClass, profileName, globalClasses, avatarUrl, newUnlockedBadge, setNewUnlockedBadge } = useAuth();
+  const { user, plan, logout, classesRemaining, myReservations, cancelClass, profileName, globalClasses, avatarUrl, newUnlockedBadge, setNewUnlockedBadge, setShowTour } = useAuth();
   
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
@@ -116,6 +116,9 @@ function Portal() {
                 </div>
                 <div className="profile-dropdown-item" onClick={() => { navigate('/ajustes'); setShowProfileMenu(false); }}>
                    Ajustes
+                </div>
+                <div className="profile-dropdown-item" onClick={() => { setShowTour(true); setShowProfileMenu(false); }}>
+                   Ver Tour de la App
                 </div>
                 <div className="profile-dropdown-item danger" onClick={logout}>
                    Cerrar Sesión
