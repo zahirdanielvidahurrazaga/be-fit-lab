@@ -223,9 +223,10 @@ export function AppTour() {
 
   useEffect(() => {
     if (!showTour) return;
+    if (!isInternalRoute) return;
     const step = TOUR_STEPS[currentStep];
     if (!step) return;
-    
+
     const handleClick = (e) => {
       // Allow clicks inside the tour modal itself
       if (e.target.closest('#tour-modal-card')) return;

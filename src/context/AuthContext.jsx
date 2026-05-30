@@ -174,9 +174,8 @@ export const AuthProvider = ({ children }) => {
           }
         }
         
-        // Disparar tour si no lo ha visto
-        if (!localStorage.getItem(`befit_tour_seen_${session.user.id}`)) {
-          // Un pequeño delay para que la UI cargue primero
+        // Disparar tour solo en app nativa
+        if (Capacitor.isNativePlatform() && !localStorage.getItem(`befit_tour_seen_${session.user.id}`)) {
           setTimeout(() => setShowTour(true), 1500);
         }
       } else {
@@ -196,7 +195,7 @@ export const AuthProvider = ({ children }) => {
         fetchAllUsers();
         fetchCoaches();
 
-        if (!localStorage.getItem(`befit_tour_seen_${session.user.id}`)) {
+        if (Capacitor.isNativePlatform() && !localStorage.getItem(`befit_tour_seen_${session.user.id}`)) {
           setTimeout(() => setShowTour(true), 1500);
         }
       } else {

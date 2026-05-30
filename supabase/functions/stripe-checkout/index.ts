@@ -66,15 +66,15 @@ serve(async (req) => {
       });
     }
 
-    const resultBase = 'https://fifaowaiokauhuqklzwe.supabase.co/functions/v1/payment-result';
+    const appUrl = 'https://be-fit-lab.pages.dev';
 
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
       payment_method_types: ['card'],
       mode: 'subscription',
       line_items: [{ price: price.id, quantity: 1 }],
-      success_url: `${resultBase}?status=success`,
-      cancel_url:  `${resultBase}?status=cancel`,
+      success_url: `${appUrl}/planes?payment=success`,
+      cancel_url:  `${appUrl}/planes?payment=cancel`,
       metadata: {
         supabase_user_id: userId,
         plan_title: planTitle,

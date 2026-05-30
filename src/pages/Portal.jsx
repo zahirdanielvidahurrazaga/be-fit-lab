@@ -200,11 +200,11 @@ function Portal() {
                 </div>
                 
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--primary)', fontFamily: 'var(--font-display)', lineHeight: 0.9 }}>
-                    {classesRemaining}
+                  <div style={{ fontSize: classesRemaining >= 9999 ? '1.8rem' : '2.5rem', fontWeight: 900, color: 'var(--primary)', fontFamily: 'var(--font-display)', lineHeight: 0.9 }}>
+                    {classesRemaining >= 9999 ? '∞' : classesRemaining}
                   </div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>
-                    Clases Restantes
+                    {classesRemaining >= 9999 ? 'Ilimitadas' : 'Clases Restantes'}
                   </div>
                 </div>
               </div>
@@ -450,7 +450,7 @@ function Portal() {
               <div className="wallet-footer" style={{ borderTop: '1px dashed rgba(0,0,0,0.05)', paddingTop: '20px', paddingBottom: '20px', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '0.65rem', color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--primary)'}}>sesiones</span></div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{classesRemaining >= 9999 ? '∞' : classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--primary)'}}>{classesRemaining >= 9999 ? 'ilimitadas' : 'sesiones'}</span></div>
                 </div>
               </div>
             </div>

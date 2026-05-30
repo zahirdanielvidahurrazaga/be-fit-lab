@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Check, X, Calendar, Wallet, AlertCircle, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { PricingCarousel } from '../components/PricingCarousel';
@@ -9,13 +9,18 @@ import { Capacitor } from '@capacitor/core';
 
 function Planes() {
   const navigate = useNavigate();
-  const { user, refreshUserData, plan, classesRemaining } = useAuth();
+  const location = useLocation();
+  const { user, refreshUserData, plan, classesRemaining, membershipStatus } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState(1); // 1 = confirm, 2 = waiting, 3 = success
   const [paymentError, setPaymentError] = useState(null);
   const [showCarousel, setShowCarousel] = useState(false);
+
+  // Si no tiene plan activo, mostrar el carrusel directamente
+  const showingCarousel = showCarousel || !membershipStatus || membershipStatus !== 'ACTIVE';
   const realtimeChannelRef = useRef(null);
+  const pollIntervalRef = useRef(null);
 
   const handleOpenCheckout = (plan) => {
     setSelectedPlan(plan);
@@ -27,6 +32,10 @@ function Planes() {
     if (realtimeChannelRef.current) {
       supabase.removeChannel(realtimeChannelRef.current);
       realtimeChannelRef.current = null;
+    }
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
     }
     setSelectedPlan(null);
     setIsProcessing(false);
@@ -61,6 +70,25 @@ function Planes() {
       .subscribe();
 
     realtimeChannelRef.current = channel;
+
+    // Fallback: verificar cada 3s por si Realtime no captura el evento a tiempo
+    pollIntervalRef.current = setInterval(async () => {
+      const { data } = await supabase
+        .from('users')
+        .select('membership_status')
+        .eq('id', user.id)
+        .single();
+      if (data?.membership_status === 'ACTIVE') {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+        supabase.removeChannel(realtimeChannelRef.current);
+        realtimeChannelRef.current = null;
+        await refreshUserData();
+        setIsProcessing(false);
+        setCheckoutStep(3);
+        setTimeout(() => { closeModal(); navigate('/portal'); }, 2500);
+      }
+    }, 3000);
   };
 
   const handleStripeCheckout = async () => {
@@ -98,12 +126,19 @@ function Planes() {
     }
   };
 
-  // Limpiar canal de Realtime si se desmonta el componente
+  // Auto-abrir checkout si viene plan pre-seleccionado desde la landing
+  useEffect(() => {
+    if (location.state?.selectedPlan) {
+      handleOpenCheckout(location.state.selectedPlan);
+      window.history.replaceState({}, '');
+    }
+  }, []);
+
+  // Limpiar al desmontar
   useEffect(() => {
     return () => {
-      if (realtimeChannelRef.current) {
-        supabase.removeChannel(realtimeChannelRef.current);
-      }
+      if (realtimeChannelRef.current) supabase.removeChannel(realtimeChannelRef.current);
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
   }, []);
 
@@ -189,7 +224,7 @@ function Planes() {
         </div>
       )}
 
-      {(!user || showCarousel) && (
+      {(!user || showingCarousel) && (
         <div style={{ marginTop: '2rem' }}>
           <PricingCarousel onSelectPlan={(plan) => handleOpenCheckout({ title: `Plan ${plan.title}`, price: plan.price.replace('$', '') })} />
         </div>

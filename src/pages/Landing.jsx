@@ -367,7 +367,7 @@ export default function Landing() {
 
         <div className="desktop-actions" style={{ display:'flex', gap:'1rem', alignItems:'center' }}>
           {user
-            ? <Link to={role==='ADMIN'?'/admin':'/portal'} style={{ fontSize:'0.88rem', fontWeight:500, textDecoration:'none', color:'var(--on-surface)' }}>Mi Portal</Link>
+            ? <Link to={role==='ADMIN' ? '/admin' : membershipStatus==='ACTIVE' ? '/portal' : '/planes'} style={{ fontSize:'0.88rem', fontWeight:500, textDecoration:'none', color:'var(--on-surface)' }}>Mi Portal</Link>
             : <Link to="/login" style={{ fontSize:'0.88rem', fontWeight:500, textDecoration:'none', color:'var(--on-surface)' }}>Iniciar Sesión</Link>
           }
           <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.96 }} onClick={() => document.getElementById('precios')?.scrollIntoView({ behavior: 'smooth' })} className="btn-primary" style={{ padding:'0.55rem 1.6rem', fontSize:'0.88rem' }}>
@@ -413,7 +413,7 @@ export default function Landing() {
               <div style={{ fontSize:'0.7rem', color:'#6B7280' }}>Aún no tienes membresía activa</div>
             </div>
           </div>
-          <motion.button whileTap={{ scale:0.96 }} onClick={() => document.getElementById('precios')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding:'7px 16px', borderRadius:'20px', border:'none', background:'var(--primary)', color:'white', fontSize:'0.75rem', fontWeight:700, cursor:'pointer', flexShrink:0 }}>Ver Planes</motion.button>
+          <Link to="/planes" style={{ padding:'7px 16px', borderRadius:'20px', background:'var(--primary)', color:'white', fontSize:'0.75rem', fontWeight:700, cursor:'pointer', flexShrink:0, textDecoration:'none' }}>Ver Planes</Link>
         </motion.div>
       )}
 
@@ -422,9 +422,9 @@ export default function Landing() {
       {/* ════════════════════════════════════════════════════════════ */}
       <section style={{ minHeight:'100vh', display:'flex', alignItems:'flex-end', padding:'10rem 5% 6rem', position:'relative', overflow:'hidden' }}>
         {/* Fondo a Color */}
-        <div style={{ position:'absolute', inset:0, zIndex:0, backgroundImage:'url("/fotos-hero/IMG_5376.JPG")', backgroundSize:'cover', backgroundPosition:'center 30%' }} />
+        <div style={{ position:'absolute', inset:0, zIndex:0, backgroundImage:'url("/fotos-hero/IMG_5376.JPG")', backgroundSize:'cover', backgroundPosition:'center 30%', pointerEvents:'none' }} />
         {/* Gradiente sutil inferior para legibilidad del texto */}
-        <div style={{ position:'absolute', inset:0, zIndex:1, background:'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%)' }} />
+        <div style={{ position:'absolute', inset:0, zIndex:1, background:'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%)', pointerEvents:'none' }} />
         
         <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.8, ease:'easeOut' }} className="hero-text-container" style={{ position:'relative', zIndex:2, maxWidth:'850px', width:'100%' }}>
           <div className="badge-peach" style={{ background:'var(--surface-lowest)' }}>
@@ -435,7 +435,7 @@ export default function Landing() {
           </h1>
           <div className="hero-buttons">
             {user ? (
-              <button className="glass-button" style={{ background:'white', color:'black' }} onClick={() => navigate(role==='ADMIN'?'/admin':'/portal')}>Ir a mi Portal <ArrowRight size={20}/></button>
+              <Link to={role==='ADMIN' ? '/admin' : membershipStatus==='ACTIVE' ? '/portal' : '/planes'} className="glass-button" style={{ background:'white', color:'black', textDecoration:'none' }}>Ir a mi Portal <ArrowRight size={20}/></Link>
             ) : (
               <>
                 <button className="glass-button" style={{ background:'white', color:'black' }} onClick={() => document.getElementById('precios')?.scrollIntoView({ behavior: 'smooth' })}>Comenzar Transformación <ArrowRight size={20}/></button>
@@ -819,7 +819,7 @@ export default function Landing() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem', alignItems: 'center' }}>
             
             {/* Carrusel 3D de Planes */}
-            <PricingCarousel />
+            <PricingCarousel onSelectPlan={(plan) => navigate(user ? '/planes' : '/login', { state: { selectedPlan: { title: `Plan ${plan.title}`, price: plan.price.replace('$','') } } })} />
 
             {/* Panel de Beneficios y Costos Adicionales */}
             <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-50px" }}
