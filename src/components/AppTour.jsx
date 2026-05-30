@@ -296,17 +296,19 @@ export function AppTour() {
       y: 0,
       x: '-50%', // Centrado horizontalmente
       top: stepData?.position === 'top' 
-        ? '8%' 
+        ? '10%' 
         : stepData?.position === 'bottom'
-          ? '82%'
+          ? '90%'
           : (targetRect 
             ? (isBottomHalf ? targetRect.top - 20 : targetRect.bottom + 20) 
             : '50%'),
-      translateY: (stepData?.position === 'top' || stepData?.position === 'bottom')
+      translateY: stepData?.position === 'top'
         ? '0%'
-        : (targetRect 
-          ? (isBottomHalf ? '-100%' : '0%') 
-          : '-50%'),
+        : stepData?.position === 'bottom'
+          ? '-100%'
+          : (targetRect 
+            ? (isBottomHalf ? '-100%' : '0%') 
+            : '-50%'),
       left: '50%'
     },
     exit: { opacity: 0, scale: 0.9, y: 20 }
