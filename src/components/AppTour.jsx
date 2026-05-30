@@ -298,7 +298,7 @@ export function AppTour() {
       top: stepData?.position === 'top' 
         ? '10%' 
         : stepData?.position === 'bottom'
-          ? '90%'
+          ? '98%'
           : (targetRect 
             ? (isBottomHalf ? targetRect.top - 20 : targetRect.bottom + 20) 
             : '50%'),
