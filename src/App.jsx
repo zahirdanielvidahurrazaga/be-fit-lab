@@ -1,22 +1,25 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
-import Landing from './pages/Landing';
-import Agenda from './pages/Agenda';
-import Evolucion from './pages/Evolucion';
-import Nutricion from './pages/Nutricion';
-import Portal from './pages/Portal';
-import MiCuenta from './pages/MiCuenta';
-import Ajustes from './pages/Ajustes';
-import Admin from './pages/Admin';
-import Coach from './pages/Coach';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Planes from './pages/Planes';
-import Privacidad from './pages/Privacidad';
-import Terminos from './pages/Terminos';
-import Welcome from './pages/Welcome';
-import Cafeteria from './pages/Cafeteria';
+
+// Code-splitting por ruta: cada página se descarga solo cuando se visita.
+// Esto reduce drásticamente el JS del primer load (antes todo iba en un bundle).
+const Landing = lazy(() => import('./pages/Landing'));
+const Agenda = lazy(() => import('./pages/Agenda'));
+const Evolucion = lazy(() => import('./pages/Evolucion'));
+const Nutricion = lazy(() => import('./pages/Nutricion'));
+const Portal = lazy(() => import('./pages/Portal'));
+const MiCuenta = lazy(() => import('./pages/MiCuenta'));
+const Ajustes = lazy(() => import('./pages/Ajustes'));
+const Admin = lazy(() => import('./pages/Admin'));
+const Coach = lazy(() => import('./pages/Coach'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Planes = lazy(() => import('./pages/Planes'));
+const Privacidad = lazy(() => import('./pages/Privacidad'));
+const Terminos = lazy(() => import('./pages/Terminos'));
+const Welcome = lazy(() => import('./pages/Welcome'));
+const Cafeteria = lazy(() => import('./pages/Cafeteria'));
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useLocalNotifications } from './hooks/useLocalNotifications';
 import { usePushNotifications } from './hooks/usePushNotifications';
@@ -83,6 +86,11 @@ function App() {
     <AuthProvider>
       <Router>
         <ScrollToTop />
+        <Suspense fallback={
+          <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FDFBF7' }}>
+            <div className="loader">Cargando...</div>
+          </div>
+        }>
         <Routes>
           {/* Rutas Públicas */}
           <Route path="/" element={isNative ? <Navigate to="/welcome" replace /> : <Landing />} />
@@ -108,6 +116,7 @@ function App() {
           {/* Rutas Privadas Admin */}
           <Route path="/admin" element={<ProtectedRoute requireRole="ADMIN"><Admin /></ProtectedRoute>} />
         </Routes>
+        </Suspense>
         <AppTour />
       </Router>
     </AuthProvider>

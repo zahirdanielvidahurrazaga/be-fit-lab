@@ -10,6 +10,14 @@
     <meta http-equiv="Content-Security-Policy" 
           content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https: data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none';" />
     <link rel="icon" type="image/png" href="/favicon.png" />
+
+    <!-- Acelerar conexiones críticas del primer load -->
+    <link rel="preconnect" href="https://fifaowaiokauhuqklzwe.supabase.co" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Precargar la imagen hero del Landing (mejora el LCP en web) -->
+    <link rel="preload" as="image" href="/fotos-hero/IMG_5376.JPG" fetchpriority="high" />
+
     <title>Be Fit Lab — Estudio de Fitness Premium</title>
   </head>
   <body>
