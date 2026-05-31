@@ -33,18 +33,12 @@ serve(async (req) => {
     const title = 'Compra en cafetería ☕';
     const body = `${summary} — Total $${total} MXN. ¡Pásala a recoger!`;
 
-    // Log directo (in-app garantizado)
+    // Solo registra la notificación in-app (verificada en servidor). El PUSH lo
+    // dispara el cliente por el mismo camino que el admin (más confiable que
+    // fetch servidor-a-servidor, que se cancelaba al no esperar el cliente).
     await supabase.from('notification_logs').insert({
       user_id: userId, type: 'payment', title, body, status: 'sent',
     });
-    // Push (sin volver a registrar el log)
-    try {
-      await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
-        body: JSON.stringify({ userId, title, body, type: 'payment', skipLog: true }),
-      });
-    } catch (e) { console.error('push cafetería:', e); }
 
     return Response.json({ ok: true, notified: true }, { headers: corsHeaders });
   } catch (err: unknown) {

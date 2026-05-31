@@ -74,8 +74,20 @@ function Cafeteria() {
 
         if (res?.paymentResult === 'paymentSheetCompleted') {
           setShowThanks(true);
-          // Notificar la compra (push + log) — verificado en el servidor
+          // 1) Notificación in-app verificada en el servidor (log)
           supabase.functions.invoke('stripe-cafe-notify', { body: { paymentIntentId: data.paymentIntentId } });
+          // 2) PUSH por el mismo camino que el admin (cliente → send-push, sin log para no duplicar)
+          if (user?.id) {
+            supabase.functions.invoke('send-push', {
+              body: {
+                userId: user.id,
+                title: 'Compra en cafetería ☕',
+                body: `Tu ${item.name} está listo. ¡Pásalo a recoger!`,
+                type: 'payment',
+                skipLog: true,
+              },
+            });
+          }
         }
         // 'paymentSheetCanceled' / 'paymentSheetFailed' → no hacemos nada
       } else {
