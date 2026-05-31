@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
+import { Preferences } from '@capacitor/preferences';
+
+// Marca el tour como visto en almacenamiento nativo (persiste entre lanzamientos)
+const markTourSeen = (userId) => {
+  if (!userId) return;
+  const key = `befit_tour_seen_${userId}`;
+  try { localStorage.setItem(key, 'true'); } catch (e) {}
+  Preferences.set({ key, value: 'true' });
+};
 import { useAuth } from '../context/AuthContext';
 import { User, Wallet, TrendingUp, Calendar, ChevronRight, X, Sparkles, Play, Utensils, Target, Award, Scale, Activity, QrCode } from 'lucide-react';
 
@@ -244,7 +253,7 @@ export function AppTour() {
                 } else {
                   setShowTour(false);
                   setCurrentStep(0);
-                  if (user) localStorage.setItem(`befit_tour_seen_${user.id}`, 'true');
+                  markTourSeen(user?.id);
                 }
               }, 150);
             }
@@ -279,9 +288,7 @@ export function AppTour() {
   const handleClose = () => {
     setShowTour(false);
     setCurrentStep(0);
-    if (user) {
-      localStorage.setItem(`befit_tour_seen_${user.id}`, 'true');
-    }
+    markTourSeen(user?.id);
   };
 
 
@@ -405,16 +412,28 @@ export function AppTour() {
             {/* Indicadores de progreso */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '24px' }}>
               {TOUR_STEPS.map((_, i) => (
-                <div 
-                  key={i} 
-                  style={{ 
-                    width: i === currentStep ? '20px' : '6px', height: '6px', 
+                <div
+                  key={i}
+                  style={{
+                    width: i === currentStep ? '20px' : '6px', height: '6px',
                     borderRadius: '3px', background: i === currentStep ? 'var(--primary)' : 'rgba(0,0,0,0.1)',
                     transition: 'all 0.3s ease'
-                  }} 
+                  }}
                 />
               ))}
             </div>
+
+            {/* Saltar tutorial (marca el tour como visto para que no reaparezca) */}
+            <button
+              onClick={handleClose}
+              style={{
+                marginTop: '16px', background: 'transparent', border: 'none',
+                color: 'var(--on-surface-variant)', fontSize: '0.85rem', fontWeight: 600,
+                cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '3px',
+              }}
+            >
+              Saltar tutorial
+            </button>
 
           </motion.div>
         </div>

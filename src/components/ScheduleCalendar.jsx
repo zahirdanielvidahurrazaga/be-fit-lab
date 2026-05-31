@@ -183,7 +183,7 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, onReser
 }
 
 export function ClassItem({ classData, full, onReserve, coaches, badgeConfigs }) {
-  const { time, title, instructor, spots, category } = classData;
+  const { time, title, instructor, spots, category, coach_id } = classData;
 
   const getBackgroundColor = (cat) => {
     switch(cat) {
@@ -221,7 +221,7 @@ export function ClassItem({ classData, full, onReserve, coaches, badgeConfigs })
         <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', background: '#FCF9F5', flexShrink: 0, border: '2px solid white', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
            {(() => {
              const publicCoachProfile = badgeConfigs?.find(b => b.rule_type === 'COACH_PROFILE');
-             const coachInfo = (coaches || []).find(c => c.full_name === instructor || c.email === instructor) 
+             const coachInfo = (coaches || []).find(c => (coach_id && c.id === coach_id) || c.full_name === instructor || c.email === instructor)
                              || (coaches?.length === 1 ? coaches[0] : null)
                              || (publicCoachProfile ? { full_name: publicCoachProfile.label, avatar_url: publicCoachProfile.icon } : null);
              const photoUrl = coachInfo?.avatar_url;
@@ -242,7 +242,7 @@ export function ClassItem({ classData, full, onReserve, coaches, badgeConfigs })
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
              {(() => {
                const publicCoachProfile = badgeConfigs?.find(b => b.rule_type === 'COACH_PROFILE');
-               const coachInfo = (coaches || []).find(c => c.full_name === instructor || c.email === instructor) 
+               const coachInfo = (coaches || []).find(c => (coach_id && c.id === coach_id) || c.full_name === instructor || c.email === instructor)
                                || (coaches?.length === 1 ? coaches[0] : null)
                                || (publicCoachProfile ? { full_name: publicCoachProfile.label, avatar_url: publicCoachProfile.icon } : null);
                const displayName = coachInfo?.full_name || instructor;

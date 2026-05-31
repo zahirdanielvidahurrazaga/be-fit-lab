@@ -40,3 +40,6 @@ check_error.js
 *.njsproj
 *.sln
 *.sw?
+
+# Archivos duplicados generados por cap sync (basura)
+**/config [0-9]*.xml

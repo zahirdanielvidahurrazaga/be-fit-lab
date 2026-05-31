@@ -30,6 +30,38 @@ serve(async (req) => {
       if (session.payment_status !== 'paid') return new Response('ok');
 
       const { supabase_user_id, plan_title, class_count } = session.metadata ?? {};
+
+      // Pago de CAFETERÍA: no toca membresía; registra el resumen de compra
+      // en notification_logs para que aparezca en el centro de notificaciones.
+      if (session.metadata?.type === 'cafeteria') {
+        if (supabase_user_id) {
+          let titulo = 'Compra en cafetería ☕';
+          let cuerpo = '¡Tu pedido está listo, pásalo a recoger!';
+          try {
+            const li = await stripe.checkout.sessions.listLineItems(session.id, { limit: 20 });
+            const resumen = li.data.map(x => `${x.quantity}× ${x.description}`).join(', ');
+            const total = Math.round((session.amount_total ?? 0) / 100);
+            cuerpo = `${resumen} — Total $${total} MXN. ¡Pásala a recoger!`;
+          } catch (e) { console.error('Error armando resumen cafetería:', e); }
+
+          // 1) Registrar el log DIRECTO (garantiza la notificación in-app)
+          await supabase.from('notification_logs').insert({
+            user_id: supabase_user_id, type: 'payment', title: titulo, body: cuerpo, status: 'sent',
+          });
+          // 2) Mandar el PUSH (sin volver a registrar el log → skipLog)
+          try {
+            await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
+              body: JSON.stringify({ userId: supabase_user_id, title: titulo, body: cuerpo, type: 'payment', skipLog: true }),
+            });
+          } catch (e) { console.error('Error enviando push cafetería:', e); }
+        }
+        return new Response('ok');
+      }
+
+      // Membresía: requiere plan_title; si no, ignorar.
+      if (!plan_title) return new Response('ok');
       if (!supabase_user_id) return new Response('ok');
 
       const { error } = await supabase.from('users').update({

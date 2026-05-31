@@ -65,5 +65,16 @@
 	<string>Be Fit Lab accede a tu galería para que puedas elegir tu foto de perfil.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Be Fit Lab puede guardar fotos en tu biblioteca.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.befitlab.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>befitlab</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

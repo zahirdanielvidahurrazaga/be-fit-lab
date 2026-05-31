@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
+import ProfileMenu from '../components/ProfileMenu';
 
 const isNative = Capacitor.isNativePlatform();
 
@@ -188,7 +189,7 @@ function Evolucion() {
     try {
       const { data } = await supabase
         .from('reservations')
-        .select('*, classes(title, time, day)')
+        .select('*, classes(title, time, day, instructor)')
         .eq('user_id', user.id)
         .eq('checked_in', true)
         .order('created_at', { ascending: false });
@@ -245,9 +246,7 @@ function Evolucion() {
             <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>Tu progreso</p>
             <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Evolución</h1>
           </div>
-          <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <TrendingUp size={20} color="var(--primary)" />
-          </div>
+          <ProfileMenu />
         </div>
       </header>
 

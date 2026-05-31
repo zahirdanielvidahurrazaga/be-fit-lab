@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
+import AdminCafeteria from '../components/AdminCafeteria';
+import { Coffee, Bell } from 'lucide-react';
 
 const daysOfWeek = [
   { num: 1, label: 'Lunes' },
@@ -16,7 +18,7 @@ const daysOfWeek = [
 ];
 
 function Admin() {
-  const { user, logout, globalClasses, recipes, updateClassSpots, checkInClient, addClass, deleteClass, addRecipe, deleteRecipe, allUsers, coaches, activatePlan, fetchClassesByDayOfWeek, fetchGlobalClasses, assignCustomBadge, removeCustomBadge, badgeConfigs, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig, addMultipleClasses } = useAuth();
+  const { user, logout, globalClasses, recipes, updateClassSpots, checkInClient, addClass, deleteClass, addRecipe, deleteRecipe, allUsers, coaches, activatePlan, fetchClassesByDayOfWeek, fetchGlobalClasses, assignCustomBadge, removeCustomBadge, badgeConfigs, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig, addMultipleClasses, setNotifOpen } = useAuth();
   const isScrolled = useScrollDetect(30);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('mostrador');
@@ -47,7 +49,7 @@ function Admin() {
   const [showAddClass, setShowAddClass] = useState(false);
   const [classMode, setClassMode] = useState('single');
   const [newClass, setNewClass] = useState({
-    title: '', time: '', instructor: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza',
+    title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza',
     description: '',
     date: new Date().toISOString().split('T')[0],
     startDate: new Date().toISOString().split('T')[0],
@@ -233,6 +235,7 @@ function Admin() {
         title: newClass.title,
         time: newClass.time,
         instructor: newClass.instructor,
+        coach_id: newClass.coach_id || null,
         category: newClass.category,
         description: newClass.description || null,
         date: newClass.date,
@@ -254,6 +257,7 @@ function Admin() {
             title: newClass.title,
             time: newClass.time,
             instructor: newClass.instructor,
+            coach_id: newClass.coach_id || null,
             category: newClass.category,
             description: newClass.description || null,
             date: current.toISOString().split('T')[0],
@@ -277,7 +281,7 @@ function Admin() {
     showToast("¡Clase(s) creadas con éxito!");
     setShowAddClass(false);
     setNewClass({
-      title: '', time: '', instructor: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza',
+      title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza',
       description: '',
       date: new Date().toISOString().split('T')[0],
       startDate: new Date().toISOString().split('T')[0],
@@ -420,6 +424,12 @@ function Admin() {
                   <div onClick={() => { setActiveTab('nutricion'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Utensils size={18} color="var(--primary)" /> Comida
                   </div>
+                  <div onClick={() => { setActiveTab('cafeteria'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
+                    <Coffee size={18} color="var(--primary)" /> Cafetería
+                  </div>
+                  <div onClick={() => { setNotifOpen(true); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
+                    <Bell size={18} color="var(--primary)" /> Enviar aviso
+                  </div>
                   <div style={{ height: '1px', background: 'rgba(0,0,0,0.05)', margin: '8px' }} />
                   <div onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: '#ff3b30', fontWeight: 600 }}>
                     <LogOut size={18} /> Cerrar Sesión
@@ -457,6 +467,14 @@ function Admin() {
           <div onClick={() => setActiveTab('nutricion')} className={`sidebar-nav-item ${activeTab === 'nutricion' ? 'active' : ''}`}>
             <Utensils size={20} />
             <span>Nutrición</span>
+          </div>
+          <div onClick={() => setActiveTab('cafeteria')} className={`sidebar-nav-item ${activeTab === 'cafeteria' ? 'active' : ''}`}>
+            <Coffee size={20} />
+            <span>Cafetería</span>
+          </div>
+          <div onClick={() => setNotifOpen(true)} className="sidebar-nav-item">
+            <Bell size={20} />
+            <span>Enviar aviso</span>
           </div>
           <div onClick={() => setActiveTab('insignias')} className={`sidebar-nav-item ${activeTab === 'insignias' ? 'active' : ''}`}>
             <Award size={20} />
@@ -850,9 +868,12 @@ function Admin() {
                         />
                         <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
                           <input placeholder="Hora (ej. 07:00 AM)" value={newClass.time} onChange={e => setNewClass({...newClass, time: e.target.value})} style={inputStyle} />
-                          <select value={newClass.instructor} onChange={e => setNewClass({...newClass, instructor: e.target.value})} style={{...inputStyle, WebkitAppearance: 'none'}}>
+                          <select value={newClass.coach_id} onChange={e => {
+                            const c = coaches.find(x => x.id === e.target.value);
+                            setNewClass({...newClass, coach_id: e.target.value, instructor: c ? (c.full_name || c.email) : ''});
+                          }} style={{...inputStyle, WebkitAppearance: 'none'}}>
                             <option value="">Coach...</option>
-                            {coaches.map(c => <option key={c.id} value={c.full_name || c.email}>{c.full_name || c.email}</option>)}
+                            {coaches.map(c => <option key={c.id} value={c.id}>{c.full_name || c.email}</option>)}
                           </select>
                         </div>
                         <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
@@ -1014,7 +1035,14 @@ function Admin() {
                 </section>
               </motion.div>
             )}
-  
+
+            {/* ============ TAB: CAFETERÍA ============ */}
+            {activeTab === 'cafeteria' && (
+              <motion.div key="cafeteria" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
+                <AdminCafeteria />
+              </motion.div>
+            )}
+
             {/* ============ TAB: INSIGNIAS ============ */}
             {activeTab === 'insignias' && (
               <motion.div key="insignias" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>

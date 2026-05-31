@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Camera, Mail, Phone, Shield, Clock, ChevronRight, ChevronLeft, Check, AlertCircle, Utensils, TrendingUp, CalendarDays, QrCode, X, Home, CreditCard } from 'lucide-react';
+import { User, Camera, Mail, Phone, Shield, Clock, ChevronRight, ChevronLeft, Check, AlertCircle, Utensils, TrendingUp, CalendarDays, QrCode, X, Home, CreditCard, Compass } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { uploadAvatar, isLegacyDataUrl } from '../lib/avatar';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { Camera as CapCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function MiCuenta() {
   const navigate = useNavigate();
-  const { user, role, plan, classesRemaining, membershipStatus, myReservations, refreshUserData, avatarUrl, setAvatarUrl } = useAuth();
+  const { user, role, plan, classesRemaining, membershipStatus, myReservations, refreshUserData, avatarUrl, setAvatarUrl, setShowTour } = useAuth();
   const isScrolled = useScrollDetect(30);
 
   const [fullName, setFullName] = useState('');
@@ -17,6 +18,7 @@ function MiCuenta() {
   const [emergencyName, setEmergencyName] = useState('');
   const [emergencyPhone, setEmergencyPhone] = useState('');
   const [bio, setBio] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   const [experience, setExperience] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -32,18 +34,41 @@ function MiCuenta() {
     }
   }, [user]);
 
+  // Migración lazy: si el avatar guardado es base64 (modelo viejo), subirlo a
+  // Storage y reemplazar avatar_url por la URL. Se hace una sola vez al abrir
+  // Mi Cuenta; mientras tanto el base64 sigue mostrándose sin problema.
+  useEffect(() => {
+    if (!user || !isLegacyDataUrl(avatarUrl)) return;
+    let cancelled = false;
+    (async () => {
+      const { url } = await uploadAvatar(user.id, avatarUrl);
+      if (cancelled || !url) return;
+      await supabase.from('users').update({ avatar_url: url }).eq('id', user.id);
+      if (role === 'COACH' || role === 'ADMIN') {
+        const { data: existing } = await supabase.from('badges_config').select('id').eq('rule_type', 'COACH_PROFILE').single();
+        if (existing) await supabase.from('badges_config').update({ icon: url }).eq('id', existing.id);
+      }
+      try { localStorage.setItem(`avatar_${user.id}`, url); } catch (e) {}
+      setAvatarUrl(url);
+    })();
+    return () => { cancelled = true; };
+  }, [user, avatarUrl, role]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const compressAvatar = (dataUrl) =>
     new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
         const SIZE = 300;
-        const ratio = Math.min(SIZE / img.width, SIZE / img.height);
+        const ratio = Math.min(SIZE / img.width, SIZE / img.height, 1);
         const canvas = document.createElement('canvas');
         canvas.width = img.width * ratio;
         canvas.height = img.height * ratio;
         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
         resolve(canvas.toDataURL('image/jpeg', 0.75));
       };
+      // Si la imagen no se puede decodificar (p.ej. HEIC raro), no colgar la
+      // promesa: devolver el original para que el guardado no se quede atorado.
+      img.onerror = () => resolve(dataUrl);
       img.src = dataUrl;
     });
 
@@ -66,25 +91,35 @@ function MiCuenta() {
   const confirmAvatar = async () => {
     if (!pendingAvatar) return;
     const compressed = await compressAvatar(pendingAvatar);
-    setAvatarUrl(compressed);
-    localStorage.setItem(`avatar_${user.id}`, compressed);
+
+    // Subir a Supabase Storage y guardar la URL pública (modelo nuevo). Si la
+    // subida falla, caemos al base64 para no dejar a la usuaria sin foto.
+    const { url, error: upErr } = await uploadAvatar(user.id, compressed);
+    if (upErr) console.error('Error subiendo avatar a Storage:', upErr);
+    const finalUrl = url || compressed;
+
+    setAvatarUrl(finalUrl);
+    // El caché local es secundario; si revienta NO debe impedir el guardado en BD.
+    try { localStorage.setItem(`avatar_${user.id}`, finalUrl); } catch (e) {
+      console.warn('No se pudo cachear el avatar en localStorage:', e);
+    }
 
     const { error: avatarError } = await supabase
       .from('users')
-      .update({ avatar_url: compressed })
+      .update({ avatar_url: finalUrl })
       .eq('id', user.id);
 
     if (avatarError) {
       console.error('Error guardando avatar en DB:', avatarError);
-      setError('Foto guardada localmente, pero no se pudo sincronizar. Verifica la columna avatar_url en Supabase.');
+      setError('Foto guardada, pero no se pudo sincronizar. Verifica la columna avatar_url en Supabase.');
     }
 
     if (role === 'COACH' || role === 'ADMIN') {
       const { data: existing } = await supabase.from('badges_config').select('*').eq('rule_type', 'COACH_PROFILE').single();
       if (existing) {
-        await supabase.from('badges_config').update({ icon: compressed }).eq('id', existing.id);
+        await supabase.from('badges_config').update({ icon: finalUrl }).eq('id', existing.id);
       } else {
-        await supabase.from('badges_config').insert({ rule_type: 'COACH_PROFILE', rule_value: 0, icon: compressed, label: fullName || 'Coach' });
+        await supabase.from('badges_config').insert({ rule_type: 'COACH_PROFILE', rule_value: 0, icon: finalUrl, label: fullName || 'Coach' });
       }
     }
 
@@ -94,7 +129,7 @@ function MiCuenta() {
   const loadProfile = async () => {
     const { data, error } = await supabase
       .from('users')
-      .select('full_name, phone, emergency_contact_name, emergency_contact_phone, bio, experience')
+      .select('full_name, phone, emergency_contact_name, emergency_contact_phone, bio, experience, birth_date')
       .eq('id', user.id)
       .single();
 
@@ -105,6 +140,7 @@ function MiCuenta() {
       setEmergencyPhone(data.emergency_contact_phone || '');
       setBio(data.bio || '');
       setExperience(data.experience || '');
+      setBirthDate(data.birth_date || '');
     }
   };
 
@@ -129,7 +165,8 @@ function MiCuenta() {
       full_name: fullName,
       phone: phone,
       emergency_contact_name: emergencyName,
-      emergency_contact_phone: emergencyPhone
+      emergency_contact_phone: emergencyPhone,
+      birth_date: birthDate || null
     };
     
     if (role === 'COACH') {
@@ -366,6 +403,18 @@ function MiCuenta() {
               />
             </div>
 
+            <div style={{ marginBottom: '14px' }}>
+              <label style={labelStyle}>Cumpleaños 🎂</label>
+              <input
+                type="date"
+                value={birthDate || ''}
+                onChange={(e) => setBirthDate(e.target.value)}
+                style={inputStyle}
+                onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
+                onBlur={(e) => e.target.style.borderColor = '#ddc1b3'}
+              />
+            </div>
+
             <div>
               <label style={labelStyle}>Email</label>
               <div style={{ position: 'relative' }}>
@@ -589,7 +638,7 @@ function MiCuenta() {
             style={{
               ...cardStyle,
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              cursor: 'pointer', marginBottom: '100px'
+              cursor: 'pointer', marginBottom: '12px'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -600,6 +649,27 @@ function MiCuenta() {
                 <Shield size={18} color="var(--on-surface-variant)" />
               </div>
               <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1c1c1a' }}>Ajustes</span>
+            </div>
+            <ChevronRight size={20} color="#8a7266" />
+          </div>
+
+          {/* VER TOUR DE LA APP */}
+          <div
+            onClick={() => { setShowTour(true); navigate('/portal'); }}
+            style={{
+              ...cardStyle,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              cursor: 'pointer', marginBottom: '100px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '40px', height: '40px', borderRadius: '14px',
+                background: 'rgba(255,145,77,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <Compass size={18} color="var(--primary)" />
+              </div>
+              <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1c1c1a' }}>Ver Tour de la App</span>
             </div>
             <ChevronRight size={20} color="#8a7266" />
           </div>

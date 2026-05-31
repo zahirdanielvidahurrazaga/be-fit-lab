@@ -10,7 +10,6 @@ export async function sendAPNs(token: string, title: string, body: string, data:
   const pemKey   = Deno.env.get('APNS_PRIVATE_KEY')!;
 
   const jwt  = await generateAPNsJWT(keyId, teamId, pemKey);
-  const host = Deno.env.get('APNS_ENV') === 'sandbox' ? APNS_HOST_DEV : APNS_HOST_PROD;
 
   const payload = {
     aps: {
@@ -21,7 +20,7 @@ export async function sendAPNs(token: string, title: string, body: string, data:
     ...data,
   };
 
-  const res = await fetch(`${host}/3/device/${token}`, {
+  const post = (host: string) => fetch(`${host}/3/device/${token}`, {
     method: 'POST',
     headers: {
       authorization: `bearer ${jwt}`,
@@ -33,8 +32,20 @@ export async function sendAPNs(token: string, title: string, body: string, data:
     body: JSON.stringify(payload),
   });
 
+  const primary = Deno.env.get('APNS_ENV') === 'sandbox' ? APNS_HOST_DEV : APNS_HOST_PROD;
+  const fallback = primary === APNS_HOST_PROD ? APNS_HOST_DEV : APNS_HOST_PROD;
+
+  let res = await post(primary);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
+    // Token del otro entorno (p.ej. build de Xcode = sandbox vs APNs producción)
+    // → reintentar en el host alterno para que el push llegue igual.
+    if (res.status === 400 && err?.reason === 'BadDeviceToken') {
+      res = await post(fallback);
+      if (res.ok) return;
+      const err2 = await res.json().catch(() => ({}));
+      throw new Error(`APNs error ${res.status}: ${JSON.stringify(err2)}`);
+    }
     throw new Error(`APNs error ${res.status}: ${JSON.stringify(err)}`);
   }
 }

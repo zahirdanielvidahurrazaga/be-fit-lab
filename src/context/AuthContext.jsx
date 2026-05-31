@@ -4,6 +4,17 @@ import { registerPushToken, unregisterPushToken } from '../hooks/usePushNotifica
 import { scheduleClassReminder, cancelClassReminder, notifyReservationConfirmed, scheduleCancelDeadlineReminder, getNextClassOccurrence } from '../hooks/useLocalNotifications';
 import { removeClassFromCalendar } from '../hooks/useCalendar';
 import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
+
+// El flag del tour se guarda en almacenamiento NATIVO (Preferences) porque el
+// localStorage del WebView lo purga iOS entre lanzamientos → el tour reaparecía.
+const hasSeenTour = async (userId) => {
+  const key = `befit_tour_seen_${userId}`;
+  const { value } = await Preferences.get({ key });
+  if (value) return true;
+  if (localStorage.getItem(key)) { await Preferences.set({ key, value: 'true' }); return true; } // migración
+  return false;
+};
 
 const AuthContext = createContext({});
 
@@ -15,7 +26,8 @@ export const AuthProvider = ({ children }) => {
   const [membershipStatus, setMembershipStatus] = useState('INACTIVE');
   const [loading, setLoading] = useState(true);
   const [customBadges, setCustomBadges] = useState([]);
-  const [newUnlockedBadge, setNewUnlockedBadge] = useState(null);
+  const [badgeQueue, setBadgeQueue] = useState([]); // cola de insignias por animar
+  const dismissBadge = () => setBadgeQueue(q => q.slice(1));
   const [showTour, setShowTour] = useState(false);
 
   // ESTADO GLOBAL DE RESERVAS (Supabase)
@@ -23,10 +35,17 @@ export const AuthProvider = ({ children }) => {
   const [classesRemaining, setClassesRemaining] = useState(0);
   const [globalClasses, setGlobalClasses] = useState([]);
   const [recipes, setRecipes] = useState([]);
+  const [cafeProducts, setCafeProducts] = useState([]);
   const [myReservations, setMyReservations] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [coaches, setCoaches] = useState([]);
   const [avatarUrl, setAvatarUrl] = useState(null);
+
+  // Centro de notificaciones in-app (tabla notification_logs en tiempo real)
+  const [notifications, setNotifications] = useState([]);
+  const unreadCount = notifications.filter(n => !n.read_at).length;
+  // Panel de notificaciones abierto desde el menú de perfil
+  const [notifOpen, setNotifOpen] = useState(false);
 
   // Flag para evitar que onAuthStateChange sobreescriba un plan recién activado
   const planJustActivatedRef = useRef(false);
@@ -49,49 +68,111 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   };
 
-  const evaluateBadgesForUnlock = async (userId) => {
-    if (!badgeConfigs || badgeConfigs.length === 0) return;
-    const { data: history } = await supabase.from('reservations').select('*, classes(instructor)').eq('user_id', userId).eq('checked_in', true);
-    let unlockedNow = [];
-    badgeConfigs.forEach(rule => {
-      if (rule.rule_type === 'MANUAL' || rule.rule_type === 'PROFILE_COMPLETE') return;
-      let isEarned = false;
-      if (rule.rule_type === 'TOTAL_CLASSES') {
-        isEarned = (history?.length || 0) >= rule.rule_value;
-      } else if (rule.rule_type === 'DIFFERENT_COACHES') {
-        const coaches = new Set((history || []).map(h => h.classes?.instructor).filter(Boolean));
-        isEarned = coaches.size >= rule.rule_value;
-      } else if (rule.rule_type === 'WEEKLY_CLASSES') {
-        const weekCounts = {};
-        (history || []).forEach(h => {
-           const d = new Date(h.created_at);
-           const weekKey = `${d.getFullYear()}-${Math.floor(d.getTime() / (1000*60*60*24*7))}`;
-           weekCounts[weekKey] = (weekCounts[weekKey] || 0) + 1;
-        });
-        const maxWeekly = Math.max(0, ...Object.values(weekCounts));
-        isEarned = maxWeekly >= rule.rule_value;
-      }
-      if (isEarned) unlockedNow.push(rule);
+  // Calcula TODAS las insignias ganadas leyendo datos frescos de la BD
+  // (historial con check-in + perfil + insignias manuales). Cubre todos los
+  // tipos, incluido PROFILE_COMPLETE.
+  const computeEarnedBadges = async (userId) => {
+    const [{ data: history }, { data: profile }] = await Promise.all([
+      supabase.from('reservations').select('created_at, classes(instructor)').eq('user_id', userId).eq('checked_in', true),
+      supabase.from('users').select('full_name, avatar_url, custom_badges').eq('id', userId).single(),
+    ]);
+    const count = history?.length || 0;
+    const coachesSet = new Set((history || []).map(h => h.classes?.instructor).filter(Boolean));
+    const weekCounts = {};
+    (history || []).forEach(h => {
+      const d = new Date(h.created_at);
+      const weekKey = `${d.getFullYear()}-${Math.floor(d.getTime() / (1000 * 60 * 60 * 24 * 7))}`;
+      weekCounts[weekKey] = (weekCounts[weekKey] || 0) + 1;
     });
-    const stored = JSON.parse(localStorage.getItem(`befit_earned_badges_${userId}`) || '[]');
-    const newBadges = unlockedNow.filter(b => !stored.includes(b.id));
+    const maxWeekly = Math.max(0, ...Object.values(weekCounts));
+    const profileComplete = !!(profile?.full_name && profile.full_name.trim() !== '' && profile?.avatar_url);
+    const customLabels = (profile?.custom_badges || []).map(cb => cb.label).filter(Boolean);
+
+    return (badgeConfigs || []).filter(rule => {
+      if (customLabels.includes(rule.label)) return true;
+      switch (rule.rule_type) {
+        case 'TOTAL_CLASSES': return count >= rule.rule_value;
+        case 'DIFFERENT_COACHES': return coachesSet.size >= rule.rule_value;
+        case 'WEEKLY_CLASSES': return maxWeekly >= rule.rule_value;
+        case 'PROFILE_COMPLETE': return profileComplete;
+        default: return false; // MANUAL solo por customLabels
+      }
+    });
+  };
+
+  // Evalúa y encola para animar las insignias NUEVAS. La primera vez (sin
+  // registro local) SIEMBRA en silencio para no animar insignias ya obtenidas
+  // (p.ej. en un dispositivo nuevo).
+  const evaluateBadgesForUnlock = async (userId) => {
+    if (!userId || !badgeConfigs || badgeConfigs.length === 0) return;
+    const earned = await computeEarnedBadges(userId);
+    const key = `befit_earned_badges_${userId}`;
+    const raw = localStorage.getItem(key);
+
+    if (raw === null) {
+      localStorage.setItem(key, JSON.stringify(earned.map(b => b.id)));
+      return; // siembra silenciosa
+    }
+
+    const storedArr = JSON.parse(raw);
+    const newBadges = earned.filter(b => !storedArr.includes(b.id));
     if (newBadges.length > 0) {
-      setNewUnlockedBadge(newBadges[0]);
-      localStorage.setItem(`befit_earned_badges_${userId}`, JSON.stringify([...stored, ...newBadges.map(b => b.id)]));
+      setBadgeQueue(q => [...q, ...newBadges]);
+      localStorage.setItem(key, JSON.stringify([...storedArr, ...newBadges.map(b => b.id)]));
     }
   };
 
   useEffect(() => {
     if (!user) return;
     const channel = supabase.channel(`public:reservations:user_${user.id}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'reservations', filter: `user_id=eq.${user.id}` }, (payload) => {
-        if (payload.new.checked_in && !payload.old.checked_in) {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations', filter: `user_id=eq.${user.id}` }, (payload) => {
+        // Cualquier cambio en mis reservas (reserva, cancelación, check-in del admin)
+        // refresca mi lista y mis clases restantes sin necesidad de recargar.
+        fetchUserData(user);
+        // Insignias al hacer check-in
+        if (payload.eventType === 'UPDATE' && payload.new?.checked_in && !payload.old?.checked_in) {
            evaluateBadgesForUnlock(user.id);
         }
       })
       .subscribe();
     return () => supabase.removeChannel(channel);
   }, [user, badgeConfigs]);
+
+  // Evalúa insignias cuando cambian perfil/insignias (dispara "Listos para
+  // Arrancar" al completar el perfil) y SIEMBRA en silencio en el primer arranque.
+  useEffect(() => {
+    if (!user || !badgeConfigs || badgeConfigs.length === 0) return;
+    evaluateBadgesForUnlock(user.id);
+  }, [user, badgeConfigs, profileName, avatarUrl, customBadges]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Mi registro de usuario en tiempo real: plan, clases restantes y estatus
+  // se actualizan cuando el admin los modifica, sin recargar la app.
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase.channel(`public:users:self_${user.id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` }, () => {
+        // No pisar un plan recién activado localmente (race con activatePlan)
+        if (planJustActivatedRef.current) return;
+        fetchUserData(user);
+      })
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Centro de notificaciones en tiempo real
+  useEffect(() => {
+    if (!user) { setNotifications([]); return; }
+    fetchNotifications(user.id);
+    const channel = supabase.channel(`public:notifs:user_${user.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notification_logs', filter: `user_id=eq.${user.id}` }, (payload) => {
+        setNotifications(prev => [payload.new, ...prev]);
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notification_logs', filter: `user_id=eq.${user.id}` }, (payload) => {
+        setNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new : n));
+      })
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresca sesión y datos cuando la app vuelve al frente (nativa + PWA)
   useEffect(() => {
@@ -104,14 +185,13 @@ export const AuthProvider = ({ children }) => {
       if (now - lastRefresh < THROTTLE_MS) return;
       lastRefresh = now;
 
-      // 1. Forzar refresh del token — si expiró, Supabase lo renueva aquí
-      const { data: { session }, error } = await supabase.auth.getSession();
+      // 1. Leer la sesión vigente. autoRefreshToken renueva el token si expiró.
+      const { data: { session } } = await supabase.auth.getSession();
 
-      if (error || !session) {
-        // Token irrecuperable → limpiar estado para que aparezca el login
-        forceCleanSession();
-        return;
-      }
+      // NO cerramos sesión aquí ante una sesión ausente/errores transitorios
+      // (p.ej. reabrir la app sin red): eso provocaba logouts indebidos.
+      // La expiración real la maneja onAuthStateChange (evento SIGNED_OUT).
+      if (!session) return;
 
       // 2. Re-cargar datos públicos que pueden estar desactualizados
       fetchGlobalClasses();
@@ -133,9 +213,40 @@ export const AuthProvider = ({ children }) => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, () => {
         fetchGlobalClasses();
       })
-      .subscribe();
+      .subscribe((status) => {
+        // Al (re)conectar el socket sincronizamos clases y recetas. Cubre el
+        // arranque en frío y las reconexiones tras perder red / volver del fondo,
+        // que antes dejaban el calendario vacío hasta recargar la página.
+        if (status === 'SUBSCRIBED') {
+          fetchGlobalClasses();
+          fetchRecipes();
+        }
+      });
     return () => supabase.removeChannel(channel);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Menú de cafetería en tiempo real (el admin cambia precios → se refleja ya)
+  useEffect(() => {
+    const channel = supabase.channel('public:cafe_products:all')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cafe_products' }, () => {
+        fetchCafeProducts();
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') fetchCafeProducts();
+      });
+    return () => supabase.removeChannel(channel);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Admin / Coach: la lista de clientes se mantiene en vivo
+  useEffect(() => {
+    if (!user || (role !== 'ADMIN' && role !== 'COACH')) return;
+    const channel = supabase.channel('public:users:all')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
+        fetchAllUsers();
+      })
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [user, role]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // fetchCoaches moved to run after auth
 
@@ -155,28 +266,12 @@ export const AuthProvider = ({ children }) => {
       }
       if (session?.user) {
         setUser(session.user);
-        await fetchUserData(session.user);
+        await fetchUserData(session.user); // carga también el avatar (DB → estado)
         registerPushToken(session.user.id);
-        const saved = localStorage.getItem(`avatar_${session.user.id}`);
-        if (saved) {
-          setAvatarUrl(saved);
-          // Sync to DB if not there yet
-          const { data: profile } = await supabase.from('users').select('avatar_url').eq('id', session.user.id).single();
-          if (profile && !profile.avatar_url) {
-            await supabase.from('users').update({ avatar_url: saved }).eq('id', session.user.id);
-          }
-        } else {
-          // Fallback: load from DB
-          const { data: profile } = await supabase.from('users').select('avatar_url').eq('id', session.user.id).single();
-          if (profile?.avatar_url) {
-            setAvatarUrl(profile.avatar_url);
-            localStorage.setItem(`avatar_${session.user.id}`, profile.avatar_url);
-          }
-        }
-        
-        // Disparar tour solo en app nativa
-        if (Capacitor.isNativePlatform() && !localStorage.getItem(`befit_tour_seen_${session.user.id}`)) {
-          setTimeout(() => setShowTour(true), 1500);
+
+        // Disparar tour solo en app nativa y solo si no se ha visto
+        if (Capacitor.isNativePlatform()) {
+          hasSeenTour(session.user.id).then(seen => { if (!seen) setTimeout(() => setShowTour(true), 1500); });
         }
       } else {
         setLoading(false);
@@ -195,8 +290,8 @@ export const AuthProvider = ({ children }) => {
         fetchAllUsers();
         fetchCoaches();
 
-        if (Capacitor.isNativePlatform() && !localStorage.getItem(`befit_tour_seen_${session.user.id}`)) {
-          setTimeout(() => setShowTour(true), 1500);
+        if (Capacitor.isNativePlatform()) {
+          hasSeenTour(session.user.id).then(seen => { if (!seen) setTimeout(() => setShowTour(true), 1500); });
         }
       } else {
         setRole(null);
@@ -214,6 +309,7 @@ export const AuthProvider = ({ children }) => {
     // Cargar datos globales públicos (disponibles sin sesión)
     fetchGlobalClasses();
     fetchRecipes();
+    fetchCafeProducts();
     fetchBadgeConfigs();
     fetchCoaches();
 
@@ -408,6 +504,52 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // ============================================
+  // CAFETERÍA (catálogo en BD — precios server-side)
+  // ============================================
+  const fetchCafeProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('cafe_products')
+        .select('*')
+        .order('category', { ascending: true })
+        .order('sort_order', { ascending: true });
+      if (!error && data) setCafeProducts(data);
+    } catch (err) {
+      console.error('Error cargando productos de cafetería:', err);
+    }
+  };
+
+  const addCafeProduct = async (product) => {
+    try {
+      const { data, error } = await supabase.from('cafe_products').insert(product).select().single();
+      if (!error && data) setCafeProducts(prev => [...prev, data]);
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
+  const updateCafeProduct = async (id, updates) => {
+    try {
+      const { data, error } = await supabase.from('cafe_products').update(updates).eq('id', id).select().single();
+      if (!error && data) setCafeProducts(prev => prev.map(p => p.id === id ? data : p));
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
+  const deleteCafeProduct = async (id) => {
+    try {
+      const { error } = await supabase.from('cafe_products').delete().eq('id', id);
+      if (!error) setCafeProducts(prev => prev.filter(p => p.id !== id));
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
   const createBadgeConfig = async (configData) => {
     try {
       const { data, error } = await supabase.from('badges_config').insert(configData).select().single();
@@ -485,7 +627,7 @@ export const AuthProvider = ({ children }) => {
       // 1. Obtener rol y clases restantes
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('role, classes_remaining, membership_plan, membership_status, full_name, custom_badges')
+        .select('role, classes_remaining, membership_plan, membership_status, full_name, custom_badges, avatar_url')
         .eq('id', currentUser.id)
         .single();
         
@@ -512,6 +654,22 @@ export const AuthProvider = ({ children }) => {
         setClassesRemaining(userData.classes_remaining || 0);
         setProfileName(userData.full_name || '');
         setCustomBadges(userData.custom_badges || []);
+
+        // Avatar: la BD es la fuente de verdad. Se carga aquí (en TODAS las rutas
+        // de auth: arranque, login, refresh, realtime), no solo en el getSession
+        // inicial — eso causaba que "a veces cargara y a veces no".
+        if (userData.avatar_url) {
+          setAvatarUrl(userData.avatar_url);
+          try { localStorage.setItem(`avatar_${currentUser.id}`, userData.avatar_url); } catch (e) {}
+        } else {
+          // BD sin avatar pero hay uno cacheado localmente → subirlo para que
+          // otros perfiles (coach en reservas, etc.) también lo vean.
+          const cached = localStorage.getItem(`avatar_${currentUser.id}`);
+          if (cached) {
+            setAvatarUrl(cached);
+            supabase.from('users').update({ avatar_url: cached }).eq('id', currentUser.id);
+          }
+        }
       } else {
         setRole('CLIENT');
         setPlan('none');
@@ -791,6 +949,57 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // ============================================
+  // CENTRO DE NOTIFICACIONES
+  // ============================================
+  const fetchNotifications = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('notification_logs')
+        .select('*')
+        .eq('user_id', userId)
+        .order('sent_at', { ascending: false })
+        .limit(100);
+      if (!error && data) setNotifications(data);
+    } catch (err) {
+      console.error('Error cargando notificaciones:', err);
+    }
+  };
+
+  // Marca como leídas todas mis notificaciones (optimista + persiste)
+  const markNotificationsRead = async () => {
+    if (!user) return;
+    const hasUnread = notifications.some(n => !n.read_at);
+    if (!hasUnread) return;
+    const now = new Date().toISOString();
+    setNotifications(prev => prev.map(n => n.read_at ? n : { ...n, read_at: now }));
+    try {
+      await supabase
+        .from('notification_logs')
+        .update({ read_at: now })
+        .eq('user_id', user.id)
+        .is('read_at', null);
+    } catch (err) {
+      console.error('Error marcando notificaciones como leídas:', err);
+    }
+  };
+
+  // Envía una notificación push (+ log in-app) a uno o varios usuarios.
+  // Uso del admin: notificar a un cliente/coach concreto o a un grupo.
+  const sendNotification = async ({ userIds, title, body, type = 'admin' }) => {
+    const ids = (Array.isArray(userIds) ? userIds : [userIds]).filter(Boolean);
+    if (ids.length === 0 || !title || !body) {
+      return { success: false, sent: 0, total: 0, reason: 'datos_incompletos' };
+    }
+    const results = await Promise.allSettled(
+      ids.map(id => supabase.functions.invoke('send-push', {
+        body: { userId: id, title, body, type },
+      }))
+    );
+    const sent = results.filter(r => r.status === 'fulfilled' && !r.value?.error).length;
+    return { success: sent > 0, sent, total: ids.length };
+  };
+
   const login = async (email, password) => {
     return await supabase.auth.signInWithPassword({ email, password });
   };
@@ -858,6 +1067,7 @@ export const AuthProvider = ({ children }) => {
     setMyReservations([]);
     setAllUsers([]);
     setBadgeConfigs([]);
+    setNotifications([]);
     // Limpiar flags de sesión
     localStorage.removeItem('befit_remember_me');
     sessionStorage.removeItem('befit_session_active');
@@ -876,9 +1086,12 @@ export const AuthProvider = ({ children }) => {
       activatePlan, addClass, deleteClass, addRecipe, deleteRecipe,
       fetchClassReservations, fetchClassesByDayOfWeek, fetchGlobalClasses,
       assignCustomBadge, removeCustomBadge, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig,
-      newUnlockedBadge, setNewUnlockedBadge,
+      badgeQueue, dismissBadge,
       showTour, setShowTour,
-      coaches, addMultipleClasses
+      coaches, addMultipleClasses,
+      notifications, unreadCount, fetchNotifications, markNotificationsRead, sendNotification,
+      notifOpen, setNotifOpen,
+      cafeProducts, fetchCafeProducts, addCafeProduct, updateCafeProduct, deleteCafeProduct
     }}>
       {children}
     </AuthContext.Provider>

@@ -2,52 +2,96 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
-import { ChevronLeft, ChevronRight, Coffee, Flame, Info, AlertCircle, ShoppingCart } from 'lucide-react';
-
-const ICE_COFFEE = [
-  { id: 'c1', name: 'Iced Americano', description: 'Espresso con hielo y agua', price: 30, paymentUrl: '#', image: '/cafeteria/iced_americano_plain_v2_1780028321924.png' },
-  { id: 'c2', name: 'Iced Latte', description: 'Espresso con hielo y leche', price: 45, paymentUrl: '#', image: '/cafeteria/iced_latte_plain_1780028143088.png' },
-  { id: 'c3', name: 'Ice Chocolate', description: 'Mezcla de chocolate de la casa con hielo', price: 45, paymentUrl: '#', image: '/cafeteria/ice_chocolate_plain_1780028154536.png' },
-  { id: 'c4', name: 'Vainilla Latte', description: 'Espresso, Vainilla, leche y hielos', price: 45, paymentUrl: '#', image: '/cafeteria/vainilla_latte_plain_1780028168845.png' },
-];
-
-const SMOOTHIES = [
-  { id: 's1', name: 'Mango Proteín', cals: 220, protein: 26, description: 'Promedio: 220 calorías, 25 g de proteína', price: 100, paymentUrl: '#' },
-  { id: 's2', name: 'Horchata Proteín', cals: 218, protein: 26, description: 'Promedio: 220 calorías, 25 g de proteína', price: 100, paymentUrl: '#' },
-  { id: 's3', name: 'Arroz con Leche', cals: 218, protein: 26, description: 'Promedio: 220 calorías, 25 g de proteína', price: 100, paymentUrl: '#' },
-  { id: 's4', name: 'Banana Maní', cals: 290, protein: 30, description: 'Promedio: 220 calorías, 25 g de proteína', price: 100, paymentUrl: '#' },
-  { id: 's5', name: 'CHAI Frambuesa', cals: 220, protein: 26, description: 'Promedio: 220 calorías, 25 g de proteína', price: 100, paymentUrl: '#' },
-  { id: 's6', name: 'CHOCO BANANA', cals: 250, protein: 26, description: 'Promedio: 220 calorías, 25 g de proteína', price: 100, paymentUrl: '#' },
-  { id: 's7', name: 'Dubai Proteín', cals: 250, protein: 26, description: 'Promedio: 220 calorías, 25 g de proteína', price: 100, paymentUrl: '#' },
-  { id: 's8', name: 'Mazapan', cals: 70, protein: 4, description: 'Promedio: 220 calorías, 25 g de proteína', price: 100, paymentUrl: '#' },
-  { id: 's9', name: 'Fit-colada', cals: null, protein: null, description: 'Coco rayado, agua de coco, pulpa de piña', price: 100, paymentUrl: '#' },
-];
-
-const TEMPORADA = [
-  { id: 't1', name: 'Mango-Matcha', description: 'Leche de tu preferencia, pulpa de mango, matcha (Pídelo también con proteína)', cals: 70, protein: 4, price: 60, paymentUrl: '#' },
-];
+import { Stripe } from '@capacitor-community/stripe';
+import { ChevronLeft, ChevronRight, Coffee, Flame, Info, AlertCircle, ShoppingCart, CheckCircle2, X } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 function Cafeteria() {
   const navigate = useNavigate();
+  const { user, cafeProducts } = useAuth();
   const isNative = Capacitor.isNativePlatform();
   const [activeWidgetIndex, setActiveWidgetIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [buyingId, setBuyingId] = useState(null);
+  const [showThanks, setShowThanks] = useState(false);
+
+  // Catálogo desde la BD (precios server-side). Solo productos disponibles.
+  const available = (cafeProducts || []).filter(p => p.available !== false);
+  const coffeeItems = available.filter(p => p.category === 'coffee');
+  const smoothieItems = available.filter(p => p.category === 'smoothie');
+  const temporadaItems = available.filter(p => p.category === 'temporada');
 
   useEffect(() => {
     window.scrollTo(0, 0);
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    // Web: si Stripe redirigió con ?payment=success, mostrar el "¡Gracias!"
+    if (new URLSearchParams(window.location.search).get('payment') === 'success') {
+      setShowThanks(true);
+    }
+    // Nativo: el deep link de retorno avisa que el pago fue exitoso
+    const onPaid = () => setShowThanks(true);
+    window.addEventListener('cafe-payment-success', onPaid);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('cafe-payment-success', onPaid);
+    };
   }, []);
 
   const nextWidget = () => setActiveWidgetIndex((prev) => (prev + 1) % 3);
   const prevWidget = () => setActiveWidgetIndex((prev) => (prev - 1 + 3) % 3);
 
-  const handleBuy = (item) => {
-    if (item.paymentUrl && item.paymentUrl !== '#') {
-      window.location.href = item.paymentUrl;
-    } else {
-      alert('¡Próximamente! Esperando enlace de pago para ' + item.name);
+  const handleBuy = async (item) => {
+    if (buyingId) return;
+    setBuyingId(item.id);
+    try {
+      if (Capacitor.isNativePlatform()) {
+        // HOJA DE PAGO NATIVA (se cierra sola tras pagar, sin navegador)
+        const { data, error } = await supabase.functions.invoke('stripe-cafe-intent', {
+          body: { items: [{ id: item.id, quantity: 1 }], userEmail: user?.email, userId: user?.id },
+        });
+        if (error) throw new Error(error.message);
+        if (!data?.clientSecret) throw new Error('No se recibió el intent de pago');
+
+        // Intentar con Apple Pay; si no está configurado, caer a solo tarjeta
+        try {
+          await Stripe.createPaymentSheet({
+            paymentIntentClientSecret: data.clientSecret,
+            merchantDisplayName: 'Be Fit Lab',
+            enableApplePay: true,
+            applePayMerchantId: 'merchant.com.befitlab.app',
+            countryCode: 'MX',
+          });
+        } catch (applePayErr) {
+          console.warn('Apple Pay no disponible, usando solo tarjeta:', applePayErr);
+          await Stripe.createPaymentSheet({
+            paymentIntentClientSecret: data.clientSecret,
+            merchantDisplayName: 'Be Fit Lab',
+          });
+        }
+        const res = await Stripe.presentPaymentSheet();
+
+        if (res?.paymentResult === 'paymentSheetCompleted') {
+          setShowThanks(true);
+          // Notificar la compra (push + log) — verificado en el servidor
+          supabase.functions.invoke('stripe-cafe-notify', { body: { paymentIntentId: data.paymentIntentId } });
+        }
+        // 'paymentSheetCanceled' / 'paymentSheetFailed' → no hacemos nada
+      } else {
+        // Web: checkout hospedado de Stripe
+        const { data, error } = await supabase.functions.invoke('stripe-cafe-checkout', {
+          body: { items: [{ id: item.id, quantity: 1 }], userEmail: user?.email, userId: user?.id },
+        });
+        if (error) throw new Error(error.message);
+        if (!data?.url) throw new Error('No se recibió URL de pago');
+        window.open(data.url, '_blank', 'noopener,noreferrer');
+      }
+    } catch (err) {
+      console.error('Error iniciando pago de cafetería:', err);
+      alert('No se pudo iniciar el pago. Intenta de nuevo.');
+    } finally {
+      setBuyingId(null);
     }
   };
 
@@ -65,14 +109,14 @@ function Cafeteria() {
     <div style={{ minHeight: '100vh', background: '#FDFBF7', color: '#1A1C1E', fontFamily: 'var(--font-body)', overflowX: 'hidden' }}>
       
       {/* HERO SECTION */}
-      <div style={{ position: 'relative', width: '100%', height: isNative ? '300px' : '400px', background: 'url("/fotos-hero/IMG_5410.JPG")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+      <div style={{ position: 'relative', width: '100%', height: isNative ? '300px' : '400px', backgroundColor: '#2b211c', backgroundImage: 'url("/fotos-hero/IMG_5410.JPG")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%)', backdropFilter: 'blur(3px)' }}></div>
         
         {/* NAV BUTTON */}
         <div style={{ position: 'absolute', top: isNative ? '40px' : '30px', left: isNative ? '15px' : '30px', zIndex: 10 }}>
-          <button 
-            onClick={() => navigate('/')} 
-            className="glass-button" 
+          <button
+            onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/'); }}
+            className="glass-button"
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontSize: '0.9rem', color: 'white', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.3)' }}
           >
             <ChevronLeft size={18} /> Volver
@@ -97,18 +141,19 @@ function Cafeteria() {
         <motion.div variants={containerVariants} initial="hidden" animate="visible">
           
           {/* CATEGORY: ICE COFFEE */}
+          {coffeeItems.length > 0 && (
           <motion.div variants={itemVariants} style={{ marginBottom: '50px' }}>
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', borderBottom: '2px solid rgba(0,0,0,0.1)', paddingBottom: '15px', marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               Ice Coffee
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-              {ICE_COFFEE.map(item => (
+              {coffeeItems.map(item => (
                 <div key={item.id} style={{ background: 'white', borderRadius: '20px', padding: '25px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   
                   {/* IMAGE */}
-                  {item.image && (
+                  {item.image_url && (
                     <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }}>
-                      <img src={item.image} alt={item.name} style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', mixBlendMode: 'multiply' }} />
+                      <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', mixBlendMode: 'multiply' }} />
                     </div>
                   )}
 
@@ -126,14 +171,16 @@ function Cafeteria() {
               ))}
             </div>
           </motion.div>
+          )}
 
           {/* CATEGORY: SMOOTHIES */}
+          {smoothieItems.length > 0 && (
           <motion.div variants={itemVariants} style={{ marginBottom: '50px' }}>
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', borderBottom: '2px solid rgba(0,0,0,0.1)', paddingBottom: '15px', marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               Coffee Lab & Smoothies
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' }}>
-              {SMOOTHIES.map(item => (
+              {smoothieItems.map(item => (
                 <div key={item.id} style={{ background: 'linear-gradient(145deg, #ffffff, #fdfbf7)', borderRadius: '24px', padding: '25px', boxShadow: '0 15px 35px rgba(0,0,0,0.06)', border: '1px solid rgba(255,145,77,0.15)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
                   
                   {/* Decorative blob */}
@@ -169,14 +216,16 @@ function Cafeteria() {
               ))}
             </div>
           </motion.div>
+          )}
 
           {/* CATEGORY: TEMPORADA */}
+          {temporadaItems.length > 0 && (
           <motion.div variants={itemVariants} style={{ marginBottom: '60px' }}>
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', borderBottom: '2px solid rgba(0,0,0,0.1)', paddingBottom: '15px', marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               Bebidas de Temporada
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
-              {TEMPORADA.map(item => (
+              {temporadaItems.map(item => (
                 <div key={item.id} style={{ background: 'linear-gradient(135deg, #FFD194 0%, #70E1F5 100%)', padding: '2px', borderRadius: '26px' }}>
                   <div style={{ background: 'white', borderRadius: '24px', padding: '30px', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
                     <h3 style={{ fontSize: '1.5rem', fontWeight: 800, margin: '0 0 10px 0' }}>{item.name}</h3>
@@ -200,6 +249,7 @@ function Cafeteria() {
               ))}
             </div>
           </motion.div>
+          )}
 
           {/* INFORMACIÓN EXTRA WIDGETS CAROUSEL (Estilo Precios) */}
           <motion.div variants={itemVariants} style={{ position: 'relative', width: '100%', maxWidth: '1000px', margin: '60px auto 40px', height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -322,6 +372,27 @@ function Cafeteria() {
 
         </motion.div>
       </div>
+
+      {/* MODAL "¡GRACIAS!" tras el pago */}
+      {showThanks && (
+        <div onClick={() => setShowThanks(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <motion.div onClick={(e) => e.stopPropagation()} initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', damping: 18, stiffness: 220 }}
+            style={{ width: 'min(360px, 100%)', background: '#fff', borderRadius: '28px', padding: '34px 26px', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.3)', position: 'relative' }}>
+            <button onClick={() => setShowThanks(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '16px', right: '16px', width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <X size={16} color="#1A1C1E" />
+            </button>
+            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.15 }}
+              style={{ width: '76px', height: '76px', borderRadius: '50%', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', boxShadow: '0 10px 25px rgba(255,145,77,0.4)' }}>
+              <CheckCircle2 size={42} color="#fff" strokeWidth={2.5} />
+            </motion.div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.9rem', margin: '0 0 8px', color: '#1A1C1E' }}>¡Gracias! 🎉</h2>
+            <p style={{ margin: '0 0 24px', fontSize: '0.95rem', color: '#6B7280', lineHeight: 1.5 }}>Tu pedido fue procesado. Pásalo a recoger a la cafetería 💛</p>
+            <button onClick={() => setShowThanks(false)} style={{ width: '100%', padding: '15px', borderRadius: '16px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 25px rgba(255,145,77,0.35)' }}>
+              ¡Listo!
+            </button>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

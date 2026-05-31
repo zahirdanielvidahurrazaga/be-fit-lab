@@ -10,6 +10,7 @@ import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks
 import { addClassToCalendar } from '../hooks/useCalendar';
 import { supabase } from '../lib/supabase';
 import { ScheduleCalendar } from '../components/ScheduleCalendar';
+import ProfileMenu from '../components/ProfileMenu';
 
 function Agenda() {
   const isNative = Capacitor.isNativePlatform();
@@ -106,12 +107,7 @@ function Agenda() {
             <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>Tus clases</p>
             <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Reservas</h1>
           </div>
-          <div style={{ 
-            width: '42px', height: '42px', borderRadius: '50%', 
-            background: 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <CalendarIcon size={20} color="var(--primary)" />
-          </div>
+          <ProfileMenu />
         </div>
       </header>
 
@@ -307,7 +303,7 @@ function Agenda() {
 
                   {/* Mini-perfil del coach — expandible */}
                   {(() => {
-                    const coachInfo = coaches?.find(c => c.full_name === modalData?.instructor || c.email === modalData?.instructor);
+                    const coachInfo = coaches?.find(c => (modalData?.coach_id && c.id === modalData.coach_id) || c.full_name === modalData?.instructor || c.email === modalData?.instructor);
                     if (!coachInfo) return null;
                     const hasBio = coachInfo.bio || coachInfo.experience;
                     return (

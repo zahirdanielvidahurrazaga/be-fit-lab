@@ -10,15 +10,20 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor-community/stripe": "^8.1.1",
     "@capacitor/android": "^8.3.4",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/browser": "^8.0.3",
     "@capacitor/camera": "^8.2.0",
     "@capacitor/core": "^8.3.4",
     "@capacitor/ios": "^8.3.4",
     "@capacitor/local-notifications": "^8.2.0",
+    "@capacitor/preferences": "^8.0.1",
     "@capacitor/push-notifications": "^8.1.1",
     "@capgo/capacitor-health": "^8.5.1",
     "@ebarooni/capacitor-calendar": "^8.0.1",
     "@ionic/pwa-elements": "^3.4.0",
+    "@stripe/stripe-js": "^9.7.0",
     "@supabase/supabase-js": "^2.104.1",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.38.0",
@@ -29,6 +34,7 @@
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2",
     "recharts": "^3.8.1",
+    "stripe-pwa-elements": "^3.2.0",
     "upath": "^3.0.7"
   },
   "devDependencies": {

@@ -1,6 +1,9 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
+import { Stripe as CapStripe } from '@capacitor-community/stripe';
 
 // Code-splitting por ruta: cada página se descarga solo cuando se visita.
 // Esto reduce drásticamente el JS del primer load (antes todo iba en un bundle).
@@ -20,11 +23,21 @@ const Privacidad = lazy(() => import('./pages/Privacidad'));
 const Terminos = lazy(() => import('./pages/Terminos'));
 const Welcome = lazy(() => import('./pages/Welcome'));
 const Cafeteria = lazy(() => import('./pages/Cafeteria'));
+const Cumpleanos = lazy(() => import('./pages/Cumpleanos'));
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useLocalNotifications } from './hooks/useLocalNotifications';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { AppTour } from './components/AppTour';
+import NotificationSheet from './components/NotificationSheet';
+import BadgeUnlockOverlay from './components/BadgeUnlockOverlay';
 import './index.css';
+
+// Overlay global de insignia desbloqueada: se muestra en CUALQUIER pantalla
+// (antes solo aparecía si la usuaria estaba en Inicio).
+const GlobalBadgeOverlay = () => {
+  const { badgeQueue, dismissBadge } = useAuth();
+  return <BadgeUnlockOverlay badge={badgeQueue[0] || null} onClose={dismissBadge} />;
+};
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -82,6 +95,28 @@ function App() {
     document.documentElement.setAttribute('data-theme', 'light');
   }, []);
 
+  // Inicializar Stripe nativo (hoja de pago) en la app
+  React.useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const pk = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+    if (pk) CapStripe.initialize({ publishableKey: pk }).catch(e => console.error('Stripe init:', e));
+  }, []);
+
+  // Deep link de retorno del pago (befitlab://): cierra el navegador in-app
+  // y avisa a la cafetería para mostrar el "¡Gracias!".
+  React.useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let listener;
+    CapApp.addListener('appUrlOpen', async ({ url }) => {
+      if (!url || !url.startsWith('befitlab://')) return;
+      try { await Browser.close(); } catch (e) {}
+      if (url.includes('payment=success')) {
+        window.dispatchEvent(new CustomEvent('cafe-payment-success'));
+      }
+    }).then(l => { listener = l; });
+    return () => { if (listener) listener.remove(); };
+  }, []);
+
   return (
     <AuthProvider>
       <Router>
@@ -108,6 +143,7 @@ function App() {
           <Route path="/nutricion" element={<ProtectedRoute requireRole="CLIENT"><Nutricion /></ProtectedRoute>} />
           <Route path="/evolucion" element={<ProtectedRoute requireRole="CLIENT"><Evolucion /></ProtectedRoute>} />
           <Route path="/mi-cuenta" element={<ProtectedRoute requireRole={['CLIENT', 'COACH']}><MiCuenta /></ProtectedRoute>} />
+          <Route path="/cumpleanos" element={<ProtectedRoute requireRole={['CLIENT', 'COACH', 'ADMIN']}><Cumpleanos /></ProtectedRoute>} />
           <Route path="/ajustes" element={<ProtectedRoute requireRole={['CLIENT', 'COACH']}><Ajustes /></ProtectedRoute>} />
           
           {/* Rutas Privadas Coach */}
@@ -118,6 +154,8 @@ function App() {
         </Routes>
         </Suspense>
         <AppTour />
+        <NotificationSheet />
+        <GlobalBadgeOverlay />
       </Router>
     </AuthProvider>
   );

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Utensils, TrendingUp, User, QrCode, ChevronRight, Activity, Flame, Sparkles, Clock, MapPin, X, Lock, Wallet } from 'lucide-react';
+import { Calendar, Utensils, TrendingUp, User, QrCode, ChevronRight, Activity, Flame, Sparkles, Clock, MapPin, X, Lock, Wallet, Coffee, Cake } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getNextClassOccurrence } from '../hooks/useLocalNotifications';
@@ -8,12 +8,12 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { motion } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { Capacitor } from '@capacitor/core';
-import BadgeUnlockOverlay from '../components/BadgeUnlockOverlay';
+import ProfileMenu from '../components/ProfileMenu';
 
 function Portal() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, logout, classesRemaining, myReservations, cancelClass, profileName, globalClasses, avatarUrl, newUnlockedBadge, setNewUnlockedBadge, setShowTour } = useAuth();
+  const { user, plan, logout, classesRemaining, myReservations, cancelClass, profileName, globalClasses, avatarUrl, setShowTour } = useAuth();
   
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
@@ -74,8 +74,6 @@ function Portal() {
 
   return (
     <div className="mobile-app-container" style={{ background: 'var(--app-bg)' }}>
-      <BadgeUnlockOverlay badge={newUnlockedBadge} onClose={() => setNewUnlockedBadge(null)} />
-
       {/* HEADER UNIFICADO */}
       <header className="ios-header" style={{ paddingBottom: '5px', background: 'transparent' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
@@ -83,49 +81,7 @@ function Portal() {
             <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>{greeting}</p>
             <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>{userName}</h1>
           </motion.div>
-          <div style={{ position: 'relative' }}>
-            <div
-              onClick={() => setShowProfileMenu(!showProfileMenu)}
-              style={{
-                width: '42px', height: '42px', borderRadius: '50%',
-                background: avatarUrl ? 'transparent' : 'rgba(255,139,66,0.1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', overflow: 'hidden',
-                border: avatarUrl ? '2px solid #FF8B42' : 'none',
-                boxShadow: avatarUrl ? '0 4px 12px rgba(255,139,66,0.3)' : 'none'
-              }}>
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <User size={20} color="var(--primary)" />
-              )}
-            </div>
-
-            {/* DROPDOWN PERFIL */}
-            {showProfileMenu && (
-              <div className="profile-dropdown">
-                <div style={{ padding: '10px 15px', borderBottom: '1px solid rgba(55,61,59,0.05)', marginBottom: '5px' }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 700 }}>{userName}</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)' }}>Socia Activa</div>
-                </div>
-                <div className="profile-dropdown-item" onClick={() => { navigate('/planes'); setShowProfileMenu(false); }}>
-                   Mi Membresía
-                </div>
-                <div className="profile-dropdown-item" onClick={() => { navigate('/mi-cuenta'); setShowProfileMenu(false); }}>
-                   Mi Cuenta
-                </div>
-                <div className="profile-dropdown-item" onClick={() => { navigate('/ajustes'); setShowProfileMenu(false); }}>
-                   Ajustes
-                </div>
-                <div className="profile-dropdown-item" onClick={() => { setShowTour(true); setShowProfileMenu(false); }}>
-                   Ver Tour de la App
-                </div>
-                <div className="profile-dropdown-item danger" onClick={logout}>
-                   Cerrar Sesión
-                </div>
-              </div>
-            )}
-          </div>
+          <ProfileMenu />
         </div>
       </header>
 
@@ -289,6 +245,47 @@ function Portal() {
                 <div>
                   <div style={{ color: 'var(--black)', fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>Reservar</div>
                   <div style={{ color: 'var(--on-surface-variant)', fontSize: '0.7rem', fontWeight: 600, marginTop: '3px' }}>Agendar clase</div>
+                </div>
+              </div>
+
+              {/* Story Card - Cafetería (glass) */}
+              <div
+                onClick={() => navigate('/cafeteria')}
+                style={{
+                  flex: '0 0 auto', width: '140px', height: '180px', borderRadius: '24px',
+                  background: 'rgba(255,255,255,0.45)',
+                  backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+                  padding: '20px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                  cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                  border: '1px solid rgba(255,255,255,0.7)',
+                  boxShadow: '0 12px 30px rgba(0,0,0,0.06)'
+                }}
+              >
+                <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '90px', height: '90px', background: 'rgba(255,139,66,0.12)', borderRadius: '50%' }}></div>
+                <div style={{ position: 'absolute', bottom: '-25px', left: '-25px', width: '70px', height: '70px', background: 'rgba(255,145,77,0.08)', borderRadius: '50%' }}></div>
+                <Coffee size={28} color="var(--primary)" strokeWidth={2} />
+                <div>
+                  <div style={{ color: 'var(--on-surface)', fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>Cafetería</div>
+                  <div style={{ color: 'var(--on-surface-variant)', fontSize: '0.7rem', fontWeight: 600, marginTop: '3px' }}>Café y smoothies</div>
+                </div>
+              </div>
+
+              {/* Story Card - Cumpleaños */}
+              <div
+                onClick={() => navigate('/cumpleanos')}
+                style={{
+                  flex: '0 0 auto', width: '140px', height: '180px', borderRadius: '24px',
+                  background: 'linear-gradient(135deg, #FFE9DF 0%, #FFD9E1 100%)',
+                  padding: '20px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                  cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                  boxShadow: '0 12px 30px rgba(224,122,156,0.2)'
+                }}
+              >
+                <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '85px', height: '85px', background: 'rgba(255,255,255,0.3)', borderRadius: '50%' }}></div>
+                <Cake size={28} color="#C2456E" strokeWidth={2} />
+                <div>
+                  <div style={{ color: 'var(--black)', fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>Cumpleaños</div>
+                  <div style={{ color: '#9B5A6A', fontSize: '0.7rem', fontWeight: 600, marginTop: '3px' }}>Tu cuenta regresiva</div>
                 </div>
               </div>
             </div>

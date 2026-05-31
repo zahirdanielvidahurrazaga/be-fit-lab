@@ -6,6 +6,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { motion, AnimatePresence } from 'framer-motion';
 import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
+import ProfileMenu from '../components/ProfileMenu';
 
 function Nutricion() {
   const navigate = useNavigate();
@@ -60,12 +61,7 @@ function Nutricion() {
             <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>Plan Nutricional</p>
             <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Healthy Era</h1>
           </div>
-          <div style={{ 
-            width: '42px', height: '42px', borderRadius: '50%', 
-            background: 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-             <Utensils size={20} color="var(--primary)" />
-          </div>
+          <ProfileMenu />
         </div>
       </header>
 
