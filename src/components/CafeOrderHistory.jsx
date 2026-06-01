@@ -51,7 +51,7 @@ export default function CafeOrderHistory({ userId, onClose, onOpenOrder }) {
           <button onClick={onClose} aria-label="Cerrar" style={{ width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={18} /></button>
         </div>
 
-        <div style={{ overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0 18px calc(env(safe-area-inset-bottom,0px) + 28px)', flex: 1 }}>
+        <div style={{ overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', padding: '0 18px calc(env(safe-area-inset-bottom,0px) + 28px)', flex: 1 }}>
           {orders === null ? (
             <p style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px 0' }}>Cargando…</p>
           ) : orders.length === 0 ? (

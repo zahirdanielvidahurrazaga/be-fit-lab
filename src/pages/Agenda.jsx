@@ -401,6 +401,7 @@ function Agenda() {
               style={{ padding: '12px 24px 20px', background: 'var(--surface)' }}
             >
               <div className="sheet-handle" />
+              <button onClick={() => setShowQR(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '14px', right: '16px', width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.06)', color: 'var(--on-surface)', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 5 }}>✕</button>
               
               <div className="wallet-card" style={{ 
                 background: 'var(--surface-low)', 

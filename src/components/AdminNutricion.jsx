@@ -54,6 +54,32 @@ function PhotoButton({ url, onUploaded, size = 84 }) {
   );
 }
 
+// Editor de lista (ingredientes / pasos): filas con campo + botón quitar, y un
+// botón "Agregar" — intuitivo y rápido, sin depender de Enter (Enter es atajo).
+function ListEditor({ label, addLabel, items, onChange, numbered, placeholder }) {
+  const set = (i, v) => onChange(items.map((x, idx) => (idx === i ? v : x)));
+  const add = () => onChange([...items, '']);
+  const remove = (i) => onChange(items.filter((_, idx) => idx !== i));
+  return (
+    <div style={{ marginBottom: '12px' }}>
+      <div style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)', marginBottom: '8px' }}>{label}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {items.map((it, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {numbered
+              ? <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(255,145,77,0.14)', color: PRIMARY, fontWeight: 800, fontSize: '0.76rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</span>
+              : <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: PRIMARY, flexShrink: 0, marginLeft: '9px' }} />}
+            <input value={it} onChange={e => set(i, e.target.value)} placeholder={placeholder}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} style={input} />
+            <button onClick={() => remove(i)} aria-label="Quitar" style={{ border: 'none', background: 'none', color: '#ba1a1a', cursor: 'pointer', display: 'flex', flexShrink: 0, padding: '4px' }}><Trash2 size={15} /></button>
+          </div>
+        ))}
+      </div>
+      <button onClick={add} style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,145,77,0.12)', color: PRIMARY, border: 'none', borderRadius: '10px', padding: '8px 13px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}><Plus size={15} /> Agregar {addLabel}</button>
+    </div>
+  );
+}
+
 // ============ RECETAS ============
 function Recetas() {
   const [recipes, setRecipes] = useState([]);
@@ -66,9 +92,9 @@ function Recetas() {
   };
   useEffect(() => { load(); }, []);
 
-  const blank = { time: 'Desayuno', title: '', kcal: '', time_prep: '', img: '', ingredients: '', steps: '' };
-  const startAdd = () => setForm({ ...blank });
-  const startEdit = (r) => setForm({ id: r.id, time: r.time || 'Desayuno', title: r.title || '', kcal: r.kcal || '', time_prep: r.time_prep || '', img: r.img || '', ingredients: (r.ingredients || []).join('\n'), steps: (r.steps || []).join('\n') });
+  const blank = { time: 'Desayuno', title: '', kcal: '', time_prep: '', img: '', ingredients: [''], steps: [''] };
+  const startAdd = () => setForm({ ...blank, ingredients: [''], steps: [''] });
+  const startEdit = (r) => setForm({ id: r.id, time: r.time || 'Desayuno', title: r.title || '', kcal: r.kcal || '', time_prep: r.time_prep || '', img: r.img || '', ingredients: (r.ingredients || []).length ? [...r.ingredients] : [''], steps: (r.steps || []).length ? [...r.steps] : [''] });
 
   const save = async () => {
     if (!form.title.trim()) { alert('Falta el título.'); return; }
@@ -76,8 +102,8 @@ function Recetas() {
     const payload = {
       time: form.time, title: form.title.trim(), kcal: String(form.kcal || ''), time_prep: form.time_prep || '',
       img: form.img || null,
-      ingredients: form.ingredients.split('\n').map(s => s.trim()).filter(Boolean),
-      steps: form.steps.split('\n').map(s => s.trim()).filter(Boolean),
+      ingredients: form.ingredients.map(s => s.trim()).filter(Boolean),
+      steps: form.steps.map(s => s.trim()).filter(Boolean),
     };
     if (form.id) await supabase.from('recipes').update(payload).eq('id', form.id);
     else await supabase.from('recipes').insert(payload);
@@ -114,8 +140,8 @@ function Recetas() {
                 <input placeholder="Kcal (ej. 450)" value={form.kcal} onChange={e => setForm({ ...form, kcal: e.target.value })} style={input} />
                 <input placeholder="Tiempo (ej. 15 min)" value={form.time_prep} onChange={e => setForm({ ...form, time_prep: e.target.value })} style={input} />
               </div>
-              <textarea placeholder="Ingredientes (uno por línea)" value={form.ingredients} onChange={e => setForm({ ...form, ingredients: e.target.value })} rows={4} style={{ ...input, marginBottom: '12px', resize: 'vertical' }} />
-              <textarea placeholder="Pasos (uno por línea)" value={form.steps} onChange={e => setForm({ ...form, steps: e.target.value })} rows={4} style={{ ...input, marginBottom: '14px', resize: 'vertical' }} />
+              <ListEditor label="Ingredientes" addLabel="ingrediente" items={form.ingredients} onChange={(v) => setForm(f => ({ ...f, ingredients: v }))} placeholder="Ej. 200 g de pollo" />
+              <ListEditor label="Pasos" addLabel="paso" numbered items={form.steps} onChange={(v) => setForm(f => ({ ...f, steps: v }))} placeholder="Describe el paso…" />
               <button onClick={save} disabled={saving} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: PRIMARY, color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}>
                 <Save size={16} /> {saving ? 'Guardando…' : (form.id ? 'Guardar cambios' : 'Crear receta')}
               </button>

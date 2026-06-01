@@ -101,7 +101,7 @@ export default function CafeProductSheet({ product, groups, onClose, onAdd }) {
           </button>
         </div>
 
-        <div style={{ overflowY: 'auto', padding: '20px 22px 0', flex: 1 }}>
+        <div style={{ overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', padding: '20px 22px 0', flex: 1 }}>
           <motion.h2 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
             style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: '#1A1C1E' }}>{product.name}</motion.h2>
           {product.description && <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} style={{ margin: '0 0 12px', color: '#6B7280', fontSize: '0.92rem', lineHeight: 1.5 }}>{product.description}</motion.p>}

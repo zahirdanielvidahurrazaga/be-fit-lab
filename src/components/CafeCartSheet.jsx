@@ -42,7 +42,7 @@ export default function CafeCartSheet({ cart, products, onClose, onUpdateQty, on
           <button onClick={onClose} aria-label="Cerrar" style={{ width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={18} /></button>
         </div>
 
-        <div style={{ overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0 22px 28px', flex: 1 }}>
+        <div style={{ overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', padding: '0 22px 28px', flex: 1 }}>
           {cart.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '50px 0', color: '#9CA3AF' }}>
               <ShoppingBag size={40} style={{ opacity: 0.4, marginBottom: '10px' }} />
