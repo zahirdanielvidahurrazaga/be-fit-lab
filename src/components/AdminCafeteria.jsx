@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Check, Coffee } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import AdminCafeOptions from './AdminCafeOptions';
 
 const CATEGORIES = [
   { value: 'coffee', label: 'Ice Coffee' },
@@ -79,6 +80,7 @@ function AdminCafeteria() {
   };
 
   return (
+    <>
     <section>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
         <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -155,6 +157,8 @@ function AdminCafeteria() {
         );
       })}
     </section>
+    <AdminCafeOptions />
+    </>
   );
 }
 
