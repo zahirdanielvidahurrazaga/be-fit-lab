@@ -7,6 +7,7 @@ import { useScrollDetect } from '../hooks/useScrollDetect';
 import AdminCafeteria from '../components/AdminCafeteria';
 import AdminReportes from '../components/AdminReportes';
 import AdminClientas from '../components/AdminClientas';
+import AdminNutricion from '../components/AdminNutricion';
 import { Coffee, Bell, UserCog } from 'lucide-react';
 
 const daysOfWeek = [
@@ -993,55 +994,7 @@ function Admin() {
             {/* ============ TAB: NUTRICION ============ */}
             {activeTab === 'nutricion' && (
               <motion.div key="nutricion" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
-                <section>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                    <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', margin: 0 }}>Gestión de Nutrición</h2>
-                    <button onClick={() => setShowAddRecipe(!showAddRecipe)} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '8px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
-                      <Plus size={16} /> Nueva
-                    </button>
-                  </div>
-  
-                  {showAddRecipe && (
-                    <div className="ios-glass-card" style={{ padding: '15px', marginBottom: '15px', background: 'white' }}>
-                      <select value={newRecipe.time} onChange={e => setNewRecipe({...newRecipe, time: e.target.value})} style={{...inputStyle, marginBottom: '10px', WebkitAppearance: 'none'}}>
-                        <option value="Desayuno">Desayuno</option>
-                        <option value="Almuerzo">Almuerzo</option>
-                        <option value="Cena">Cena</option>
-                        <option value="Snack">Snack</option>
-                      </select>
-                      <input placeholder="Título (ej. Bowl de Pollo)" value={newRecipe.title} onChange={e => setNewRecipe({...newRecipe, title: e.target.value})} style={{...inputStyle, marginBottom: '10px'}} />
-                      <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                        <input placeholder="Kcal (ej. 450)" value={newRecipe.kcal} onChange={e => setNewRecipe({...newRecipe, kcal: e.target.value})} style={inputStyle} />
-                        <input placeholder="Tiempo (ej. 15 min)" value={newRecipe.time_prep} onChange={e => setNewRecipe({...newRecipe, time_prep: e.target.value})} style={inputStyle} />
-                      </div>
-                      <input placeholder="URL de Imagen (Unsplash...)" value={newRecipe.img} onChange={e => setNewRecipe({...newRecipe, img: e.target.value})} style={{...inputStyle, marginBottom: '10px'}} />
-                      <textarea placeholder="Ingredientes separados por comas (Pollo, Arroz, Limón)" value={newRecipe.ingredients} onChange={e => setNewRecipe({...newRecipe, ingredients: e.target.value})} style={{...inputStyle, marginBottom: '10px', height: '60px', resize: 'none'}} />
-                      <textarea placeholder="Pasos separados por puntos (Cocinar. Servir.)" value={newRecipe.steps} onChange={e => setNewRecipe({...newRecipe, steps: e.target.value})} style={{...inputStyle, marginBottom: '15px', height: '60px', resize: 'none'}} />
-                      
-                      <button onClick={handleCreateRecipe} style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer' }}>Guardar Receta</button>
-                    </div>
-                  )}
-  
-                  <div className="admin-responsive-grid">
-                    {recipes && recipes.length > 0 ? recipes.map((r) => (
-                      <div key={r.id} className="ios-glass-card" style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '15px', background: 'var(--surface)', margin: 0 }}>
-                        <img src={r.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400&h=300"} alt={r.title} style={{ width: '60px', height: '60px', borderRadius: '12px', objectFit: 'cover' }} />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 800, textTransform: 'uppercase' }}>{r.time}</div>
-                          <h3 style={{ fontSize: '0.95rem', margin: '2px 0', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>{r.title}</h3>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: 0 }}>{r.kcal} kcal • {r.time_prep}</p>
-                        </div>
-                        <button onClick={() => deleteRecipe(r.id)} style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: '#FF4D4D15', color: '#FF4D4D', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                          <Minus size={16} />
-                        </button>
-                      </div>
-                    )) : (
-                      <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.9rem', fontStyle: 'italic', background: 'rgba(55,61,59,0.03)', borderRadius: '16px' }}>
-                        No hay recetas registradas.
-                      </div>
-                    )}
-                  </div>
-                </section>
+                <AdminNutricion />
               </motion.div>
             )}
 

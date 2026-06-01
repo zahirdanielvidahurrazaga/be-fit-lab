@@ -22,21 +22,24 @@ export function compressCafeImage(source, maxSize = 900, quality = 0.82) {
   });
 }
 
-// Sube una imagen de producto a Storage (bucket público cafe-products) con un
-// nombre único y devuelve su URL pública. RLS: solo admin puede escribir.
-export async function uploadCafeImage(source) {
+// Sube una imagen comprimida a Storage (bucket público) con nombre único y
+// devuelve su URL pública. RLS del bucket cafe-products: solo admin escribe.
+export async function uploadImage(source, { bucket = 'cafe-products', folder = '' } = {}) {
   if (!source) return { url: null, error: 'sin_imagen' };
   let blob;
   try { blob = await compressCafeImage(source); }
   catch (e) { return { url: null, error: e }; }
 
   const id = (crypto?.randomUUID?.() || String(Date.now() + Math.random())).replace(/[^a-z0-9-]/gi, '');
-  const path = `${id}.jpg`;
+  const path = `${folder ? folder + '/' : ''}${id}.jpg`;
   const { error } = await supabase.storage
-    .from('cafe-products')
+    .from(bucket)
     .upload(path, blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '3600' });
   if (error) return { url: null, error };
 
-  const { data } = supabase.storage.from('cafe-products').getPublicUrl(path);
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return { url: data.publicUrl, error: null };
 }
+
+// Imagen de producto de cafetería (compat).
+export const uploadCafeImage = (source) => uploadImage(source, { bucket: 'cafe-products' });

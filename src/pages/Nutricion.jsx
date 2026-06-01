@@ -7,6 +7,7 @@ import { useScrollDetect } from '../hooks/useScrollDetect';
 import { motion, AnimatePresence } from 'framer-motion';
 import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
 import ProfileMenu from '../components/ProfileMenu';
+import ClientMealPlan from '../components/ClientMealPlan';
 
 function Nutricion() {
   const navigate = useNavigate();
@@ -67,44 +68,8 @@ function Nutricion() {
 
       <main className="dashboard-main">
         <div className="dashboard-sidebar">
-          {/* Plan del Día Banner - Premium Redesign */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{ 
-              padding: '28px 24px', borderRadius: '32px', 
-              background: 'linear-gradient(135deg, #2D2928 0%, #4A4544 100%)',
-              color: 'white',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
-              position: 'relative', overflow: 'hidden'
-            }}
-          >
-            <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '120px', height: '120px', background: 'rgba(255,139,66,0.15)', borderRadius: '50%', filter: 'blur(30px)' }}></div>
-            
-            <div style={{ position: 'relative', zIndex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <Scale size={14} color="var(--primary)" />
-                <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Objetivo Semanal</span>
-              </div>
-              
-              <h2 style={{ fontSize: '1.8rem', color: 'white', marginBottom: '24px', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>Definición <span style={{ color: 'var(--primary)' }}>Glow</span></h2>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
-                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white' }}>1.6k</div>
-                    <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', fontWeight: 800, marginTop: '2px' }}>KCAL</div>
-                 </div>
-                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white' }}>120g</div>
-                    <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', fontWeight: 800, marginTop: '2px' }}>PROT</div>
-                 </div>
-                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white' }}>150g</div>
-                    <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', fontWeight: 800, marginTop: '2px' }}>CARBS</div>
-                 </div>
-              </div>
-            </div>
-          </motion.div>
+          {/* Plan nutricional real + calendario mensual de comidas */}
+          <ClientMealPlan userId={user?.id} />
 
           {/* HIDRATACIÓN - Minimal Circle Progress */}
           <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

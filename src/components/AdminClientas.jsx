@@ -113,7 +113,14 @@ export default function AdminClientas() {
   const [users, setUsers] = useState(null); // TODOS los usuarios (no solo clientas)
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
+  const [planFilter, setPlanFilter] = useState('all');
   const [busy, setBusy] = useState(false);
+
+  const plans = useMemo(() => {
+    const s = new Set();
+    (users || []).forEach(u => { if (u.role === 'CLIENT' && u.membership_status === 'ACTIVE' && u.membership_plan) s.add(u.membership_plan); });
+    return [...s];
+  }, [users]);
 
   const load = async () => {
     const { data } = await supabase.from('users')
@@ -141,10 +148,11 @@ export default function AdminClientas() {
     if (filter === 'active') arr = arr.filter(u => u.membership_status === 'ACTIVE' && u.role === 'CLIENT');
     else if (filter === 'inactive') arr = arr.filter(u => u.membership_status !== 'ACTIVE' && u.role === 'CLIENT');
     else if (filter === 'staff') arr = arr.filter(u => ['COACH', 'BARISTA', 'ADMIN'].includes(u.role));
+    if (planFilter !== 'all') arr = arr.filter(u => (u.membership_plan || '') === planFilter && u.membership_status === 'ACTIVE');
     const s = q.trim().toLowerCase();
     if (s) arr = arr.filter(u => (u.full_name || '').toLowerCase().includes(s) || (u.email || '').toLowerCase().includes(s));
     return arr;
-  }, [users, filter, q]);
+  }, [users, filter, planFilter, q]);
 
   const counts = useMemo(() => {
     const all = users || [];
@@ -170,11 +178,18 @@ export default function AdminClientas() {
           style={{ width: '100%', padding: '12px 14px 12px 42px', borderRadius: '14px', border: '1px solid rgba(0,0,0,0.1)', background: 'white', fontSize: '0.92rem', boxSizing: 'border-box' }} />
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '18px' }}>
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: plans.length ? '10px' : '18px' }}>
         {FILTERS.map(([id, label]) => (
           <Pill key={id} active={filter === id} onClick={() => setFilter(id)}>{label}</Pill>
         ))}
       </div>
+      {plans.length > 0 && (
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '18px', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, marginRight: '2px' }}>Membresía:</span>
+          <Pill active={planFilter === 'all'} onClick={() => setPlanFilter('all')}>Todas</Pill>
+          {plans.map(p => <Pill key={p} active={planFilter === p} onClick={() => setPlanFilter(p)}>{p}</Pill>)}
+        </div>
+      )}
 
       {users === null ? (
         <div style={{ textAlign: 'center', padding: '50px 0', color: 'var(--on-surface-variant)' }}>Cargando…</div>
