@@ -27,6 +27,7 @@ function Cafeteria() {
   const [countdown, setCountdown] = useState(5);
   const [processing, setProcessing] = useState(false);
   const [trackingOrderId, setTrackingOrderId] = useState(null); // seguimiento del pedido
+  const [activeOrders, setActiveOrders] = useState([]);          // pedidos en curso del usuario
 
   // Catálogo desde la BD (precios server-side). Solo productos disponibles.
   const available = (cafeProducts || []).filter(p => p.available !== false);
@@ -54,6 +55,22 @@ function Cafeteria() {
       window.removeEventListener('cafe-payment-success', onPaid);
     };
   }, []);
+
+  // Pedidos en curso del usuario (para el botón "Mi pedido") + realtime
+  useEffect(() => {
+    if (!user?.id) return;
+    const fetchActive = async () => {
+      const { data } = await supabase.from('cafe_orders').select('id,status,created_at').eq('user_id', user.id).in('status', ['paid', 'preparing', 'ready']).order('created_at', { ascending: false });
+      setActiveOrders(data || []);
+    };
+    fetchActive();
+    const ch = supabase.channel(`my-cafe-orders-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cafe_orders', filter: `user_id=eq.${user.id}` }, fetchActive)
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [user?.id]);
+
+  const orderStatusLabel = (s) => s === 'preparing' ? 'Preparándose' : s === 'ready' ? '¡Listo para recoger!' : 'Confirmado';
 
   // Bloquear el scroll del fondo cuando hay una hoja/overlay abierto
   useEffect(() => {
@@ -102,7 +119,7 @@ function Cafeteria() {
           // Pedido pagado: notificación verificada (servidor) + push (cliente, camino probado)
           supabase.functions.invoke('stripe-cafe-notify', { body: { paymentIntentId: data.paymentIntentId } });
           const resumen = cart.map(i => `${i.qty}× ${i.name}`).join(', ');
-          if (user?.id) supabase.functions.invoke('send-push', { body: { userId: user.id, title: 'Compra en cafetería', body: `${resumen}. ¡Pásala a recoger!`, type: 'payment', skipLog: true } });
+          if (user?.id) supabase.functions.invoke('send-push', { body: { userId: user.id, title: 'Pedido confirmado', body: `${resumen}. ¡Ya lo estamos preparando!`, type: 'payment', skipLog: true } });
           if (meta.gift?.recipient_user_id) supabase.functions.invoke('send-push', { body: { userId: meta.gift.recipient_user_id, title: '¡Te enviaron un regalo!', body: meta.gift.message || `Te regalaron: ${resumen}`, type: 'payment', skipLog: true } });
           setCart([]);
           if (data.orderId) setTrackingOrderId(data.orderId); else setShowThanks(true);
@@ -448,6 +465,21 @@ function Cafeteria() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* BOTÓN FLOTANTE "MI PEDIDO" (pedido en curso) */}
+      {activeOrders.length > 0 && !selectedProduct && !showCart && !confirming && !trackingOrderId && !processing && !showThanks && (
+        <motion.button
+          initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+          onClick={() => setTrackingOrderId(activeOrders[0].id)}
+          style={{ position: 'fixed', left: '20px', right: '20px', bottom: cartCount > 0 ? 'calc(env(safe-area-inset-bottom,0px) + 86px)' : 'calc(env(safe-area-inset-bottom,0px) + 20px)', zIndex: 3500, border: '1px solid rgba(255,255,255,0.16)', cursor: 'pointer', background: 'rgba(43,33,28,0.92)', backdropFilter: 'blur(16px) saturate(160%)', WebkitBackdropFilter: 'blur(16px) saturate(160%)', color: '#fff', borderRadius: '20px', padding: '13px 18px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 12px 30px rgba(43,33,28,0.4)' }}>
+          <Coffee size={22} color="#FFB7A8" />
+          <span style={{ flex: 1, textAlign: 'left' }}>
+            <span style={{ display: 'block', fontSize: '0.7rem', opacity: 0.7, fontWeight: 600 }}>Tu pedido en curso</span>
+            <span style={{ fontWeight: 800, fontSize: '0.95rem' }}>{orderStatusLabel(activeOrders[0].status)}</span>
+          </span>
+          <span style={{ fontSize: '0.85rem', fontWeight: 700, opacity: 0.9 }}>Ver ›</span>
+        </motion.button>
+      )}
 
       {/* SEGUIMIENTO DEL PEDIDO (estilo Uber Eats) */}
       <AnimatePresence>

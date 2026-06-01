@@ -24,6 +24,43 @@ function Steam() {
   );
 }
 
+function CoffeeBrewing({ phase }) {
+  // phase: 0 confirmado · 1 preparando · 2 listo
+  const fill = phase === 0 ? '24%' : phase === 2 ? '86%' : ['34%', '80%', '34%'];
+  return (
+    <div style={{ position: 'relative', width: '190px', height: '180px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', margin: '0 auto' }}>
+      {/* glow dorado */}
+      <div style={{ position: 'absolute', inset: '-10px', background: 'radial-gradient(circle at 50% 42%, rgba(201,163,91,0.28), transparent 62%)' }} />
+      {/* vapor */}
+      {phase >= 1 && (
+        <div style={{ position: 'absolute', top: '6px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '11px' }}>
+          {[0, 1, 2].map(i => (
+            <motion.div key={i} animate={{ y: [0, -24], opacity: [0, 0.55, 0], scaleY: [0.7, 1.4, 0.7] }} transition={{ duration: 2.1, repeat: Infinity, delay: i * 0.4, ease: 'easeInOut' }}
+              style={{ width: '6px', height: '28px', borderRadius: '5px', background: 'rgba(255,255,255,0.8)', filter: 'blur(0.5px)' }} />
+          ))}
+        </div>
+      )}
+      {/* chorro al preparar */}
+      {phase === 1 && (
+        <motion.div animate={{ scaleY: [0, 1, 1, 0], opacity: [0, 1, 1, 0] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', times: [0, 0.18, 0.82, 1] }}
+          style={{ position: 'absolute', top: '40px', left: '50%', transform: 'translateX(-50%)', transformOrigin: 'top', width: '5px', height: '44px', borderRadius: '3px', background: 'linear-gradient(#7A5740,#3B2A20)', zIndex: 2 }} />
+      )}
+      {/* taza */}
+      <div style={{ position: 'relative', width: '118px', height: '104px', marginBottom: '16px' }}>
+        <div style={{ position: 'absolute', right: '-20px', top: '26px', width: '34px', height: '40px', border: '8px solid #EFE3D5', borderLeft: 'none', borderRadius: '0 20px 20px 0' }} />
+        <div style={{ position: 'absolute', inset: 0, background: '#FFFDFA', borderRadius: '16px 16px 52px 52px', border: '2px solid #EFE3D5', overflow: 'hidden', boxShadow: '0 16px 32px rgba(59,42,32,0.2)' }}>
+          <motion.div animate={{ height: fill }} transition={{ duration: phase === 1 ? 2.5 : 0.9, repeat: phase === 1 ? Infinity : 0, ease: 'easeInOut' }}
+            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(180deg,#7A5740,#3B2A20)' }}>
+            <div style={{ position: 'absolute', top: '-3px', left: 0, right: 0, height: '7px', background: 'rgba(245,235,220,0.85)', borderRadius: '50%' }} />
+          </motion.div>
+        </div>
+      </div>
+      {/* plato */}
+      <div style={{ position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)', width: '152px', height: '14px', background: '#F1E7DA', borderRadius: '50%', boxShadow: '0 8px 18px rgba(59,42,32,0.14)' }} />
+    </div>
+  );
+}
+
 function Confetti() {
   const pieces = useMemo(() => Array.from({ length: 22 }, (_, i) => {
     const a = (Math.PI * 2 * i) / 22 + Math.random() * 0.4, d = 110 + Math.random() * 130;
@@ -71,20 +108,10 @@ export default function CafeOrderTracking({ orderId, onClose }) {
         </motion.p>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: '#2B211C', margin: '0 0 30px' }}>{current.label}</h1>
 
-        {/* Ilustración animada */}
-        <div style={{ position: 'relative', marginBottom: '36px' }}>
+        {/* Ilustración animada: café sirviéndose */}
+        <div style={{ position: 'relative', marginBottom: '34px' }}>
           {ready && <Confetti />}
-          <motion.div
-            animate={ready ? { scale: [1, 1.06, 1] } : { scale: [1, 1.04, 1] }}
-            transition={{ duration: ready ? 1.2 : 2, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ position: 'relative', width: '150px', height: '150px', borderRadius: '50%', background: ready ? 'linear-gradient(135deg,#22C55E,#16A34A)' : 'linear-gradient(135deg,#FF914D,#E07A9C)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: ready ? '0 18px 44px rgba(34,197,94,0.4)' : '0 18px 44px rgba(255,145,77,0.4)' }}>
-            {idx === 1 && <Steam />}
-            <AnimatePresence mode="wait">
-              <motion.div key={idx} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }} transition={{ type: 'spring', damping: 14 }}>
-                <ActiveIcon size={62} color="#fff" strokeWidth={2.2} />
-              </motion.div>
-            </AnimatePresence>
-          </motion.div>
+          <CoffeeBrewing phase={idx} />
         </div>
 
         <p style={{ fontSize: '1.05rem', color: '#6B5B50', margin: '0 0 36px', maxWidth: '300px', lineHeight: 1.5 }}>{current.desc}</p>

@@ -38,8 +38,8 @@ serve(async (req) => {
     // Notificación in-app del comprador
     if (buyerId) {
       await supabase.from('notification_logs').insert({
-        user_id: buyerId, type: 'payment', title: 'Compra en cafetería ☕',
-        body: `${summary} — Total $${total} MXN. ¡Pásala a recoger!`, status: 'sent',
+        user_id: buyerId, type: 'payment', title: 'Pedido confirmado',
+        body: `${summary} — Total $${total} MXN. ¡Ya lo estamos preparando!`, status: 'sent',
       });
     }
     // Notificación in-app del destinatario (regalo)
