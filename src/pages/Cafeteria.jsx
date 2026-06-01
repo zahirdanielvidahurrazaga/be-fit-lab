@@ -41,6 +41,7 @@ function Cafeteria() {
   const [activeOrders, setActiveOrders] = useState([]);          // pedidos en curso del usuario
   const [showHistory, setShowHistory] = useState(false);         // historial de pedidos del usuario
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);   // pide registrarse/login para comprar
+  const [returnedFromPay, setReturnedFromPay] = useState(false); // volvió del checkout web (Stripe)
 
   // Catálogo desde la BD (precios server-side). Solo productos disponibles.
   const available = (cafeProducts || []).filter(p => p.available !== false);
@@ -69,7 +70,11 @@ function Cafeteria() {
     window.scrollTo(0, 0);
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
-    if (new URLSearchParams(window.location.search).get('payment') === 'success') { setShowThanks(true); setCart([]); }
+    if (new URLSearchParams(window.location.search).get('payment') === 'success') {
+      setCart([]);
+      window.history.replaceState?.({}, '', '/cafeteria'); // limpiar el ?payment para no repetir
+      setReturnedFromPay(true); // abrir el seguimiento cuando cargue la sesión
+    }
     const onPaid = () => setShowThanks(true);
     window.addEventListener('cafe-payment-success', onPaid);
     // Cargar grupos de personalización (con sus opciones)
@@ -123,6 +128,29 @@ function Cafeteria() {
     }
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Al volver del pago web (Stripe), abrir el seguimiento del último pedido del usuario.
+  // Espera a que la sesión cargue; corre de nuevo cuando user.id esté disponible.
+  useEffect(() => {
+    if (!returnedFromPay || !user?.id) return;
+    let active = true;
+    (async () => {
+      const { data } = await supabase.from('cafe_orders').select('id')
+        .eq('user_id', user.id).in('status', ['paid', 'preparing', 'ready', 'completed'])
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (!active) return;
+      setReturnedFromPay(false);
+      if (data?.id) setTrackingOrderId(data.id); else setShowThanks(true);
+    })();
+    return () => { active = false; };
+  }, [returnedFromPay, user?.id]);
+
+  // Fallback: si tras unos segundos no hay sesión, al menos mostrar el "¡Gracias!"
+  useEffect(() => {
+    if (!returnedFromPay) return;
+    const t = setTimeout(() => { if (!user?.id) { setReturnedFromPay(false); setShowThanks(true); } }, 4500);
+    return () => clearTimeout(t);
+  }, [returnedFromPay, user?.id]);
+
   // Bloquear el scroll del fondo cuando hay una hoja/overlay abierto
   useEffect(() => {
     const open = selectedProduct || showCart || confirming || processing || showThanks || trackingOrderId || showHistory || showAuthPrompt;
@@ -158,7 +186,7 @@ function Cafeteria() {
     setProcessing(true);
     try {
       const items = cart.map(i => ({ product_id: i.product_id, quantity: i.qty, option_ids: i.option_ids, notes: i.notes }));
-      const body = { items, userEmail: user?.email, userId: user?.id, gift: meta.gift, pickupTime: meta.pickupTime, noStraw: meta.noStraw };
+      const body = { items, userEmail: user?.email, userId: user?.id, gift: meta.gift, pickupTime: meta.pickupTime, noStraw: meta.noStraw, returnUrl: window.location.origin };
 
       if (Capacitor.isNativePlatform()) {
         const { data, error } = await supabase.functions.invoke('stripe-cafe-intent', { body });

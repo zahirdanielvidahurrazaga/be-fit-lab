@@ -55,8 +55,11 @@ serve(async (req) => {
         // Marcar pagado de forma IDEMPOTENTE: solo procede si seguía pendiente
         // (evita doble notificación si Stripe reintenta el webhook).
         if (orderId) {
+          const patch: Record<string, unknown> = { status: 'paid', payment_intent_id: (session.payment_intent as string) ?? null };
+          // Defensa: si el pedido quedó sin dueño, fijarlo desde la metadata
+          if (supabase_user_id) patch.user_id = supabase_user_id;
           const { data: updated } = await supabase.from('cafe_orders')
-            .update({ status: 'paid', payment_intent_id: (session.payment_intent as string) ?? null })
+            .update(patch)
             .eq('id', orderId).eq('status', 'pending_payment')
             .select('*').maybeSingle();
           if (!updated) return new Response('ok'); // ya procesado o no encontrado

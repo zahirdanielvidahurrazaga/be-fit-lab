@@ -17,7 +17,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const { items, userEmail, userId, gift, pickupTime, noStraw } = await req.json();
+    const { items, userEmail, userId, gift, pickupTime, noStraw, returnUrl } = await req.json();
 
     const raw = Array.isArray(items) ? items : (items ? [items] : []);
     // Acepta el formato nuevo {product_id, quantity, option_ids, notes} y el legacy {id}
@@ -35,6 +35,17 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
+
+    // user_id AUTORITATIVO desde el JWT del usuario (no confiar solo en el body):
+    // garantiza que el pedido quede ligado al dueño correcto para tracking/historial.
+    let ownerId: string | null = userId || null;
+    try {
+      const token = (req.headers.get('Authorization') || '').replace('Bearer ', '');
+      if (token) {
+        const { data: { user: authUser } } = await supabase.auth.getUser(token);
+        if (authUser?.id) ownerId = authUser.id;
+      }
+    } catch (_) { /* sin sesión válida → queda lo que vino en el body */ }
 
     const productIds = [...new Set(list.map((i: any) => i.product_id))];
     const optionIds = [...new Set(list.flatMap((i: any) => i.option_ids).filter(Boolean))];
@@ -89,7 +100,7 @@ serve(async (req) => {
     // Crear el pedido (pending_payment); el webhook lo marca pagado
     const giftObj = gift && gift.is_gift ? gift : null;
     const { data: order, error: ordErr } = await supabase.from('cafe_orders').insert({
-      user_id: userId || null,
+      user_id: ownerId,
       status: 'pending_payment',
       items: snapshot,
       subtotal: total,
@@ -112,7 +123,10 @@ serve(async (req) => {
         ?? (await stripe.customers.create({ email: userEmail, metadata: { supabase_user_id: userId ?? '' } })).id;
     }
 
-    const appUrl = 'https://be-fit-lab.pages.dev';
+    // Regresar al MISMO dominio desde donde se compró (conserva la sesión web)
+    const appUrl = (typeof returnUrl === 'string' && /^https?:\/\//.test(returnUrl))
+      ? returnUrl.replace(/\/$/, '')
+      : 'https://be-fit-lab.pages.dev';
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -123,7 +137,7 @@ serve(async (req) => {
       cancel_url: `${appUrl}/cafeteria?payment=cancel`,
       metadata: {
         type: 'cafeteria',
-        supabase_user_id: userId ?? '',
+        supabase_user_id: ownerId ?? '',
         order_id: order.id,
       },
     });

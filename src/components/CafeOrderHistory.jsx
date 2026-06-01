@@ -25,14 +25,19 @@ export default function CafeOrderHistory({ userId, onClose, onOpenOrder }) {
   const [orders, setOrders] = useState(null);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) { setOrders([]); return; } // sin sesión → estado vacío, no spinner infinito
+    let active = true;
+    setOrders(null);
     (async () => {
-      const { data } = await supabase.from('cafe_orders')
+      const { data, error } = await supabase.from('cafe_orders')
         .select('id,status,items,total,created_at,is_gift,pickup_time')
         .eq('user_id', userId).neq('status', 'pending_payment')
         .order('created_at', { ascending: false }).limit(50);
+      if (!active) return;
+      if (error) console.error('Historial cafetería:', error);
       setOrders(data || []);
     })();
+    return () => { active = false; };
   }, [userId]);
 
   return (
