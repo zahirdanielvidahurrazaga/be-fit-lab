@@ -31,7 +31,9 @@ function Cafeteria() {
   const [optionGroups, setOptionGroups] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null); // ficha/personalización
   const [showCart, setShowCart] = useState(false);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('befit_cafe_cart')) || []; } catch { return []; }
+  });
   const [confirming, setConfirming] = useState(null);   // { meta } durante la cuenta de 5s
   const [countdown, setCountdown] = useState(5);
   const [processing, setProcessing] = useState(false);
@@ -67,7 +69,7 @@ function Cafeteria() {
     window.scrollTo(0, 0);
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
-    if (new URLSearchParams(window.location.search).get('payment') === 'success') setShowThanks(true);
+    if (new URLSearchParams(window.location.search).get('payment') === 'success') { setShowThanks(true); setCart([]); }
     const onPaid = () => setShowThanks(true);
     window.addEventListener('cafe-payment-success', onPaid);
     // Cargar grupos de personalización (con sus opciones)
@@ -96,6 +98,30 @@ function Cafeteria() {
   }, [user?.id]);
 
   const orderStatusLabel = (s) => s === 'preparing' ? 'Preparándose' : s === 'ready' ? '¡Listo para recoger!' : 'Confirmado';
+
+  // Persistir el carrito (sobrevive a navegar a registro/login y a recargas)
+  useEffect(() => {
+    try { localStorage.setItem('befit_cafe_cart', JSON.stringify(cart)); } catch { /* almacenamiento lleno */ }
+  }, [cart]);
+
+  // Reconciliar el carrito con el catálogo: si un producto se eliminó/ocultó,
+  // quitarlo del carrito guardado (evita que falle el checkout con datos viejos).
+  useEffect(() => {
+    if (!cafeProducts || cafeProducts.length === 0) return;
+    const okIds = new Set(cafeProducts.filter(p => p.available !== false).map(p => p.id));
+    setCart(prev => {
+      const next = prev.filter(i => okIds.has(i.product_id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [cafeProducts]);
+
+  // Al volver autenticado tras registrarse/iniciar sesión, reabrir el carrito para finalizar
+  useEffect(() => {
+    if (user?.id && localStorage.getItem('befit_cafe_resume') === '1') {
+      localStorage.removeItem('befit_cafe_resume');
+      if (cart.length > 0) setShowCart(true);
+    }
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Bloquear el scroll del fondo cuando hay una hoja/overlay abierto
   useEffect(() => {
@@ -556,10 +582,10 @@ function Cafeteria() {
               </div>
               <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.55rem', margin: '0 0 8px', color: '#1A1C1E' }}>Crea tu cuenta para pedir</h2>
               <p style={{ margin: '0 0 24px', fontSize: '0.95rem', color: '#6B7280', lineHeight: 1.5 }}>Es gratis y rápido — no necesitas membresía. Así puedes seguir tu pedido en vivo y recibir avisos cuando esté listo.</p>
-              <button onClick={() => navigate('/registro')} style={{ width: '100%', padding: '15px', borderRadius: '16px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 25px rgba(255,145,77,0.35)', marginBottom: '10px' }}>
+              <button onClick={() => { localStorage.setItem('befit_redirect_after_auth', '/cafeteria'); localStorage.setItem('befit_cafe_resume', '1'); navigate('/registro'); }} style={{ width: '100%', padding: '15px', borderRadius: '16px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 25px rgba(255,145,77,0.35)', marginBottom: '10px' }}>
                 Registrarme
               </button>
-              <button onClick={() => navigate('/login')} style={{ width: '100%', padding: '13px', borderRadius: '16px', border: '1.5px solid rgba(0,0,0,0.12)', background: '#fff', color: '#1A1C1E', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>
+              <button onClick={() => { localStorage.setItem('befit_redirect_after_auth', '/cafeteria'); localStorage.setItem('befit_cafe_resume', '1'); navigate('/login'); }} style={{ width: '100%', padding: '13px', borderRadius: '16px', border: '1.5px solid rgba(0,0,0,0.12)', background: '#fff', color: '#1A1C1E', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>
                 Ya tengo cuenta
               </button>
             </motion.div>

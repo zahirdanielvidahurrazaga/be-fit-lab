@@ -75,8 +75,15 @@ function Register() {
           navigate('/portal');
         }, 1000);
       } else {
-        // Registro normal (sin pago previo), enviar a landing o a planes si es app nativa
-        navigate(isNative ? '/planes' : '/', { state: { registered: true } });
+        // Si venían de la cafetería a comprar, regresarlos ahí con su carrito intacto
+        const dest = localStorage.getItem('befit_redirect_after_auth');
+        if (dest) {
+          localStorage.removeItem('befit_redirect_after_auth');
+          navigate(dest, { state: { registered: true } });
+        } else {
+          // Registro normal (sin pago previo), enviar a landing o a planes si es app nativa
+          navigate(isNative ? '/planes' : '/', { state: { registered: true } });
+        }
       }
     }
   };

@@ -109,7 +109,10 @@ function Login() {
         localStorage.removeItem('befit_remember_me');
         sessionStorage.setItem('befit_session_active', '1');
       }
-      navigate('/portal');
+      // Si venían de la cafetería (u otra pantalla), regresarlos ahí
+      const dest = localStorage.getItem('befit_redirect_after_auth');
+      if (dest) { localStorage.removeItem('befit_redirect_after_auth'); navigate(dest); }
+      else navigate('/portal');
     }
   };
 
