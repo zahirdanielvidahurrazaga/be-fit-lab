@@ -42,7 +42,7 @@ export default function CafeCartSheet({ cart, products, onClose, onUpdateQty, on
           <button onClick={onClose} aria-label="Cerrar" style={{ width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={18} /></button>
         </div>
 
-        <div style={{ overflowY: 'auto', padding: '0 22px', flex: 1 }}>
+        <div style={{ overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0 22px 28px', flex: 1 }}>
           {cart.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '50px 0', color: '#9CA3AF' }}>
               <ShoppingBag size={40} style={{ opacity: 0.4, marginBottom: '10px' }} />
@@ -77,7 +77,7 @@ export default function CafeCartSheet({ cart, products, onClose, onUpdateQty, on
           {/* Complementos */}
           {complementos.length > 0 && cart.length > 0 && (
             <div style={{ marginTop: '24px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: '0 0 12px', color: '#1A1C1E' }}>¿Algo más? 👀</h3>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: '0 0 12px', color: '#1A1C1E' }}>¿Algo más?</h3>
               <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '6px' }}>
                 {complementos.map(p => (
                   <button key={p.id} onClick={() => onOpenProduct(p)} style={{ flex: '0 0 auto', width: '120px', textAlign: 'left', background: '#fff', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '16px', padding: '12px', cursor: 'pointer' }}>
@@ -96,7 +96,7 @@ export default function CafeCartSheet({ cart, products, onClose, onUpdateQty, on
                 <Leaf size={20} color={noStraw ? '#16A34A' : '#9CA3AF'} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#1A1C1E' }}>Sin popote</div>
-                  <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>Ayuda al planeta 🌱</div>
+                  <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>Cuida el planeta</div>
                 </div>
                 <span style={{ width: '20px', height: '20px', borderRadius: '6px', border: `2px solid ${noStraw ? '#22C55E' : '#CBD5E1'}`, background: noStraw ? '#22C55E' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '0.7rem' }}>{noStraw ? '✓' : ''}</span>
               </button>
@@ -105,7 +105,7 @@ export default function CafeCartSheet({ cart, products, onClose, onUpdateQty, on
               <div style={{ borderRadius: '16px', border: `1.5px solid ${isGift ? 'var(--primary)' : 'rgba(0,0,0,0.08)'}`, background: '#fff', overflow: 'hidden' }}>
                 <button onClick={() => setIsGift(v => !v)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}>
                   <Gift size={20} color={isGift ? 'var(--primary)' : '#9CA3AF'} />
-                  <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#1A1C1E' }}>Es un regalo 🎁</div><div style={{ fontSize: '0.78rem', color: '#6B7280' }}>Para alguien especial</div></div>
+                  <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#1A1C1E' }}>Es un regalo</div><div style={{ fontSize: '0.78rem', color: '#6B7280' }}>Para alguien especial</div></div>
                   <span style={{ width: '20px', height: '20px', borderRadius: '6px', border: `2px solid ${isGift ? 'var(--primary)' : '#CBD5E1'}`, background: isGift ? 'var(--primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '0.7rem' }}>{isGift ? '✓' : ''}</span>
                 </button>
                 {isGift && (
@@ -136,12 +136,12 @@ export default function CafeCartSheet({ cart, products, onClose, onUpdateQty, on
         {/* Footer total + finalizar */}
         {cart.length > 0 && (
           <div style={{ padding: '16px 22px', paddingBottom: 'calc(env(safe-area-inset-bottom,0px) + 16px)', borderTop: '1px solid rgba(0,0,0,0.06)', background: '#FDFBF7' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'baseline' }}>
               <span style={{ fontSize: '1rem', color: '#6B7280', fontWeight: 600 }}>Total</span>
-              <span style={{ fontSize: '1.3rem', fontWeight: 900, color: '#1A1C1E' }}>${subtotal} MXN</span>
+              <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#1A1C1E' }}>${subtotal} MXN</span>
             </div>
-            <button onClick={finalize} style={{ width: '100%', padding: '16px', borderRadius: '18px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '1.05rem', cursor: 'pointer', boxShadow: '0 10px 24px rgba(255,145,77,0.35)' }}>
-              Finalizar compra · ${subtotal}
+            <button onClick={finalize} style={{ width: '100%', padding: '16px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.45)', background: 'rgba(255,145,77,0.9)', backdropFilter: 'blur(16px) saturate(160%)', WebkitBackdropFilter: 'blur(16px) saturate(160%)', color: '#fff', fontWeight: 800, fontSize: '1.05rem', cursor: 'pointer', boxShadow: '0 10px 24px rgba(255,145,77,0.35)' }}>
+              Finalizar compra
             </button>
           </div>
         )}

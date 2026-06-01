@@ -53,6 +53,13 @@ function Cafeteria() {
     };
   }, []);
 
+  // Bloquear el scroll del fondo cuando hay una hoja/overlay abierto
+  useEffect(() => {
+    const open = selectedProduct || showCart || confirming || processing || showThanks;
+    document.body.style.overflow = open ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [selectedProduct, showCart, confirming, processing, showThanks]);
+
   const nextWidget = () => setActiveWidgetIndex((prev) => (prev + 1) % 3);
   const prevWidget = () => setActiveWidgetIndex((prev) => (prev - 1 + 3) % 3);
 
@@ -390,13 +397,14 @@ function Cafeteria() {
         </motion.div>
       </div>
 
-      {/* BOTÓN FLOTANTE DEL CARRITO */}
+      {/* BOTÓN FLOTANTE DEL CARRITO (glass) */}
       {cartCount > 0 && !selectedProduct && !showCart && !confirming && (
         <motion.button
           initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
           onClick={() => setShowCart(true)}
-          style={{ position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom,0px) + 20px)', left: '20px', right: '20px', zIndex: 3500, border: 'none', cursor: 'pointer', background: 'var(--primary)', color: '#fff', borderRadius: '20px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 12px 30px rgba(255,145,77,0.45)' }}>
-          <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '10px', minWidth: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{cartCount}</span>
+          style={{ position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom,0px) + 20px)', left: '20px', right: '20px', zIndex: 3500, border: '1px solid rgba(255,255,255,0.45)', cursor: 'pointer', background: 'rgba(255,145,77,0.88)', backdropFilter: 'blur(16px) saturate(160%)', WebkitBackdropFilter: 'blur(16px) saturate(160%)', color: '#fff', borderRadius: '20px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 12px 30px rgba(255,145,77,0.4)' }}>
+          <ShoppingCart size={20} color="#fff" />
+          <span style={{ background: 'rgba(255,255,255,0.28)', borderRadius: '10px', minWidth: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem' }}>{cartCount}</span>
           <span style={{ flex: 1, textAlign: 'left', fontWeight: 800, fontSize: '1rem' }}>Ver carrito</span>
           <span style={{ fontWeight: 900, fontSize: '1.05rem' }}>${cartTotal}</span>
         </motion.button>
@@ -439,6 +447,18 @@ function Cafeteria() {
         )}
       </AnimatePresence>
 
+      {/* OVERLAY DE CARGA ANTES DEL PAGO */}
+      <AnimatePresence>
+        {processing && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 4700, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
+              style={{ width: '54px', height: '54px', borderRadius: '50%', border: '4px solid rgba(255,255,255,0.25)', borderTopColor: '#fff' }} />
+            <p style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', margin: 0 }}>Preparando tu pago…</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* MODAL "¡GRACIAS!" tras el pago */}
       {showThanks && (
         <div onClick={() => setShowThanks(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
@@ -451,8 +471,8 @@ function Cafeteria() {
               style={{ width: '76px', height: '76px', borderRadius: '50%', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', boxShadow: '0 10px 25px rgba(255,145,77,0.4)' }}>
               <CheckCircle2 size={42} color="#fff" strokeWidth={2.5} />
             </motion.div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.9rem', margin: '0 0 8px', color: '#1A1C1E' }}>¡Gracias! 🎉</h2>
-            <p style={{ margin: '0 0 24px', fontSize: '0.95rem', color: '#6B7280', lineHeight: 1.5 }}>Tu pedido fue procesado. Pásalo a recoger a la cafetería 💛</p>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.9rem', margin: '0 0 8px', color: '#1A1C1E' }}>¡Gracias!</h2>
+            <p style={{ margin: '0 0 24px', fontSize: '0.95rem', color: '#6B7280', lineHeight: 1.5 }}>Tu pedido fue procesado. Pásalo a recoger a la cafetería.</p>
             <button onClick={() => setShowThanks(false)} style={{ width: '100%', padding: '15px', borderRadius: '16px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 25px rgba(255,145,77,0.35)' }}>
               ¡Listo!
             </button>

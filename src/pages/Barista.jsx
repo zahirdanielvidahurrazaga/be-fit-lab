@@ -1,37 +1,78 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Coffee, LogOut, Gift, Clock, Leaf, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Coffee, LogOut, Gift, Clock, Leaf, CheckCircle2, RefreshCw, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
-const STATUS = {
-  paid: { label: 'Nuevo', color: '#FF914D', next: 'preparing', action: 'Preparar' },
-  preparing: { label: 'Preparando', color: '#3B82F6', next: 'ready', action: 'Marcar listo' },
-  ready: { label: 'Listo', color: '#22C55E', next: 'completed', action: 'Entregado' },
-};
+const COLUMNS = [
+  { key: 'paid', label: 'Nuevos', color: '#FF914D', tint: 'rgba(255,145,77,0.10)', next: 'preparing', action: 'Preparar' },
+  { key: 'preparing', label: 'Preparando', color: '#3B82F6', tint: 'rgba(59,130,246,0.10)', next: 'ready', action: 'Marcar listo' },
+  { key: 'ready', label: 'Listos', color: '#16A34A', tint: 'rgba(22,163,74,0.10)', next: 'completed', action: 'Entregado' },
+];
+const META = Object.fromEntries(COLUMNS.map(c => [c.key, c]));
 
 const timeAgo = (iso) => {
   const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
   if (m < 1) return 'Ahora';
-  if (m < 60) return `Hace ${m} min`;
-  const h = Math.floor(m / 60);
-  return `Hace ${h} h`;
+  if (m < 60) return `${m} min`;
+  return `${Math.floor(m / 60)} h`;
 };
 const fmtPickup = (iso) => new Date(iso).toLocaleString('es-MX', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
 
+function OrderCard({ order, onAdvance }) {
+  const st = META[order.status];
+  return (
+    <motion.div layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }}
+      style={{ background: '#fff', borderRadius: '20px', padding: '16px', boxShadow: '0 4px 16px rgba(43,33,28,0.06)', border: '1px solid rgba(43,33,28,0.06)' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '10px' }}>
+        <div style={{ fontWeight: 800, fontSize: '1.02rem', color: '#2B211C', fontFamily: 'var(--font-display)' }}>{order.buyer?.full_name || 'Clienta'}</div>
+        <div style={{ fontSize: '0.72rem', color: '#A89A8E', fontWeight: 600 }}>{timeAgo(order.created_at)} · #{order.id.slice(0, 4)}</div>
+      </div>
+
+      {(order.pickup_time || order.no_straw || order.is_gift) && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+          {order.pickup_time && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#B45309', background: 'rgba(245,158,11,0.12)', padding: '4px 9px', borderRadius: '8px' }}><Clock size={12} /> {fmtPickup(order.pickup_time)}</span>}
+          {order.no_straw && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#16A34A', background: 'rgba(22,163,74,0.12)', padding: '4px 9px', borderRadius: '8px' }}><Leaf size={12} /> Sin popote</span>}
+          {order.is_gift && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, color: '#C2456E', background: 'rgba(224,122,156,0.12)', padding: '4px 9px', borderRadius: '8px' }}><Gift size={12} /> Regalo{order.gift_recipient_name ? ` · ${order.gift_recipient_name}` : ''}</span>}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
+        {(order.items || []).map((it, idx) => (
+          <div key={idx} style={{ display: 'flex', gap: '10px' }}>
+            <span style={{ flexShrink: 0, minWidth: '26px', height: '26px', borderRadius: '8px', background: 'rgba(43,33,28,0.06)', color: '#2B211C', fontWeight: 800, fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{it.qty}</span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#2B211C', lineHeight: 1.25 }}>{it.name}</div>
+              {it.options?.length > 0 && <div style={{ fontSize: '0.8rem', color: '#8a7266' }}>{it.options.map(o => o.name).join(' · ')}</div>}
+              {it.notes && <div style={{ fontSize: '0.78rem', color: '#A89A8E', fontStyle: 'italic' }}>“{it.notes}”</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {order.gift_message && <div style={{ fontSize: '0.82rem', color: '#C2456E', background: 'rgba(224,122,156,0.08)', borderRadius: '10px', padding: '8px 10px', marginBottom: '12px' }}>“{order.gift_message}”</div>}
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(43,33,28,0.06)', paddingTop: '12px' }}>
+        <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#2B211C' }}>${order.total}</span>
+        {st && (
+          <button onClick={() => onAdvance(order)} style={{ border: 'none', cursor: 'pointer', background: st.color, color: '#fff', fontWeight: 800, fontSize: '0.88rem', padding: '11px 18px', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: `0 6px 16px ${st.color}55` }}>
+            {order.status === 'ready' ? <CheckCircle2 size={16} /> : null}{st.action}<ChevronRight size={15} style={{ opacity: 0.7 }} />
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
 function Barista() {
-  const { logout, profileName } = useAuth();
+  const { logout } = useAuth();
   const [orders, setOrders] = useState([]);
-  const [tab, setTab] = useState('active'); // active | history
+  const [tab, setTab] = useState('active');
   const [loading, setLoading] = useState(true);
 
   const fetchOrders = async () => {
-    const { data } = await supabase
-      .from('cafe_orders')
-      .select('*, buyer:user_id(full_name)')
-      .neq('status', 'pending_payment')
-      .order('created_at', { ascending: false })
-      .limit(100);
+    const { data } = await supabase.from('cafe_orders').select('*, buyer:user_id(full_name)')
+      .neq('status', 'pending_payment').order('created_at', { ascending: false }).limit(120);
     setOrders(data || []);
     setLoading(false);
   };
@@ -45,101 +86,86 @@ function Barista() {
   }, []);
 
   const advance = async (order) => {
-    const next = STATUS[order.status]?.next;
+    const next = META[order.status]?.next;
     if (!next) return;
-    setOrders(os => os.map(o => o.id === order.id ? { ...o, status: next } : o)); // optimista
+    setOrders(os => os.map(o => o.id === order.id ? { ...o, status: next } : o));
     await supabase.from('cafe_orders').update({ status: next }).eq('id', order.id);
   };
 
-  const active = useMemo(() => orders.filter(o => ['paid', 'preparing', 'ready'].includes(o.status)), [orders]);
+  const byStatus = useMemo(() => {
+    const g = { paid: [], preparing: [], ready: [] };
+    orders.forEach(o => { if (g[o.status]) g[o.status].push(o); });
+    return g;
+  }, [orders]);
   const history = useMemo(() => orders.filter(o => o.status === 'completed' || o.status === 'cancelled'), [orders]);
-  const list = tab === 'active' ? active : history;
+  const activeCount = byStatus.paid.length + byStatus.preparing.length + byStatus.ready.length;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F4EFE9', paddingBottom: '40px' }}>
+    <div style={{ minHeight: '100vh', background: '#F4EFE9', fontFamily: 'var(--font-body, Inter, sans-serif)' }}>
       {/* HEADER */}
-      <header style={{ background: 'linear-gradient(135deg, #2B211C, #4A3B30)', padding: 'calc(env(safe-area-inset-top,0px) + 18px) 20px 18px', color: '#fff', position: 'sticky', top: 0, zIndex: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Coffee size={22} color="#FFB7A8" />
+      <header style={{ background: '#fff', borderBottom: '1px solid rgba(43,33,28,0.07)', padding: 'calc(env(safe-area-inset-top,0px) + 16px) 20px 0', position: 'sticky', top: 0, zIndex: 20 }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: 'linear-gradient(135deg,#FF914D,#E07A9C)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 16px rgba(255,145,77,0.35)' }}>
+            <Coffee size={24} color="#fff" />
           </div>
           <div style={{ flex: 1 }}>
-            <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.7, fontWeight: 600 }}>Be Fit Lab · Cafetería</p>
-            <h1 style={{ margin: 0, fontSize: '1.4rem', fontFamily: 'var(--font-display)' }}>Pedidos {active.length > 0 && <span style={{ fontSize: '0.9rem', background: 'var(--primary)', borderRadius: '10px', padding: '2px 9px', marginLeft: '4px' }}>{active.length}</span>}</h1>
+            <p style={{ margin: 0, fontSize: '0.72rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#A89A8E', fontWeight: 700 }}>Be Fit Lab · Cafetería</p>
+            <h1 style={{ margin: 0, fontSize: '1.5rem', fontFamily: 'var(--font-display)', color: '#2B211C' }}>Mostrador</h1>
           </div>
-          <button onClick={fetchOrders} aria-label="Refrescar" style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.12)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><RefreshCw size={18} /></button>
-          <button onClick={logout} aria-label="Salir" style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: 'rgba(255,77,77,0.2)', color: '#FF8B8B', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><LogOut size={18} /></button>
+          <button onClick={fetchOrders} aria-label="Refrescar" style={{ width: '42px', height: '42px', borderRadius: '50%', border: '1px solid rgba(43,33,28,0.1)', background: '#fff', color: '#2B211C', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><RefreshCw size={18} /></button>
+          <button onClick={logout} aria-label="Salir" style={{ width: '42px', height: '42px', borderRadius: '50%', border: 'none', background: 'rgba(186,26,26,0.08)', color: '#ba1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><LogOut size={18} /></button>
         </div>
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-          {[['active', 'Activos'], ['history', 'Historial']].map(([k, lbl]) => (
-            <button key={k} onClick={() => setTab(k)} style={{ flex: 1, padding: '10px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: tab === k ? '#fff' : 'rgba(255,255,255,0.1)', color: tab === k ? '#2B211C' : '#fff' }}>{lbl}</button>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', gap: '24px', marginTop: '14px' }}>
+          {[['active', `Activos (${activeCount})`], ['history', 'Historial']].map(([k, lbl]) => (
+            <button key={k} onClick={() => setTab(k)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 12px', fontWeight: 800, fontSize: '0.95rem', color: tab === k ? '#2B211C' : '#A89A8E', borderBottom: `3px solid ${tab === k ? 'var(--primary)' : 'transparent'}` }}>{lbl}</button>
           ))}
         </div>
       </header>
 
-      <main style={{ maxWidth: '720px', margin: '0 auto', padding: '18px 16px' }}>
+      <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '20px 16px 40px' }}>
         {loading ? (
-          <p style={{ textAlign: 'center', color: '#8a7266' }}>Cargando…</p>
-        ) : list.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#8a7266' }}>
-            <Coffee size={44} style={{ opacity: 0.3, marginBottom: '12px' }} />
-            <p style={{ margin: 0, fontWeight: 600 }}>{tab === 'active' ? 'Sin pedidos activos' : 'Sin historial'}</p>
-            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', opacity: 0.8 }}>Los pedidos nuevos aparecen aquí al instante.</p>
-          </div>
+          <p style={{ textAlign: 'center', color: '#8a7266', marginTop: '40px' }}>Cargando…</p>
+        ) : tab === 'history' ? (
+          history.length === 0
+            ? <Empty text="Sin historial todavía" />
+            : <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '460px', margin: '0 auto' }}>{history.map(o => <OrderCard key={o.id} order={o} onAdvance={advance} />)}</div>
+        ) : activeCount === 0 ? (
+          <Empty text="Sin pedidos activos" sub="Los pedidos nuevos aparecen aquí al instante." />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <AnimatePresence initial={false}>
-              {list.map(order => {
-                const st = STATUS[order.status];
-                return (
-                  <motion.div key={order.id} layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }}
-                    style={{ background: '#fff', borderRadius: '20px', padding: '16px', boxShadow: '0 6px 20px rgba(0,0,0,0.06)', border: order.status === 'ready' ? '2px solid #22C55E' : '1px solid rgba(0,0,0,0.05)' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: '1rem', color: '#1A1C1E' }}>{order.buyer?.full_name || 'Clienta'}</div>
-                        <div style={{ fontSize: '0.78rem', color: '#8a7266' }}>{timeAgo(order.created_at)} · #{order.id.slice(0, 6)}</div>
-                      </div>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fff', background: (st?.color || '#9CA3AF'), borderRadius: '10px', padding: '4px 10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        {st?.label || order.status}
-                      </span>
-                    </div>
-
-                    {/* Badges */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
-                      {order.pickup_time && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: '#B45309', background: 'rgba(245,158,11,0.12)', padding: '4px 9px', borderRadius: '9px' }}><Clock size={12} /> {fmtPickup(order.pickup_time)}</span>}
-                      {order.no_straw && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: '#16A34A', background: 'rgba(34,197,94,0.12)', padding: '4px 9px', borderRadius: '9px' }}><Leaf size={12} /> Sin popote</span>}
-                      {order.is_gift && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: '#C2456E', background: 'rgba(224,122,156,0.12)', padding: '4px 9px', borderRadius: '9px' }}><Gift size={12} /> Regalo{order.gift_recipient_name ? ` · ${order.gift_recipient_name}` : ''}</span>}
-                    </div>
-
-                    {/* Items */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: order.gift_message ? '8px' : '12px' }}>
-                      {(order.items || []).map((it, idx) => (
-                        <div key={idx} style={{ borderLeft: '3px solid rgba(255,145,77,0.4)', paddingLeft: '10px' }}>
-                          <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#1A1C1E' }}>{it.qty}× {it.name}</div>
-                          {it.options?.length > 0 && <div style={{ fontSize: '0.8rem', color: '#6B7280' }}>{it.options.map(o => o.name).join(' · ')}</div>}
-                          {it.notes && <div style={{ fontSize: '0.78rem', color: '#9CA3AF', fontStyle: 'italic' }}>“{it.notes}”</div>}
-                        </div>
-                      ))}
-                    </div>
-
-                    {order.gift_message && <div style={{ fontSize: '0.82rem', color: '#C2456E', background: 'rgba(224,122,156,0.08)', borderRadius: '10px', padding: '8px 10px', marginBottom: '12px' }}>💌 “{order.gift_message}”</div>}
-
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1A1C1E' }}>${order.total} MXN</span>
-                      {st && (
-                        <button onClick={() => advance(order)} style={{ border: 'none', cursor: 'pointer', background: st.color, color: '#fff', fontWeight: 800, fontSize: '0.9rem', padding: '11px 20px', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {order.status === 'ready' ? <CheckCircle2 size={16} /> : null} {st.action}
-                        </button>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+          // Tablero por estado (responsivo: columnas en ancho, apilado en móvil)
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '18px', alignItems: 'start' }}>
+            {COLUMNS.map(col => (
+              <div key={col.key} style={{ background: col.tint, borderRadius: '22px', padding: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 6px 12px' }}>
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: col.color }} />
+                  <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#2B211C', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{col.label}</h2>
+                  <span style={{ marginLeft: 'auto', fontWeight: 800, color: col.color, fontSize: '0.9rem' }}>{byStatus[col.key].length}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <AnimatePresence initial={false}>
+                    {byStatus[col.key].length === 0
+                      ? <div style={{ textAlign: 'center', color: '#B8A99C', fontSize: '0.82rem', padding: '20px 0' }}>—</div>
+                      : byStatus[col.key].map(o => <OrderCard key={o.id} order={o} onAdvance={advance} />)}
+                  </AnimatePresence>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function Empty({ text, sub }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '70px 20px', color: '#8a7266' }}>
+      <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 6px 18px rgba(43,33,28,0.06)' }}>
+        <Coffee size={32} color="#D6C7B8" />
+      </div>
+      <p style={{ margin: 0, fontWeight: 700, color: '#2B211C' }}>{text}</p>
+      {sub && <p style={{ margin: '4px 0 0', fontSize: '0.85rem' }}>{sub}</p>}
     </div>
   );
 }
