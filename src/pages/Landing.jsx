@@ -1020,11 +1020,11 @@ export default function Landing() {
             </motion.a>
           </motion.div>
           <motion.div variants={slideLeft} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ flex:'1 1 500px' }}>
-            {/* Mapa con OpenStreetMap (sin API key, no lo bloquea Google) + botón a Google Maps */}
+            {/* Mapa oficial de Google Maps (embed pb, sin API key, no se bloquea) + botón a Google Maps */}
             <div style={{ position:'relative' }}>
-              <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=-98.2008%2C19.0134%2C-98.1908%2C19.0194&layer=mapnik&marker=19.0163552%2C-98.1957961"
+              <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3772.076391246044!2d-98.1957961!3d19.0163552!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85cfc1f60e34723f%3A0xe268a04e8e4ab501!2sBe%20Fit%20Lab!5e0!3m2!1ses!2smx!4v1780353480943!5m2!1ses!2smx"
                 width="100%" height="500" style={{ border:0, borderRadius:'32px', boxShadow:'0 30px 80px rgba(0,0,0,0.05)', display:'block' }}
-                loading="lazy" title="Be Fit Lab — Puebla"/>
+                allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Be Fit Lab — Puebla"/>
               <motion.a whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }}
                 href="https://maps.app.goo.gl/RFUhTHGG5cQuVoST8" target="_blank" rel="noopener noreferrer"
                 style={{ position:'absolute', bottom:'20px', left:'50%', transform:'translateX(-50%)', display:'inline-flex', alignItems:'center', gap:'8px', background:'linear-gradient(135deg, rgba(255,145,77,0.92), rgba(230,130,69,0.94))', backdropFilter:'blur(14px) saturate(180%)', WebkitBackdropFilter:'blur(14px) saturate(180%)', border:'1px solid rgba(255,255,255,0.45)', color:'white', padding:'0.85rem 1.6rem', borderRadius:'40px', textDecoration:'none', fontWeight:700, fontSize:'0.95rem', boxShadow:'0 10px 28px rgba(255,145,77,0.4), inset 0 1px 0 rgba(255,255,255,0.5)' }}>
