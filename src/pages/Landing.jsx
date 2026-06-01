@@ -131,6 +131,15 @@ const ParallaxTestimonials = () => {
   const rotations   = [-2.5, 2, -1.5];
   const alignments  = ['flex-start', 'flex-end', 'center'];
 
+  // En móvil desactivamos los efectos caros (blobs animados + backdrop-filter +
+  // animaciones flotantes infinitas) que causaban lentitud; en PC se mantienen.
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const onR = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onR);
+    return () => window.removeEventListener('resize', onR);
+  }, []);
+
   useEffect(() => {
     const ctx = gsap.context(() => {
       const mm = gsap.matchMedia();
@@ -213,16 +222,16 @@ const ParallaxTestimonials = () => {
       ref={sectionRef}
       style={{ background: '#E8F2FA', position: 'relative', overflow: 'hidden', minHeight: '140vh', paddingBottom: '10vh' }}
     >
-      {/* Blobs decorativos animados */}
+      {/* Blobs decorativos — animados solo en PC (en móvil estáticos y con menos blur) */}
       <motion.div
-        animate={{ x: ['-10%', '10%', '-10%'], y: ['-10%', '20%', '-10%'], scale: [1, 1.2, 1] }}
-        transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
-        style={{ position: 'absolute', top: '-10%', left: '-10%', width: '70vw', height: '70vw', background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)', filter: 'blur(80px)', opacity: 0.9, pointerEvents: 'none', zIndex: 0 }}
+        animate={isMobile ? undefined : { x: ['-10%', '10%', '-10%'], y: ['-10%', '20%', '-10%'], scale: [1, 1.2, 1] }}
+        transition={isMobile ? undefined : { duration: 15, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ position: 'absolute', top: '-10%', left: '-10%', width: '70vw', height: '70vw', background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)', filter: isMobile ? 'blur(40px)' : 'blur(80px)', opacity: 0.9, pointerEvents: 'none', zIndex: 0 }}
       />
       <motion.div
-        animate={{ x: ['10%', '-15%', '10%'], y: ['20%', '-10%', '20%'], scale: [1.2, 1, 1.2] }}
-        transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
-        style={{ position: 'absolute', top: '20%', right: '-10%', width: '80vw', height: '80vw', background: 'radial-gradient(circle, rgba(212,230,241,0.9) 0%, rgba(212,230,241,0) 70%)', filter: 'blur(100px)', opacity: 0.8, pointerEvents: 'none', zIndex: 0 }}
+        animate={isMobile ? undefined : { x: ['10%', '-15%', '10%'], y: ['20%', '-10%', '20%'], scale: [1.2, 1, 1.2] }}
+        transition={isMobile ? undefined : { duration: 20, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ position: 'absolute', top: '20%', right: '-10%', width: '80vw', height: '80vw', background: 'radial-gradient(circle, rgba(212,230,241,0.9) 0%, rgba(212,230,241,0) 70%)', filter: isMobile ? 'blur(45px)' : 'blur(100px)', opacity: 0.8, pointerEvents: 'none', zIndex: 0 }}
       />
 
       {/* Título — se mueve lento (GSAP lo anima) */}
@@ -258,14 +267,14 @@ const ParallaxTestimonials = () => {
               zIndex: i + 1,
             }}
           >
-            {/* Floating idle animation encima del parallax */}
+            {/* Floating idle animation — solo en PC; en móvil rotación estática */}
             <motion.div
-              animate={{ y: [0, -12, 0], rotate: [rotations[i % rotations.length], rotations[i % rotations.length] + 0.8, rotations[i % rotations.length]] }}
-              transition={{ duration: 5 + i, repeat: Infinity, ease: 'easeInOut', delay: i * 0.7 }}
-              whileHover={{ scale: 1.04, transition: { duration: 0.25 } }}
-              style={{ width: '100%', maxWidth: '420px' }}
+              animate={isMobile ? undefined : { y: [0, -12, 0], rotate: [rotations[i % rotations.length], rotations[i % rotations.length] + 0.8, rotations[i % rotations.length]] }}
+              transition={isMobile ? undefined : { duration: 5 + i, repeat: Infinity, ease: 'easeInOut', delay: i * 0.7 }}
+              whileHover={isMobile ? undefined : { scale: 1.04, transition: { duration: 0.25 } }}
+              style={{ width: '100%', maxWidth: '420px', transform: isMobile ? `rotate(${rotations[i % rotations.length]}deg)` : undefined }}
             >
-              <div style={{ background: 'rgba(255,255,255,0.65)', border: '1px solid rgba(255,255,255,0.9)', borderRadius: '32px', padding: '32px', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', boxShadow: '0 30px 60px rgba(0,0,0,0.08), inset 0 0 20px rgba(255,255,255,0.5)' }}>
+              <div style={{ background: isMobile ? '#ffffff' : 'rgba(255,255,255,0.65)', border: '1px solid rgba(255,255,255,0.9)', borderRadius: '32px', padding: '32px', ...(isMobile ? {} : { backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }), boxShadow: '0 20px 45px rgba(0,0,0,0.08), inset 0 0 20px rgba(255,255,255,0.5)' }}>
                 <div style={{ display: 'flex', gap: '4px', marginBottom: '20px' }}>
                   {[...Array(t.stars)].map((_, s) => <Star key={s} size={16} color="var(--primary)" fill="var(--primary)" />)}
                 </div>
