@@ -5,7 +5,7 @@ gsap.registerPlugin(ScrollTrigger);
 import { ScheduleCalendar } from '../components/ScheduleCalendar';
 import { PricingCarousel } from '../components/PricingCarousel';
 import { ArrowRight, Flame, Heart, PlayCircle, Smartphone, Menu, X, Calendar, TrendingUp,
-         Utensils, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, MapPin, Phone, MessageCircle, Star } from 'lucide-react';
+         Utensils, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, MapPin, Phone, MessageCircle, Star, LogOut } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence, useScroll, useTransform, useInView, useSpring as useMotionSpring } from 'framer-motion';
@@ -289,7 +289,7 @@ const ParallaxTestimonials = () => {
 export default function Landing() {
   const navigate  = useNavigate();
   const location  = useLocation();
-  const { user, role, membershipStatus, globalClasses, coaches, badgeConfigs } = useAuth();
+  const { user, role, membershipStatus, globalClasses, coaches, badgeConfigs, logout } = useAuth();
   const [menuOpen,   setMenuOpen]   = useState(false);
   const [showToast,  setShowToast]  = useState(false);
   const [scrolled,   setScrolled]   = useState(false);
@@ -367,7 +367,13 @@ export default function Landing() {
 
         <div className="desktop-actions" style={{ display:'flex', gap:'1rem', alignItems:'center' }}>
           {user
-            ? <Link to={role==='ADMIN' ? '/admin' : membershipStatus==='ACTIVE' ? '/portal' : '/planes'} style={{ fontSize:'0.88rem', fontWeight:500, textDecoration:'none', color:'var(--on-surface)' }}>Mi Portal</Link>
+            ? <>
+                <Link to={role==='ADMIN' ? '/admin' : membershipStatus==='ACTIVE' ? '/portal' : '/planes'} style={{ fontSize:'0.88rem', fontWeight:500, textDecoration:'none', color:'var(--on-surface)' }}>Mi Portal</Link>
+                <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.96 }} onClick={() => logout()} title="Cerrar sesión"
+                  style={{ display:'flex', alignItems:'center', gap:'6px', background:'none', border:'none', cursor:'pointer', fontSize:'0.88rem', fontWeight:500, color:'var(--on-surface)', fontFamily:'var(--font-body)' }}>
+                  <LogOut size={16} /> Salir
+                </motion.button>
+              </>
             : <Link to="/login" style={{ fontSize:'0.88rem', fontWeight:500, textDecoration:'none', color:'var(--on-surface)' }}>Iniciar Sesión</Link>
           }
           <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.96 }} onClick={() => document.getElementById('precios')?.scrollIntoView({ behavior: 'smooth' })} className="btn-primary" style={{ padding:'0.55rem 1.6rem', fontSize:'0.88rem' }}>
@@ -396,6 +402,12 @@ export default function Landing() {
             <Link to={user?(role==='ADMIN'?'/admin':'/portal'):'/login'} onClick={() => setMenuOpen(false)} style={{ fontSize:'1.2rem', fontWeight:700, color:'var(--primary)', textDecoration:'none' }}>
               {user ? 'Mi Portal' : 'Iniciar Sesión'}
             </Link>
+            {user && (
+              <button onClick={() => { setMenuOpen(false); logout(); }}
+                style={{ display:'flex', alignItems:'center', gap:'8px', background:'none', border:'none', cursor:'pointer', fontSize:'1.05rem', fontWeight:600, color:'#6B7280', fontFamily:'var(--font-body)' }}>
+                <LogOut size={18} /> Cerrar sesión
+              </button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -413,7 +425,13 @@ export default function Landing() {
               <div style={{ fontSize:'0.7rem', color:'#6B7280' }}>Aún no tienes membresía activa</div>
             </div>
           </div>
-          <Link to="/planes" style={{ padding:'7px 16px', borderRadius:'20px', background:'var(--primary)', color:'white', fontSize:'0.75rem', fontWeight:700, cursor:'pointer', flexShrink:0, textDecoration:'none' }}>Ver Planes</Link>
+          <div style={{ display:'flex', alignItems:'center', gap:'8px', flexShrink:0 }}>
+            <Link to="/planes" style={{ padding:'7px 16px', borderRadius:'20px', background:'var(--primary)', color:'white', fontSize:'0.75rem', fontWeight:700, cursor:'pointer', textDecoration:'none' }}>Ver Planes</Link>
+            <button onClick={() => logout()} title="Cerrar sesión" aria-label="Cerrar sesión"
+              style={{ width:'34px', height:'34px', borderRadius:'50%', border:'none', background:'rgba(0,0,0,0.06)', color:'#6B7280', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', flexShrink:0 }}>
+              <LogOut size={16} />
+            </button>
+          </div>
         </motion.div>
       )}
 
