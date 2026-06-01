@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
 import ProfileMenu from '../components/ProfileMenu';
 import ClientMealPlan from '../components/ClientMealPlan';
+import NutritionToday from '../components/NutritionToday';
 
 function Nutricion() {
   const navigate = useNavigate();
@@ -72,33 +73,27 @@ function Nutricion() {
           <ClientMealPlan userId={user?.id} />
 
           {/* HIDRATACIÓN - Minimal Circle Progress */}
-          <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div className="ios-glass-card" style={{ padding: '18px', borderRadius: '24px', background: 'var(--app-surface-solid)' }}>
-              <div style={{ color: '#007AFF', marginBottom: '10px' }}><Droplets size={20} /></div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--on-surface)' }}>1.8<span style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', marginLeft: '4px' }}>Liters</span></div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginTop: '4px' }}>72% de la meta</div>
-            </div>
-            <div className="ios-glass-card" style={{ padding: '18px', borderRadius: '24px', background: 'var(--app-surface-solid)' }}>
-              <div style={{ color: '#FF8B42', marginBottom: '10px' }}><Flame size={20} /></div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--on-surface)' }}>450<span style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', marginLeft: '4px' }}>Kcal</span></div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginTop: '4px' }}>Quemadas hoy</div>
-            </div>
-          </div>
+          <NutritionToday userId={user?.id} />
         </div>
 
         <div className="dashboard-content" style={{ marginTop: '5px' }}>
           <section>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-               <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>Menu del día</h2>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,139,66,0.1)', padding: '6px 12px', borderRadius: '99px' }}>
-                 <Calendar size={12} color="var(--primary)" />
-                 <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 800 }}>HOY</span>
+               <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--on-surface)', fontFamily: 'var(--font-display)' }}>Recetas saludables</h2>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,145,77,0.1)', padding: '6px 12px', borderRadius: '99px' }}>
+                 <Utensils size={12} color="var(--primary)" />
+                 <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 800 }}>{meals.length}</span>
                </div>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-               {meals.map(meal => (
-                 <MealItem 
+               {meals.length === 0 ? (
+                 <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--on-surface-variant)', background: 'var(--app-surface-solid)', borderRadius: '20px', border: '1px solid var(--border-subtle, rgba(0,0,0,0.05))' }}>
+                   <Utensils size={30} style={{ opacity: 0.3, marginBottom: '10px' }} />
+                   <p style={{ margin: 0, fontWeight: 600 }}>Pronto habrá recetas aquí</p>
+                 </div>
+               ) : meals.map(meal => (
+                 <MealItem
                    key={meal.id}
                    meal={meal}
                    isFavorite={favorites.includes(meal.id)}

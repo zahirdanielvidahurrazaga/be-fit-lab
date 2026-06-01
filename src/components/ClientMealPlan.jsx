@@ -44,21 +44,21 @@ export default function ClientMealPlan({ userId }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Header del plan (real) */}
+      {/* Header del plan (real, minimalista) */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-        style={{ padding: '24px', borderRadius: '28px', background: 'linear-gradient(135deg, #2D2928 0%, #4A4544 100%)', color: 'white', position: 'relative', overflow: 'hidden', boxShadow: '0 18px 38px rgba(0,0,0,0.15)' }}>
-        <div style={{ position: 'absolute', top: '-24px', right: '-24px', width: '130px', height: '130px', background: 'rgba(255,145,77,0.18)', borderRadius: '50%', filter: 'blur(34px)' }} />
+        style={{ padding: '20px', borderRadius: '24px', background: 'var(--app-surface-solid, #fff)', border: '1px solid var(--border-subtle, rgba(0,0,0,0.05))', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', background: 'rgba(255,145,77,0.10)', borderRadius: '50%' }} />
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-            <Salad size={14} color={PRIMARY} />
-            <span style={{ fontSize: '0.64rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Tu plan nutricional</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '9px', background: 'rgba(255,145,77,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Salad size={15} color={PRIMARY} /></div>
+            <span style={{ fontSize: '0.64rem', fontWeight: 800, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Tu plan nutricional</span>
           </div>
-          <h2 style={{ fontSize: '1.8rem', color: 'white', margin: '0 0 4px', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>
+          <h2 style={{ fontSize: '1.7rem', color: 'var(--on-surface)', margin: '0 0 4px', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>
             {plan?.plan_name || 'Plan personalizado'}
           </h2>
           {plan?.calories
-            ? <div style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>Objetivo: <span style={{ color: PRIMARY, fontWeight: 800 }}>{plan.calories} kcal</span> / día</div>
-            : <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>Tu coach diseñará tu plan a la medida.</div>}
+            ? <div style={{ fontSize: '0.9rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>Objetivo <span style={{ color: PRIMARY, fontWeight: 800 }}>{plan.calories} kcal</span> / día</div>
+            : <div style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>Tu coach diseñará tu plan a la medida.</div>}
         </div>
       </motion.div>
 
