@@ -24,6 +24,7 @@ const Terminos = lazy(() => import('./pages/Terminos'));
 const Welcome = lazy(() => import('./pages/Welcome'));
 const Cafeteria = lazy(() => import('./pages/Cafeteria'));
 const Cumpleanos = lazy(() => import('./pages/Cumpleanos'));
+const Eventos = lazy(() => import('./pages/Eventos'));
 const Barista = lazy(() => import('./pages/Barista'));
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useLocalNotifications } from './hooks/useLocalNotifications';
@@ -146,6 +147,7 @@ function App() {
           <Route path="/evolucion" element={<ProtectedRoute requireRole="CLIENT"><Evolucion /></ProtectedRoute>} />
           <Route path="/mi-cuenta" element={<ProtectedRoute requireRole={['CLIENT', 'COACH']}><MiCuenta /></ProtectedRoute>} />
           <Route path="/cumpleanos" element={<ProtectedRoute requireRole={['CLIENT', 'COACH', 'ADMIN']}><Cumpleanos /></ProtectedRoute>} />
+          <Route path="/eventos" element={<ProtectedRoute requireRole={['CLIENT', 'COACH', 'ADMIN']}><Eventos /></ProtectedRoute>} />
           <Route path="/ajustes" element={<ProtectedRoute requireRole={['CLIENT', 'COACH']}><Ajustes /></ProtectedRoute>} />
           
           {/* Rutas Privadas Coach */}

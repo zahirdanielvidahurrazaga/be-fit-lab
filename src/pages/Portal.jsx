@@ -187,107 +187,23 @@ function Portal() {
             style={{ marginTop: '25px' }}
           >
             <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '15px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Explora</h2>
-            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '5px', marginLeft: '-5px', paddingLeft: '5px', paddingRight: '5px' }}>
-              
-              {/* Story Card - Nutrición */}
-              <div 
-                onClick={() => navigate('/nutricion')}
-                style={{ 
-                  flex: '0 0 auto', width: '140px', height: '180px', borderRadius: '24px', 
-                  background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
-                  padding: '20px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                  cursor: 'pointer', position: 'relative', overflow: 'hidden',
-                  boxShadow: '0 12px 30px rgba(255,139,66,0.2)'
-                }}
-              >
-                <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '80px', height: '80px', background: 'rgba(255,255,255,0.15)', borderRadius: '50%' }}></div>
-                <Utensils size={28} color="white" strokeWidth={2} />
-                <div>
-                  <div style={{ color: 'white', fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>Nutrición</div>
-                  <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.7rem', fontWeight: 600, marginTop: '3px' }}>Tu recetario</div>
-                </div>
-              </div>
-
-              {/* Story Card - Evolución */}
-              <div 
-                onClick={() => navigate('/evolucion')}
-                style={{ 
-                  flex: '0 0 auto', width: '140px', height: '180px', borderRadius: '24px', 
-                  background: 'var(--surface-low)',
-                  padding: '20px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                  cursor: 'pointer', position: 'relative', overflow: 'hidden',
-                  border: '1px solid var(--border-subtle)',
-                  boxShadow: 'var(--card-shadow)'
-                }}
-              >
-                <div style={{ position: 'absolute', bottom: '-20px', left: '-20px', width: '80px', height: '80px', background: 'rgba(255,139,66,0.08)', borderRadius: '50%' }}></div>
-                <Activity size={28} color="var(--primary)" strokeWidth={2} />
-                <div>
-                  <div style={{ color: 'var(--on-surface)', fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>Evolución</div>
-                  <div style={{ color: 'var(--on-surface-variant)', fontSize: '0.7rem', fontWeight: 600, marginTop: '3px' }}>Tu progreso</div>
-                </div>
-              </div>
-
-              {/* Story Card - Agenda */}
-              <div 
-                onClick={() => navigate('/agenda')}
-                style={{ 
-                  flex: '0 0 auto', width: '140px', height: '180px', borderRadius: '24px', 
-                  background: 'var(--surface-low)',
-                  padding: '20px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                  cursor: 'pointer', position: 'relative', overflow: 'hidden',
-                  border: '1px solid var(--border-subtle)',
-                  boxShadow: 'var(--card-shadow)'
-                }}
-              >
-                <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '80px', height: '80px', background: 'rgba(255,139,66,0.06)', borderRadius: '50%' }}></div>
-                <Calendar size={28} color="var(--primary)" strokeWidth={2} />
-                <div>
-                  <div style={{ color: 'var(--black)', fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>Reservar</div>
-                  <div style={{ color: 'var(--on-surface-variant)', fontSize: '0.7rem', fontWeight: 600, marginTop: '3px' }}>Agendar clase</div>
-                </div>
-              </div>
-
-              {/* Story Card - Cafetería (glass) */}
-              <div
-                onClick={() => navigate('/cafeteria')}
-                style={{
-                  flex: '0 0 auto', width: '140px', height: '180px', borderRadius: '24px',
-                  background: 'rgba(255,255,255,0.45)',
-                  backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
-                  padding: '20px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                  cursor: 'pointer', position: 'relative', overflow: 'hidden',
-                  border: '1px solid rgba(255,255,255,0.7)',
-                  boxShadow: '0 12px 30px rgba(0,0,0,0.06)'
-                }}
-              >
-                <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '90px', height: '90px', background: 'rgba(255,139,66,0.12)', borderRadius: '50%' }}></div>
-                <div style={{ position: 'absolute', bottom: '-25px', left: '-25px', width: '70px', height: '70px', background: 'rgba(255,145,77,0.08)', borderRadius: '50%' }}></div>
-                <Coffee size={28} color="var(--primary)" strokeWidth={2} />
-                <div>
-                  <div style={{ color: 'var(--on-surface)', fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>Cafetería</div>
-                  <div style={{ color: 'var(--on-surface-variant)', fontSize: '0.7rem', fontWeight: 600, marginTop: '3px' }}>Café y smoothies</div>
-                </div>
-              </div>
-
-              {/* Story Card - Cumpleaños */}
-              <div
-                onClick={() => navigate('/cumpleanos')}
-                style={{
-                  flex: '0 0 auto', width: '140px', height: '180px', borderRadius: '24px',
-                  background: 'linear-gradient(135deg, #FFE9DF 0%, #FFD9E1 100%)',
-                  padding: '20px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                  cursor: 'pointer', position: 'relative', overflow: 'hidden',
-                  boxShadow: '0 12px 30px rgba(224,122,156,0.2)'
-                }}
-              >
-                <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '85px', height: '85px', background: 'rgba(255,255,255,0.3)', borderRadius: '50%' }}></div>
-                <Cake size={28} color="#C2456E" strokeWidth={2} />
-                <div>
-                  <div style={{ color: 'var(--black)', fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>Cumpleaños</div>
-                  <div style={{ color: '#9B5A6A', fontSize: '0.7rem', fontWeight: 600, marginTop: '3px' }}>Tu cuenta regresiva</div>
-                </div>
-              </div>
+            <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '6px', marginLeft: '-5px', paddingLeft: '5px', paddingRight: '5px' }}>
+              {[
+                { to: '/cafeteria', img: '/fotos-hero/IMG_5410.JPG', Icon: Coffee, title: 'Peach Coffee Lab', sub: 'Café y smoothies', overlay: 'linear-gradient(160deg, rgba(60,30,15,0.18) 0%, rgba(35,18,8,0.74) 100%)' },
+                { to: '/cumpleanos', img: '/fotos-hero/_DSC0444.jpg', Icon: Cake, title: 'Cumpleaños', sub: 'Tu cuenta regresiva', overlay: 'linear-gradient(160deg, rgba(120,40,70,0.25) 0%, rgba(85,28,52,0.74) 100%)' },
+                { to: '/eventos', img: '/fotos-hero/IMG_5376.JPG', Icon: Sparkles, title: 'Eventos', sub: 'Próximas experiencias', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.12) 0%, rgba(20,14,28,0.72) 100%)' },
+              ].map(c => (
+                <motion.div key={c.to} onClick={() => navigate(c.to)} whileTap={{ scale: 0.97 }}
+                  style={{ flex: '0 0 auto', width: '210px', height: '250px', borderRadius: '26px', cursor: 'pointer', position: 'relative', overflow: 'hidden', backgroundImage: `${c.overlay}, url('${c.img}')`, backgroundSize: 'cover', backgroundPosition: 'center', padding: '18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 14px 34px rgba(0,0,0,0.18)' }}>
+                  <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: 'rgba(255,255,255,0.20)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <c.Icon size={24} color="#fff" strokeWidth={2} />
+                  </div>
+                  <div>
+                    <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.18rem', fontFamily: 'var(--font-display)', lineHeight: 1.15, textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>{c.title}</div>
+                    <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.78rem', fontWeight: 600, marginTop: '4px', textShadow: '0 1px 8px rgba(0,0,0,0.5)' }}>{c.sub}</div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </motion.section>
         </div>

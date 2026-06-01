@@ -8,7 +8,8 @@ import AdminCafeteria from '../components/AdminCafeteria';
 import AdminReportes from '../components/AdminReportes';
 import AdminClientas from '../components/AdminClientas';
 import AdminNutricion from '../components/AdminNutricion';
-import { Coffee, Bell, UserCog } from 'lucide-react';
+import AdminEventos from '../components/AdminEventos';
+import { Coffee, Bell, UserCog, Sparkles } from 'lucide-react';
 
 const daysOfWeek = [
   { num: 1, label: 'Lunes' },
@@ -433,6 +434,9 @@ function Admin() {
                   <div onClick={() => { setActiveTab('cafeteria'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Coffee size={18} color="var(--primary)" /> Cafetería
                   </div>
+                  <div onClick={() => { setActiveTab('eventos'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
+                    <Sparkles size={18} color="var(--primary)" /> Eventos
+                  </div>
                   <div onClick={() => { setNotifOpen(true); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Bell size={18} color="var(--primary)" /> Enviar aviso
                   </div>
@@ -481,6 +485,10 @@ function Admin() {
           <div onClick={() => setActiveTab('cafeteria')} className={`sidebar-nav-item ${activeTab === 'cafeteria' ? 'active' : ''}`}>
             <Coffee size={20} />
             <span>Cafetería</span>
+          </div>
+          <div onClick={() => setActiveTab('eventos')} className={`sidebar-nav-item ${activeTab === 'eventos' ? 'active' : ''}`}>
+            <Sparkles size={20} />
+            <span>Eventos</span>
           </div>
           <div onClick={() => setNotifOpen(true)} className="sidebar-nav-item">
             <Bell size={20} />
@@ -1002,6 +1010,12 @@ function Admin() {
             {activeTab === 'cafeteria' && (
               <motion.div key="cafeteria" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
                 <AdminCafeteria />
+              </motion.div>
+            )}
+
+            {activeTab === 'eventos' && (
+              <motion.div key="eventos" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
+                <AdminEventos />
               </motion.div>
             )}
 
