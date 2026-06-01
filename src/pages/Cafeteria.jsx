@@ -38,6 +38,7 @@ function Cafeteria() {
   const [trackingOrderId, setTrackingOrderId] = useState(null); // seguimiento del pedido
   const [activeOrders, setActiveOrders] = useState([]);          // pedidos en curso del usuario
   const [showHistory, setShowHistory] = useState(false);         // historial de pedidos del usuario
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);   // pide registrarse/login para comprar
 
   // Catálogo desde la BD (precios server-side). Solo productos disponibles.
   const available = (cafeProducts || []).filter(p => p.available !== false);
@@ -98,10 +99,10 @@ function Cafeteria() {
 
   // Bloquear el scroll del fondo cuando hay una hoja/overlay abierto
   useEffect(() => {
-    const open = selectedProduct || showCart || confirming || processing || showThanks || trackingOrderId || showHistory;
+    const open = selectedProduct || showCart || confirming || processing || showThanks || trackingOrderId || showHistory || showAuthPrompt;
     document.body.style.overflow = open ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
-  }, [selectedProduct, showCart, confirming, processing, showThanks, trackingOrderId, showHistory]);
+  }, [selectedProduct, showCart, confirming, processing, showThanks, trackingOrderId, showHistory, showAuthPrompt]);
 
   const nextWidget = () => setActiveWidgetIndex((prev) => (prev + 1) % 3);
   const prevWidget = () => setActiveWidgetIndex((prev) => (prev - 1 + 3) % 3);
@@ -113,7 +114,11 @@ function Cafeteria() {
   const removeItem = (lineId) => setCart(c => c.filter(i => i.lineId !== lineId));
 
   // Cuenta regresiva de 5s para cancelar antes de pagar
-  const startCheckout = (meta) => { setShowCart(false); setConfirming(meta); setCountdown(5); };
+  const startCheckout = (meta) => {
+    // Para comprar hay que tener cuenta (no requiere membresía). Sin sesión → registrarse.
+    if (!user?.id) { setShowCart(false); setShowAuthPrompt(true); return; }
+    setShowCart(false); setConfirming(meta); setCountdown(5);
+  };
   const cancelCheckout = () => setConfirming(null);
   useEffect(() => {
     if (!confirming) return;
@@ -149,10 +154,12 @@ function Cafeteria() {
           if (data.orderId) setTrackingOrderId(data.orderId); else setShowThanks(true);
         }
       } else {
-        // Web: checkout hospedado con personalización completa (mismo carrito que el nativo)
+        // Web: checkout hospedado con personalización completa (mismo carrito que el nativo).
+        // Redirigir en la MISMA pestaña: window.open desde un timer lo bloquea el navegador
+        // como popup (por eso "no salía el pago"). El success_url regresa a /cafeteria.
         const { data, error } = await supabase.functions.invoke('stripe-cafe-checkout', { body });
         if (error) throw new Error(error.message);
-        if (data?.url) window.open(data.url, '_blank', 'noopener,noreferrer');
+        if (data?.url) { window.location.href = data.url; return; }
       }
     } catch (err) {
       console.error('Error en el pago:', err);
@@ -533,6 +540,32 @@ function Cafeteria() {
           <span style={{ fontSize: '0.85rem', fontWeight: 700, opacity: 0.9 }}>Ver ›</span>
         </motion.button>
       )}
+
+      {/* PROMPT: crear cuenta para comprar (sin requerir membresía) */}
+      <AnimatePresence>
+        {showAuthPrompt && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAuthPrompt(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 4600, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+            <motion.div onClick={(e) => e.stopPropagation()} initial={{ scale: 0.85, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', damping: 20, stiffness: 240 }}
+              style={{ width: 'min(360px, 100%)', background: '#fff', borderRadius: '28px', padding: '34px 26px', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.3)', position: 'relative' }}>
+              <button onClick={() => setShowAuthPrompt(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '16px', right: '16px', width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <X size={16} color="#1A1C1E" />
+              </button>
+              <div style={{ width: '76px', height: '76px', borderRadius: '50%', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', boxShadow: '0 10px 25px rgba(255,145,77,0.4)' }}>
+                <Coffee size={38} color="#fff" strokeWidth={2.2} />
+              </div>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.55rem', margin: '0 0 8px', color: '#1A1C1E' }}>Crea tu cuenta para pedir</h2>
+              <p style={{ margin: '0 0 24px', fontSize: '0.95rem', color: '#6B7280', lineHeight: 1.5 }}>Es gratis y rápido — no necesitas membresía. Así puedes seguir tu pedido en vivo y recibir avisos cuando esté listo.</p>
+              <button onClick={() => navigate('/registro')} style={{ width: '100%', padding: '15px', borderRadius: '16px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 25px rgba(255,145,77,0.35)', marginBottom: '10px' }}>
+                Registrarme
+              </button>
+              <button onClick={() => navigate('/login')} style={{ width: '100%', padding: '13px', borderRadius: '16px', border: '1.5px solid rgba(0,0,0,0.12)', background: '#fff', color: '#1A1C1E', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>
+                Ya tengo cuenta
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* HISTORIAL DE PEDIDOS */}
       <AnimatePresence>
