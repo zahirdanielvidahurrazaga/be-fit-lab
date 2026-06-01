@@ -5,7 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import AdminCafeteria from '../components/AdminCafeteria';
-import { Coffee, Bell } from 'lucide-react';
+import AdminReportes from '../components/AdminReportes';
+import AdminClientas from '../components/AdminClientas';
+import { Coffee, Bell, UserCog } from 'lucide-react';
 
 const daysOfWeek = [
   { num: 1, label: 'Lunes' },
@@ -418,6 +420,9 @@ function Admin() {
                   <div onClick={() => { setActiveTab('reportes'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <BarChart3 size={18} color="var(--primary)" /> Reportes
                   </div>
+                  <div onClick={() => { setActiveTab('clientas'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
+                    <UserCog size={18} color="var(--primary)" /> Clientas
+                  </div>
                   <div onClick={() => { setActiveTab('insignias'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Award size={18} color="var(--primary)" /> Insignias
                   </div>
@@ -463,6 +468,10 @@ function Admin() {
           <div onClick={() => setActiveTab('reportes')} className={`sidebar-nav-item ${activeTab === 'reportes' ? 'active' : ''}`}>
             <BarChart3 size={20} />
             <span>Reportes</span>
+          </div>
+          <div onClick={() => setActiveTab('clientas')} className={`sidebar-nav-item ${activeTab === 'clientas' ? 'active' : ''}`}>
+            <UserCog size={20} />
+            <span>Clientas</span>
           </div>
           <div onClick={() => setActiveTab('nutricion')} className={`sidebar-nav-item ${activeTab === 'nutricion' ? 'active' : ''}`}>
             <Utensils size={20} />
@@ -1182,54 +1191,13 @@ function Admin() {
             {/* ============ TAB: REPORTES (Métricas de Negocio) PREMIUM ============ */}
             {activeTab === 'reportes' && (
               <motion.div key="reportes" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
-                <div className="admin-double-column">
-                  <section style={{ width: '100%' }}>
-                    <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', marginBottom: '20px', color: 'var(--black)' }}>Resumen Financiero</h2>
-                    
-                    <div style={{ background: 'linear-gradient(135deg, #2C302E, #1A1C1E)', padding: '25px', borderRadius: '24px', marginBottom: 0, boxShadow: '0 15px 35px rgba(0,0,0,0.15)' }}>
-                       <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '5px' }}>Ingresos Brutos (Mes)</div>
-                       <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '15px' }}>
-                          <div style={{ fontSize: '2.8rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)', lineHeight: 1 }}>$42,850</div>
-                          <div style={{ background: 'rgba(34,197,94,0.2)', color: '#4ADE80', padding: '4px 8px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800 }}>+15%</div>
-                       </div>
-                       <div style={{ height: '60px', display: 'flex', alignItems: 'flex-end', gap: '6px' }}>
-                         {[30, 45, 60, 40, 70, 85, 100].map((h, i) => (
-                           <div key={i} style={{ flex: 1, height: `${h}%`, background: i === 6 ? 'var(--accent)' : 'rgba(255,255,255,0.1)', borderRadius: '4px' }} />
-                         ))}
-                       </div>
-                    </div>
-                  </section>
-  
-                  <section style={{ width: '100%' }}>
-                    <h2 className="desktop-hidden-title" style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', marginBottom: '20px', color: 'var(--black)' }}>Métricas Secundarias</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-                      <div style={{ padding: '20px', background: 'white', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
-                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Retención</div>
-                            <TrendingUp size={16} color="var(--primary)" />
-                         </div>
-                         <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>92<span style={{ fontSize: '1rem', color: 'var(--on-surface-variant)' }}>%</span></div>
-                      </div>
-                      <div style={{ padding: '20px', background: 'white', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
-                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Ticket Prom.</div>
-                            <DollarSign size={16} color="var(--primary)" />
-                         </div>
-                         <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}><span style={{ fontSize: '1rem', color: 'var(--on-surface-variant)' }}>$</span>850</div>
-                      </div>
-                    </div>
-  
-                    <div style={{ padding: '20px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.15)', borderRadius: '20px' }}>
-                       <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                          <div style={{ background: '#22C55E', color: 'white', padding: '10px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(34,197,94,0.3)' }}><Activity size={20}/></div>
-                          <div>
-                             <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#166534', marginBottom: '2px' }}>Crecimiento Acelerado</div>
-                             <div style={{ fontSize: '0.8rem', color: '#15803D', fontWeight: 600 }}>La retención ha mejorado un 2% este mes.</div>
-                          </div>
-                       </div>
-                    </div>
-                  </section>
-                </div>
+                <AdminReportes />
+              </motion.div>
+            )}
+
+            {activeTab === 'clientas' && (
+              <motion.div key="clientas" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
+                <AdminClientas />
               </motion.div>
             )}
           </AnimatePresence>
