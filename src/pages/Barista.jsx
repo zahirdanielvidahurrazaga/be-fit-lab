@@ -90,6 +90,10 @@ function Barista() {
     if (!next) return;
     setOrders(os => os.map(o => o.id === order.id ? { ...o, status: next } : o));
     await supabase.from('cafe_orders').update({ status: next }).eq('id', order.id);
+    // Avisar a la clienta cuando su pedido está listo (push + notificación)
+    if (next === 'ready' && order.user_id) {
+      supabase.functions.invoke('send-push', { body: { userId: order.user_id, title: '¡Tu pedido está listo!', body: 'Pásalo a recoger en el mostrador.', type: 'payment' } });
+    }
   };
 
   const byStatus = useMemo(() => {

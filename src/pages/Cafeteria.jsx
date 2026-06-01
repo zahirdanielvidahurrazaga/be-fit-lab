@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import CafeProductSheet from '../components/CafeProductSheet';
 import CafeCartSheet from '../components/CafeCartSheet';
+import CafeOrderTracking from '../components/CafeOrderTracking';
 
 function Cafeteria() {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ function Cafeteria() {
   const [confirming, setConfirming] = useState(null);   // { meta } durante la cuenta de 5s
   const [countdown, setCountdown] = useState(5);
   const [processing, setProcessing] = useState(false);
+  const [trackingOrderId, setTrackingOrderId] = useState(null); // seguimiento del pedido
 
   // Catálogo desde la BD (precios server-side). Solo productos disponibles.
   const available = (cafeProducts || []).filter(p => p.available !== false);
@@ -55,10 +57,10 @@ function Cafeteria() {
 
   // Bloquear el scroll del fondo cuando hay una hoja/overlay abierto
   useEffect(() => {
-    const open = selectedProduct || showCart || confirming || processing || showThanks;
+    const open = selectedProduct || showCart || confirming || processing || showThanks || trackingOrderId;
     document.body.style.overflow = open ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
-  }, [selectedProduct, showCart, confirming, processing, showThanks]);
+  }, [selectedProduct, showCart, confirming, processing, showThanks, trackingOrderId]);
 
   const nextWidget = () => setActiveWidgetIndex((prev) => (prev + 1) % 3);
   const prevWidget = () => setActiveWidgetIndex((prev) => (prev - 1 + 3) % 3);
@@ -100,10 +102,10 @@ function Cafeteria() {
           // Pedido pagado: notificación verificada (servidor) + push (cliente, camino probado)
           supabase.functions.invoke('stripe-cafe-notify', { body: { paymentIntentId: data.paymentIntentId } });
           const resumen = cart.map(i => `${i.qty}× ${i.name}`).join(', ');
-          if (user?.id) supabase.functions.invoke('send-push', { body: { userId: user.id, title: 'Compra en cafetería ☕', body: `${resumen}. ¡Pásala a recoger!`, type: 'payment', skipLog: true } });
-          if (meta.gift?.recipient_user_id) supabase.functions.invoke('send-push', { body: { userId: meta.gift.recipient_user_id, title: '🎁 ¡Te enviaron un regalo!', body: meta.gift.message || `Te regalaron: ${resumen}`, type: 'payment', skipLog: true } });
+          if (user?.id) supabase.functions.invoke('send-push', { body: { userId: user.id, title: 'Compra en cafetería', body: `${resumen}. ¡Pásala a recoger!`, type: 'payment', skipLog: true } });
+          if (meta.gift?.recipient_user_id) supabase.functions.invoke('send-push', { body: { userId: meta.gift.recipient_user_id, title: '¡Te enviaron un regalo!', body: meta.gift.message || `Te regalaron: ${resumen}`, type: 'payment', skipLog: true } });
           setCart([]);
-          setShowThanks(true);
+          if (data.orderId) setTrackingOrderId(data.orderId); else setShowThanks(true);
         }
       } else {
         // Web: checkout hospedado (un solo producto por simplicidad en web)
@@ -444,6 +446,13 @@ function Cafeteria() {
               Cancelar
             </button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* SEGUIMIENTO DEL PEDIDO (estilo Uber Eats) */}
+      <AnimatePresence>
+        {trackingOrderId && (
+          <CafeOrderTracking orderId={trackingOrderId} onClose={() => setTrackingOrderId(null)} />
         )}
       </AnimatePresence>
 
