@@ -1020,9 +1020,17 @@ export default function Landing() {
             </motion.a>
           </motion.div>
           <motion.div variants={slideLeft} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ flex:'1 1 500px' }}>
-            <iframe src="https://maps.google.com/maps?q=Blvrd%2022%20Sur%205123%2C%20Villa%20Carmel%2C%2072567%20Heroica%20Puebla%20de%20Zaragoza%2C%20Pue.&t=&z=16&ie=UTF8&iwloc=&output=embed"
-              width="100%" height="500" style={{ border:0, borderRadius:'32px', boxShadow:'0 30px 80px rgba(0,0,0,0.05)', display:'block' }}
-              allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Be Fit Lab — Puebla"/>
+            {/* Mapa con OpenStreetMap (sin API key, no lo bloquea Google) + botón a Google Maps */}
+            <div style={{ position:'relative' }}>
+              <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=-98.2008%2C19.0134%2C-98.1908%2C19.0194&layer=mapnik&marker=19.0163552%2C-98.1957961"
+                width="100%" height="500" style={{ border:0, borderRadius:'32px', boxShadow:'0 30px 80px rgba(0,0,0,0.05)', display:'block' }}
+                loading="lazy" title="Be Fit Lab — Puebla"/>
+              <motion.a whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }}
+                href="https://maps.app.goo.gl/RFUhTHGG5cQuVoST8" target="_blank" rel="noopener noreferrer"
+                style={{ position:'absolute', bottom:'20px', left:'50%', transform:'translateX(-50%)', display:'inline-flex', alignItems:'center', gap:'8px', background:'linear-gradient(135deg, rgba(255,145,77,0.92), rgba(230,130,69,0.94))', backdropFilter:'blur(14px) saturate(180%)', WebkitBackdropFilter:'blur(14px) saturate(180%)', border:'1px solid rgba(255,255,255,0.45)', color:'white', padding:'0.85rem 1.6rem', borderRadius:'40px', textDecoration:'none', fontWeight:700, fontSize:'0.95rem', boxShadow:'0 10px 28px rgba(255,145,77,0.4), inset 0 1px 0 rgba(255,255,255,0.5)' }}>
+                <MapPin size={18}/> Cómo llegar
+              </motion.a>
+            </div>
           </motion.div>
         </div>
       </section>
