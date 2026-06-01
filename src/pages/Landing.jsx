@@ -1035,42 +1035,47 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Footer ────────────────────────────────────────────────── */}
-      <footer style={{ background:'var(--black)', padding:'8rem 5% 3rem', position:'relative', overflow:'hidden' }}>
+      {/* ── Footer (glass claro, en la línea de la marca) ───────────── */}
+      <footer style={{ background:'linear-gradient(180deg, #FFF6F0 0%, #FDF1EA 100%)', padding:'7rem 5% 2.5rem', position:'relative', overflow:'hidden', borderTop:'1px solid rgba(255,145,77,0.14)' }}>
+        {/* Blobs decorativos suaves (marca) */}
+        <div style={{ position:'absolute', top:'-20%', left:'-8%', width:'46vw', height:'46vw', background:'radial-gradient(circle, rgba(255,145,77,0.12) 0%, transparent 70%)', filter:'blur(40px)', pointerEvents:'none', zIndex:0 }} />
+        <div style={{ position:'absolute', bottom:'-30%', right:'-6%', width:'42vw', height:'42vw', background:'radial-gradient(circle, rgba(224,122,156,0.10) 0%, transparent 70%)', filter:'blur(40px)', pointerEvents:'none', zIndex:0 }} />
+
         <div style={{ maxWidth:'1200px', margin:'0 auto', position:'relative', zIndex:1 }}>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:'4rem', marginBottom:'6rem' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:'4rem', marginBottom:'5rem' }}>
             <div>
-              <img src="/logo2.png" alt="Be Fit Lab" style={{ height:'48px', width:'auto', marginBottom:'24px', filter:'brightness(0) invert(1)', display:'block' }}/>
-              <p style={{ color:'rgba(255,255,255,0.6)', fontSize:'1rem', lineHeight:1.7, maxWidth:'280px' }}>The glutes specialists. Transformación real a través del movimiento consciente.</p>
-              <div style={{ display:'flex', gap:'16px', marginTop:'32px' }}>
-                <motion.a whileHover={{ scale:1.1, background:'rgba(255,255,255,0.1)' }} href="https://instagram.com/befit.lab" target="_blank" rel="noopener noreferrer" style={{ width:'48px', height:'48px', background:'rgba(255,255,255,0.05)', borderRadius:'16px', display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.2s' }}><InstagramIcon size={20} color="white"/></motion.a>
-                <motion.a whileHover={{ scale:1.1, background:'rgba(255,255,255,0.1)' }} href={`https://wa.me/${WA_NUMBER}`} target="_blank" rel="noopener noreferrer" style={{ width:'48px', height:'48px', background:'rgba(255,255,255,0.05)', borderRadius:'16px', display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.2s' }}><MessageCircle size={20} color="white"/></motion.a>
+              <img src="/logo2.png" alt="Be Fit Lab" style={{ height:'48px', width:'auto', marginBottom:'22px', display:'block' }}/>
+              <p style={{ color:'var(--on-surface-variant)', fontSize:'1rem', lineHeight:1.7, maxWidth:'280px' }}>The glutes specialists. Transformación real a través del movimiento consciente.</p>
+              <div style={{ display:'flex', gap:'14px', marginTop:'30px' }}>
+                {[{href:'https://instagram.com/befit.lab', icon:<InstagramIcon size={20} color="var(--primary)"/>},{href:`https://wa.me/${WA_NUMBER}`, icon:<MessageCircle size={20} color="var(--primary)"/>}].map((s,i) => (
+                  <motion.a key={i} whileHover={{ scale:1.1, y:-2 }} whileTap={{ scale:0.95 }} href={s.href} target="_blank" rel="noopener noreferrer"
+                    style={{ width:'48px', height:'48px', background:'rgba(255,255,255,0.6)', border:'1px solid rgba(255,255,255,0.85)', backdropFilter:'blur(14px) saturate(180%)', WebkitBackdropFilter:'blur(14px) saturate(180%)', borderRadius:'16px', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 6px 18px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.7)' }}>{s.icon}</motion.a>
+                ))}
               </div>
             </div>
-            <div>
-              <div style={{ fontWeight:800, color:'white', fontSize:'0.85rem', textTransform:'uppercase', letterSpacing:'0.15em', marginBottom:'24px' }}>Estudio</div>
-              {[['Clases','clases'],['Horarios','horarios'],['El Estudio','estudio'],['Coaches','coaches']].map(([l,id]) => (
-                <motion.button key={id} whileHover={{ x:6, color:'var(--primary)' }} onClick={() => scrollTo(id)} style={{ display:'block', background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.6)', fontSize:'1rem', padding:'8px 0', fontFamily:'var(--font-body)', textAlign:'left', transition:'color 0.2s' }}>{l}</motion.button>
-              ))}
-            </div>
-            <div>
-              <div style={{ fontWeight:800, color:'white', fontSize:'0.85rem', textTransform:'uppercase', letterSpacing:'0.15em', marginBottom:'24px' }}>Membresías</div>
-              {[['Precios y paquetes','precios'],['Peach Patisserie','cafeteria']].map(([l,id]) => (
-                <motion.button key={l} whileHover={{ x:6, color:'var(--primary)' }} onClick={() => scrollTo(id)} style={{ display:'block', background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.6)', fontSize:'1rem', padding:'8px 0', fontFamily:'var(--font-body)', textAlign:'left', transition:'color 0.2s' }}>{l}</motion.button>
-              ))}
-              <Link to="/login"  style={{ display:'block', color:'rgba(255,255,255,0.6)', fontSize:'1rem', padding:'8px 0', textDecoration:'none', marginTop:'16px' }}>Iniciar Sesión</Link>
-              <Link to="/registro" style={{ display:'block', color:'rgba(255,255,255,0.6)', fontSize:'1rem', padding:'8px 0', textDecoration:'none' }}>Crear Cuenta</Link>
-            </div>
-            <div>
-              <div style={{ fontWeight:800, color:'white', fontSize:'0.85rem', textTransform:'uppercase', letterSpacing:'0.15em', marginBottom:'24px' }}>Legal</div>
-              <Link to="/terminos"  style={{ display:'block', color:'rgba(255,255,255,0.6)', fontSize:'1rem', padding:'8px 0', textDecoration:'none' }}>Términos y condiciones</Link>
-              <Link to="/privacidad" style={{ display:'block', color:'rgba(255,255,255,0.6)', fontSize:'1rem', padding:'8px 0', textDecoration:'none' }}>Política de privacidad</Link>
-              <motion.button whileHover={{ x:6 }} onClick={() => scrollTo('faq')} style={{ display:'block', background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.6)', fontSize:'1rem', padding:'8px 0', fontFamily:'var(--font-body)', textAlign:'left' }}>Aviso de cancelación</motion.button>
-            </div>
+            {[
+              { title:'Estudio', items:[['Clases','clases'],['Horarios','horarios'],['El Estudio','estudio'],['Coaches','coaches']] },
+              { title:'Explora', items:[['Precios y paquetes','precios'],['Cafetería','cafeteria']], extra:[['Iniciar Sesión','/login'],['Crear Cuenta','/registro']] },
+              { title:'Legal', links:[['Términos y condiciones','/terminos'],['Política de privacidad','/privacidad']], faq:true },
+            ].map((col) => (
+              <div key={col.title}>
+                <div style={{ fontWeight:800, color:'var(--black)', fontSize:'0.85rem', textTransform:'uppercase', letterSpacing:'0.15em', marginBottom:'22px' }}>{col.title}</div>
+                {(col.items||[]).map(([l,id]) => (
+                  <motion.button key={l} whileHover={{ x:6, color:'var(--primary)' }} onClick={() => scrollTo(id)} style={{ display:'block', background:'none', border:'none', cursor:'pointer', color:'var(--on-surface-variant)', fontSize:'1rem', padding:'8px 0', fontFamily:'var(--font-body)', textAlign:'left', transition:'color 0.2s' }}>{l}</motion.button>
+                ))}
+                {(col.extra||[]).map(([l,to]) => (
+                  <Link key={l} to={to} style={{ display:'block', color:'var(--on-surface-variant)', fontSize:'1rem', padding:'8px 0', textDecoration:'none' }}>{l}</Link>
+                ))}
+                {(col.links||[]).map(([l,to]) => (
+                  <Link key={l} to={to} style={{ display:'block', color:'var(--on-surface-variant)', fontSize:'1rem', padding:'8px 0', textDecoration:'none' }}>{l}</Link>
+                ))}
+                {col.faq && <motion.button whileHover={{ x:6, color:'var(--primary)' }} onClick={() => scrollTo('faq')} style={{ display:'block', background:'none', border:'none', cursor:'pointer', color:'var(--on-surface-variant)', fontSize:'1rem', padding:'8px 0', fontFamily:'var(--font-body)', textAlign:'left', transition:'color 0.2s' }}>Aviso de cancelación</motion.button>}
+              </div>
+            ))}
           </div>
-          <div style={{ borderTop:'1px solid rgba(255,255,255,0.1)', paddingTop:'2.5rem', display:'flex', flexWrap:'wrap', justifyContent:'space-between', gap:'1.5rem' }}>
-            <p style={{ color:'rgba(255,255,255,0.4)', fontSize:'0.9rem', margin:0 }}>© {new Date().getFullYear()} Be Fit Lab. Todos los derechos reservados.</p>
-            <p style={{ color:'rgba(255,255,255,0.4)', fontSize:'0.9rem', margin:0 }}>Diseñado con la perfección de Apple.</p>
+          <div style={{ borderTop:'1px solid rgba(0,0,0,0.08)', paddingTop:'2.2rem', display:'flex', flexWrap:'wrap', justifyContent:'space-between', alignItems:'center', gap:'1rem' }}>
+            <p style={{ color:'var(--on-surface-variant)', fontSize:'0.88rem', margin:0 }}>© {new Date().getFullYear()} Be Fit Lab. Todos los derechos reservados.</p>
+            <p style={{ color:'var(--on-surface-variant)', fontSize:'0.88rem', margin:0 }}>Desarrollado por <span style={{ color:'var(--primary)', fontWeight:700 }}>Zahir Daniel Vidahurrazaga Marín</span></p>
           </div>
         </div>
       </footer>
