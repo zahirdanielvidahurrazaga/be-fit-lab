@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ChefHat, Flame, Clock, User, Calendar, Utensils, TrendingUp, CheckCircle2, Droplets, Play, QrCode, ChevronRight, Heart, Info, Scale, Wallet } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChefHat, Flame, Clock, User, Calendar, Utensils, TrendingUp, CheckCircle2, Droplets, Play, QrCode, ChevronRight, Heart, Info, Scale, Wallet, X } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -38,6 +38,14 @@ function Nutricion() {
     }
   };
   const isScrolled = useScrollDetect(30);
+
+  // Bloquear el scroll del fondo cuando hay un drawer/sheet abierto (evita que
+  // el gesto de scroll se "robe" hacia el fondo en iOS y rompa el scroll interno)
+  useEffect(() => {
+    const open = showRecipe || showQR;
+    document.body.style.overflow = open ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [showRecipe, showQR]);
 
   const handleMealClick = (meal) => {
     setRecipeData(meal);
@@ -129,13 +137,16 @@ function Nutricion() {
               
               <div style={{ height: '240px', borderRadius: '28px', overflow: 'hidden', marginBottom: '24px', position: 'relative', boxShadow: '0 15px 35px rgba(0,0,0,0.1)' }}>
                 <img src={recipeData?.img} alt="Recipe" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <div style={{ 
-                  position: 'absolute', top: '20px', left: '20px', 
-                  background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', 
-                  padding: '8px 16px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 800, color: 'var(--black)' 
+                <div style={{
+                  position: 'absolute', top: '20px', left: '20px',
+                  background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)',
+                  padding: '8px 16px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 800, color: 'var(--black)'
                 }}>
                   {recipeData?.time}
                 </div>
+                <button onClick={() => setShowRecipe(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '16px', right: '16px', width: '38px', height: '38px', borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.18)' }}>
+                  <X size={18} color="#1A1C1E" />
+                </button>
               </div>
 
               <div style={{ padding: '0 10px' }}>
@@ -242,10 +253,13 @@ function Nutricion() {
                   setShowQR(false);
                 }
               }}
-              className="qr-bottom-sheet" 
-              style={{ padding: '12px 24px 20px', background: 'var(--surface)' }}
+              className="qr-bottom-sheet"
+              style={{ padding: '12px 24px 20px', background: 'var(--surface)', position: 'relative' }}
             >
               <div className="sheet-handle" />
+              <button onClick={() => setShowQR(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '14px', right: '16px', width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }}>
+                <X size={17} color="var(--on-surface)" />
+              </button>
               
               <div className="wallet-card" style={{ 
                 background: 'var(--surface-low)', 

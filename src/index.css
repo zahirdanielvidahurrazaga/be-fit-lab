@@ -1199,8 +1199,6 @@ h1, h2, h3, h4, h5 {
   width: 100vw;
   max-height: 90vh;
   background: var(--surface);
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
   z-index: 9999;
   padding: 30px 20px 40px;
   border-radius: 30px 30px 0 0;
@@ -1208,9 +1206,8 @@ h1, h2, h3, h4, h5 {
   animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   border-top: 1px solid rgba(255,255,255,0.1);
-  will-change: transform;
-  transform: translateZ(0);
 }
 
 .glass-modal {
