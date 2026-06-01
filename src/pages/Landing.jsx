@@ -117,7 +117,7 @@ const FAQ_ITEMS = [
   { q:'¿Con cuánta anticipación debo llegar?',      a:'Llega al menos 10 minutos antes. Las puertas se cierran al iniciar la clase por respeto a todas las participantes.' },
   { q:'¿Cómo reservo mi lugar?',                    a:'A través de nuestra App (disponible en App Store) o iniciando sesión en este sitio. Las reservas abren 7 días antes de cada clase.' },
 ];
-const WA_NUMBER = '5212345678900'; // ← reemplaza con el número real
+const WA_NUMBER = '522212664253'; // +52 221 266 4253
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1003,7 +1003,7 @@ export default function Landing() {
             <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Encuéntranos</span>
             <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0 2.5rem', lineHeight:1.05, color:'var(--black)', letterSpacing:'-0.04em' }}>Ven a<br/><span style={{ color:'var(--primary)' }}>conocernos.</span></h2>
             <div style={{ display:'flex', flexDirection:'column', gap:'24px', marginBottom:'3rem' }}>
-              {[{icon:<MapPin size={24} color="var(--primary)"/>,label:'Dirección',val:<>Calle y número, Colonia,<br/>Ciudad, Estado, CP</>},{icon:<Phone size={24} color="var(--primary)"/>,label:'Teléfono / WhatsApp',val:'+52 (XX) XXXX-XXXX'},{icon:<InstagramIcon size={24} color="var(--primary)"/>,label:'Instagram',val:<a href="https://instagram.com/" target="_blank" rel="noopener noreferrer" style={{ color:'var(--primary)', fontWeight:700, textDecoration:'none' }}>@befitlab</a>}].map(({icon,label,val}) => (
+              {[{icon:<MapPin size={24} color="var(--primary)"/>,label:'Dirección',val:<a href="https://maps.app.goo.gl/RFUhTHGG5cQuVoST8" target="_blank" rel="noopener noreferrer" style={{ color:'var(--on-surface-variant)', textDecoration:'none' }}>Blvrd 22 Sur 5123, Villa Carmel,<br/>72567 Heroica Puebla de Zaragoza, Pue.</a>},{icon:<Phone size={24} color="var(--primary)"/>,label:'Teléfono / WhatsApp',val:<a href="tel:+522212664253" style={{ color:'var(--on-surface-variant)', textDecoration:'none' }}>+52 221 266 4253</a>},{icon:<InstagramIcon size={24} color="var(--primary)"/>,label:'Instagram',val:<a href="https://instagram.com/befit.lab" target="_blank" rel="noopener noreferrer" style={{ color:'var(--primary)', fontWeight:700, textDecoration:'none' }}>@befit.lab</a>}].map(({icon,label,val}) => (
                 <motion.div key={label} whileHover={{ x:6 }} transition={SPRING} style={{ display:'flex', gap:'20px', alignItems:'flex-start' }}>
                   <div style={{ background:'var(--surface)', width:'56px', height:'56px', borderRadius:'16px', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{icon}</div>
                   <div>
@@ -1020,9 +1020,9 @@ export default function Landing() {
             </motion.a>
           </motion.div>
           <motion.div variants={slideLeft} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ flex:'1 1 500px' }}>
-            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3762.661!2d-99.1332!3d19.4284!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zBe+Fit+Lab!5e0!3m2!1ses!2smx!4v1"
+            <iframe src="https://www.google.com/maps?q=Blvrd+22+Sur+5123,+Villa+Carmel,+72567+Heroica+Puebla+de+Zaragoza,+Pue.&output=embed"
               width="100%" height="500" style={{ border:0, borderRadius:'32px', boxShadow:'0 30px 80px rgba(0,0,0,0.05)', display:'block', filter:'contrast(1.05) saturate(1.1)' }}
-              allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Be Fit Lab"/>
+              allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Be Fit Lab — Puebla"/>
           </motion.div>
         </div>
       </section>
@@ -1035,7 +1035,7 @@ export default function Landing() {
               <img src="/logo2.png" alt="Be Fit Lab" style={{ height:'48px', width:'auto', marginBottom:'24px', filter:'brightness(0) invert(1)', display:'block' }}/>
               <p style={{ color:'rgba(255,255,255,0.6)', fontSize:'1rem', lineHeight:1.7, maxWidth:'280px' }}>The glutes specialists. Transformación real a través del movimiento consciente.</p>
               <div style={{ display:'flex', gap:'16px', marginTop:'32px' }}>
-                <motion.a whileHover={{ scale:1.1, background:'rgba(255,255,255,0.1)' }} href="https://instagram.com/" target="_blank" rel="noopener noreferrer" style={{ width:'48px', height:'48px', background:'rgba(255,255,255,0.05)', borderRadius:'16px', display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.2s' }}><InstagramIcon size={20} color="white"/></motion.a>
+                <motion.a whileHover={{ scale:1.1, background:'rgba(255,255,255,0.1)' }} href="https://instagram.com/befit.lab" target="_blank" rel="noopener noreferrer" style={{ width:'48px', height:'48px', background:'rgba(255,255,255,0.05)', borderRadius:'16px', display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.2s' }}><InstagramIcon size={20} color="white"/></motion.a>
                 <motion.a whileHover={{ scale:1.1, background:'rgba(255,255,255,0.1)' }} href={`https://wa.me/${WA_NUMBER}`} target="_blank" rel="noopener noreferrer" style={{ width:'48px', height:'48px', background:'rgba(255,255,255,0.05)', borderRadius:'16px', display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.2s' }}><MessageCircle size={20} color="white"/></motion.a>
               </div>
             </div>
