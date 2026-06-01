@@ -1020,8 +1020,8 @@ export default function Landing() {
             </motion.a>
           </motion.div>
           <motion.div variants={slideLeft} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ flex:'1 1 500px' }}>
-            <iframe src="https://www.google.com/maps?q=Blvrd+22+Sur+5123,+Villa+Carmel,+72567+Heroica+Puebla+de+Zaragoza,+Pue.&output=embed"
-              width="100%" height="500" style={{ border:0, borderRadius:'32px', boxShadow:'0 30px 80px rgba(0,0,0,0.05)', display:'block', filter:'contrast(1.05) saturate(1.1)' }}
+            <iframe src="https://maps.google.com/maps?q=Blvrd%2022%20Sur%205123%2C%20Villa%20Carmel%2C%2072567%20Heroica%20Puebla%20de%20Zaragoza%2C%20Pue.&t=&z=16&ie=UTF8&iwloc=&output=embed"
+              width="100%" height="500" style={{ border:0, borderRadius:'32px', boxShadow:'0 30px 80px rgba(0,0,0,0.05)', display:'block' }}
               allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Be Fit Lab — Puebla"/>
           </motion.div>
         </div>
@@ -1076,7 +1076,7 @@ export default function Landing() {
         whileTap={{ scale:0.95 }}
         href={`https://wa.me/${WA_NUMBER}?text=Hola%20Be%20Fit%20Lab%2C%20quisiera%20m%C3%A1s%20informaci%C3%B3n`}
         target="_blank" rel="noopener noreferrer"
-        style={{ position:'fixed', bottom:'28px', right:'24px', zIndex:999, width:'58px', height:'58px', background:'#22C55E', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 8px 24px rgba(34,197,94,0.45)', textDecoration:'none' }}
+        style={{ position:'fixed', bottom:'28px', right:'24px', zIndex:999, width:'58px', height:'58px', background:'linear-gradient(135deg, rgba(255,145,77,0.9), rgba(230,130,69,0.92))', backdropFilter:'blur(14px) saturate(180%)', WebkitBackdropFilter:'blur(14px) saturate(180%)', border:'1px solid rgba(255,255,255,0.45)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 10px 28px rgba(255,145,77,0.45), inset 0 1px 0 rgba(255,255,255,0.55)', textDecoration:'none' }}
         aria-label="WhatsApp">
         <MessageCircle size={26} color="white"/>
       </motion.a>
