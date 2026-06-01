@@ -41,10 +41,18 @@ serve(async (req) => {
       startingAfter = page.data[page.data.length - 1].id;
     }
 
+    // IDs de PaymentIntent que corresponden a pedidos de cafetería (clasificación
+    // robusta: cubre web (Checkout) y nativo, presentes y pasados, sin depender
+    // de que la metadata del PI esté presente).
+    const { data: cafeOrders } = await supabase.from('cafe_orders').select('payment_intent_id').not('payment_intent_id', 'is', null);
+    const cafePIs = new Set((cafeOrders || []).map((o: any) => o.payment_intent_id));
+
     const mxn = (c: number) => Math.round((c || 0)) / 100;
+    const piIdOf = (ch: any) => typeof ch.payment_intent === 'string' ? ch.payment_intent : ch.payment_intent?.id;
     const typeOf = (ch: any): 'cafeteria' | 'membresia' => {
       const t = ch.payment_intent?.metadata?.type || ch.metadata?.type;
-      return t === 'cafeteria' ? 'cafeteria' : 'membresia';
+      if (t === 'cafeteria' || cafePIs.has(piIdOf(ch))) return 'cafeteria';
+      return 'membresia';
     };
 
     let gross = 0, net = 0, fees = 0, count = 0, refunded = 0;
@@ -77,11 +85,20 @@ serve(async (req) => {
       }
     }
 
-    // Serie por día de los últimos 30 días (rellena días sin ventas en 0)
+    // Serie adaptable al rango: hasta 30 barras (diarias si el rango es corto,
+    // agrupadas en bloques si es largo). Cada barra suma sus días.
+    const step = Math.max(1, Math.ceil(days / 30));
+    const buckets = Math.ceil(days / step);
     const series: { date: string; amount: number }[] = [];
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
-      series.push({ date: d, amount: Math.round((byDay[d] || 0)) });
+    for (let i = buckets - 1; i >= 0; i--) {
+      let sum = 0; let label = '';
+      for (let d = 0; d < step; d++) {
+        const offset = i * step + d;
+        const key = new Date(Date.now() - offset * 86400000).toISOString().slice(0, 10);
+        if (d === 0) label = key;
+        sum += byDay[key] || 0;
+      }
+      series.push({ date: label, amount: Math.round(sum) });
     }
 
     return Response.json({

@@ -140,6 +140,11 @@ serve(async (req) => {
         supabase_user_id: ownerId ?? '',
         order_id: order.id,
       },
+      // Propagar el tipo al PaymentIntent (la metadata de la sesión NO se copia sola)
+      // para que el dashboard financiero lo clasifique como cafetería y no membresía.
+      payment_intent_data: {
+        metadata: { type: 'cafeteria', order_id: order.id, supabase_user_id: ownerId ?? '' },
+      },
     });
 
     return Response.json({ url: session.url, sessionId: session.id, orderId: order.id }, { headers: corsHeaders });
