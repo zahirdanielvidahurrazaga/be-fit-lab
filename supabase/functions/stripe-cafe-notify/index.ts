@@ -7,9 +7,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Tras completar la PaymentSheet, el cliente llama aquí con el paymentIntentId.
-// Verifica en Stripe que esté 'succeeded' (no confía en el cliente) y manda la
-// notificación de compra (push + log). Idempotente: no duplica si ya se notificó.
+// Tras completar la PaymentSheet: verifica que el PaymentIntent esté pagado,
+// marca el pedido como 'paid' (idempotente) y registra las notificaciones in-app
+// (comprador y, si es regalo, destinatario). Los PUSH los dispara el cliente.
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
@@ -20,27 +20,37 @@ serve(async (req) => {
     const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
     if (pi.status !== 'succeeded') return Response.json({ ok: false, status: pi.status }, { headers: corsHeaders });
 
-    const userId = pi.metadata?.supabase_user_id;
-    if (!userId) return Response.json({ ok: true, notified: false }, { headers: corsHeaders });
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
-
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const orderId = pi.metadata?.order_id;
+    const buyerId = pi.metadata?.supabase_user_id;
     const summary = pi.metadata?.summary || 'Tu pedido';
     const total = pi.metadata?.total_mxn || Math.round((pi.amount ?? 0) / 100);
-    const title = 'Compra en cafetería ☕';
-    const body = `${summary} — Total $${total} MXN. ¡Pásala a recoger!`;
 
-    // Solo registra la notificación in-app (verificada en servidor). El PUSH lo
-    // dispara el cliente por el mismo camino que el admin (más confiable que
-    // fetch servidor-a-servidor, que se cancelaba al no esperar el cliente).
-    await supabase.from('notification_logs').insert({
-      user_id: userId, type: 'payment', title, body, status: 'sent',
-    });
+    // Marcar pagado SOLO si estaba pendiente → idempotencia (no duplica notifs)
+    let order: any = null;
+    if (orderId) {
+      const { data } = await supabase.from('cafe_orders').update({ status: 'paid' })
+        .eq('id', orderId).eq('status', 'pending_payment').select('*').maybeSingle();
+      if (!data) return Response.json({ ok: true, dup: true }, { headers: corsHeaders });
+      order = data;
+    }
 
-    return Response.json({ ok: true, notified: true }, { headers: corsHeaders });
+    // Notificación in-app del comprador
+    if (buyerId) {
+      await supabase.from('notification_logs').insert({
+        user_id: buyerId, type: 'payment', title: 'Compra en cafetería ☕',
+        body: `${summary} — Total $${total} MXN. ¡Pásala a recoger!`, status: 'sent',
+      });
+    }
+    // Notificación in-app del destinatario (regalo)
+    if (order?.is_gift && order.gift_recipient_user_id) {
+      await supabase.from('notification_logs').insert({
+        user_id: order.gift_recipient_user_id, type: 'payment', title: '🎁 ¡Te enviaron un regalo!',
+        body: order.gift_message ? `"${order.gift_message}" — ${summary}` : `Te regalaron: ${summary}`, status: 'sent',
+      });
+    }
+
+    return Response.json({ ok: true }, { headers: corsHeaders });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error('stripe-cafe-notify error:', message);

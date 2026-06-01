@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { Stripe } from '@capacitor-community/stripe';
-import { ChevronLeft, ChevronRight, Coffee, Flame, Info, AlertCircle, ShoppingCart, CheckCircle2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Coffee, Flame, Info, AlertCircle, ShoppingCart, ShoppingBag, CheckCircle2, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import CafeProductSheet from '../components/CafeProductSheet';
+import CafeCartSheet from '../components/CafeCartSheet';
 
 function Cafeteria() {
   const navigate = useNavigate();
@@ -13,8 +15,16 @@ function Cafeteria() {
   const isNative = Capacitor.isNativePlatform();
   const [activeWidgetIndex, setActiveWidgetIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [buyingId, setBuyingId] = useState(null);
   const [showThanks, setShowThanks] = useState(false);
+
+  // --- Pedido (estilo Uber Eats) ---
+  const [optionGroups, setOptionGroups] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null); // ficha/personalización
+  const [showCart, setShowCart] = useState(false);
+  const [cart, setCart] = useState([]);
+  const [confirming, setConfirming] = useState(null);   // { meta } durante la cuenta de 5s
+  const [countdown, setCountdown] = useState(5);
+  const [processing, setProcessing] = useState(false);
 
   // Catálogo desde la BD (precios server-side). Solo productos disponibles.
   const available = (cafeProducts || []).filter(p => p.available !== false);
@@ -22,17 +32,21 @@ function Cafeteria() {
   const smoothieItems = available.filter(p => p.category === 'smoothie');
   const temporadaItems = available.filter(p => p.category === 'temporada');
 
+  const cartCount = cart.reduce((s, i) => s + i.qty, 0);
+  const cartTotal = cart.reduce((s, i) => s + i.lineTotal, 0);
+
   useEffect(() => {
     window.scrollTo(0, 0);
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
-    // Web: si Stripe redirigió con ?payment=success, mostrar el "¡Gracias!"
-    if (new URLSearchParams(window.location.search).get('payment') === 'success') {
-      setShowThanks(true);
-    }
-    // Nativo: el deep link de retorno avisa que el pago fue exitoso
+    if (new URLSearchParams(window.location.search).get('payment') === 'success') setShowThanks(true);
     const onPaid = () => setShowThanks(true);
     window.addEventListener('cafe-payment-success', onPaid);
+    // Cargar grupos de personalización (con sus opciones)
+    (async () => {
+      const { data } = await supabase.from('cafe_option_groups').select('*, cafe_options(*)').order('sort_order');
+      setOptionGroups(data || []);
+    })();
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('cafe-payment-success', onPaid);
@@ -42,68 +56,59 @@ function Cafeteria() {
   const nextWidget = () => setActiveWidgetIndex((prev) => (prev + 1) % 3);
   const prevWidget = () => setActiveWidgetIndex((prev) => (prev - 1 + 3) % 3);
 
-  const handleBuy = async (item) => {
-    if (buyingId) return;
-    setBuyingId(item.id);
+  // Carrito
+  const openProduct = (item) => setSelectedProduct(item);
+  const addToCart = (line) => { setCart(c => [...c, line]); setSelectedProduct(null); };
+  const updateQty = (lineId, delta) => setCart(c => c.map(i => i.lineId === lineId ? { ...i, qty: Math.max(1, i.qty + delta), lineTotal: i.unitPrice * Math.max(1, i.qty + delta) } : i));
+  const removeItem = (lineId) => setCart(c => c.filter(i => i.lineId !== lineId));
+
+  // Cuenta regresiva de 5s para cancelar antes de pagar
+  const startCheckout = (meta) => { setShowCart(false); setConfirming(meta); setCountdown(5); };
+  const cancelCheckout = () => setConfirming(null);
+  useEffect(() => {
+    if (!confirming) return;
+    if (countdown <= 0) { proceedToPayment(confirming); setConfirming(null); return; }
+    const t = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [confirming, countdown]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const proceedToPayment = async (meta) => {
+    if (processing || cart.length === 0) return;
+    setProcessing(true);
     try {
+      const items = cart.map(i => ({ product_id: i.product_id, quantity: i.qty, option_ids: i.option_ids, notes: i.notes }));
+      const body = { items, userEmail: user?.email, userId: user?.id, gift: meta.gift, pickupTime: meta.pickupTime, noStraw: meta.noStraw };
+
       if (Capacitor.isNativePlatform()) {
-        // HOJA DE PAGO NATIVA (se cierra sola tras pagar, sin navegador)
-        const { data, error } = await supabase.functions.invoke('stripe-cafe-intent', {
-          body: { items: [{ id: item.id, quantity: 1 }], userEmail: user?.email, userId: user?.id },
-        });
+        const { data, error } = await supabase.functions.invoke('stripe-cafe-intent', { body });
         if (error) throw new Error(error.message);
         if (!data?.clientSecret) throw new Error('No se recibió el intent de pago');
-
-        // Intentar con Apple Pay; si no está configurado, caer a solo tarjeta
         try {
-          await Stripe.createPaymentSheet({
-            paymentIntentClientSecret: data.clientSecret,
-            merchantDisplayName: 'Be Fit Lab',
-            enableApplePay: true,
-            applePayMerchantId: 'merchant.com.befitlab.app',
-            countryCode: 'MX',
-          });
-        } catch (applePayErr) {
-          console.warn('Apple Pay no disponible, usando solo tarjeta:', applePayErr);
-          await Stripe.createPaymentSheet({
-            paymentIntentClientSecret: data.clientSecret,
-            merchantDisplayName: 'Be Fit Lab',
-          });
+          await Stripe.createPaymentSheet({ paymentIntentClientSecret: data.clientSecret, merchantDisplayName: 'Be Fit Lab', enableApplePay: true, applePayMerchantId: 'merchant.com.befitlab.app', countryCode: 'MX' });
+        } catch (e) {
+          await Stripe.createPaymentSheet({ paymentIntentClientSecret: data.clientSecret, merchantDisplayName: 'Be Fit Lab' });
         }
         const res = await Stripe.presentPaymentSheet();
-
         if (res?.paymentResult === 'paymentSheetCompleted') {
-          setShowThanks(true);
-          // 1) Notificación in-app verificada en el servidor (log)
+          // Pedido pagado: notificación verificada (servidor) + push (cliente, camino probado)
           supabase.functions.invoke('stripe-cafe-notify', { body: { paymentIntentId: data.paymentIntentId } });
-          // 2) PUSH por el mismo camino que el admin (cliente → send-push, sin log para no duplicar)
-          if (user?.id) {
-            supabase.functions.invoke('send-push', {
-              body: {
-                userId: user.id,
-                title: 'Compra en cafetería ☕',
-                body: `Tu ${item.name} está listo. ¡Pásalo a recoger!`,
-                type: 'payment',
-                skipLog: true,
-              },
-            });
-          }
+          const resumen = cart.map(i => `${i.qty}× ${i.name}`).join(', ');
+          if (user?.id) supabase.functions.invoke('send-push', { body: { userId: user.id, title: 'Compra en cafetería ☕', body: `${resumen}. ¡Pásala a recoger!`, type: 'payment', skipLog: true } });
+          if (meta.gift?.recipient_user_id) supabase.functions.invoke('send-push', { body: { userId: meta.gift.recipient_user_id, title: '🎁 ¡Te enviaron un regalo!', body: meta.gift.message || `Te regalaron: ${resumen}`, type: 'payment', skipLog: true } });
+          setCart([]);
+          setShowThanks(true);
         }
-        // 'paymentSheetCanceled' / 'paymentSheetFailed' → no hacemos nada
       } else {
-        // Web: checkout hospedado de Stripe
-        const { data, error } = await supabase.functions.invoke('stripe-cafe-checkout', {
-          body: { items: [{ id: item.id, quantity: 1 }], userEmail: user?.email, userId: user?.id },
-        });
+        // Web: checkout hospedado (un solo producto por simplicidad en web)
+        const { data, error } = await supabase.functions.invoke('stripe-cafe-checkout', { body: { items: cart.map(i => ({ id: i.product_id, quantity: i.qty })), userEmail: user?.email, userId: user?.id } });
         if (error) throw new Error(error.message);
-        if (!data?.url) throw new Error('No se recibió URL de pago');
-        window.open(data.url, '_blank', 'noopener,noreferrer');
+        if (data?.url) window.open(data.url, '_blank', 'noopener,noreferrer');
       }
     } catch (err) {
-      console.error('Error iniciando pago de cafetería:', err);
-      alert('No se pudo iniciar el pago. Intenta de nuevo.');
+      console.error('Error en el pago:', err);
+      alert('No se pudo procesar el pago. Intenta de nuevo.');
     } finally {
-      setBuyingId(null);
+      setProcessing(false);
     }
   };
 
@@ -175,7 +180,7 @@ function Cafeteria() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '25px' }}>
                     <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>${item.price}</span>
-                    <button onClick={() => handleBuy(item)} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '30px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                    <button onClick={() => openProduct(item)} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '30px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
                       <ShoppingCart size={16} /> Agregar
                     </button>
                   </div>
@@ -220,7 +225,7 @@ function Cafeteria() {
                   
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', zIndex: 1 }}>
                     <span style={{ fontSize: '1.5rem', fontWeight: 800 }}>${item.price}</span>
-                    <button onClick={() => handleBuy(item)} style={{ background: 'black', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '30px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }} onMouseEnter={e => {e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.background = '#222'}} onMouseLeave={e => {e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'black'}}>
+                    <button onClick={() => openProduct(item)} style={{ background: 'black', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '30px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }} onMouseEnter={e => {e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.background = '#222'}} onMouseLeave={e => {e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'black'}}>
                       Comprar
                     </button>
                   </div>
@@ -252,7 +257,7 @@ function Cafeteria() {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
                       <span style={{ fontSize: '1.6rem', fontWeight: 800 }}>${item.price}</span>
-                      <button onClick={() => handleBuy(item)} style={{ background: 'linear-gradient(to right, #f97316, #ea580c)', color: 'white', border: 'none', padding: '12px 28px', borderRadius: '30px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(234,88,12,0.3)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                      <button onClick={() => openProduct(item)} style={{ background: 'linear-gradient(to right, #f97316, #ea580c)', color: 'white', border: 'none', padding: '12px 28px', borderRadius: '30px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(234,88,12,0.3)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
                         <ShoppingCart size={18} /> Pedir Ya
                       </button>
                     </div>
@@ -384,6 +389,55 @@ function Cafeteria() {
 
         </motion.div>
       </div>
+
+      {/* BOTÓN FLOTANTE DEL CARRITO */}
+      {cartCount > 0 && !selectedProduct && !showCart && !confirming && (
+        <motion.button
+          initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+          onClick={() => setShowCart(true)}
+          style={{ position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom,0px) + 20px)', left: '20px', right: '20px', zIndex: 3500, border: 'none', cursor: 'pointer', background: 'var(--primary)', color: '#fff', borderRadius: '20px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 12px 30px rgba(255,145,77,0.45)' }}>
+          <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '10px', minWidth: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{cartCount}</span>
+          <span style={{ flex: 1, textAlign: 'left', fontWeight: 800, fontSize: '1rem' }}>Ver carrito</span>
+          <span style={{ fontWeight: 900, fontSize: '1.05rem' }}>${cartTotal}</span>
+        </motion.button>
+      )}
+
+      {/* FICHA / PERSONALIZACIÓN */}
+      <AnimatePresence>
+        {selectedProduct && (
+          <CafeProductSheet product={selectedProduct} groups={optionGroups} onClose={() => setSelectedProduct(null)} onAdd={addToCart} />
+        )}
+      </AnimatePresence>
+
+      {/* CARRITO */}
+      <AnimatePresence>
+        {showCart && (
+          <CafeCartSheet cart={cart} products={available} onClose={() => setShowCart(false)} onUpdateQty={updateQty} onRemove={removeItem} onOpenProduct={(p) => { setShowCart(false); setSelectedProduct(p); }} onCheckout={startCheckout} />
+        )}
+      </AnimatePresence>
+
+      {/* CUENTA REGRESIVA DE CANCELACIÓN (5s) */}
+      <AnimatePresence>
+        {confirming && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 4500, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center' }}>
+            <div style={{ position: 'relative', width: '120px', height: '120px', marginBottom: '24px' }}>
+              <svg width="120" height="120" style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="8" />
+                <motion.circle cx="60" cy="60" r="52" fill="none" stroke="#fff" strokeWidth="8" strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 52}
+                  initial={{ strokeDashoffset: 0 }} animate={{ strokeDashoffset: 2 * Math.PI * 52 }} transition={{ duration: 5, ease: 'linear' }} />
+              </svg>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.6rem', fontWeight: 900, color: '#fff', fontFamily: 'var(--font-display)' }}>{countdown}</div>
+            </div>
+            <h2 style={{ color: '#fff', margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: '1.5rem' }}>Confirmando tu pedido…</h2>
+            <p style={{ color: 'rgba(255,255,255,0.8)', margin: '0 0 28px', fontSize: '0.95rem' }}>¿Te arrepentiste? Aún puedes cancelar.</p>
+            <button onClick={cancelCheckout} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.4)', padding: '14px 40px', borderRadius: '16px', fontWeight: 800, fontSize: '1rem', cursor: 'pointer' }}>
+              Cancelar
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* MODAL "¡GRACIAS!" tras el pago */}
       {showThanks && (
