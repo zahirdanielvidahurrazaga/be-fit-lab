@@ -1,6 +1,22 @@
 import React, { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
-import { X, Plus, Minus, Flame, ShoppingCart } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Plus, Minus, Flame, ShoppingCart, Check } from 'lucide-react';
+
+// Total tipo "ticker": el número se desliza/funde al cambiar (sensación premium).
+function AnimatedTotal({ value, prefix = '$' }) {
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex', minWidth: '1ch', justifyContent: 'center', overflow: 'hidden' }}>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span key={value}
+          initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -14, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+          style={{ display: 'inline-block' }}>
+          {prefix}{value}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  );
+}
 
 // Ficha de producto estilo Uber Eats: info + personalización + cantidad + notas.
 export default function CafeProductSheet({ product, groups, onClose, onAdd }) {
@@ -70,11 +86,14 @@ export default function CafeProductSheet({ product, groups, onClose, onAdd }) {
         style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 4000 }} />
       <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 32, stiffness: 320 }}
         style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 4001, maxHeight: '90vh', background: '#FDFBF7', borderTopLeftRadius: '28px', borderTopRightRadius: '28px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 -10px 40px rgba(0,0,0,0.25)' }}>
-        {/* Header con imagen */}
+        {/* Header con imagen (flota suavemente) */}
         <div style={{ position: 'relative' }}>
           {product.image_url ? (
-            <div style={{ height: '200px', background: 'linear-gradient(180deg,#F0E6DC,#FDFBF7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <img src={product.image_url} alt={product.name} style={{ maxHeight: '180px', maxWidth: '80%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
+            <div style={{ height: '200px', background: 'radial-gradient(120% 90% at 50% 18%, #F6EDE3 0%, #FDFBF7 75%)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              <motion.img src={product.image_url} alt={product.name}
+                initial={{ scale: 0.82, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: [0, -8, 0] }}
+                transition={{ scale: { type: 'spring', stiffness: 180, damping: 18 }, opacity: { duration: 0.4 }, y: { duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 } }}
+                style={{ maxHeight: '180px', maxWidth: '80%', objectFit: 'contain', mixBlendMode: /\.png(\?|$)/i.test(product.image_url) ? 'multiply' : 'normal', filter: /\.png(\?|$)/i.test(product.image_url) ? 'none' : 'drop-shadow(0 18px 24px rgba(80,50,30,0.22))' }} />
             </div>
           ) : <div style={{ height: '64px' }} />}
           <button onClick={onClose} aria-label="Cerrar" style={{ position: 'absolute', top: '16px', right: '16px', width: '36px', height: '36px', borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
@@ -83,8 +102,9 @@ export default function CafeProductSheet({ product, groups, onClose, onAdd }) {
         </div>
 
         <div style={{ overflowY: 'auto', padding: '20px 22px 0', flex: 1 }}>
-          <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: '#1A1C1E' }}>{product.name}</h2>
-          {product.description && <p style={{ margin: '0 0 12px', color: '#6B7280', fontSize: '0.92rem', lineHeight: 1.5 }}>{product.description}</p>}
+          <motion.h2 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+            style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: '#1A1C1E' }}>{product.name}</motion.h2>
+          {product.description && <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} style={{ margin: '0 0 12px', color: '#6B7280', fontSize: '0.92rem', lineHeight: 1.5 }}>{product.description}</motion.p>}
           {(product.cals || product.protein) && (
             <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }}>
               {product.cals != null && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.04)', padding: '5px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}><Flame size={14} color="#EF4444" /> {product.cals} cals</span>}
@@ -92,9 +112,9 @@ export default function CafeProductSheet({ product, groups, onClose, onAdd }) {
             </div>
           )}
 
-          {/* Grupos de personalización */}
-          {applicable.map(g => (
-            <div key={g.id} style={{ marginBottom: '20px' }}>
+          {/* Grupos de personalización (entrada escalonada) */}
+          {applicable.map((g, gi) => (
+            <motion.div key={g.id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 + gi * 0.07, type: 'spring', stiffness: 120, damping: 18 }} style={{ marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '10px' }}>
                 <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#1A1C1E' }}>{g.name}</h3>
                 {g.required && <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--primary)' }}>Requerido</span>}
@@ -102,21 +122,30 @@ export default function CafeProductSheet({ product, groups, onClose, onAdd }) {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {g.options.map(o => {
-                  const selected = g.selection_type === 'multi' ? (sel[g.id] || []).includes(o.id) : sel[g.id] === o.id;
+                  const multi = g.selection_type === 'multi';
+                  const selected = multi ? (sel[g.id] || []).includes(o.id) : sel[g.id] === o.id;
                   return (
-                    <button key={o.id} onClick={() => g.selection_type === 'multi' ? toggleMulti(g.id, o.id) : pickSingle(g.id, o.id)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '14px', cursor: 'pointer', textAlign: 'left',
-                        background: selected ? 'rgba(255,145,77,0.1)' : '#fff', border: `1.5px solid ${selected ? 'var(--primary)' : 'rgba(0,0,0,0.08)'}` }}>
-                      <span style={{ width: '20px', height: '20px', borderRadius: g.selection_type === 'multi' ? '6px' : '50%', border: `2px solid ${selected ? 'var(--primary)' : '#CBD5E1'}`, background: selected ? 'var(--primary)' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {selected && <span style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 900 }}>✓</span>}
+                    <motion.button key={o.id} onClick={() => multi ? toggleMulti(g.id, o.id) : pickSingle(g.id, o.id)}
+                      whileTap={{ scale: 0.975 }} animate={{ borderColor: selected ? 'var(--primary)' : 'rgba(0,0,0,0.08)', backgroundColor: selected ? 'rgba(255,145,77,0.10)' : 'rgba(255,255,255,1)' }} transition={{ duration: 0.18 }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '14px', cursor: 'pointer', textAlign: 'left', border: '1.5px solid rgba(0,0,0,0.08)', background: '#fff' }}>
+                      <span style={{ position: 'relative', width: '22px', height: '22px', borderRadius: multi ? '7px' : '50%', border: `2px solid ${selected ? 'var(--primary)' : '#CBD5E1'}`, background: selected ? 'var(--primary)' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-color .18s, background .18s' }}>
+                        <AnimatePresence>
+                          {selected && (
+                            <motion.span initial={{ scale: 0, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0 }} transition={{ type: 'spring', stiffness: 600, damping: 22 }} style={{ display: 'flex' }}>
+                              <Check size={13} color="#fff" strokeWidth={3.5} />
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
                       </span>
                       <span style={{ flex: 1, fontWeight: 600, fontSize: '0.92rem', color: '#1A1C1E' }}>{o.name}</span>
-                      {o.price_delta > 0 && <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#6B7280' }}>+${o.price_delta}</span>}
-                    </button>
+                      {o.price_delta > 0 && (
+                        <motion.span animate={{ color: selected ? 'var(--primary)' : '#6B7280', fontWeight: selected ? 800 : 700 }} style={{ fontSize: '0.85rem' }}>+${o.price_delta}</motion.span>
+                      )}
+                    </motion.button>
                   );
                 })}
               </div>
-            </div>
+            </motion.div>
           ))}
 
           {/* Notas */}
@@ -130,13 +159,16 @@ export default function CafeProductSheet({ product, groups, onClose, onAdd }) {
         {/* Footer: cantidad + agregar */}
         <div style={{ padding: '14px 22px', paddingBottom: 'calc(env(safe-area-inset-bottom,0px) + 16px)', borderTop: '1px solid rgba(0,0,0,0.06)', background: '#FDFBF7', display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: '#fff', borderRadius: '16px', padding: '8px 12px', border: '1.5px solid rgba(0,0,0,0.08)' }}>
-            <button onClick={() => setQty(q => Math.max(1, q - 1))} style={{ border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex' }}><Minus size={18} color="var(--primary)" /></button>
-            <span style={{ fontWeight: 800, minWidth: '18px', textAlign: 'center' }}>{qty}</span>
-            <button onClick={() => setQty(q => q + 1)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex' }}><Plus size={18} color="var(--primary)" /></button>
+            <motion.button whileTap={{ scale: 0.85 }} onClick={() => setQty(q => Math.max(1, q - 1))} style={{ border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex' }}><Minus size={18} color="var(--primary)" /></motion.button>
+            <span style={{ fontWeight: 800, minWidth: '18px', textAlign: 'center' }}>
+              <AnimatedTotal value={qty} prefix="" />
+            </span>
+            <motion.button whileTap={{ scale: 0.85 }} onClick={() => setQty(q => q + 1)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex' }}><Plus size={18} color="var(--primary)" /></motion.button>
           </div>
-          <button onClick={add} style={{ flex: 1, padding: '15px', borderRadius: '16px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 10px 24px rgba(255,145,77,0.35)' }}>
-            <ShoppingCart size={18} /> Agregar · ${lineTotal}
-          </button>
+          <motion.button onClick={add} whileTap={{ scale: 0.97 }}
+            style={{ flex: 1, padding: '15px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg, #FF914D, #E68245)', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 10px 24px rgba(255,145,77,0.4)' }}>
+            <ShoppingCart size={18} /> Agregar · <AnimatedTotal value={lineTotal} />
+          </motion.button>
         </div>
       </motion.div>
     </>

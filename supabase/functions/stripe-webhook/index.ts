@@ -2,6 +2,21 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'npm:stripe@14';
 
+// Avisa por push + in-app a todas las baristas que entró un pedido nuevo.
+async function notifyBaristas(supabase: any, summary: string, orderId: string) {
+  const { data: baristas } = await supabase.from('users').select('id').eq('role', 'BARISTA');
+  if (!baristas?.length) return;
+  const title = 'Nuevo pedido ☕';
+  const body = summary ? `${summary}` : 'Tienes un pedido nuevo por preparar.';
+  await Promise.allSettled(baristas.map((b: any) =>
+    fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
+      body: JSON.stringify({ userId: b.id, title, body, type: 'general', data: { kind: 'new_order', order_id: orderId || '' } }),
+    }),
+  ));
+}
+
 serve(async (req) => {
   const body = await req.text();
   const signature = req.headers.get('stripe-signature') ?? '';
@@ -31,24 +46,42 @@ serve(async (req) => {
 
       const { supabase_user_id, plan_title, class_count } = session.metadata ?? {};
 
-      // Pago de CAFETERÍA: no toca membresía; registra el resumen de compra
-      // en notification_logs para que aparezca en el centro de notificaciones.
+      // Pago de CAFETERÍA: no toca membresía. Marca el pedido como pagado (para
+      // que el barista lo vea y el cliente tenga tracking) y avisa por push + in-app.
       if (session.metadata?.type === 'cafeteria') {
-        if (supabase_user_id) {
-          let titulo = 'Compra en cafetería ☕';
-          let cuerpo = '¡Tu pedido está listo, pásalo a recoger!';
+        const orderId = session.metadata?.order_id;
+        let order: any = null;
+
+        // Marcar pagado de forma IDEMPOTENTE: solo procede si seguía pendiente
+        // (evita doble notificación si Stripe reintenta el webhook).
+        if (orderId) {
+          const { data: updated } = await supabase.from('cafe_orders')
+            .update({ status: 'paid', payment_intent_id: (session.payment_intent as string) ?? null })
+            .eq('id', orderId).eq('status', 'pending_payment')
+            .select('*').maybeSingle();
+          if (!updated) return new Response('ok'); // ya procesado o no encontrado
+          order = updated;
+        }
+
+        // Resumen de la compra (preferir el snapshot del pedido)
+        let resumen = '';
+        if (order?.items?.length) {
+          resumen = order.items.map((i: any) => `${i.qty}× ${i.name}`).join(', ');
+        } else {
           try {
             const li = await stripe.checkout.sessions.listLineItems(session.id, { limit: 20 });
-            const resumen = li.data.map(x => `${x.quantity}× ${x.description}`).join(', ');
-            const total = Math.round((session.amount_total ?? 0) / 100);
-            cuerpo = `${resumen} — Total $${total} MXN. ¡Pásala a recoger!`;
+            resumen = li.data.map(x => `${x.quantity}× ${x.description}`).join(', ');
           } catch (e) { console.error('Error armando resumen cafetería:', e); }
+        }
 
-          // 1) Registrar el log DIRECTO (garantiza la notificación in-app)
+        const titulo = 'Pedido confirmado';
+        const cuerpo = `${resumen ? resumen + '. ' : ''}¡Ya lo estamos preparando!`;
+
+        // Avisar al comprador (in-app + push)
+        if (supabase_user_id) {
           await supabase.from('notification_logs').insert({
             user_id: supabase_user_id, type: 'payment', title: titulo, body: cuerpo, status: 'sent',
           });
-          // 2) Mandar el PUSH (sin volver a registrar el log → skipLog)
           try {
             await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push`, {
               method: 'POST',
@@ -56,6 +89,23 @@ serve(async (req) => {
               body: JSON.stringify({ userId: supabase_user_id, title: titulo, body: cuerpo, type: 'payment', skipLog: true }),
             });
           } catch (e) { console.error('Error enviando push cafetería:', e); }
+        }
+
+        // Avisar a las baristas del nuevo pedido (push + in-app)
+        await notifyBaristas(supabase, resumen, orderId || '');
+
+        // Si es regalo con cuenta destinataria, avisarle también
+        const recipientId = order?.gift_recipient_user_id;
+        if (recipientId && recipientId !== supabase_user_id) {
+          const gtitulo = '¡Te enviaron un regalo! 🎁';
+          const gcuerpo = order?.gift_message || `Te regalaron: ${resumen || 'un pedido de la cafetería'}`;
+          try {
+            await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
+              body: JSON.stringify({ userId: recipientId, title: gtitulo, body: gcuerpo, type: 'payment' }),
+            });
+          } catch (e) { console.error('Error enviando push regalo cafetería:', e); }
         }
         return new Response('ok');
       }

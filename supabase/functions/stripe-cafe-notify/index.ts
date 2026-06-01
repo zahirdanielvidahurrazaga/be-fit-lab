@@ -7,6 +7,21 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Avisa por push + in-app a todas las baristas que entró un pedido nuevo.
+async function notifyBaristas(supabase: any, summary: string, orderId: string) {
+  const { data: baristas } = await supabase.from('users').select('id').eq('role', 'BARISTA');
+  if (!baristas?.length) return;
+  const title = 'Nuevo pedido ☕';
+  const body = summary ? `${summary}` : 'Tienes un pedido nuevo por preparar.';
+  await Promise.allSettled(baristas.map((b: any) =>
+    fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
+      body: JSON.stringify({ userId: b.id, title, body, type: 'general', data: { kind: 'new_order', order_id: orderId || '' } }),
+    }),
+  ));
+}
+
 // Tras completar la PaymentSheet: verifica que el PaymentIntent esté pagado,
 // marca el pedido como 'paid' (idempotente) y registra las notificaciones in-app
 // (comprador y, si es regalo, destinatario). Los PUSH los dispara el cliente.
@@ -49,6 +64,9 @@ serve(async (req) => {
         body: order.gift_message ? `"${order.gift_message}" — ${summary}` : `Te regalaron: ${summary}`, status: 'sent',
       });
     }
+
+    // Avisar a las baristas del nuevo pedido (push + in-app)
+    await notifyBaristas(supabase, String(summary), orderId || '');
 
     return Response.json({ ok: true }, { headers: corsHeaders });
   } catch (err: unknown) {

@@ -11,6 +11,14 @@ import CafeCartSheet from '../components/CafeCartSheet';
 import CafeOrderTracking from '../components/CafeOrderTracking';
 import CafeOrderHistory from '../components/CafeOrderHistory';
 
+// Los cafés sembrados son PNG con fondo blanco (necesitan multiply para integrarse);
+// las fotos subidas desde Admin son JPEG y van con blend normal.
+const imgBlend = (url) => /\.png(\?|$)/i.test(url || '') ? 'multiply' : 'normal';
+
+// Stagger de las tarjetas al entrar (se re-dispara al cambiar de pestaña).
+const gridStagger = { hidden: {}, visible: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } } };
+const cardItem = { hidden: { opacity: 0, y: 22, scale: 0.97 }, visible: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 130, damping: 18 } } };
+
 function Cafeteria() {
   const navigate = useNavigate();
   const { user, cafeProducts } = useAuth();
@@ -39,6 +47,20 @@ function Cafeteria() {
 
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
   const cartTotal = cart.reduce((s, i) => s + i.lineTotal, 0);
+
+  // Pestañas por categoría (Especiales/Temporada primero)
+  const TABS = [
+    { key: 'temporada', label: 'Especiales', items: temporadaItems },
+    { key: 'coffee', label: 'Ice Coffee', items: coffeeItems },
+    { key: 'smoothie', label: 'Coffee Lab', items: smoothieItems },
+  ];
+  const visibleTabs = TABS.filter(t => t.items.length > 0);
+  const [activeCat, setActiveCat] = useState('temporada');
+  // Si la categoría activa no tiene productos (al cargar), saltar a la primera disponible
+  useEffect(() => {
+    const keys = visibleTabs.map(t => t.key);
+    if (keys.length && !keys.includes(activeCat)) setActiveCat(keys[0]);
+  }, [cafeProducts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -127,8 +149,8 @@ function Cafeteria() {
           if (data.orderId) setTrackingOrderId(data.orderId); else setShowThanks(true);
         }
       } else {
-        // Web: checkout hospedado (un solo producto por simplicidad en web)
-        const { data, error } = await supabase.functions.invoke('stripe-cafe-checkout', { body: { items: cart.map(i => ({ id: i.product_id, quantity: i.qty })), userEmail: user?.email, userId: user?.id } });
+        // Web: checkout hospedado con personalización completa (mismo carrito que el nativo)
+        const { data, error } = await supabase.functions.invoke('stripe-cafe-checkout', { body });
         if (error) throw new Error(error.message);
         if (data?.url) window.open(data.url, '_blank', 'noopener,noreferrer');
       }
@@ -158,7 +180,7 @@ function Cafeteria() {
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%)', backdropFilter: 'blur(3px)' }}></div>
         
         {/* NAV BUTTON */}
-        <div style={{ position: 'absolute', top: isNative ? '40px' : '30px', left: isNative ? '15px' : '30px', zIndex: 10 }}>
+        <div style={{ position: 'absolute', top: isNative ? 'calc(env(safe-area-inset-top, 44px) + 10px)' : '30px', left: isNative ? '15px' : '30px', zIndex: 10 }}>
           <button
             onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/'); }}
             className="glass-button"
@@ -169,7 +191,7 @@ function Cafeteria() {
         </div>
 
         {/* MIS PEDIDOS (historial) */}
-        <div style={{ position: 'absolute', top: isNative ? '40px' : '30px', right: isNative ? '15px' : '30px', zIndex: 10 }}>
+        <div style={{ position: 'absolute', top: isNative ? 'calc(env(safe-area-inset-top, 44px) + 10px)' : '30px', right: isNative ? '15px' : '30px', zIndex: 10 }}>
           <button
             onClick={() => setShowHistory(true)}
             className="glass-button"
@@ -195,21 +217,37 @@ function Cafeteria() {
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: isNative ? '30px 20px' : '60px 40px' }}>
         
         <motion.div variants={containerVariants} initial="hidden" animate="visible">
-          
+
+          {/* TABS por categoría (liquid glass) */}
+          <motion.div variants={itemVariants} style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '34px' }}>
+            {visibleTabs.map(t => {
+              const active = activeCat === t.key;
+              return (
+                <motion.button key={t.key} onClick={() => setActiveCat(t.key)} whileTap={{ scale: 0.94 }} animate={{ scale: active ? 1.04 : 1 }} transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                  style={{ border: '1px solid rgba(255,255,255,0.65)', borderRadius: '999px', padding: '11px 22px', cursor: 'pointer', fontWeight: 800, fontSize: '0.92rem', whiteSpace: 'nowrap',
+                    background: active ? 'linear-gradient(135deg, #FF914D, #E68245)' : 'rgba(255,255,255,0.5)', color: active ? '#fff' : 'var(--on-surface-variant)',
+                    backdropFilter: 'blur(16px) saturate(180%)', WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+                    boxShadow: active ? '0 12px 26px rgba(255,145,77,0.42), inset 0 1px 0 rgba(255,255,255,0.4)' : '0 4px 14px rgba(80,50,30,0.07), inset 0 1px 0 rgba(255,255,255,0.7)' }}>
+                  {t.label}
+                </motion.button>
+              );
+            })}
+          </motion.div>
+
+          {/* CONTENIDO DE LA PESTAÑA ACTIVA (anima al cambiar) */}
+          <AnimatePresence mode="wait">
+          <motion.div key={activeCat} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.24 }}>
+
           {/* CATEGORY: ICE COFFEE */}
-          {coffeeItems.length > 0 && (
-          <motion.div variants={itemVariants} style={{ marginBottom: '50px' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', borderBottom: '2px solid rgba(0,0,0,0.1)', paddingBottom: '15px', marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              Ice Coffee
-            </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+          {activeCat === 'coffee' && coffeeItems.length > 0 && (
+          <motion.div variants={gridStagger} initial="hidden" animate="visible" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
               {coffeeItems.map(item => (
-                <div key={item.id} style={{ background: 'white', borderRadius: '20px', padding: '25px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <motion.div key={item.id} variants={cardItem} style={{ background: 'white', borderRadius: '20px', padding: '25px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   
                   {/* IMAGE */}
                   {item.image_url && (
                     <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }}>
-                      <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', mixBlendMode: 'multiply' }} />
+                      <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', mixBlendMode: imgBlend(item.image_url) }} />
                     </div>
                   )}
 
@@ -223,26 +261,26 @@ function Cafeteria() {
                       <ShoppingCart size={16} /> Agregar
                     </button>
                   </div>
-                </div>
+                </motion.div>
               ))}
-            </div>
           </motion.div>
           )}
 
           {/* CATEGORY: SMOOTHIES */}
-          {smoothieItems.length > 0 && (
-          <motion.div variants={itemVariants} style={{ marginBottom: '50px' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', borderBottom: '2px solid rgba(0,0,0,0.1)', paddingBottom: '15px', marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              Coffee Lab & Smoothies
-            </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' }}>
+          {activeCat === 'smoothie' && smoothieItems.length > 0 && (
+          <motion.div variants={gridStagger} initial="hidden" animate="visible" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' }}>
               {smoothieItems.map(item => (
-                <div key={item.id} style={{ background: 'linear-gradient(145deg, #ffffff, #fdfbf7)', borderRadius: '24px', padding: '25px', boxShadow: '0 15px 35px rgba(0,0,0,0.06)', border: '1px solid rgba(255,145,77,0.15)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
+                <motion.div key={item.id} variants={cardItem} style={{ background: 'linear-gradient(145deg, #ffffff, #fdfbf7)', borderRadius: '24px', padding: '25px', boxShadow: '0 15px 35px rgba(0,0,0,0.06)', border: '1px solid rgba(255,145,77,0.15)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
                   
                   {/* Decorative blob */}
                   <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', background: 'rgba(255,145,77,0.05)', borderRadius: '50%', zIndex: 0 }}></div>
                   
                   <div style={{ zIndex: 1 }}>
+                    {item.image_url && (
+                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                        <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" style={{ width: '160px', height: '160px', objectFit: 'cover', borderRadius: '50%', boxShadow: '0 12px 26px rgba(80,50,30,0.18)', mixBlendMode: imgBlend(item.image_url) }} />
+                      </div>
+                    )}
                     <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '0 0 5px 0' }}>{item.name}</h3>
                     <p style={{ color: '#6B7280', fontSize: '0.85rem', margin: '0 0 15px 0', lineHeight: 1.4 }}>{item.description}</p>
                     
@@ -268,22 +306,22 @@ function Cafeteria() {
                       Comprar
                     </button>
                   </div>
-                </div>
+                </motion.div>
               ))}
-            </div>
           </motion.div>
           )}
 
           {/* CATEGORY: TEMPORADA */}
-          {temporadaItems.length > 0 && (
-          <motion.div variants={itemVariants} style={{ marginBottom: '60px' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', borderBottom: '2px solid rgba(0,0,0,0.1)', paddingBottom: '15px', marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              Bebidas de Temporada
-            </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
+          {activeCat === 'temporada' && temporadaItems.length > 0 && (
+          <motion.div variants={gridStagger} initial="hidden" animate="visible" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
               {temporadaItems.map(item => (
-                <div key={item.id} style={{ background: 'linear-gradient(135deg, #FFD194 0%, #70E1F5 100%)', padding: '2px', borderRadius: '26px' }}>
+                <motion.div key={item.id} variants={cardItem} style={{ background: 'linear-gradient(135deg, #FFD194 0%, #70E1F5 100%)', padding: '2px', borderRadius: '26px' }}>
                   <div style={{ background: 'white', borderRadius: '24px', padding: '30px', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
+                    {item.image_url && (
+                      <div style={{ margin: '-10px -10px 18px', borderRadius: '18px', overflow: 'hidden', height: '180px', background: '#F6EDE3' }}>
+                        <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: imgBlend(item.image_url) === 'multiply' ? 'contain' : 'cover', mixBlendMode: imgBlend(item.image_url) }} />
+                      </div>
+                    )}
                     <h3 style={{ fontSize: '1.5rem', fontWeight: 800, margin: '0 0 10px 0' }}>{item.name}</h3>
                     <p style={{ color: '#4B5563', fontSize: '0.95rem', margin: '0 0 20px 0', lineHeight: 1.5 }}>{item.description}</p>
                     <div style={{ display: 'flex', gap: '10px', marginBottom: '25px' }}>
@@ -301,11 +339,13 @@ function Cafeteria() {
                       </button>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
-            </div>
           </motion.div>
           )}
+
+          </motion.div>
+          </AnimatePresence>
 
           {/* INFORMACIÓN EXTRA WIDGETS CAROUSEL (Estilo Precios) */}
           <motion.div variants={itemVariants} style={{ position: 'relative', width: '100%', maxWidth: '1000px', margin: '60px auto 40px', height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
