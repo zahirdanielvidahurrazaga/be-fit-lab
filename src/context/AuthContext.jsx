@@ -258,6 +258,15 @@ export const AuthProvider = ({ children }) => {
       if (isNative && session?.user) {
         localStorage.setItem('befit_remember_me', '1');
       }
+      // Si volvemos de un pago web (redirect a Stripe y de regreso), el sessionStorage
+      // del tab pudo perderse en el viaje. Restaurar el flag para NO cerrar la sesión.
+      if (!isNative && session?.user) {
+        const payReturn = localStorage.getItem('befit_payment_return');
+        if (payReturn && (Date.now() - Number(payReturn) < 15 * 60 * 1000)) {
+          sessionStorage.setItem('befit_session_active', '1');
+        }
+        localStorage.removeItem('befit_payment_return');
+      }
       // En web: auto-signout si el usuario no marcó "mantener sesión" y no hay sesión de tab activa
       if (!isNative && session?.user && !localStorage.getItem('befit_remember_me') && !sessionStorage.getItem('befit_session_active')) {
         await supabase.auth.signOut();

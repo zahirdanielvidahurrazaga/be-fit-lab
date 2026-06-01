@@ -213,7 +213,13 @@ function Cafeteria() {
         // como popup (por eso "no salía el pago"). El success_url regresa a /cafeteria.
         const { data, error } = await supabase.functions.invoke('stripe-cafe-checkout', { body });
         if (error) throw new Error(error.message);
-        if (data?.url) { window.location.href = data.url; return; }
+        if (data?.url) {
+          // Marca para que al volver de Stripe NO se haga auto-signout (el sessionStorage
+          // del tab puede perderse en el viaje cross-dominio). Sobrevive en localStorage.
+          localStorage.setItem('befit_payment_return', String(Date.now()));
+          window.location.href = data.url;
+          return;
+        }
       }
     } catch (err) {
       console.error('Error en el pago:', err);
@@ -243,7 +249,7 @@ function Cafeteria() {
         {/* NAV BUTTON */}
         <div style={{ position: 'absolute', top: isNative ? 'calc(env(safe-area-inset-top, 44px) + 10px)' : '30px', left: isNative ? '15px' : '30px', zIndex: 10 }}>
           <button
-            onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/'); }}
+            onClick={() => navigate(user ? '/portal' : '/')}
             className="glass-button"
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontSize: '0.9rem', color: 'white', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.3)' }}
           >
