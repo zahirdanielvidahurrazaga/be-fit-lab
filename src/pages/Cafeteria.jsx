@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { Stripe } from '@capacitor-community/stripe';
-import { ChevronLeft, ChevronRight, Coffee, Flame, Info, AlertCircle, ShoppingCart, ShoppingBag, CheckCircle2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Coffee, Flame, Info, AlertCircle, ShoppingCart, ShoppingBag, CheckCircle2, X, Receipt } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import CafeProductSheet from '../components/CafeProductSheet';
 import CafeCartSheet from '../components/CafeCartSheet';
 import CafeOrderTracking from '../components/CafeOrderTracking';
+import CafeOrderHistory from '../components/CafeOrderHistory';
 
 function Cafeteria() {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ function Cafeteria() {
   const [processing, setProcessing] = useState(false);
   const [trackingOrderId, setTrackingOrderId] = useState(null); // seguimiento del pedido
   const [activeOrders, setActiveOrders] = useState([]);          // pedidos en curso del usuario
+  const [showHistory, setShowHistory] = useState(false);         // historial de pedidos del usuario
 
   // Catálogo desde la BD (precios server-side). Solo productos disponibles.
   const available = (cafeProducts || []).filter(p => p.available !== false);
@@ -74,10 +76,10 @@ function Cafeteria() {
 
   // Bloquear el scroll del fondo cuando hay una hoja/overlay abierto
   useEffect(() => {
-    const open = selectedProduct || showCart || confirming || processing || showThanks || trackingOrderId;
+    const open = selectedProduct || showCart || confirming || processing || showThanks || trackingOrderId || showHistory;
     document.body.style.overflow = open ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
-  }, [selectedProduct, showCart, confirming, processing, showThanks, trackingOrderId]);
+  }, [selectedProduct, showCart, confirming, processing, showThanks, trackingOrderId, showHistory]);
 
   const nextWidget = () => setActiveWidgetIndex((prev) => (prev + 1) % 3);
   const prevWidget = () => setActiveWidgetIndex((prev) => (prev - 1 + 3) % 3);
@@ -163,6 +165,17 @@ function Cafeteria() {
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontSize: '0.9rem', color: 'white', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.3)' }}
           >
             <ChevronLeft size={18} /> Volver
+          </button>
+        </div>
+
+        {/* MIS PEDIDOS (historial) */}
+        <div style={{ position: 'absolute', top: isNative ? '40px' : '30px', right: isNative ? '15px' : '30px', zIndex: 10 }}>
+          <button
+            onClick={() => setShowHistory(true)}
+            className="glass-button"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', fontSize: '0.9rem', color: 'white', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.3)' }}
+          >
+            <Receipt size={17} /> Mis pedidos
           </button>
         </div>
 
@@ -471,8 +484,8 @@ function Cafeteria() {
         <motion.button
           initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
           onClick={() => setTrackingOrderId(activeOrders[0].id)}
-          style={{ position: 'fixed', left: '20px', right: '20px', bottom: cartCount > 0 ? 'calc(env(safe-area-inset-bottom,0px) + 86px)' : 'calc(env(safe-area-inset-bottom,0px) + 20px)', zIndex: 3500, border: '1px solid rgba(255,255,255,0.16)', cursor: 'pointer', background: 'rgba(43,33,28,0.92)', backdropFilter: 'blur(16px) saturate(160%)', WebkitBackdropFilter: 'blur(16px) saturate(160%)', color: '#fff', borderRadius: '20px', padding: '13px 18px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 12px 30px rgba(43,33,28,0.4)' }}>
-          <Coffee size={22} color="#FFB7A8" />
+          style={{ position: 'fixed', left: '20px', right: '20px', bottom: cartCount > 0 ? 'calc(env(safe-area-inset-bottom,0px) + 86px)' : 'calc(env(safe-area-inset-bottom,0px) + 20px)', zIndex: 3500, border: '1px solid rgba(255,255,255,0.28)', cursor: 'pointer', background: 'rgba(58,44,36,0.46)', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', color: '#fff', borderRadius: '20px', padding: '13px 18px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 12px 34px rgba(43,33,28,0.28), inset 0 1px 0 rgba(255,255,255,0.18)' }}>
+          <Coffee size={22} color="#FFC9BC" />
           <span style={{ flex: 1, textAlign: 'left' }}>
             <span style={{ display: 'block', fontSize: '0.7rem', opacity: 0.7, fontWeight: 600 }}>Tu pedido en curso</span>
             <span style={{ fontWeight: 800, fontSize: '0.95rem' }}>{orderStatusLabel(activeOrders[0].status)}</span>
@@ -480,6 +493,17 @@ function Cafeteria() {
           <span style={{ fontSize: '0.85rem', fontWeight: 700, opacity: 0.9 }}>Ver ›</span>
         </motion.button>
       )}
+
+      {/* HISTORIAL DE PEDIDOS */}
+      <AnimatePresence>
+        {showHistory && (
+          <CafeOrderHistory
+            userId={user?.id}
+            onClose={() => setShowHistory(false)}
+            onOpenOrder={(id) => { setShowHistory(false); setTrackingOrderId(id); }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* SEGUIMIENTO DEL PEDIDO (estilo Uber Eats) */}
       <AnimatePresence>

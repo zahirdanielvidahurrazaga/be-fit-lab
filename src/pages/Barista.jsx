@@ -89,10 +89,19 @@ function Barista() {
     const next = META[order.status]?.next;
     if (!next) return;
     setOrders(os => os.map(o => o.id === order.id ? { ...o, status: next } : o));
-    await supabase.from('cafe_orders').update({ status: next }).eq('id', order.id);
-    // Avisar a la clienta cuando su pedido está listo (push + notificación)
-    if (next === 'ready' && order.user_id) {
-      supabase.functions.invoke('send-push', { body: { userId: order.user_id, title: '¡Tu pedido está listo!', body: 'Pásalo a recoger en el mostrador.', type: 'payment' } });
+    const { error: upErr } = await supabase.from('cafe_orders').update({ status: next }).eq('id', order.id);
+    if (upErr) { console.error('No se pudo actualizar el pedido:', upErr); fetchOrders(); return; }
+    // Avisar a la clienta cuando su pedido está listo (push + notificación in-app).
+    // El destinatario es quien recoge: en un regalo, la persona regalada (si tiene cuenta); si no, quien compró.
+    if (next === 'ready') {
+      const recipientId = order.gift_recipient_user_id || order.user_id;
+      if (recipientId) {
+        const { data, error } = await supabase.functions.invoke('send-push', {
+          body: { userId: recipientId, title: '¡Tu pedido está listo!', body: 'Pásalo a recoger en el mostrador.', type: 'payment' },
+        });
+        if (error) console.error('send-push (pedido listo) falló:', error);
+        else console.log('send-push (pedido listo) ok:', data);
+      }
     }
   };
 
