@@ -319,7 +319,7 @@ export default function Eventos() {
                   <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', background: 'rgba(255,145,77,0.2)', borderRadius: '50%', filter: 'blur(34px)' }} />
                   <div style={{ position: 'relative', zIndex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '6px' }}><Sparkles size={14} color={PRIMARY} /><span style={{ fontSize: '0.64rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Próximo evento</span></div>
-                    <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: '0 0 16px', lineHeight: 1.1 }}>{next.title}</h2>
+                    <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: '0 0 16px', lineHeight: 1.1, color: '#fff' }}>{next.title}</h2>
                     <Countdown date={next.event_date} />
                   </div>
                 </div>

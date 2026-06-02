@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DollarSign, TrendingUp, Users, Coffee, CalendarDays, Award, CreditCard, Gift, Activity, Crown, Receipt, BarChart3 } from 'lucide-react';
+import { DollarSign, TrendingUp, Users, Coffee, CalendarDays, Award, CreditCard, Gift, Activity, Crown, Receipt, BarChart3, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -254,12 +254,13 @@ export default function AdminReportes() {
                   <SectionTitle>Por tipo de venta</SectionTitle>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {(() => {
-                      const tot = Math.max(1, fin.byType.membresia + fin.byType.cafeteria);
+                      const tot = Math.max(1, fin.byType.membresia + fin.byType.cafeteria + (fin.byType.evento || 0));
                       return [
-                        { name: 'Membresías', v: fin.byType.membresia, Icon: Crown },
-                        { name: 'Cafetería', v: fin.byType.cafeteria, Icon: Coffee },
-                      ].map((x, i) => (
-                        <RankRow key={i} rank={i + 1} top={i === 0} title={x.name} value={money(x.v)} sub={`${Math.round((x.v / tot) * 100)}% de los ingresos`} pct={(x.v / tot) * 100} />
+                        { name: 'Membresías', v: fin.byType.membresia },
+                        { name: 'Cafetería', v: fin.byType.cafeteria },
+                        { name: 'Eventos', v: fin.byType.evento || 0 },
+                      ].sort((a, b) => b.v - a.v).map((x, i) => (
+                        <RankRow key={x.name} rank={i + 1} top={i === 0} title={x.name} value={money(x.v)} sub={`${Math.round((x.v / tot) * 100)}% de los ingresos`} pct={(x.v / tot) * 100} />
                       ));
                     })()}
                   </div>
@@ -275,8 +276,8 @@ export default function AdminReportes() {
                     {fin.recent.length === 0 ? <div style={{ padding: '20px', textAlign: 'center', color: 'var(--on-surface-variant)' }}>Sin transacciones</div>
                     : fin.recent.map((t, i) => (
                       <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i ? '1px solid rgba(0,0,0,0.04)' : 'none' }}>
-                        <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: t.type === 'cafeteria' ? 'rgba(255,145,77,0.12)' : 'rgba(26,28,30,0.06)', color: t.type === 'cafeteria' ? PRIMARY : INK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          {t.type === 'cafeteria' ? <Coffee size={16} /> : <Crown size={16} />}
+                        <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: t.type === 'cafeteria' ? 'rgba(255,145,77,0.12)' : t.type === 'evento' ? 'rgba(224,122,156,0.14)' : 'rgba(26,28,30,0.06)', color: t.type === 'cafeteria' ? PRIMARY : t.type === 'evento' ? '#E07A9C' : INK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          {t.type === 'cafeteria' ? <Coffee size={16} /> : t.type === 'evento' ? <Sparkles size={16} /> : <Crown size={16} />}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 700, fontSize: '0.85rem', color: INK, textTransform: 'capitalize' }}>{t.type}</div>

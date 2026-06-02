@@ -46,18 +46,21 @@ serve(async (req) => {
     // de que la metadata del PI esté presente).
     const { data: cafeOrders } = await supabase.from('cafe_orders').select('payment_intent_id').not('payment_intent_id', 'is', null);
     const cafePIs = new Set((cafeOrders || []).map((o: any) => o.payment_intent_id));
+    const { data: eventRegs } = await supabase.from('event_registrations').select('payment_intent_id').not('payment_intent_id', 'is', null);
+    const eventPIs = new Set((eventRegs || []).map((o: any) => o.payment_intent_id));
 
     const mxn = (c: number) => Math.round((c || 0)) / 100;
     const piIdOf = (ch: any) => typeof ch.payment_intent === 'string' ? ch.payment_intent : ch.payment_intent?.id;
-    const typeOf = (ch: any): 'cafeteria' | 'membresia' => {
+    const typeOf = (ch: any): 'cafeteria' | 'membresia' | 'evento' => {
       const t = ch.payment_intent?.metadata?.type || ch.metadata?.type;
+      if (t === 'event' || eventPIs.has(piIdOf(ch))) return 'evento';
       if (t === 'cafeteria' || cafePIs.has(piIdOf(ch))) return 'cafeteria';
       return 'membresia';
     };
 
     let gross = 0, net = 0, fees = 0, count = 0, refunded = 0;
     const byDay: Record<string, number> = {};
-    const byType: Record<string, number> = { cafeteria: 0, membresia: 0 };
+    const byType: Record<string, number> = { cafeteria: 0, membresia: 0, evento: 0 };
     const recent: any[] = [];
 
     for (const ch of charges) {
@@ -106,7 +109,7 @@ serve(async (req) => {
       mode: (Deno.env.get('STRIPE_SECRET_KEY') || '').startsWith('sk_live') ? 'live' : 'test',
       gross: Math.round(gross), net: Math.round(net), fees: Math.round(fees),
       refunded: Math.round(refunded), count,
-      byType: { cafeteria: Math.round(byType.cafeteria), membresia: Math.round(byType.membresia) },
+      byType: { cafeteria: Math.round(byType.cafeteria), membresia: Math.round(byType.membresia), evento: Math.round(byType.evento) },
       series, recent,
       avgTicket: count ? Math.round(gross / count) : 0,
     }, { headers: corsHeaders });
