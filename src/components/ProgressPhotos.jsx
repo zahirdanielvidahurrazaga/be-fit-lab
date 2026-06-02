@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Plus, Sparkles, Lock, X, Check, CalendarClock, Info, Image as ImageIcon, RotateCcw, ChevronLeft } from 'lucide-react';
+import { Camera, Plus, Sparkles, Lock, X, Check, CalendarClock, Info, Image as ImageIcon, RotateCcw, ChevronLeft, Trash2, Columns } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { compressCafeImage } from '../lib/cafeImage';
 
@@ -11,44 +11,38 @@ const SIX_WEEKS = 42 * 24 * 60 * 60 * 1000;
 // Figura humana semitransparente que orienta a la clienta sobre cómo pararse.
 // Respira sutilmente (motion) para que se note que es una guía.
 function PoseGuide({ angle }) {
-  const stroke = 'rgba(255,255,255,0.9)';
-  const sw = 12;
-  const line = { fill: 'none', stroke, strokeWidth: sw, strokeLinecap: 'round', strokeLinejoin: 'round' };
+  const stroke = 'rgba(255,255,255,0.85)';
+  const line = { fill: 'none', stroke, strokeWidth: 8, strokeLinecap: 'round', strokeLinejoin: 'round' };
 
-  // Vista frontal: brazos ligeramente separados, piernas a la anchura de cadera
   const Front = (
-    <g {...line}>
-      <circle cx="60" cy="34" r="18" fill={stroke} stroke="none" />
-      <line x1="60" y1="54" x2="60" y2="152" />
-      <line x1="36" y1="68" x2="84" y2="68" />
-      <line x1="36" y1="68" x2="24" y2="148" />
-      <line x1="84" y1="68" x2="96" y2="148" />
-      <line x1="60" y1="152" x2="44" y2="256" />
-      <line x1="60" y1="152" x2="76" y2="256" />
-    </g>
+    <>
+      <path d="M60 52 C48 52 42 38 42 26 C42 14 48 4 60 4 C72 4 78 14 78 26 C78 38 72 52 60 52 Z" fill={stroke} />
+      {/* Torso & Hips */}
+      <path d="M60 58 C35 58 28 80 30 110 C32 140 38 150 38 150 L38 270 C38 276 48 276 48 270 L48 155 L60 155 L72 155 L72 270 C72 276 82 276 82 270 L82 150 C82 150 88 140 90 110 C92 80 85 58 60 58 Z" {...line} />
+      {/* Arms */}
+      <path d="M30 80 C15 110 12 145 12 160 M90 80 C105 110 108 145 108 160" {...line} />
+    </>
   );
 
-  // Perfil (de lado): un solo brazo visible, "nariz" apuntando hacia el lado
   const Side = (
-    <g {...line}>
-      <circle cx="62" cy="34" r="17" fill={stroke} stroke="none" />
-      <path d="M47 28 L33 34 L47 40 Z" fill={stroke} stroke="none" />
-      <line x1="62" y1="52" x2="59" y2="152" />
-      <line x1="61" y1="70" x2="57" y2="138" />
-      <line x1="59" y1="152" x2="52" y2="256" />
-      <line x1="59" y1="152" x2="66" y2="254" />
-    </g>
+    <>
+      <path d="M55 52 C45 52 40 40 40 28 C40 16 48 6 58 6 C68 6 72 18 70 30 C68 42 63 52 55 52 Z M40 28 C35 32 30 35 30 35 C35 40 40 42 45 42" fill={stroke} strokeLinecap="round" strokeLinejoin="round" />
+      {/* Torso side */}
+      <path d="M52 58 C40 65 38 90 42 110 C46 130 50 150 50 150 L45 270 C45 276 55 276 55 270 L60 155 L65 270 C65 276 75 276 75 270 L70 150 C70 150 75 130 75 110 C75 90 65 65 52 58 Z" {...line} />
+      {/* Arm side */}
+      <path d="M50 70 C40 100 38 135 38 150" {...line} />
+    </>
   );
 
   const content = angle === 'front' ? Front
     : angle === 'left' ? Side
-    : <g transform="translate(120,0) scale(-1,1)">{Side}</g>; // derecho = espejo
+    : <g transform="translate(120,0) scale(-1,1)">{Side}</g>;
 
   return (
     <motion.svg viewBox="0 0 120 280" preserveAspectRatio="xMidYMid meet"
       animate={{ opacity: [0.45, 0.8, 0.45], scale: [1, 1.015, 1] }}
       transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
-      style={{ width: '60%', height: '90%', filter: 'drop-shadow(0 0 8px rgba(0,0,0,0.5))' }}>
+      style={{ width: '65%', height: '95%', filter: 'drop-shadow(0 0 12px rgba(0,0,0,0.6))' }}>
       {content}
     </motion.svg>
   );
@@ -69,27 +63,84 @@ const glass = {
 };
 
 // ───────────────────────── Tarjeta con flip ─────────────────────────
-function FlipCard({ label, phrase, url }) {
+function FlipCard({ label, url, session, angleKey, onDeleteIndividual }) {
   const [flipped, setFlipped] = useState(false);
   return (
-    <div onClick={() => setFlipped(f => !f)} style={{ perspective: '1100px', cursor: 'pointer', aspectRatio: '3 / 4' }}>
+    <div style={{ perspective: '1100px', aspectRatio: '3 / 4' }}>
       <motion.div animate={{ rotateY: flipped ? 180 : 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         style={{ position: 'relative', width: '100%', height: '100%', transformStyle: 'preserve-3d' }}>
-        {/* Portada (frase aesthetic) */}
-        <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', borderRadius: '18px', overflow: 'hidden', background: 'linear-gradient(155deg, #2D2928 0%, #4A4544 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '14px' }}>
-          <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '90px', height: '90px', background: 'rgba(255,145,77,0.18)', borderRadius: '50%', filter: 'blur(26px)' }} />
-          <span style={{ position: 'relative', fontSize: '0.62rem', fontWeight: 800, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>{label}</span>
-          <p style={{ position: 'relative', fontFamily: "'Caveat', cursive", fontSize: '1.4rem', lineHeight: 1.2, color: '#fff', margin: 0, fontWeight: 600 }}>"{phrase}"</p>
-          <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.64rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}><Lock size={11} /> Toca para ver</span>
+        
+        {/* Portada (Logo) */}
+        <div onClick={() => setFlipped(true)} style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', borderRadius: '14px', overflow: 'hidden', background: 'var(--surface-lowest)', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '14px', boxShadow: '0 8px 32px rgba(0,0,0,0.05)', cursor: 'pointer' }}>
+          <img src="/logo2.png" alt="Be Fit Lab" style={{ width: '65%', objectFit: 'contain', opacity: 0.85, filter: 'drop-shadow(0 4px 12px rgba(255,145,77,0.2))' }} />
+          <span style={{ position: 'absolute', bottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontSize: '0.64rem', fontWeight: 700, color: 'var(--on-surface-variant)' }}><Lock size={11} /> {label}</span>
         </div>
+
         {/* Reverso (foto) */}
-        <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', borderRadius: '18px', overflow: 'hidden', background: '#1A1C1E' }}>
-          {url ? <img src={url} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)' }}><Camera size={28} /></div>}
-          <span style={{ position: 'absolute', bottom: '10px', left: '10px', fontSize: '0.66rem', fontWeight: 800, color: '#fff', background: 'rgba(0,0,0,0.5)', padding: '3px 9px', borderRadius: '8px', backdropFilter: 'blur(6px)' }}>{label}</span>
+        <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', borderRadius: '12px', overflow: 'hidden', background: '#1A1C1E', boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
+          {url ? (
+             <>
+               <img src={url} alt={label} onClick={() => setFlipped(false)} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} />
+               <button onClick={(e) => { e.stopPropagation(); onDeleteIndividual(session, angleKey); }} style={{ position: 'absolute', top: '8px', right: '8px', width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.5)', color: '#ff4d4d', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }} title="Eliminar esta foto">
+                 <Trash2 size={14} />
+               </button>
+             </>
+            ) : <div onClick={() => setFlipped(false)} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}><Camera size={28} /></div>}
+          <span onClick={() => setFlipped(false)} style={{ position: 'absolute', bottom: '10px', left: '10px', fontSize: '0.66rem', fontWeight: 800, color: '#fff', background: 'rgba(0,0,0,0.5)', padding: '3px 9px', borderRadius: '8px', backdropFilter: 'blur(6px)', cursor: 'pointer' }}>{label}</span>
         </div>
       </motion.div>
     </div>
+  );
+}
+
+// ───────────────────────── Modal de Comparación ─────────────────────────
+function CompareModal({ sessions, onClose }) {
+  const [s1, setS1] = useState(sessions[sessions.length - 1]?.id || sessions[0]?.id);
+  const [s2, setS2] = useState(sessions[0]?.id);
+  const [angle, setAngle] = useState('front');
+
+  const sess1 = sessions.find(s => s.id === s1);
+  const sess2 = sessions.find(s => s.id === s2);
+
+  return (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 5200, backdropFilter: 'blur(8px)' }} />
+      <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 32, stiffness: 320 }}
+        style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 5201, height: '90vh', background: 'var(--app-surface-solid, #fff)', borderTopLeftRadius: '28px', borderTopRightRadius: '28px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        
+        <div style={{ padding: '16px 20px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle, rgba(0,0,0,0.05))' }}>
+          <button onClick={onClose} style={{ width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={18} color="var(--on-surface)" /></button>
+          <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--on-surface)' }}>Comparar Progreso</span>
+          <div style={{ width: '34px' }} />
+        </div>
+
+        <div style={{ padding: '14px 20px', display: 'flex', gap: '8px', overflowX: 'auto', flexShrink: 0, WebkitOverflowScrolling: 'touch' }}>
+          {ANGLES.map(a => (
+            <button key={a.key} onClick={() => setAngle(a.key)} style={{ padding: '8px 16px', borderRadius: '20px', border: 'none', background: angle === a.key ? PRIMARY : 'rgba(0,0,0,0.05)', color: angle === a.key ? '#fff' : 'var(--on-surface-variant)', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              {a.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ flex: 1, padding: '0 16px 20px', display: 'flex', gap: '10px' }}>
+          {[ { sess: sess1, val: s1, set: setS1, label: 'Antes' }, { sess: sess2, val: s2, set: setS2, label: 'Después' } ].map((col, idx) => (
+            <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <select value={col.val} onChange={e => col.set(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '10px', border: '1px solid var(--border-subtle, rgba(0,0,0,0.1))', background: 'var(--surface-low)', color: 'var(--on-surface)', fontSize: '0.8rem', fontWeight: 600, outline: 'none' }}>
+                {sessions.map(s => <option key={s.id} value={s.id}>{new Date(s.taken_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: '2-digit' })}</option>)}
+              </select>
+              <div style={{ flex: 1, background: '#101010', borderRadius: '16px', overflow: 'hidden', position: 'relative' }}>
+                {col.sess?.urls?.[angle] ? (
+                  <img src={col.sess.urls[angle]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)' }}><Camera size={24} /></div>
+                )}
+                <span style={{ position: 'absolute', bottom: '8px', left: '8px', fontSize: '0.65rem', fontWeight: 800, color: '#fff', background: 'rgba(0,0,0,0.5)', padding: '3px 8px', borderRadius: '8px', backdropFilter: 'blur(6px)' }}>{col.label}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    </>
   );
 }
 
@@ -275,15 +326,53 @@ function CaptureWizard({ userId, onClose, onSaved }) {
   );
 }
 
+const FRASES = [
+  'El _proceso_ que hoy te pesa, mañana será tu mayor _recompensa_.',
+  'Tu _cuerpo_ escucha todo lo que tu _mente_ dice.',
+  'Cada clase es un _regalo_ que te das a ti misma.',
+  'No se trata de ser _perfecta_, sino de ser _constante_.',
+  'Tu única _competencia_ eres tú de ayer.',
+  'Brilla por _dentro_ y se notará por _fuera_.',
+  'Hoy es un buen día para _empezar_ de nuevo.',
+];
+
+function FrasePostIt({ text }) {
+  const parts = text.split('_');
+  return (
+    <div style={{ position: 'relative', transform: 'rotate(-1.5deg)', background: '#FAF6EF', padding: '28px 24px 24px', borderRadius: '6px', boxShadow: '0 12px 24px rgba(0,0,0,0.08)', marginBottom: '18px', width: '100%', maxWidth: '320px', margin: '0 auto 18px' }}>
+      <div style={{ position: 'absolute', top: '-13px', left: '50%', transform: 'translateX(-50%) rotate(-3deg)', width: '110px', height: '26px', background: 'rgba(224,122,156,0.28)', borderLeft: '2px dashed rgba(255,255,255,0.7)', borderRight: '2px dashed rgba(255,255,255,0.7)', backdropFilter: 'blur(1px)' }} />
+      <p style={{ fontFamily: "'Caveat', cursive", color: '#3A3632', fontSize: '1.85rem', lineHeight: 1.35, fontWeight: 600, margin: 0, textAlign: 'center' }}>
+        {parts.map((seg, i) => i % 2 === 1
+          ? <span key={i} style={{ textDecoration: 'underline', textUnderlineOffset: '4px' }}>{seg}</span>
+          : <span key={i}>{seg}</span>)}
+      </p>
+    </div>
+  );
+}
+
 // ───────────────────────── Componente principal ─────────────────────────
 export default function ProgressPhotos({ userId }) {
   const [sessions, setSessions] = useState(null);
   const [showWizard, setShowWizard] = useState(false);
+  const [showCompare, setShowCompare] = useState(false);
+  const [photoToDelete, setPhotoToDelete] = useState(null);
 
   const load = async () => {
     if (!userId) return;
     const { data } = await supabase.from('progress_photos').select('*').eq('user_id', userId).order('taken_at', { ascending: false });
-    const withUrls = await Promise.all((data || []).map(async (s) => {
+    
+    // Auto-limpieza: Si por alguna razón queda una sesión completamente vacía en la base de datos,
+    // la eliminamos automáticamente para que no aparezca como tarjetas vacías.
+    const validSessions = [];
+    for (const s of (data || [])) {
+      if (!s.front_path && !s.side_path && !s.back_path) {
+        await supabase.from('progress_photos').delete().eq('id', s.id);
+      } else {
+        validSessions.push(s);
+      }
+    }
+
+    const withUrls = await Promise.all(validSessions.map(async (s) => {
       const sign = async (p) => p ? (await supabase.storage.from('progress-photos').createSignedUrl(p, 3600)).data?.signedUrl : null;
       const [front, left, right] = await Promise.all([sign(s.front_path), sign(s.side_path), sign(s.back_path)]);
       return { ...s, urls: { front, left, right } };
@@ -291,6 +380,33 @@ export default function ProgressPhotos({ userId }) {
     setSessions(withUrls);
   };
   useEffect(() => { load(); }, [userId]);
+
+  const confirmDeletePhoto = async () => {
+    if (!photoToDelete) return;
+    const { session, angleKey } = photoToDelete;
+    setPhotoToDelete(null);
+    try {
+      const colName = ANGLES.find(a => a.key === angleKey).col;
+      const path = session[colName];
+      if (path) {
+        await supabase.storage.from('progress-photos').remove([path]);
+      }
+      
+      // Checar si con este borrado la sesión se queda totalmente vacía
+      const updatedSession = { ...session, [colName]: null };
+      if (!updatedSession.front_path && !updatedSession.side_path && !updatedSession.back_path) {
+        // Borrar el registro completo de la base de datos
+        await supabase.from('progress_photos').delete().eq('id', session.id);
+      } else {
+        // Solo actualizar la columna a null
+        await supabase.from('progress_photos').update({ [colName]: null }).eq('id', session.id);
+      }
+      
+      load();
+    } catch (e) {
+      alert('Error al eliminar la foto: ' + e.message);
+    }
+  };
 
   const nextDue = useMemo(() => {
     if (!sessions?.length) return { due: true, days: 0 };
@@ -301,19 +417,50 @@ export default function ProgressPhotos({ userId }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
       {/* Cadencia 6 semanas */}
-      <div style={{ background: nextDue.due ? 'linear-gradient(135deg, #FF914D, #E07A9C)' : 'var(--app-surface-solid, #fff)', borderRadius: '22px', padding: '18px', border: nextDue.due ? 'none' : '1px solid var(--border-subtle, rgba(0,0,0,0.05))', display: 'flex', alignItems: 'center', gap: '14px', color: nextDue.due ? '#fff' : 'var(--on-surface)' }}>
-        <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: nextDue.due ? 'rgba(255,255,255,0.22)' : 'rgba(255,145,77,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          {nextDue.due ? <Sparkles size={22} color="#fff" /> : <CalendarClock size={22} color={PRIMARY} />}
+      <div style={{ 
+        position: 'relative', overflow: 'hidden', 
+        background: 'linear-gradient(145deg, #FFCCAA 0%, #FFB385 100%)', borderRadius: '32px', 
+        padding: '24px', border: 'none', 
+        display: 'flex', alignItems: 'center', color: '#ffffff', 
+        boxShadow: '0 20px 40px rgba(255, 179, 133, 0.25)',
+        minHeight: '175px'
+      }}>
+        {/* Brillo suave superior tipo Glass con difuminado horizontal para evitar cortes */}
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(90deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.3) 100%)', pointerEvents: 'none' }}></div>
+
+        {/* Imagen modelo lado derecho (v3) - Muy grande, bajada y más a la derecha */}
+        <div style={{ position: 'absolute', right: '-90px', bottom: '-40%', width: '70%', height: '175%', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', pointerEvents: 'none', zIndex: 0 }}>
+          <img src="/v3.png" alt="" style={{ height: '100%', width: '100%', objectFit: 'cover', objectPosition: 'bottom right', filter: 'drop-shadow(-10px 10px 20px rgba(0,0,0,0.3))' }} />
         </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 800, fontFamily: 'var(--font-display)', fontSize: '1.05rem' }}>{nextDue.due ? '¡Es momento de tus fotos!' : 'Tu progreso visual'}</div>
-          <div style={{ fontSize: '0.82rem', opacity: nextDue.due ? 0.9 : 0.7 }}>{!sessions?.length ? 'Toma tus primeras 3 fotos para empezar' : nextDue.due ? 'Han pasado 6 semanas — toca una nueva sesión' : `Próxima sesión en ${nextDue.days} ${nextDue.days === 1 ? 'día' : 'días'}`}</div>
+        
+        {/* Contenido texto lado izquierdo */}
+        <div style={{ flex: 1, zIndex: 1, paddingRight: '45%' }}>
+          <h3 style={{ margin: '0 0 8px', fontWeight: 900, fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: '#ffffff', lineHeight: 1.1, textShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+            {nextDue.due ? '¡Hora de tus fotos!' : 'Tu progreso visual'}
+          </h3>
+          <p style={{ margin: '0 0 16px', fontSize: '0.82rem', color: 'rgba(255,255,255,0.95)', fontWeight: 600, lineHeight: 1.4 }}>
+            {!sessions?.length ? 'Toma tus primeras fotos para empezar tu viaje' : nextDue.due ? 'Han pasado 6 semanas, registra tu avance' : `Próxima sesión en ${nextDue.days} ${nextDue.days === 1 ? 'día' : 'días'}`}
+          </p>
+          {/* Pill oscura estilo Premium Glass */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', padding: '8px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
+            {nextDue.due ? <Sparkles size={14} color="#ffffff" /> : <CalendarClock size={14} color="#ffffff" />}
+            <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#ffffff' }}>
+              {nextDue.due ? 'Acción Requerida' : 'Evolución'}
+            </span>
+          </div>
         </div>
       </div>
 
-      <button onClick={() => setShowWizard(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '14px', borderRadius: '16px', border: 'none', background: PRIMARY, color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 10px 24px rgba(255,145,77,0.35)' }}>
-        <Plus size={18} /> Nueva sesión de fotos
-      </button>
+      <div style={{ display: 'flex', gap: '10px' }}>
+        <button onClick={() => setShowWizard(true)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px', borderRadius: '16px', border: '1px solid var(--glass-border, rgba(255,255,255,0.7))', background: 'var(--glass-bg, rgba(255,255,255,0.55))', color: 'var(--on-surface)', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', boxShadow: '0 8px 28px rgba(0,0,0,0.07)' }}>
+          <Plus size={18} color="var(--primary)" /> Nueva sesión
+        </button>
+        {sessions && sessions.length > 1 && (
+          <button onClick={() => setShowCompare(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px 20px', borderRadius: '16px', border: '1px solid var(--glass-border, rgba(255,255,255,0.7))', background: 'var(--glass-bg, rgba(255,255,255,0.55))', color: 'var(--on-surface)', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', boxShadow: '0 8px 28px rgba(0,0,0,0.07)' }}>
+            <Columns size={18} color="var(--primary)" /> Comparar
+          </button>
+        )}
+      </div>
 
       {sessions === null ? (
         <p style={{ textAlign: 'center', color: 'var(--on-surface-variant)', padding: '30px 0' }}>Cargando…</p>
@@ -324,19 +471,42 @@ export default function ProgressPhotos({ userId }) {
         </div>
       ) : (
         sessions.map((s, i) => (
-          <div key={s.id}>
-            <div style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)', marginBottom: '10px' }}>
-              {i === 0 ? 'Más reciente · ' : ''}{new Date(s.taken_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+          <div key={s.id} style={{ marginBottom: '24px', background: 'var(--surface)', padding: '20px 16px', borderRadius: '24px' }}>
+            
+            {/* 1. Post-it */}
+            <FrasePostIt text={FRASES[i % FRASES.length]} />
+
+            {/* 2. Fecha (centrada) */}
+            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--on-surface-variant)' }}>
+                {i === 0 ? 'Más reciente · ' : ''}{new Date(s.taken_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
             </div>
+
+            {/* 3. Fotos */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-              {ANGLES.map(a => <FlipCard key={a.key} label={a.label} phrase={a.phrase} url={s.urls[a.key]} />)}
+              {ANGLES.map(a => <FlipCard key={a.key} label={a.label} url={s.urls[a.key]} session={s} angleKey={a.key} onDeleteIndividual={(sess, angle) => setPhotoToDelete({ session: sess, angleKey: angle })} />)}
             </div>
           </div>
         ))
       )}
 
       <AnimatePresence>
+        {photoToDelete && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setPhotoToDelete(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(5px)' }} />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', damping: 25, stiffness: 300 }} style={{ position: 'relative', background: 'var(--surface-lowest)', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '320px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+              <h3 style={{ margin: '0 0 10px', fontSize: '1.2rem', color: 'var(--on-surface)', fontFamily: 'var(--font-display)' }}>¿Eliminar foto?</h3>
+              <p style={{ margin: '0 0 24px', fontSize: '0.9rem', color: 'var(--on-surface-variant)', lineHeight: 1.4 }}>¿Seguro que deseas eliminar esta foto permanentemente? Esta acción no se puede deshacer.</p>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={() => setPhotoToDelete(null)} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid var(--border-subtle, rgba(0,0,0,0.1))', background: 'transparent', color: 'var(--on-surface)', fontWeight: 700, cursor: 'pointer' }}>Cancelar</button>
+                <button onClick={confirmDeletePhoto} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: '#ff4d4d', color: '#fff', fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 16px rgba(255,77,77,0.3)' }}>Eliminar</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
         {showWizard && <CaptureWizard userId={userId} onClose={() => setShowWizard(false)} onSaved={() => { setShowWizard(false); load(); }} />}
+        {showCompare && <CompareModal sessions={sessions} onClose={() => setShowCompare(false)} />}
       </AnimatePresence>
     </div>
   );

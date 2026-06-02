@@ -296,16 +296,17 @@ function Evolucion() {
         })}
       </div>
 
-      {subtab === 'fotos' && (
-        <main className="dashboard-main" style={{ paddingTop: '10px' }}>
+      <AnimatePresence mode="wait">
+        {subtab === 'fotos' && (
+          <motion.main key="fotos" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="dashboard-main" style={{ paddingTop: '10px' }}>
           <div style={{ width: '100%', maxWidth: '720px', margin: '0 auto', padding: '0 16px' }}>
             <ProgressPhotos userId={user?.id} />
           </div>
-        </main>
-      )}
+          </motion.main>
+        )}
 
-      {subtab === 'insignias' && (
-        <main className="dashboard-main" style={{ paddingTop: '10px' }}>
+        {subtab === 'insignias' && (
+          <motion.main key="insignias" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="dashboard-main" style={{ paddingTop: '10px' }}>
           <div style={{ width: '100%', maxWidth: '720px', margin: '0 auto', padding: '0 16px' }}>
             <motion.section className="tour-badges-section" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
               <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '6px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Tus insignias</h2>
@@ -326,11 +327,11 @@ function Evolucion() {
               )}
             </motion.section>
           </div>
-        </main>
-      )}
+          </motion.main>
+        )}
 
-      {subtab === 'resumen' && (
-      <main className="dashboard-main" style={{ paddingTop: '10px' }}>
+        {subtab === 'resumen' && (
+        <motion.main key="resumen" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="dashboard-main" style={{ paddingTop: '10px' }}>
         <div className="dashboard-sidebar">
 
           {/* PROGRESS RING */}
@@ -586,8 +587,9 @@ function Evolucion() {
             </motion.section>
           )}
         </div>
-      </main>
-      )}
+        </motion.main>
+        )}
+      </AnimatePresence>
 
       {/* QR SHEET */}
       {showQR && (

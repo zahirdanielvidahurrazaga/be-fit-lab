@@ -124,60 +124,55 @@ function Portal() {
 
         <div className="dashboard-sidebar">
 
-          {/* MEMBERSHIP CARD - Light Premium Redesign */}
+          {/* MEMBERSHIP CARD - Premium App Aesthetic (Full Image Background) */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             style={{ 
               padding: '24px', borderRadius: '32px', 
-              background: '#ffffff',
-              border: '1px solid rgba(0,0,0,0.05)',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.06)',
-              position: 'relative', overflow: 'hidden'
+              backgroundImage: `linear-gradient(145deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%), url('/fotos-hero/_DSC0444.jpg')`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              border: 'none',
+              boxShadow: '0 20px 40px rgba(230, 114, 43, 0.25)',
+              position: 'relative', overflow: 'hidden',
+              minHeight: '175px',
+              display: 'flex', alignItems: 'center'
             }}
           >
-            {/* Soft background gradient effect */}
-            <div style={{ position: 'absolute', top: 0, right: 0, width: '150px', height: '150px', background: 'radial-gradient(circle, rgba(255,145,77,0.15) 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}></div>
+            {/* Brillo suave superior tipo Glass */}
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%)', pointerEvents: 'none' }}></div>
             
-            <div style={{ position: 'relative', zIndex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+            <div style={{ position: 'relative', zIndex: 1, flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Mi Membresía</span>
+              </div>
+              <h2 style={{ fontSize: '1.9rem', color: '#ffffff', margin: '0 0 6px', fontFamily: 'var(--font-display)', lineHeight: 1.05, textShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+                {plan ? plan.replace('Plan ', '') : 'Sin Plan'}
+              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '20px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: plan ? '#4ADE80' : '#F87171', boxShadow: '0 0 10px rgba(0,0,0,0.15)' }}></div>
+                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.95)', fontWeight: 700 }}>{plan ? 'Suscripción Activa' : 'Inactiva'}</span>
+              </div>
+              
+              {/* Pill oscura estilo Premium Glass */}
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '14px', background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', padding: '10px 16px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)' }}>
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Mi Membresía</span>
-                  </div>
-                  <h2 style={{ fontSize: '1.6rem', color: 'var(--black)', margin: 0, fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>
-                    {plan ? plan.replace('Plan ', '') : 'Sin Plan'}
-                  </h2>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '6px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: plan ? '#22C55E' : '#EF4444' }}></div>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{plan ? 'Suscripción Activa' : 'Inactiva'}</span>
-                  </div>
-                </div>
-                
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: classesRemaining >= 9999 ? '1.8rem' : '2.5rem', fontWeight: 900, color: 'var(--primary)', fontFamily: 'var(--font-display)', lineHeight: 0.9 }}>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#fff', lineHeight: 1, fontFamily: 'var(--font-display)', textAlign: 'center' }}>
                     {classesRemaining >= 9999 ? '∞' : classesRemaining}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>
-                    {classesRemaining >= 9999 ? 'Ilimitadas' : 'Clases Restantes'}
+                  <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.7)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '3px', textAlign: 'center' }}>
+                    {classesRemaining >= 9999 ? 'Ilimitadas' : 'Clases'}
                   </div>
                 </div>
+                <button 
+                  onClick={() => navigate('/planes')}
+                  style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', transition: 'background 0.2s' }}
+                >
+                  <ChevronRight size={16} />
+                </button>
               </div>
-
-              {/* Action Button - Simplified for Dashboard */}
-              <button 
-                onClick={() => navigate('/planes')}
-                style={{ 
-                  width: '100%', padding: '12px', borderRadius: '16px', 
-                  background: 'rgba(255, 255, 255, 0.4)', color: 'var(--black)', 
-                  border: '1px solid rgba(255, 255, 255, 0.6)', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer',
-                  display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', transition: 'all 0.2s', marginTop: '10px'
-                }}
-              >
-                Ver Mi Membresía <ChevronRight size={16} color="var(--primary)" />
-              </button>
             </div>
           </motion.div>
 
@@ -190,8 +185,8 @@ function Portal() {
             <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '6px', marginLeft: '-5px', paddingLeft: '5px', paddingRight: '5px' }}>
               {[
                 { to: '/cafeteria', img: '/fotos-hero/IMG_5410.JPG', Icon: Coffee, title: 'Coffee Lab', sub: 'Café & smoothies', overlay: 'linear-gradient(160deg, rgba(60,30,15,0.18) 0%, rgba(35,18,8,0.74) 100%)' },
-                { to: '/cumpleanos', img: '/fotos-hero/_DSC0444.jpg', Icon: Cake, title: 'Cumpleaños', sub: 'Tu cuenta regresiva', overlay: 'linear-gradient(160deg, rgba(120,40,70,0.25) 0%, rgba(85,28,52,0.74) 100%)' },
-                { to: '/eventos', img: '/fotos-hero/IMG_5376.JPG', Icon: Sparkles, title: 'Eventos', sub: 'Próximas experiencias', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.12) 0%, rgba(20,14,28,0.72) 100%)' },
+                { to: '/cumpleanos', img: '/fotos-hero/cumple.png', Icon: Cake, title: 'Cumpleaños', sub: 'Tu cuenta regresiva', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)' },
+                { to: '/eventos', img: '/fotos-hero/_DSC0470.jpg', Icon: Sparkles, title: 'Eventos', sub: 'Próximas experiencias', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)' },
               ].map(c => (
                 <motion.div key={c.to} onClick={() => navigate(c.to)} whileTap={{ scale: 0.97 }}
                   style={{ flex: '0 0 auto', width: '210px', height: '250px', borderRadius: '26px', cursor: 'pointer', position: 'relative', overflow: 'hidden', backgroundImage: `${c.overlay}, url('${c.img}')`, backgroundSize: 'cover', backgroundPosition: 'center', padding: '18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 14px 34px rgba(0,0,0,0.18)' }}>
