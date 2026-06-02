@@ -1,12 +1,58 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Plus, Sparkles, Lock, X, Check, CalendarClock, Timer, Image as ImageIcon, RotateCcw, ChevronLeft } from 'lucide-react';
+import { Camera, Plus, Sparkles, Lock, X, Check, CalendarClock, Info, Image as ImageIcon, RotateCcw, ChevronLeft } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { compressCafeImage } from '../lib/cafeImage';
 
 const PRIMARY = '#FF914D';
 const SIX_WEEKS = 42 * 24 * 60 * 60 * 1000;
-const TIMER_SECONDS = 5; // ⏱️ ajusta aquí la duración del temporizador
+
+// ───────────────────── Siluetas guía (avatar) por ángulo ─────────────────────
+// Figura humana semitransparente que orienta a la clienta sobre cómo pararse.
+// Respira sutilmente (motion) para que se note que es una guía.
+function PoseGuide({ angle }) {
+  const stroke = 'rgba(255,255,255,0.9)';
+  const sw = 12;
+  const line = { fill: 'none', stroke, strokeWidth: sw, strokeLinecap: 'round', strokeLinejoin: 'round' };
+
+  // Vista frontal: brazos ligeramente separados, piernas a la anchura de cadera
+  const Front = (
+    <g {...line}>
+      <circle cx="60" cy="34" r="18" fill={stroke} stroke="none" />
+      <line x1="60" y1="54" x2="60" y2="152" />
+      <line x1="36" y1="68" x2="84" y2="68" />
+      <line x1="36" y1="68" x2="24" y2="148" />
+      <line x1="84" y1="68" x2="96" y2="148" />
+      <line x1="60" y1="152" x2="44" y2="256" />
+      <line x1="60" y1="152" x2="76" y2="256" />
+    </g>
+  );
+
+  // Perfil (de lado): un solo brazo visible, "nariz" apuntando hacia el lado
+  const Side = (
+    <g {...line}>
+      <circle cx="62" cy="34" r="17" fill={stroke} stroke="none" />
+      <path d="M47 28 L33 34 L47 40 Z" fill={stroke} stroke="none" />
+      <line x1="62" y1="52" x2="59" y2="152" />
+      <line x1="61" y1="70" x2="57" y2="138" />
+      <line x1="59" y1="152" x2="52" y2="256" />
+      <line x1="59" y1="152" x2="66" y2="254" />
+    </g>
+  );
+
+  const content = angle === 'front' ? Front
+    : angle === 'left' ? Side
+    : <g transform="translate(120,0) scale(-1,1)">{Side}</g>; // derecho = espejo
+
+  return (
+    <motion.svg viewBox="0 0 120 280" preserveAspectRatio="xMidYMid meet"
+      animate={{ opacity: [0.45, 0.8, 0.45], scale: [1, 1.015, 1] }}
+      transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+      style={{ width: '60%', height: '90%', filter: 'drop-shadow(0 0 8px rgba(0,0,0,0.5))' }}>
+      {content}
+    </motion.svg>
+  );
+}
 
 // Los 3 ángulos. `col` mapea a la columna existente de la tabla.
 const ANGLES = [
@@ -53,12 +99,10 @@ function CaptureWizard({ userId, onClose, onSaved }) {
   const [shots, setShots] = useState({});           // key -> { blob, url }
   const [camActive, setCamActive] = useState(false);
   const [camError, setCamError] = useState(false);
-  const [countdown, setCountdown] = useState(0);
   const [saving, setSaving] = useState(false);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const fileRef = useRef(null);
-  const timerRef = useRef(null);
 
   const isReview = step >= ANGLES.length;
   const cur = ANGLES[step] || ANGLES[0];
@@ -82,7 +126,7 @@ function CaptureWizard({ userId, onClose, onSaved }) {
   // Al entrar a un paso de captura sin foto, abrir la cámara
   useEffect(() => {
     if (!isReview && !shots[cur.key]) startCam(); else stopCam();
-    return () => { stopCam(); if (timerRef.current) clearInterval(timerRef.current); };
+    return () => { stopCam(); };
     // eslint-disable-next-line
   }, [step]);
 
@@ -99,14 +143,6 @@ function CaptureWizard({ userId, onClose, onSaved }) {
       setShots(s => ({ ...s, [cur.key]: { blob, url } }));
       stopCam();
     }, 'image/jpeg', 0.9);
-  };
-  const captureWithTimer = () => {
-    if (countdown > 0) return;
-    let n = TIMER_SECONDS; setCountdown(n);
-    timerRef.current = setInterval(() => {
-      n -= 1; setCountdown(n);
-      if (n <= 0) { clearInterval(timerRef.current); setCountdown(0); capture(); }
-    }, 1000);
   };
   const pickGallery = (e) => {
     const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
@@ -166,26 +202,15 @@ function CaptureWizard({ userId, onClose, onSaved }) {
                 ) : camActive ? (
                   <>
                     <video ref={videoRef} playsInline muted autoPlay style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
-                    {/* ╔══════════════════════════════════════════════════════════╗
-                        ║ 👉 AQUÍ va tu SILUETA / animación de guía para "{cur.title}".  ║
-                        ║ Es un contenedor centrado superpuesto sobre la cámara.       ║
-                        ║ Reemplaza el placeholder de abajo por tu <img>/<Lottie>/SVG. ║
-                        ╚══════════════════════════════════════════════════════════╝ */}
+                    {/* Silueta guía (avatar) que orienta la pose del ángulo actual.
+                        👉 Si más adelante quieres usar tus propias siluetas/Lottie,
+                        reemplaza <PoseGuide/> por tu animación para `cur.key`. */}
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                      {/* PLACEHOLDER de silueta — sustituir por la animación del ángulo {cur.key} */}
-                      <div style={{ width: '52%', height: '88%', border: '2px dashed rgba(255,255,255,0.45)', borderRadius: '120px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '10px' }}>
-                        <span style={{ fontSize: '0.66rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>Silueta · {cur.label}</span>
-                      </div>
+                      <PoseGuide angle={cur.key} />
                     </div>
-                    {/* Cuenta regresiva del temporizador */}
-                    <AnimatePresence>
-                      {countdown > 0 && (
-                        <motion.div key={countdown} initial={{ scale: 1.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.6, opacity: 0 }}
-                          style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)' }}>
-                          <span style={{ fontSize: '5rem', fontWeight: 900, color: '#fff', fontFamily: 'var(--font-display)', textShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>{countdown}</span>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    <span style={{ position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)', fontSize: '0.74rem', fontWeight: 700, color: '#fff', background: 'rgba(0,0,0,0.45)', padding: '5px 12px', borderRadius: '999px', backdropFilter: 'blur(6px)', whiteSpace: 'nowrap' }}>
+                      Acomódate dentro de la silueta · {cur.label}
+                    </span>
                   </>
                 ) : (
                   <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: 'rgba(255,255,255,0.7)', padding: '20px', textAlign: 'center' }}>
@@ -198,9 +223,9 @@ function CaptureWizard({ userId, onClose, onSaved }) {
               {/* Texto de ayuda */}
               {!shot && (
                 <div style={{ ...glass, borderRadius: '14px', padding: '11px 14px', marginBottom: '14px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                  <Timer size={16} color={PRIMARY} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <Info size={16} color={PRIMARY} style={{ flexShrink: 0, marginTop: '2px' }} />
                   <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--on-surface-variant)', lineHeight: 1.45 }}>
-                    Como es de cuerpo completo: <strong style={{ color: 'var(--on-surface)' }}>apoya el teléfono en una superficie plana y aléjate ~2 metros.</strong> Usa el temporizador. {cur.hint}
+                    Como es de cuerpo completo, pídele a alguien que te tome la foto o <strong style={{ color: 'var(--on-surface)' }}>apoya el teléfono y acomódate dentro de la silueta.</strong> {cur.hint}
                   </p>
                 </div>
               )}
@@ -214,13 +239,10 @@ function CaptureWizard({ userId, onClose, onSaved }) {
                   </div>
                 ) : (
                   <>
-                    <button onClick={captureWithTimer} disabled={!camActive || countdown > 0} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '15px', borderRadius: '16px', border: 'none', background: camActive ? PRIMARY : 'rgba(0,0,0,0.1)', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: camActive ? 'pointer' : 'default', boxShadow: camActive ? '0 10px 24px rgba(255,145,77,0.35)' : 'none' }}>
-                      <Timer size={18} /> {countdown > 0 ? `Capturando en ${countdown}…` : `Capturar con temporizador (${TIMER_SECONDS}s)`}
+                    <button onClick={capture} disabled={!camActive} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '15px', borderRadius: '16px', border: 'none', background: camActive ? PRIMARY : 'rgba(0,0,0,0.1)', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: camActive ? 'pointer' : 'default', boxShadow: camActive ? '0 10px 24px rgba(255,145,77,0.35)' : 'none' }}>
+                      <Camera size={18} /> Capturar foto
                     </button>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button onClick={capture} disabled={!camActive || countdown > 0} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', padding: '13px', borderRadius: '15px', ...glass, color: 'var(--on-surface)', fontWeight: 700, fontSize: '0.88rem', cursor: camActive ? 'pointer' : 'default', opacity: camActive ? 1 : 0.5 }}><Camera size={16} /> Capturar ya</button>
-                      <button onClick={() => fileRef.current?.click()} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', padding: '13px', borderRadius: '15px', ...glass, color: 'var(--on-surface)', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}><ImageIcon size={16} /> Galería</button>
-                    </div>
+                    <button onClick={() => fileRef.current?.click()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', padding: '13px', borderRadius: '15px', ...glass, color: 'var(--on-surface)', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}><ImageIcon size={16} /> Subir desde galería</button>
                     <input ref={fileRef} type="file" accept="image/*" onChange={pickGallery} style={{ display: 'none' }} />
                   </>
                 )}
