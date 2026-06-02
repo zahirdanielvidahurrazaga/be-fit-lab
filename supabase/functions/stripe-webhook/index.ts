@@ -46,6 +46,16 @@ serve(async (req) => {
 
       const { supabase_user_id, plan_title, class_count } = session.metadata ?? {};
 
+      // Pago de INSCRIPCIÓN A EVENTO → inscribir a la clienta
+      if (session.metadata?.type === 'event') {
+        const eventId = session.metadata.event_id;
+        if (eventId && supabase_user_id) {
+          const { error } = await supabase.from('event_registrations').insert({ event_id: eventId, user_id: supabase_user_id, payment_intent_id: (session.payment_intent as string) ?? null });
+          if (error && error.code !== '23505') console.error('Error inscribiendo a evento:', error.message);
+        }
+        return new Response('ok');
+      }
+
       // Pago de CAFETERÍA: no toca membresía. Marca el pedido como pagado (para
       // que el barista lo vea y el cliente tenga tracking) y avisa por push + in-app.
       if (session.metadata?.type === 'cafeteria') {

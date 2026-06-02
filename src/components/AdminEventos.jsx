@@ -58,8 +58,8 @@ export default function AdminEventos() {
     else alert(`Aviso enviado a ${data?.sent ?? 0} clientas · push entregado a ${data?.pushed ?? 0} dispositivos.`);
   };
 
-  const blank = { title: '', description: '', event_date: '', location: '', image_url: '', price: '', registration_open: false, notify: true };
-  const startEdit = (e) => setForm({ id: e.id, title: e.title || '', description: e.description || '', event_date: toLocalInput(e.event_date), location: e.location || '', image_url: e.image_url || '', price: e.price ?? '', registration_open: !!e.registration_open, notify: false });
+  const blank = { title: '', description: '', event_date: '', location: '', image_url: '', price: '', capacity: '', registration_open: false, notify: true };
+  const startEdit = (e) => setForm({ id: e.id, title: e.title || '', description: e.description || '', event_date: toLocalInput(e.event_date), location: e.location || '', image_url: e.image_url || '', price: e.price ?? '', capacity: e.capacity ?? '', registration_open: !!e.registration_open, notify: false });
 
   const notifyClients = (ev) => supabase.functions.invoke('notify-event', { body: {
     title: '✨ Nuevo evento: ' + ev.title,
@@ -75,6 +75,7 @@ export default function AdminEventos() {
       event_date: form.event_date ? new Date(form.event_date).toISOString() : null,
       location: form.location.trim() || null, image_url: form.image_url || null,
       price: form.price === '' ? null : (parseInt(form.price, 10) || 0),
+      capacity: form.capacity === '' ? null : (parseInt(form.capacity, 10) || null),
       registration_open: !!form.registration_open,
     };
     if (form.id) await supabase.from('events').update(payload).eq('id', form.id);
@@ -109,11 +110,12 @@ export default function AdminEventos() {
                 <input placeholder="Lugar (ej. El estudio)" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} style={{ ...input, flex: '1 1 160px' }} />
               </div>
               <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                <input type="number" placeholder="Precio $ (vacío = sin costo)" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} style={{ ...input, flex: '1 1 160px' }} />
-                <button type="button" onClick={() => setForm({ ...form, registration_open: !form.registration_open })} style={{ flex: '1 1 160px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', padding: '11px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.84rem', background: form.registration_open ? 'rgba(34,197,94,0.12)' : 'rgba(0,0,0,0.05)', color: form.registration_open ? '#16A34A' : 'var(--on-surface-variant)' }}>
-                  <Ticket size={15} /> {form.registration_open ? 'Inscripción ABIERTA' : 'Inscripción cerrada'}
-                </button>
+                <input type="number" placeholder="Precio $ (vacío = gratis)" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} style={{ ...input, flex: '1 1 130px' }} />
+                <input type="number" placeholder="Cupo (vacío = sin límite)" value={form.capacity} onChange={e => setForm({ ...form, capacity: e.target.value })} style={{ ...input, flex: '1 1 130px' }} />
               </div>
+              <button type="button" onClick={() => setForm({ ...form, registration_open: !form.registration_open })} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', padding: '11px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.84rem', marginBottom: '12px', background: form.registration_open ? 'rgba(34,197,94,0.12)' : 'rgba(0,0,0,0.05)', color: form.registration_open ? '#16A34A' : 'var(--on-surface-variant)' }}>
+                <Ticket size={15} /> {form.registration_open ? 'Inscripción ABIERTA' : 'Inscripción cerrada'}
+              </button>
               <textarea placeholder="Descripción" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} style={{ ...input, marginBottom: '12px', resize: 'vertical' }} />
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', cursor: 'pointer', fontSize: '0.88rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>
                 <input type="checkbox" checked={form.notify} onChange={e => setForm({ ...form, notify: e.target.checked })} style={{ width: '18px', height: '18px', accentColor: PRIMARY }} />
@@ -150,7 +152,7 @@ export default function AdminEventos() {
               <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
                 {e.registration_open && (
                   <button onClick={() => viewRegs(e.id)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(34,197,94,0.1)', color: '#16A34A', border: 'none', borderRadius: '9px', padding: '7px 11px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
-                    <Users size={13} /> {counts[e.id] || 0} inscritas <ChevronDown size={12} />
+                    <Users size={13} /> {e.registered_count ?? counts[e.id] ?? 0}{e.capacity ? `/${e.capacity}` : ''} inscritas <ChevronDown size={12} />
                   </button>
                 )}
                 <button onClick={() => avisar(e)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(255,145,77,0.12)', color: PRIMARY, border: 'none', borderRadius: '9px', padding: '7px 11px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
