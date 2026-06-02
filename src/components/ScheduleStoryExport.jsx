@@ -161,6 +161,8 @@ export default function ScheduleStoryExport({ classes, selectedDateStr, buttonSt
   const [mode, setMode] = useState('week'); // 'week' | 'day'
   const [busy, setBusy] = useState(false);
   const cardRef = useRef(null);
+  // Ancho del preview (la tarjeta real es 1080px; aquí se escala para caber en el sheet)
+  const PREVIEW_W = Math.min(300, (typeof window !== 'undefined' ? window.innerWidth : 360) - 56);
 
   const refDate = selectedDateStr || new Date().toISOString().split('T')[0];
   const week = useMemo(() => buildWeek(classes, refDate), [classes, refDate]);
@@ -250,10 +252,10 @@ export default function ScheduleStoryExport({ classes, selectedDateStr, buttonSt
               ))}
             </div>
 
-            {/* preview (escalado) */}
-            <div style={{ flex: 1, overflow: 'auto', padding: '14px 20px 0', display: 'flex', justifyContent: 'center' }}>
-              <div style={{ width: 1080 * 0.30, height: 1920 * 0.30, flexShrink: 0 }}>
-                <div style={{ transform: 'scale(0.30)', transformOrigin: 'top left', borderRadius: 24, overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
+            {/* preview (escalado dentro de una caja de tamaño fijo) */}
+            <div style={{ flex: 1, overflow: 'auto', padding: '14px 20px 0', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
+              <div style={{ width: PREVIEW_W, height: PREVIEW_W * (1920 / 1080), flexShrink: 0, position: 'relative', overflow: 'hidden', borderRadius: 18, boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, width: 1080, height: 1920, transform: `scale(${PREVIEW_W / 1080})`, transformOrigin: 'top left' }}>
                   <StoryCard ref={cardRef} mode={mode} week={week} dayData={dayData} rangeLabel={rangeLabel} />
                 </div>
               </div>

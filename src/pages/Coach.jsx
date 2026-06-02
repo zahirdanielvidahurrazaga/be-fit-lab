@@ -78,6 +78,17 @@ function Coach() {
   const coachName = (user?.user_metadata?.full_name || user?.email?.split('@')[0] || '').toLowerCase();
   const isMyClass = (c) => coachName && c.instructor.toLowerCase().includes(coachName);
 
+  // Color de fondo según la categoría de la clase (igual que la vista de cliente)
+  const categoryColor = (cat) => {
+    switch (cat) {
+      case 'Fuerza': return '#FFE4E1';
+      case 'Resistencia': return '#E0FFFF';
+      case 'Relajacion': return '#F0FFF0';
+      case 'Gym libre': return '#FFFACD';
+      default: return 'var(--app-surface-solid, #fff)';
+    }
+  };
+
   // ── Shared calendar renderer ────────────────────────────────────────
   // getDotsForDate(dateStr) => { mine: number, others: number }
   const renderCalendar = (getDotsForDate, onDaySelect) => {
@@ -262,8 +273,8 @@ function Coach() {
                 const ocupacion = (c.max_spots || 10) - c.spots;
                 const porcentaje = Math.round((ocupacion / (c.max_spots || 10)) * 100);
                 return (
-                  <div key={c.id} className="ios-glass-card" style={{ padding: '16px 20px', background: esMia ? 'white' : 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', border: esMia ? '1.5px solid var(--primary)' : '1px solid rgba(0,0,0,0.04)', borderLeft: esMia ? '4px solid var(--primary)' : '1px solid rgba(0,0,0,0.04)', opacity: esMia ? 1 : 0.7, transition: 'all 0.2s' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: esMia ? 'rgba(255,139,66,0.08)' : 'var(--surface)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginRight: '14px', flexShrink: 0 }}>
+                  <div key={c.id} className="ios-glass-card" style={{ padding: '16px 20px', background: categoryColor(c.category), display: 'flex', alignItems: 'center', border: esMia ? '1.5px solid var(--primary)' : '1px solid rgba(0,0,0,0.05)', borderLeft: esMia ? '4px solid var(--primary)' : '1px solid rgba(0,0,0,0.05)', transition: 'all 0.2s' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(255,255,255,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginRight: '14px', flexShrink: 0 }}>
                       <span style={{ fontSize: '0.95rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: esMia ? 'var(--primary)' : 'var(--black)' }}>{c.time.split(' ')[0]}</span>
                       <span style={{ fontSize: '0.55rem', fontWeight: 800, color: 'var(--on-surface-variant)' }}>{c.time.split(' ')[1] || 'AM'}</span>
                     </div>
