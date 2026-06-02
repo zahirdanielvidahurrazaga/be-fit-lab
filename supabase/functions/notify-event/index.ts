@@ -31,16 +31,19 @@ serve(async (req) => {
     // 1) Logs in-app en lote
     await supabase.from('notification_logs').insert(ids.map((id: string) => ({ user_id: id, type, title, body, status: 'sent' })));
 
-    // 2) Push a cada clienta (skipLog para no duplicar el log)
-    await Promise.allSettled(ids.map((id: string) =>
+    // 2) Push a cada clienta (skipLog para no duplicar el log). Sumamos los
+    // pushes realmente entregados para reportarlo al admin.
+    const results = await Promise.allSettled(ids.map((id: string) =>
       fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
         body: JSON.stringify({ userId: id, title, body, type, skipLog: true }),
-      }),
+      }).then(r => r.json()).catch(() => ({ sent: 0 })),
     ));
+    let pushed = 0;
+    results.forEach(r => { if (r.status === 'fulfilled') pushed += (r.value?.sent || 0); });
 
-    return Response.json({ sent: ids.length }, { headers: corsHeaders });
+    return Response.json({ sent: ids.length, pushed }, { headers: corsHeaders });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error('notify-event error:', message);

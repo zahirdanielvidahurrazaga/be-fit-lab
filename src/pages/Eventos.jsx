@@ -19,20 +19,32 @@ const glass = {
 const fmtFull = (iso) => new Date(iso).toLocaleString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
 const isPast = (iso) => iso && new Date(iso).getTime() < Date.now() - 3 * 3600000;
 
+// Unidad con número que "rueda" al cambiar (igual que el de Cumpleaños)
+function CdUnit({ value, label }) {
+  return (
+    <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
+      <div style={{ position: 'relative', height: '2.5rem', overflow: 'hidden' }}>
+        <AnimatePresence initial={false}>
+          <motion.div key={value}
+            initial={{ y: '100%', opacity: 0 }} animate={{ y: '0%', opacity: 1 }} exit={{ y: '-100%', opacity: 0 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.9rem', fontWeight: 800, color: '#fff', lineHeight: 1, fontFamily: 'var(--font-display)', fontVariantNumeric: 'tabular-nums' }}>
+            {String(value).padStart(2, '0')}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+      <div style={{ fontSize: '0.6rem', fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '6px' }}>{label}</div>
+    </div>
+  );
+}
 function Countdown({ date }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id); }, []);
   const diff = Math.max(0, new Date(date).getTime() - now);
   const d = Math.floor(diff / 86400000), h = Math.floor(diff / 3600000) % 24, m = Math.floor(diff / 60000) % 60, s = Math.floor(diff / 1000) % 60;
-  const Unit = ({ v, l }) => (
-    <div style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#fff', fontFamily: 'var(--font-display)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{String(v).padStart(2, '0')}</div>
-      <div style={{ fontSize: '0.58rem', fontWeight: 700, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '4px' }}>{l}</div>
-    </div>
-  );
   return (
-    <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
-      <Unit v={d} l="días" /><Unit v={h} l="hrs" /><Unit v={m} l="min" /><Unit v={s} l="seg" />
+    <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
+      <CdUnit value={d} label="días" /><CdUnit value={h} label="hrs" /><CdUnit value={m} label="min" /><CdUnit value={s} label="seg" />
     </div>
   );
 }

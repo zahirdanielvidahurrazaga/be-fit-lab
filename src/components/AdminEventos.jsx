@@ -55,7 +55,7 @@ export default function AdminEventos() {
     if (!confirm(`¿Avisar a todas las clientas sobre "${ev.title}"?`)) return;
     const { data, error } = await notifyClients(ev);
     if (error || data?.error) alert('No se pudo enviar el aviso: ' + (error?.message || data?.error || 'error'));
-    else alert(`Aviso enviado a ${data?.sent ?? 0} clientas.`);
+    else alert(`Aviso enviado a ${data?.sent ?? 0} clientas · push entregado a ${data?.pushed ?? 0} dispositivos.`);
   };
 
   const blank = { title: '', description: '', event_date: '', location: '', image_url: '', price: '', registration_open: false, notify: true };
