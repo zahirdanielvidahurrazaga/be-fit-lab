@@ -233,7 +233,8 @@ export default function ScheduleStoryExport({ classes, coaches, selectedDateStr,
   // Ancho del preview (la tarjeta real es 1080px; aquí se escala para caber en el sheet)
   const PREVIEW_W = Math.min(300, (typeof window !== 'undefined' ? window.innerWidth : 360) - 56);
 
-  const refDate = selectedDateStr || new Date().toISOString().split('T')[0];
+  // Fecha de referencia seleccionable (en día = ese día; en semana = la semana que la contiene)
+  const [refDate, setRefDate] = useState(selectedDateStr || new Date().toISOString().split('T')[0]);
   const week = useMemo(() => buildWeek(classes, refDate), [classes, refDate]);
   const dayData = useMemo(() => week.days.find(d => d.dateStr === refDate) || week.days[0], [week, refDate]);
 
@@ -378,6 +379,15 @@ export default function ScheduleStoryExport({ classes, coaches, selectedDateStr,
                   <I size={16} /> {l}
                 </button>
               ))}
+            </div>
+
+            {/* selector de fecha */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 20px 10px', flexShrink: 0 }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--on-surface-variant)', whiteSpace: 'nowrap' }}>
+                {mode === 'day' ? 'Día a publicar:' : 'Semana de:'}
+              </span>
+              <input type="date" value={refDate} onChange={(e) => e.target.value && setRefDate(e.target.value)}
+                style={{ flex: 1, padding: '10px 12px', borderRadius: 12, border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))', background: 'var(--surface-low, #f4f4f5)', color: 'var(--on-surface)', fontSize: '0.9rem', fontWeight: 700, fontFamily: 'var(--font-body)', WebkitAppearance: 'none', outline: 'none' }} />
             </div>
 
             {/* preview (escalado dentro de una caja de tamaño fijo) */}
