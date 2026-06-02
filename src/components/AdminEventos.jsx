@@ -229,7 +229,7 @@ export default function AdminEventos() {
                     </div>
                     <div style={{ flex: 1, background: 'rgba(34,197,94,0.1)', borderRadius: '16px', padding: '12px' }}>
                       <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#16A34A', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{nm.result?.pushed ?? 0}</div>
-                      <div style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '4px' }}>Push entregado</div>
+                      <div style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '4px' }}>Con push</div>
                     </div>
                   </div>
 
