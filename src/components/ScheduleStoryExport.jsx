@@ -1,7 +1,7 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Share2, Download, X, CalendarRange, CalendarDays } from 'lucide-react';
+import { Share2, X, CalendarRange, CalendarDays, Moon, Sun } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { Capacitor } from '@capacitor/core';
 
@@ -13,6 +13,21 @@ import { Capacitor } from '@capacitor/core';
 
 const DOW_LABELS = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB']; // index = getDay()
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+// Categorías y sus colores (mismos que la vista de cliente)
+const CATEGORIES = [
+  { key: 'Fuerza', label: 'Fuerza', color: '#FFE4E1' },
+  { key: 'Resistencia', label: 'Resistencia', color: '#E0FFFF' },
+  { key: 'Relajacion', label: 'Relajación', color: '#F0FFF0' },
+  { key: 'Gym libre', label: 'Gym libre', color: '#FFFACD' },
+];
+const catColor = (cat) => CATEGORIES.find(c => c.key === cat)?.color || '#ECECEC';
+
+// Tokens de tema (oscuro / claro)
+const THEMES = {
+  dark: { bg: 'linear-gradient(165deg, #16181A 0%, #2D2928 100%)', text: '#fff', dim: 'rgba(255,255,255,0.55)', accent: '#FF914D', logoInvert: true, glow: 0.22 },
+  light: { bg: 'linear-gradient(165deg, #FFF7F1 0%, #FDF1EA 100%)', text: '#1A1C1E', dim: 'rgba(0,0,0,0.45)', accent: '#E07A2B', logoInvert: false, glow: 0.16 },
+};
 
 const parseTime = (t) => {
   const m = (t || '').match(/(\d+):(\d+)\s*(AM|PM)?/i);
@@ -40,19 +55,32 @@ function buildWeek(classes, refDateStr) {
   return { monday, sunday, days };
 }
 
-// Helpers de presentación de una clase dentro de una celda
+// Celda de una clase: chip pintado con el color de su categoría
 const ClassCell = ({ c }) => {
-  if (!c) return <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 30, fontWeight: 700 }}>–</span>;
+  if (!c) return <span style={{ color: 'rgba(128,128,128,0.35)', fontSize: 30, fontWeight: 700 }}>–</span>;
   return (
-    <div style={{ lineHeight: 1.1 }}>
-      <div style={{ fontSize: 27, fontWeight: 800, color: '#fff', fontFamily: 'var(--font-display)' }}>{c.instructor}</div>
-      <div style={{ fontSize: 19, fontWeight: 800, color: '#FF914D', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 3 }}>{c.title}</div>
+    <div style={{ width: '100%', background: catColor(c.category), borderRadius: 16, padding: '12px 8px', lineHeight: 1.12 }}>
+      <div style={{ fontSize: 26, fontWeight: 800, color: '#2D2928', fontFamily: 'var(--font-display)' }}>{c.instructor}</div>
+      <div style={{ fontSize: 18, fontWeight: 800, color: '#9A5B3E', textTransform: 'uppercase', letterSpacing: '0.03em', marginTop: 2 }}>{c.title}</div>
     </div>
   );
 };
 
+// Leyenda de categorías
+const CategoryLegend = ({ T }) => (
+  <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '14px 28px', marginTop: 30 }}>
+    {CATEGORIES.map(cat => (
+      <div key={cat.key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ width: 26, height: 26, borderRadius: 8, background: cat.color, border: '1px solid rgba(0,0,0,0.08)' }} />
+        <span style={{ fontSize: 24, fontWeight: 700, color: T.dim }}>{cat.label}</span>
+      </div>
+    ))}
+  </div>
+);
+
 // ── La tarjeta (1080×1920) que se captura ──────────────────────────────────
-const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel }, ref) => {
+const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = 'dark' }, ref) => {
+  const T = THEMES[theme] || THEMES.dark;
   const weekdays = week.days.slice(0, 5);
   const weekend = week.days.slice(5, 7);
   const weekdayTimes = [...new Set(weekdays.flatMap(d => d.classes.map(c => c.time)))]
@@ -60,57 +88,56 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel }, ref) =>
   const weekendTimes = [...new Set(weekend.flatMap(d => d.classes.map(c => c.time)))]
     .sort((a, b) => parseTime(a) - parseTime(b));
 
+  const DayHeader = (d) => (
+    <div key={d.dateStr} style={{ textAlign: 'center', paddingBottom: 14 }}>
+      <div style={{ fontSize: 32, fontWeight: 900, color: T.accent, letterSpacing: '0.06em' }}>{d.label}</div>
+      <div style={{ fontSize: 30, fontWeight: 700, color: T.dim }}>{d.dayNum}</div>
+    </div>
+  );
+
   return (
     <div ref={ref} style={{
-      width: 1080, height: 1920, background: 'linear-gradient(165deg, #16181A 0%, #2D2928 100%)',
+      width: 1080, height: 1920, background: T.bg,
       padding: '90px 70px', boxSizing: 'border-box', position: 'relative', overflow: 'hidden',
       fontFamily: 'var(--font-body)', display: 'flex', flexDirection: 'column'
     }}>
       {/* Glow de marca */}
-      <div style={{ position: 'absolute', top: -200, right: -150, width: 700, height: 700, background: 'radial-gradient(circle, rgba(255,145,77,0.22) 0%, transparent 70%)', filter: 'blur(40px)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: -250, left: -150, width: 650, height: 650, background: 'radial-gradient(circle, rgba(224,122,156,0.14) 0%, transparent 70%)', filter: 'blur(40px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: -200, right: -150, width: 700, height: 700, background: `radial-gradient(circle, rgba(255,145,77,${T.glow}) 0%, transparent 70%)`, filter: 'blur(40px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: -250, left: -150, width: 650, height: 650, background: `radial-gradient(circle, rgba(224,122,156,${T.glow * 0.7}) 0%, transparent 70%)`, filter: 'blur(40px)', pointerEvents: 'none' }} />
 
       {/* Header */}
-      <div style={{ position: 'relative', textAlign: 'center', marginBottom: 50 }}>
-        <img src="/logo2.png" alt="" crossOrigin="anonymous" style={{ height: 90, objectFit: 'contain', marginBottom: 24, filter: 'brightness(0) invert(1)' }} />
-        <div style={{ fontSize: 120, fontWeight: 900, color: '#fff', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', lineHeight: 0.9 }}>HORARIOS</div>
-        <div style={{ fontSize: 36, fontWeight: 800, color: '#FF914D', textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 18 }}>{rangeLabel}</div>
+      <div style={{ position: 'relative', textAlign: 'center', marginBottom: 44 }}>
+        <div style={{ fontSize: 122, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', lineHeight: 0.9 }}>HORARIOS</div>
+        <div style={{ fontSize: 36, fontWeight: 800, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 18 }}>{rangeLabel}</div>
       </div>
 
       {/* Contenido */}
       <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
         {mode === 'day' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 22, marginTop: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 22, marginTop: 10 }}>
             {dayData.classes.length > 0 ? dayData.classes.map((c, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 30, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 28, padding: '28px 34px' }}>
-                <div style={{ minWidth: 200, fontSize: 46, fontWeight: 900, color: '#FF914D', fontFamily: 'var(--font-display)' }}>{c.time}</div>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 30, background: catColor(c.category), borderRadius: 28, padding: '28px 34px' }}>
+                <div style={{ minWidth: 200, fontSize: 46, fontWeight: 900, color: '#2D2928', fontFamily: 'var(--font-display)' }}>{c.time}</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 40, fontWeight: 900, color: '#fff', fontFamily: 'var(--font-display)' }}>{c.title}</div>
-                  <div style={{ fontSize: 28, fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 4 }}>{c.instructor}</div>
+                  <div style={{ fontSize: 40, fontWeight: 900, color: '#1A1C1E', fontFamily: 'var(--font-display)' }}>{c.title}</div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: '#9A5B3E', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 4 }}>{c.instructor}</div>
                 </div>
               </div>
             )) : (
-              <div style={{ textAlign: 'center', padding: 80, fontSize: 34, color: 'rgba(255,255,255,0.4)' }}>No hay clases programadas este día.</div>
+              <div style={{ textAlign: 'center', padding: 80, fontSize: 34, color: T.dim }}>No hay clases programadas este día.</div>
             )}
           </div>
         ) : (
           <>
             {/* Grid entre semana */}
-            <div style={{ display: 'grid', gridTemplateColumns: '150px repeat(5, 1fr)', gap: '0 14px' }}>
-              {/* fila de encabezados */}
+            <div style={{ display: 'grid', gridTemplateColumns: '140px repeat(5, 1fr)', gap: '12px 10px', alignItems: 'stretch' }}>
               <div />
-              {weekdays.map(d => (
-                <div key={d.dateStr} style={{ textAlign: 'center', paddingBottom: 18 }}>
-                  <div style={{ fontSize: 32, fontWeight: 900, color: '#FF914D', letterSpacing: '0.06em' }}>{d.label}</div>
-                  <div style={{ fontSize: 30, fontWeight: 700, color: 'rgba(255,255,255,0.55)' }}>{d.dayNum}</div>
-                </div>
-              ))}
-              {/* filas por horario */}
-              {weekdayTimes.map((time, ri) => (
+              {weekdays.map(DayHeader)}
+              {weekdayTimes.map((time) => (
                 <React.Fragment key={time}>
-                  <div style={{ display: 'flex', alignItems: 'center', fontSize: 30, fontWeight: 900, color: '#fff', fontFamily: 'var(--font-display)', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '20px 0' }}>{time}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', fontSize: 28, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)' }}>{time}</div>
                   {weekdays.map(d => (
-                    <div key={d.dateStr + time} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '20px 6px' }}>
+                    <div key={d.dateStr + time} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
                       <ClassCell c={d.classes.find(c => c.time === time)} />
                     </div>
                   ))}
@@ -120,21 +147,16 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel }, ref) =>
 
             {/* Fin de semana */}
             {weekendTimes.length > 0 && (
-              <div style={{ marginTop: 50 }}>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 120, marginBottom: 20 }}>
-                  {weekend.map(d => (
-                    <div key={d.dateStr} style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 32, fontWeight: 900, color: '#FF914D', letterSpacing: '0.06em' }}>{d.label}</div>
-                      <div style={{ fontSize: 30, fontWeight: 700, color: 'rgba(255,255,255,0.55)' }}>{d.dayNum}</div>
-                    </div>
-                  ))}
+              <div style={{ marginTop: 44 }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 160, marginBottom: 14 }}>
+                  {weekend.map(DayHeader)}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 1fr', gap: '0 14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 1fr', gap: '12px 10px' }}>
                   {weekendTimes.map(time => (
                     <React.Fragment key={'we' + time}>
-                      <div style={{ display: 'flex', alignItems: 'center', fontSize: 30, fontWeight: 900, color: '#fff', fontFamily: 'var(--font-display)', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '18px 0' }}>{time}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', fontSize: 28, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)' }}>{time}</div>
                       {weekend.map(d => (
-                        <div key={d.dateStr + time} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '18px 6px' }}>
+                        <div key={d.dateStr + time} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
                           <ClassCell c={d.classes.find(c => c.time === time)} />
                         </div>
                       ))}
@@ -147,10 +169,13 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel }, ref) =>
         )}
       </div>
 
-      {/* Footer */}
-      <div style={{ position: 'relative', textAlign: 'center', marginTop: 40 }}>
-        <div style={{ fontSize: 40, fontWeight: 900, color: '#fff', letterSpacing: '0.18em', fontFamily: 'var(--font-display)' }}>BE FIT LAB</div>
-        <div style={{ fontSize: 28, fontWeight: 700, color: '#FF914D', marginTop: 6 }}>@befit.lab</div>
+      {/* Leyenda de categorías */}
+      <CategoryLegend T={T} />
+
+      {/* Footer con logo grande */}
+      <div style={{ position: 'relative', textAlign: 'center', marginTop: 36 }}>
+        <img src="/logo2.png" alt="" crossOrigin="anonymous" style={{ height: 150, objectFit: 'contain', filter: T.logoInvert ? 'brightness(0) invert(1)' : 'none' }} />
+        <div style={{ fontSize: 28, fontWeight: 700, color: T.accent, marginTop: 4 }}>@befit.lab</div>
       </div>
     </div>
   );
@@ -159,6 +184,7 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel }, ref) =>
 export default function ScheduleStoryExport({ classes, selectedDateStr, buttonStyle, buttonLabel = 'Compartir horarios' }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState('week'); // 'week' | 'day'
+  const [theme, setTheme] = useState('dark'); // 'dark' | 'light'
   const [busy, setBusy] = useState(false);
   const cardRef = useRef(null);
   // Ancho del preview (la tarjeta real es 1080px; aquí se escala para caber en el sheet)
@@ -252,11 +278,20 @@ export default function ScheduleStoryExport({ classes, selectedDateStr, buttonSt
               ))}
             </div>
 
+            {/* toggle claro / oscuro */}
+            <div style={{ display: 'flex', gap: 8, padding: '0 20px 6px', flexShrink: 0 }}>
+              {[{ k: 'dark', l: 'Oscuro', I: Moon }, { k: 'light', l: 'Claro', I: Sun }].map(({ k, l, I }) => (
+                <button key={k} onClick={() => setTheme(k)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px', borderRadius: 14, border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem', background: theme === k ? 'var(--primary)' : 'rgba(0,0,0,0.05)', color: theme === k ? '#fff' : 'var(--on-surface-variant)' }}>
+                  <I size={16} /> {l}
+                </button>
+              ))}
+            </div>
+
             {/* preview (escalado dentro de una caja de tamaño fijo) */}
             <div style={{ flex: 1, overflow: 'auto', padding: '14px 20px 0', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
               <div style={{ width: PREVIEW_W, height: PREVIEW_W * (1920 / 1080), flexShrink: 0, position: 'relative', overflow: 'hidden', borderRadius: 18, boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
                 <div style={{ position: 'absolute', top: 0, left: 0, width: 1080, height: 1920, transform: `scale(${PREVIEW_W / 1080})`, transformOrigin: 'top left' }}>
-                  <StoryCard ref={cardRef} mode={mode} week={week} dayData={dayData} rangeLabel={rangeLabel} />
+                  <StoryCard ref={cardRef} mode={mode} week={week} dayData={dayData} rangeLabel={rangeLabel} theme={theme} />
                 </div>
               </div>
             </div>
