@@ -43,7 +43,7 @@ function Evolucion() {
   const [previousMeasurement, setPreviousMeasurement] = useState(null);
   const [loadingMeasurements, setLoadingMeasurements] = useState(true);
   const [syncingScale, setSyncingScale] = useState(false);
-  const [subtab, setSubtab] = useState('resumen'); // resumen | fotos
+  const [subtab, setSubtab] = useState('resumen'); // resumen | fotos | insignias
   const isScrolled = useScrollDetect(30);
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [showGoalModal, setShowGoalModal] = useState(false);
@@ -281,7 +281,7 @@ function Evolucion() {
 
       {/* SUB-PESTAÑAS (glass) */}
       <div style={{ display: 'flex', gap: '8px', padding: '6px 16px 2px', maxWidth: '900px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
-        {[['resumen', 'Resumen'], ['fotos', 'Fotos']].map(([id, label]) => {
+        {[['resumen', 'Resumen'], ['fotos', 'Fotos'], ['insignias', 'Insignias']].map(([id, label]) => {
           const on = subtab === id;
           return (
             <motion.button key={id} onClick={() => setSubtab(id)} whileTap={{ scale: 0.95 }}
@@ -300,6 +300,31 @@ function Evolucion() {
         <main className="dashboard-main" style={{ paddingTop: '10px' }}>
           <div style={{ width: '100%', maxWidth: '720px', margin: '0 auto', padding: '0 16px' }}>
             <ProgressPhotos userId={user?.id} />
+          </div>
+        </main>
+      )}
+
+      {subtab === 'insignias' && (
+        <main className="dashboard-main" style={{ paddingTop: '10px' }}>
+          <div style={{ width: '100%', maxWidth: '720px', margin: '0 auto', padding: '0 16px' }}>
+            <motion.section className="tour-badges-section" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '6px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Tus insignias</h2>
+              <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', margin: '0 0 18px', lineHeight: 1.5 }}>
+                Desbloquéalas asistiendo a clases, completando tu perfil y manteniendo tu constancia. Toca cualquiera para ver cómo conseguirla.
+              </p>
+              {badges.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(88px, 1fr))', gap: '18px 12px', justifyItems: 'center' }}>
+                  {badges.map((b, i) => (
+                    <BadgeIcon key={i} icon={b.icon} label={b.label} locked={b.locked} onClick={() => setSelectedBadge(b)} />
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--on-surface-variant)' }}>
+                  <Award size={32} style={{ opacity: 0.3, marginBottom: '10px' }} />
+                  <p style={{ fontSize: '0.9rem', margin: 0 }}>No hay insignias configuradas aún.</p>
+                </div>
+              )}
+            </motion.section>
           </div>
         </main>
       )}
@@ -349,18 +374,6 @@ function Evolucion() {
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,139,66,0.08)', padding: '6px 14px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   <Award size={14} /> Meta: {targetMonthlyClasses} clases/mes
                 </div>
-              )}
-            </div>
-          </motion.section>
-
-          {/* BADGES */}
-          <motion.section className="tour-badges-section" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }} style={{ marginTop: '20px' }}>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '12px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Insignias</h2>
-            <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '10px' }}>
-              {badges.length > 0 ? badges.map((b, i) => (
-                <BadgeIcon key={i} icon={b.icon} label={b.label} locked={b.locked} onClick={() => setSelectedBadge(b)} />
-              )) : (
-                <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontStyle: 'italic' }}>No hay insignias configuradas aún.</p>
               )}
             </div>
           </motion.section>
