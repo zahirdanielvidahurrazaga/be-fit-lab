@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { resolveCatColor } from '../lib/categories';
 
 export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, onReserve }) {
   const todayStr = new Date().toISOString().split('T')[0];
@@ -183,19 +184,9 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, onReser
 }
 
 export function ClassItem({ classData, full, onReserve, coaches, badgeConfigs }) {
-  const { time, title, instructor, spots, category, coach_id } = classData;
+  const { time, title, instructor, spots, category, category_color, coach_id } = classData;
 
-  const getBackgroundColor = (cat) => {
-    switch(cat) {
-      case 'Fuerza': return '#FFE4E1';
-      case 'Resistencia': return '#E0FFFF';
-      case 'Relajacion': return '#F0FFF0';
-      case 'Gym libre': return '#FFFACD';
-      default: return 'var(--app-surface-solid)';
-    }
-  };
-
-  const bgColor = getBackgroundColor(category);
+  const bgColor = resolveCatColor(category, category_color);
 
   return (
     <motion.div 

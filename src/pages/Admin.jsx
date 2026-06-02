@@ -10,6 +10,7 @@ import AdminClientas from '../components/AdminClientas';
 import AdminNutricion from '../components/AdminNutricion';
 import AdminEventos from '../components/AdminEventos';
 import ScheduleStoryExport from '../components/ScheduleStoryExport';
+import { DEFAULT_CATEGORIES, PASTEL_PALETTE, resolveCatColor } from '../lib/categories';
 import { Coffee, Bell, UserCog, Sparkles } from 'lucide-react';
 
 const daysOfWeek = [
@@ -53,8 +54,10 @@ function Admin() {
   // Formularios de Creación
   const [showAddClass, setShowAddClass] = useState(false);
   const [classMode, setClassMode] = useState('single');
+  const [addingCategory, setAddingCategory] = useState(false); // form de categoría nueva
+  const [addingLevel, setAddingLevel] = useState(false);       // form de nivel nuevo
   const [newClass, setNewClass] = useState({
-    title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza',
+    title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1',
     description: '',
     date: new Date().toISOString().split('T')[0],
     startDate: new Date().toISOString().split('T')[0],
@@ -246,7 +249,8 @@ function Admin() {
         date: newClass.date,
         day: d.getDay(),
         spots: parseInt(newClass.spots),
-        level: newClass.level
+        level: newClass.level,
+        category_color: newClass.category_color || null
       });
     } else {
       if (!newClass.startDate || !newClass.endDate || newClass.daysOfWeek.length === 0) {
@@ -268,7 +272,8 @@ function Admin() {
             date: current.toISOString().split('T')[0],
             day: current.getDay(),
             spots: parseInt(newClass.spots),
-            level: newClass.level
+            level: newClass.level,
+            category_color: newClass.category_color || null
           });
         }
         current.setDate(current.getDate() + 1);
@@ -286,7 +291,7 @@ function Admin() {
     showToast("¡Clase(s) creadas con éxito!");
     setShowAddClass(false);
     setNewClass({
-      title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza',
+      title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1',
       description: '',
       date: new Date().toISOString().split('T')[0],
       startDate: new Date().toISOString().split('T')[0],
@@ -371,6 +376,37 @@ function Admin() {
   };
 
   const inputStyle = { width: '100%', padding: '14px 16px', borderRadius: '14px', border: '1px solid rgba(55,61,59,0.08)', background: 'var(--surface-lowest)', fontFamily: 'var(--font-body)', fontSize: '0.9rem', outline: 'none', transition: 'border 0.2s' };
+
+  // ── Hora: selector nativo (24h) ⇄ formato guardado "h:mm AM/PM" ──────
+  const to24h = (ampm) => {
+    const m = (ampm || '').match(/(\d+):(\d+)\s*(AM|PM)?/i);
+    if (!m) return '';
+    let h = +m[1]; const min = m[2]; const ap = (m[3] || '').toUpperCase();
+    if (ap === 'PM' && h !== 12) h += 12;
+    if (ap === 'AM' && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${min}`;
+  };
+  const toAmPm = (h24) => {
+    if (!h24) return '';
+    const [hh, mm] = h24.split(':').map(Number);
+    const ap = hh >= 12 ? 'PM' : 'AM';
+    let h = hh % 12; if (h === 0) h = 12;
+    return `${h}:${String(mm).padStart(2, '0')} ${ap}`;
+  };
+
+  // Categorías y niveles disponibles (default + los que ya existan en clases)
+  const allCategories = (() => {
+    const map = new Map();
+    DEFAULT_CATEGORIES.forEach(c => map.set(c.name, { name: c.name, label: c.label, color: c.color }));
+    (globalClasses || []).forEach(c => { if (c.category && !map.has(c.category)) map.set(c.category, { name: c.category, label: c.category, color: resolveCatColor(c.category, c.category_color) }); });
+    return [...map.values()];
+  })();
+  const allLevels = (() => {
+    const base = ['Todos los niveles', 'Principiante', 'Intermedio', 'Avanzado'];
+    const set = new Set(base);
+    (globalClasses || []).forEach(c => { if (c.level) set.add(c.level); });
+    return [...set];
+  })();
   const labelStyle = { fontSize: '0.78rem', fontWeight: 700, color: 'var(--on-surface-variant)', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' };
 
   const getRuleDescription = (type, value) => {
@@ -895,31 +931,65 @@ function Admin() {
                           style={{...inputStyle, resize: 'none', fontFamily: 'inherit', marginBottom: '10px'}}
                         />
                         <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                          <input placeholder="Hora (ej. 07:00 AM)" value={newClass.time} onChange={e => setNewClass({...newClass, time: e.target.value})} style={inputStyle} />
-                          <select value={newClass.coach_id} onChange={e => {
-                            const c = coaches.find(x => x.id === e.target.value);
-                            setNewClass({...newClass, coach_id: e.target.value, instructor: c ? (c.full_name || c.email) : ''});
-                          }} style={{...inputStyle, WebkitAppearance: 'none'}}>
-                            <option value="">Coach...</option>
-                            {coaches.map(c => <option key={c.id} value={c.id}>{c.full_name || c.email}</option>)}
-                          </select>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', marginLeft: '4px' }}>Hora</label>
+                            <input type="time" value={to24h(newClass.time)} onChange={e => setNewClass({...newClass, time: toAmPm(e.target.value)})} style={{...inputStyle, marginTop: '4px'}} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', marginLeft: '4px' }}>Coach</label>
+                            <select value={newClass.coach_id} onChange={e => {
+                              const c = coaches.find(x => x.id === e.target.value);
+                              setNewClass({...newClass, coach_id: e.target.value, instructor: c ? (c.full_name || c.email) : ''});
+                            }} style={{...inputStyle, WebkitAppearance: 'none', marginTop: '4px'}}>
+                              <option value="">Coach...</option>
+                              {coaches.map(c => <option key={c.id} value={c.id}>{c.full_name || c.email}</option>)}
+                            </select>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+
+                        <div style={{ display: 'flex', gap: '10px', marginBottom: addingLevel ? '10px' : '15px' }}>
                           <input type="number" placeholder="Cupos" value={newClass.spots} onChange={e => setNewClass({...newClass, spots: e.target.value})} style={inputStyle} />
-                          <select value={newClass.level} onChange={e => setNewClass({...newClass, level: e.target.value})} style={{...inputStyle, WebkitAppearance: 'none'}}>
-                            <option value="Todos los niveles">Todos los niveles</option>
-                            <option value="Principiante">Principiante</option>
-                            <option value="Intermedio">Intermedio</option>
-                            <option value="Avanzado">Avanzado</option>
+                          <select value={addingLevel ? '__new__' : newClass.level} onChange={e => {
+                            if (e.target.value === '__new__') { setAddingLevel(true); setNewClass({...newClass, level: ''}); }
+                            else { setAddingLevel(false); setNewClass({...newClass, level: e.target.value}); }
+                          }} style={{...inputStyle, WebkitAppearance: 'none'}}>
+                            {allLevels.map(l => <option key={l} value={l}>{l}</option>)}
+                            <option value="__new__">➕ Nuevo nivel…</option>
                           </select>
                         </div>
+                        {addingLevel && (
+                          <input autoFocus placeholder="Nombre del nivel (ej. Avanzado+)" value={newClass.level} onChange={e => setNewClass({...newClass, level: e.target.value})} style={{...inputStyle, marginBottom: '15px'}} />
+                        )}
+
                         <div style={{ marginBottom: '15px' }}>
-                          <select value={newClass.category} onChange={e => setNewClass({...newClass, category: e.target.value})} style={{...inputStyle, WebkitAppearance: 'none'}}>
-                            <option value="Fuerza">Fuerza</option>
-                            <option value="Resistencia">Resistencia</option>
-                            <option value="Relajacion">Relajación o estiramiento</option>
-                            <option value="Gym libre">Gym libre</option>
+                          <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', marginLeft: '4px' }}>Categoría</label>
+                          <select value={addingCategory ? '__new__' : newClass.category} onChange={e => {
+                            if (e.target.value === '__new__') { setAddingCategory(true); setNewClass({...newClass, category: '', category_color: PASTEL_PALETTE[0]}); }
+                            else { setAddingCategory(false); const cat = allCategories.find(c => c.name === e.target.value); setNewClass({...newClass, category: e.target.value, category_color: cat ? cat.color : null}); }
+                          }} style={{...inputStyle, WebkitAppearance: 'none', marginTop: '4px'}}>
+                            {allCategories.map(c => <option key={c.name} value={c.name}>{c.label}</option>)}
+                            <option value="__new__">➕ Nueva categoría…</option>
                           </select>
+
+                          {addingCategory && (
+                            <div style={{ marginTop: '10px' }}>
+                              <input autoFocus placeholder="Nombre de la categoría (ej. Cardio)" value={newClass.category} onChange={e => setNewClass({...newClass, category: e.target.value})} style={{...inputStyle, marginBottom: '10px'}} />
+                              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--on-surface-variant)', marginBottom: '8px' }}>Elige un color pastel</div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                {PASTEL_PALETTE.map(col => (
+                                  <button key={col} type="button" onClick={() => setNewClass({...newClass, category_color: col})}
+                                    style={{ width: '40px', height: '40px', borderRadius: '12px', background: col, cursor: 'pointer',
+                                      border: newClass.category_color === col ? '3px solid var(--primary)' : '1px solid rgba(0,0,0,0.1)',
+                                      boxShadow: newClass.category_color === col ? '0 4px 12px rgba(255,145,77,0.3)' : 'none' }} />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px' }}>
+                            <span style={{ width: '22px', height: '22px', borderRadius: '6px', background: newClass.category_color || '#ECECEC', border: '1px solid rgba(0,0,0,0.12)', flexShrink: 0 }} />
+                            <span style={{ fontSize: '0.74rem', color: 'var(--on-surface-variant)' }}>Este color lo verán clientas, coaches y las historias</span>
+                          </div>
                         </div>
                         
                         <button onClick={async (e) => {

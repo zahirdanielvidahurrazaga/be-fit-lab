@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Share2, X, CalendarRange, CalendarDays, Moon, Sun } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { Capacitor } from '@capacitor/core';
+import { resolveCatColor, categoryLabel } from '../lib/categories';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Generador de "Horarios" para Instagram Stories (formato 1080×1920).
@@ -13,15 +14,6 @@ import { Capacitor } from '@capacitor/core';
 
 const DOW_LABELS = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB']; // index = getDay()
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-
-// Categorías y sus colores (mismos que la vista de cliente)
-const CATEGORIES = [
-  { key: 'Fuerza', label: 'Fuerza', color: '#FFE4E1' },
-  { key: 'Resistencia', label: 'Resistencia', color: '#E0FFFF' },
-  { key: 'Relajacion', label: 'Relajación', color: '#F0FFF0' },
-  { key: 'Gym libre', label: 'Gym libre', color: '#FFFACD' },
-];
-const catColor = (cat) => CATEGORIES.find(c => c.key === cat)?.color || '#ECECEC';
 
 const hexToRgba = (hex, a) => {
   const h = (hex || '#ECECEC').replace('#', '');
@@ -90,7 +82,7 @@ const ClassCell = ({ c, T, avatarFor }) => {
   return (
     <div style={{
       width: '100%', borderRadius: 18, padding: '12px 8px 14px',
-      background: glassOver(catColor(c.category)), ...GLASS_CHIP,
+      background: glassOver(resolveCatColor(c.category, c.category_color)), ...GLASS_CHIP,
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, lineHeight: 1.1
     }}>
       <Avatar url={avatarFor?.(c)} name={c.instructor} size={48} ring="rgba(255,255,255,0.85)" />
@@ -102,19 +94,22 @@ const ClassCell = ({ c, T, avatarFor }) => {
   );
 };
 
-// Leyenda — una sola barra glass con todas las categorías
-const CategoryLegend = ({ T }) => (
-  <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', marginTop: 30 }}>
-    <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '12px 30px', padding: '18px 34px', borderRadius: 28, background: T.glassBg, border: `1.5px solid ${T.glassBorder}`, boxShadow: T.glassHi }}>
-      {CATEGORIES.map(cat => (
-        <div key={cat.key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ width: 26, height: 26, borderRadius: 8, background: cat.color, border: '1px solid rgba(0,0,0,0.1)' }} />
-          <span style={{ fontSize: 24, fontWeight: 800, color: T.text }}>{cat.label}</span>
-        </div>
-      ))}
+// Leyenda — una sola barra glass con las categorías presentes
+const CategoryLegend = ({ T, cats }) => {
+  if (!cats?.length) return null;
+  return (
+    <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', marginTop: 30 }}>
+      <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '12px 30px', padding: '18px 34px', borderRadius: 28, background: T.glassBg, border: `1.5px solid ${T.glassBorder}`, boxShadow: T.glassHi }}>
+        {cats.map(cat => (
+          <div key={cat.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ width: 26, height: 26, borderRadius: 8, background: cat.color, border: '1px solid rgba(0,0,0,0.1)' }} />
+            <span style={{ fontSize: 24, fontWeight: 800, color: T.text }}>{cat.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ── La tarjeta (1080×1920) que se captura ──────────────────────────────────
 const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = 'dark', avatarFor }, ref) => {
@@ -125,6 +120,14 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = '
     .sort((a, b) => parseTime(a) - parseTime(b));
   const weekendTimes = [...new Set(weekend.flatMap(d => d.classes.map(c => c.time)))]
     .sort((a, b) => parseTime(a) - parseTime(b));
+
+  // Categorías presentes (para la leyenda dinámica)
+  const presentCats = (() => {
+    const src = mode === 'day' ? (dayData?.classes || []) : week.days.flatMap(d => d.classes);
+    const map = new Map();
+    src.forEach(c => { if (c.category && !map.has(c.category)) map.set(c.category, { name: c.category, label: categoryLabel(c.category), color: resolveCatColor(c.category, c.category_color) }); });
+    return [...map.values()];
+  })();
 
   const DayHeader = (d) => (
     <div key={d.dateStr} style={{ textAlign: 'center', paddingBottom: 14 }}>
@@ -157,7 +160,7 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = '
             {dayData.classes.length > 0 ? dayData.classes.map((c, i) => (
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', gap: 26, borderRadius: 28, padding: '24px 30px',
-                background: glassOver(catColor(c.category)), ...GLASS_CHIP
+                background: glassOver(resolveCatColor(c.category, c.category_color)), ...GLASS_CHIP
               }}>
                 <div style={{ minWidth: 165, fontSize: 46, fontWeight: 900, color: '#2D2928', fontFamily: 'var(--font-display)' }}>{c.time}</div>
                 <Avatar url={avatarFor?.(c)} name={c.instructor} size={80} ring="rgba(255,255,255,0.85)" />
@@ -213,7 +216,7 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = '
       </div>
 
       {/* Leyenda de categorías */}
-      <CategoryLegend T={T} />
+      <CategoryLegend T={T} cats={presentCats} />
 
       {/* Footer con logo grande */}
       <div style={{ position: 'relative', textAlign: 'center', marginTop: 36 }}>
