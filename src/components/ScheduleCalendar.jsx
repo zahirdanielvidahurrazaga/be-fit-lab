@@ -1,7 +1,29 @@
 import React, { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { resolveCatColor } from '../lib/categories';
+import { resolveCatColor, categoryLabel } from '../lib/categories';
+
+// Leyenda de categorías presentes (barra glass bajo el calendario)
+function CategoryLegendBar({ globalClasses }) {
+  const cats = (() => {
+    const map = new Map();
+    (globalClasses || []).forEach(c => { if (c.category && !map.has(c.category)) map.set(c.category, { name: c.category, color: resolveCatColor(c.category, c.category_color) }); });
+    return [...map.values()];
+  })();
+  if (!cats.length) return null;
+  return (
+    <div style={{ marginTop: '22px', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '10px 18px', padding: '14px 20px', borderRadius: '20px', background: 'var(--glass-bg, rgba(255,255,255,0.55))', border: '1px solid var(--glass-border, rgba(255,255,255,0.7))', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', boxShadow: '0 8px 28px rgba(0,0,0,0.06)' }}>
+        {cats.map(cat => (
+          <div key={cat.name} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+            <span style={{ width: '18px', height: '18px', borderRadius: '6px', background: cat.color, border: '1px solid rgba(0,0,0,0.12)' }} />
+            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--on-surface)' }}>{categoryLabel(cat.name)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, onReserve }) {
   const todayStr = new Date().toISOString().split('T')[0];
@@ -179,6 +201,8 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, onReser
           </div>
         </motion.div>
       )}
+
+      <CategoryLegendBar globalClasses={globalClasses} />
     </div>
   );
 }

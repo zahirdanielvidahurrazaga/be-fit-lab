@@ -403,7 +403,7 @@ function Admin() {
     if (res.success) showToast("Regla eliminada");
   };
 
-  const inputStyle = { width: '100%', padding: '14px 16px', borderRadius: '14px', border: '1px solid rgba(55,61,59,0.08)', background: 'var(--surface-lowest)', fontFamily: 'var(--font-body)', fontSize: '0.9rem', outline: 'none', transition: 'border 0.2s' };
+  const inputStyle = { width: '100%', boxSizing: 'border-box', minWidth: 0, padding: '14px 16px', borderRadius: '14px', border: '1px solid rgba(55,61,59,0.08)', background: 'var(--surface-lowest)', fontFamily: 'var(--font-body)', fontSize: '0.9rem', outline: 'none', transition: 'border 0.2s' };
 
   // ── Hora: selector nativo (24h) ⇄ formato guardado "h:mm AM/PM" ──────
   const to24h = (ampm) => {
@@ -942,11 +942,11 @@ function Admin() {
                           <div style={{ marginBottom: '15px' }}>
                             <label style={labelStyle}>Rango de Fechas</label>
                             <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-                              <div style={{flex: 1}}>
+                              <div style={{flex: 1, minWidth: 0}}>
                                 <span style={{fontSize: '0.7rem', color: '#666'}}>Desde</span>
                                 <input type="date" value={newClass.startDate} onChange={e => setNewClass({...newClass, startDate: e.target.value})} style={inputStyle} />
                               </div>
-                              <div style={{flex: 1}}>
+                              <div style={{flex: 1, minWidth: 0}}>
                                 <span style={{fontSize: '0.7rem', color: '#666'}}>Hasta</span>
                                 <input type="date" value={newClass.endDate} onChange={e => setNewClass({...newClass, endDate: e.target.value})} style={inputStyle} />
                               </div>
@@ -984,11 +984,11 @@ function Admin() {
                           style={{...inputStyle, resize: 'none', fontFamily: 'inherit', marginBottom: '10px'}}
                         />
                         <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                          <div style={{ flex: 1 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', marginLeft: '4px' }}>Hora</label>
-                            <input type="time" value={to24h(newClass.time)} onChange={e => setNewClass({...newClass, time: toAmPm(e.target.value)})} style={{...inputStyle, marginTop: '4px'}} />
+                            <input type="time" value={to24h(newClass.time)} onChange={e => setNewClass({...newClass, time: toAmPm(e.target.value)})} style={{...inputStyle, WebkitAppearance: 'none', appearance: 'none', marginTop: '4px'}} />
                           </div>
-                          <div style={{ flex: 1 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', marginLeft: '4px' }}>Coach</label>
                             <select value={newClass.coach_id} onChange={e => {
                               const c = coaches.find(x => x.id === e.target.value);
