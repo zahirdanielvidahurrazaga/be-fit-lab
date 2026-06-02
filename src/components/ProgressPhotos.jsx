@@ -419,30 +419,25 @@ export default function ProgressPhotos({ userId }) {
       {/* Cadencia 6 semanas */}
       <div style={{ 
         position: 'relative', overflow: 'hidden', 
-        background: 'linear-gradient(145deg, #FFCCAA 0%, #FFB385 100%)', borderRadius: '32px', 
+        background: 'linear-gradient(145deg, #F0F6FF 0%, #D1E1FF 100%)', borderRadius: '32px', 
         padding: '24px', border: 'none', 
-        display: 'flex', alignItems: 'center', color: '#ffffff', 
-        boxShadow: '0 20px 40px rgba(255, 179, 133, 0.25)',
+        display: 'flex', alignItems: 'center', color: '#0F172A', 
+        boxShadow: '0 20px 40px rgba(180, 205, 255, 0.35)',
         minHeight: '175px'
       }}>
-        {/* Brillo suave superior tipo Glass con difuminado horizontal para evitar cortes */}
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(90deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.3) 100%)', pointerEvents: 'none' }}></div>
-
-        {/* Imagen modelo lado derecho (v3) - Muy grande, bajada y más a la derecha */}
-        <div style={{ position: 'absolute', right: '-90px', bottom: '-40%', width: '70%', height: '175%', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', pointerEvents: 'none', zIndex: 0 }}>
-          <img src="/v3.png" alt="" style={{ height: '100%', width: '100%', objectFit: 'cover', objectPosition: 'bottom right', filter: 'drop-shadow(-10px 10px 20px rgba(0,0,0,0.3))' }} />
-        </div>
+        {/* Brillo suave superior tipo Glass con difuminado horizontal */}
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(90deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.6) 100%)', pointerEvents: 'none' }}></div>
         
-        {/* Contenido texto lado izquierdo */}
-        <div style={{ flex: 1, zIndex: 1, paddingRight: '45%' }}>
-          <h3 style={{ margin: '0 0 8px', fontWeight: 900, fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: '#ffffff', lineHeight: 1.1, textShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+        {/* Contenido texto */}
+        <div style={{ flex: 1, zIndex: 1 }}>
+          <h3 style={{ margin: '0 0 8px', fontWeight: 900, fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: '#0F172A', lineHeight: 1.1, textShadow: '0 2px 10px rgba(255,255,255,0.5)' }}>
             {nextDue.due ? '¡Hora de tus fotos!' : 'Tu progreso visual'}
           </h3>
-          <p style={{ margin: '0 0 16px', fontSize: '0.82rem', color: 'rgba(255,255,255,0.95)', fontWeight: 600, lineHeight: 1.4 }}>
+          <p style={{ margin: '0 0 16px', fontSize: '0.82rem', color: '#334155', fontWeight: 700, lineHeight: 1.4 }}>
             {!sessions?.length ? 'Toma tus primeras fotos para empezar tu viaje' : nextDue.due ? 'Han pasado 6 semanas, registra tu avance' : `Próxima sesión en ${nextDue.days} ${nextDue.days === 1 ? 'día' : 'días'}`}
           </p>
-          {/* Pill oscura estilo Premium Glass */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', padding: '8px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
+          {/* Pill oscura estilo Premium para alto contraste */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#0F172A', padding: '8px 14px', borderRadius: '20px', border: 'none', boxShadow: '0 4px 12px rgba(15, 23, 42, 0.15)' }}>
             {nextDue.due ? <Sparkles size={14} color="#ffffff" /> : <CalendarClock size={14} color="#ffffff" />}
             <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#ffffff' }}>
               {nextDue.due ? 'Acción Requerida' : 'Evolución'}
