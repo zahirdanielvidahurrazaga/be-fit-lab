@@ -78,35 +78,41 @@ function buildWeek(classes, refDateStr) {
   return { monday, sunday, days };
 }
 
-// Celda de una clase: chip "glass" tintado con el color de su categoría
+// Celda de una clase: color sólido de la categoría (vivo) + brillo glass encima
+const GLASS_CHIP = {
+  border: '1.5px solid rgba(255,255,255,0.75)',
+  boxShadow: 'inset 0 1.5px 0 rgba(255,255,255,0.75), 0 6px 18px rgba(0,0,0,0.16)',
+};
+const glassOver = (color) => `linear-gradient(160deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 48%), ${color}`;
+
 const ClassCell = ({ c, T, avatarFor }) => {
-  if (!c) return <span style={{ color: 'rgba(128,128,128,0.35)', fontSize: 30, fontWeight: 700 }}>–</span>;
-  const color = catColor(c.category);
+  if (!c) return <span style={{ color: T?.dim || 'rgba(128,128,128,0.4)', fontSize: 30, fontWeight: 700 }}>–</span>;
   return (
     <div style={{
       width: '100%', borderRadius: 18, padding: '12px 8px 14px',
-      background: `linear-gradient(150deg, ${hexToRgba(color, T.tintHi)}, ${hexToRgba(color, T.tintLo)})`,
-      border: `1.5px solid ${T.glassBorder}`, boxShadow: `${T.glassHi}, 0 6px 18px rgba(0,0,0,0.12)`,
+      background: glassOver(catColor(c.category)), ...GLASS_CHIP,
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, lineHeight: 1.1
     }}>
-      <Avatar url={avatarFor?.(c)} name={c.instructor} size={48} ring={T.glassBorder} />
+      <Avatar url={avatarFor?.(c)} name={c.instructor} size={48} ring="rgba(255,255,255,0.85)" />
       <div>
-        <div style={{ fontSize: 25, fontWeight: 800, color: T.text, fontFamily: 'var(--font-display)' }}>{c.instructor}</div>
-        <div style={{ fontSize: 18, fontWeight: 800, color: T.chipTitle, textTransform: 'uppercase', letterSpacing: '0.03em', marginTop: 2 }}>{c.title}</div>
+        <div style={{ fontSize: 25, fontWeight: 800, color: '#2D2928', fontFamily: 'var(--font-display)' }}>{c.instructor}</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: '#9A5B3E', textTransform: 'uppercase', letterSpacing: '0.03em', marginTop: 2 }}>{c.title}</div>
       </div>
     </div>
   );
 };
 
-// Leyenda de categorías — pills glass con barrita de color (no se pierden con el fondo)
+// Leyenda — una sola barra glass con todas las categorías
 const CategoryLegend = ({ T }) => (
-  <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '14px 18px', marginTop: 30 }}>
-    {CATEGORIES.map(cat => (
-      <div key={cat.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px', borderRadius: 999, background: T.glassBg, border: `1.5px solid ${T.glassBorder}`, boxShadow: T.glassHi }}>
-        <span style={{ width: 36, height: 14, borderRadius: 7, background: cat.color, border: '1px solid rgba(0,0,0,0.1)' }} />
-        <span style={{ fontSize: 24, fontWeight: 800, color: T.text }}>{cat.label}</span>
-      </div>
-    ))}
+  <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', marginTop: 30 }}>
+    <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '12px 30px', padding: '18px 34px', borderRadius: 28, background: T.glassBg, border: `1.5px solid ${T.glassBorder}`, boxShadow: T.glassHi }}>
+      {CATEGORIES.map(cat => (
+        <div key={cat.key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ width: 26, height: 26, borderRadius: 8, background: cat.color, border: '1px solid rgba(0,0,0,0.1)' }} />
+          <span style={{ fontSize: 24, fontWeight: 800, color: T.text }}>{cat.label}</span>
+        </div>
+      ))}
+    </div>
   </div>
 );
 
@@ -151,14 +157,13 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = '
             {dayData.classes.length > 0 ? dayData.classes.map((c, i) => (
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', gap: 26, borderRadius: 28, padding: '24px 30px',
-                background: `linear-gradient(150deg, ${hexToRgba(catColor(c.category), T.tintHi)}, ${hexToRgba(catColor(c.category), T.tintLo)})`,
-                border: `1.5px solid ${T.glassBorder}`, boxShadow: `${T.glassHi}, 0 8px 22px rgba(0,0,0,0.14)`
+                background: glassOver(catColor(c.category)), ...GLASS_CHIP
               }}>
-                <div style={{ minWidth: 165, fontSize: 46, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)' }}>{c.time}</div>
-                <Avatar url={avatarFor?.(c)} name={c.instructor} size={80} ring={T.glassBorder} />
+                <div style={{ minWidth: 165, fontSize: 46, fontWeight: 900, color: '#2D2928', fontFamily: 'var(--font-display)' }}>{c.time}</div>
+                <Avatar url={avatarFor?.(c)} name={c.instructor} size={80} ring="rgba(255,255,255,0.85)" />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 40, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)' }}>{c.title}</div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: T.chipTitle, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 4 }}>{c.instructor}</div>
+                  <div style={{ fontSize: 40, fontWeight: 900, color: '#1A1C1E', fontFamily: 'var(--font-display)' }}>{c.title}</div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: '#9A5B3E', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 4 }}>{c.instructor}</div>
                 </div>
               </div>
             )) : (
@@ -279,7 +284,8 @@ export default function ScheduleStoryExport({ classes, coaches, selectedDateStr,
     return () => { cancelled = true; };
   }, [open, coaches]);
 
-  const avatarFor = (c) => { const co = getCoach(c); return co ? avatarData[co.id] : null; };
+  // dataURL precargado (mejor para exportar) o, si no, la URL directa (siempre se ve en el preview)
+  const avatarFor = (c) => { const co = getCoach(c); if (!co) return null; return avatarData[co.id] || co.avatar_url || null; };
 
   const rangeLabel = useMemo(() => {
     if (mode === 'day') {
@@ -296,7 +302,7 @@ export default function ScheduleStoryExport({ classes, coaches, selectedDateStr,
     if (!cardRef.current) return;
     setBusy(true);
     try {
-      const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 1, width: 1080, height: 1920 });
+      const dataUrl = await toPng(cardRef.current, { pixelRatio: 1, width: 1080, height: 1920 });
       const filename = `horarios-befitlab-${refDate}.png`;
 
       // ── App nativa (iOS/Android): escribir el PNG y abrir el share sheet del sistema ──
