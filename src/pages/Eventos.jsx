@@ -8,6 +8,14 @@ import { useAuth } from '../context/AuthContext';
 import { uploadImage } from '../lib/cafeImage';
 
 const PRIMARY = '#FF914D';
+// Liquid glass (theme-aware vía --glass-bg/--glass-border de index.css)
+const glass = {
+  background: 'var(--glass-bg)',
+  backdropFilter: 'blur(20px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+  border: '1px solid var(--glass-border)',
+  boxShadow: '0 8px 28px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.4)',
+};
 const fmtFull = (iso) => new Date(iso).toLocaleString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
 const isPast = (iso) => iso && new Date(iso).getTime() < Date.now() - 3 * 3600000;
 
@@ -95,7 +103,7 @@ function EventDetail({ ev, user, registered, onToggleReg, onBack }) {
             {registered ? <><Check size={18} /> Inscrita · Cancelar</> : <><Ticket size={18} /> Inscribirme</>}
           </button>
         )}
-        <button onClick={share} style={{ flex: ev.registration_open && !past ? '0 0 auto' : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px 18px', borderRadius: '15px', border: '1.5px solid var(--border-subtle, rgba(0,0,0,0.12))', background: 'var(--app-surface-solid, #fff)', color: 'var(--on-surface)', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>
+        <button onClick={share} style={{ flex: ev.registration_open && !past ? '0 0 auto' : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px 18px', borderRadius: '15px', ...glass, color: 'var(--on-surface)', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>
           <Share2 size={18} /> {!(ev.registration_open && !past) && 'Compartir'}
         </button>
       </div>
@@ -103,13 +111,13 @@ function EventDetail({ ev, user, registered, onToggleReg, onBack }) {
       {/* Galería compartida */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
         <h3 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--on-surface)' }}>Galería {photos.length > 0 && <span style={{ color: 'var(--on-surface-variant)', fontWeight: 500, fontSize: '0.9rem' }}>· {photos.length}</span>}</h3>
-        <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,145,77,0.12)', color: PRIMARY, border: 'none', borderRadius: '11px', padding: '8px 13px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
+        <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,145,77,0.22)', backdropFilter: 'blur(14px) saturate(180%)', WebkitBackdropFilter: 'blur(14px) saturate(180%)', color: PRIMARY, border: '1px solid rgba(255,255,255,0.4)', borderRadius: '11px', padding: '8px 13px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)' }}>
           {uploading ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'flex' }}><Loader2 size={15} /></motion.span> : <ImagePlus size={15} />} Subir fotos
         </button>
         <input ref={fileRef} type="file" accept="image/*" multiple onChange={pickPhotos} style={{ display: 'none' }} />
       </div>
       {photos.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '34px 20px', color: 'var(--on-surface-variant)', background: 'var(--app-surface-solid, #fff)', borderRadius: '18px', border: '1px solid var(--border-subtle, rgba(0,0,0,0.05))' }}>
+        <div style={{ textAlign: 'center', padding: '34px 20px', color: 'var(--on-surface-variant)', ...glass, borderRadius: '18px' }}>
           <ImagePlus size={28} style={{ opacity: 0.3, marginBottom: '8px' }} />
           <p style={{ margin: 0, fontSize: '0.9rem' }}>Sé la primera en compartir fotos de este evento 📸</p>
         </div>
@@ -134,7 +142,7 @@ function EventCard({ ev, registered, onOpen }) {
   const past = isPast(ev.event_date);
   return (
     <motion.div onClick={() => onOpen(ev)} whileTap={{ scale: 0.98 }} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-      style={{ background: 'var(--app-surface-solid, #fff)', borderRadius: '22px', overflow: 'hidden', border: '1px solid var(--border-subtle, rgba(0,0,0,0.05))', cursor: 'pointer', opacity: past ? 0.7 : 1 }}>
+      style={{ ...glass, borderRadius: '22px', overflow: 'hidden', cursor: 'pointer', opacity: past ? 0.7 : 1 }}>
       <div style={{ position: 'relative', height: '150px', background: ev.image_url ? `#eee url('${ev.image_url}') center/cover` : 'linear-gradient(135deg, #FF914D, #E07A9C)' }}>
         {!ev.image_url && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Sparkles size={36} color="rgba(255,255,255,0.6)" /></div>}
         {d && <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)', borderRadius: '12px', padding: '5px 11px', textAlign: 'center' }}>
@@ -200,7 +208,7 @@ export default function Eventos() {
     <div className="mobile-app-container" style={{ background: 'var(--app-bg)', minHeight: '100vh' }}>
       <header className="ios-header" style={{ background: 'transparent', display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button onClick={() => { if (selected) setSelected(null); else if (window.history.length > 1) navigate(-1); else navigate('/portal'); }} aria-label="Volver"
-          style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))', background: 'var(--app-surface-solid, #fff)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, color: 'var(--on-surface)' }}>
+          style={{ width: '40px', height: '40px', borderRadius: '50%', ...glass, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, color: 'var(--on-surface)' }}>
           <ChevronLeft size={20} />
         </button>
         <div>
