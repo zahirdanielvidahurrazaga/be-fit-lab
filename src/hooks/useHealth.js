@@ -67,7 +67,7 @@ export function useHealth() {
     if (!isNative()) return false;
     try {
       const result = await CapacitorHealth.requestAuthorization({
-        read: ['steps', 'calories', 'heartRate'],
+        read: ['steps', 'calories', 'heartRate', 'weight', 'bodyFat'],
         write: ['calories'],
       });
       const granted = result?.readAuthorized?.length > 0;
@@ -98,6 +98,39 @@ export function useHealth() {
     }
   }, []);
 
+  // Lee la última medición de peso y % de grasa desde Salud (la pone ahí la
+  // báscula VeSync al sincronizar). Devuelve { weight_kg, body_fat_pct, measured_at }.
+  const readBodyComposition = useCallback(async () => {
+    if (!isNative()) return null;
+    const now = new Date();
+    const start = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+    const latest = (samples) => (samples || []).reduce((a, b) => {
+      if (!a) return b;
+      const da = new Date(a.endDate || a.startDate || 0).getTime();
+      const db = new Date(b.endDate || b.startDate || 0).getTime();
+      return db >= da ? b : a;
+    }, null);
+    try {
+      const [wRes, fRes] = await Promise.allSettled([
+        CapacitorHealth.readSamples({ dataType: 'weight', startDate: start.toISOString(), endDate: now.toISOString(), limit: 60 }),
+        CapacitorHealth.readSamples({ dataType: 'bodyFat', startDate: start.toISOString(), endDate: now.toISOString(), limit: 60 }),
+      ]);
+      const w = wRes.status === 'fulfilled' ? latest(wRes.value?.samples) : null;
+      const f = fRes.status === 'fulfilled' ? latest(fRes.value?.samples) : null;
+      if (!w || w.value == null) return null;
+      let fat = f?.value ?? null;
+      if (fat != null && fat <= 1) fat = fat * 100; // HealthKit guarda fracción 0-1
+      return {
+        weight_kg: Math.round(w.value * 10) / 10,
+        body_fat_pct: fat != null ? Math.round(fat * 10) / 10 : null,
+        measured_at: w.endDate || w.startDate || new Date().toISOString(),
+      };
+    } catch (err) {
+      console.error('Error leyendo composición corporal:', err);
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     if (!isNative()) return;
     requestPermissions();
@@ -110,5 +143,6 @@ export function useHealth() {
     requestPermissions,
     fetchTodayData,
     logPilatesWorkout,
+    readBodyComposition,
   };
 }

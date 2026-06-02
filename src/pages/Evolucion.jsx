@@ -41,12 +41,13 @@ function Evolucion() {
   const [latestMeasurement, setLatestMeasurement] = useState(null);
   const [previousMeasurement, setPreviousMeasurement] = useState(null);
   const [loadingMeasurements, setLoadingMeasurements] = useState(true);
+  const [syncingScale, setSyncingScale] = useState(false);
   const isScrolled = useScrollDetect(30);
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [goalInput, setGoalInput] = useState('');
 
-  const { healthData, healthPermission, healthLoading, requestPermissions, fetchTodayData } = useHealth();
+  const { healthData, healthPermission, healthLoading, requestPermissions, fetchTodayData, readBodyComposition } = useHealth();
 
   const [classHistory, setClassHistory] = useState([]);
   const [badges, setBadges] = useState([{ icon: '🔒', label: 'Cargando...' }]);
@@ -226,6 +227,32 @@ function Evolucion() {
     }
   };
 
+  // Sincroniza peso/grasa desde Apple Salud (lo pone ahí la báscula VeSync)
+  const syncScale = async () => {
+    if (syncingScale) return;
+    if (!Capacitor.isNativePlatform()) { alert('La sincronización con tu báscula está disponible en la app móvil.'); return; }
+    setSyncingScale(true);
+    try {
+      await requestPermissions(); // asegurar permiso para leer Peso
+      const m = await readBodyComposition();
+      if (!m) {
+        alert('No encontramos tu peso en Salud.\n\n1) Pésate con tu báscula.\n2) Abre la app VeSync y asegúrate de que sincronice con Salud (Apple Salud → Compartir → VeSync).\n3) Vuelve a intentar.');
+        return;
+      }
+      if (latestMeasurement && new Date(latestMeasurement.measured_at).getTime() === new Date(m.measured_at).getTime()) {
+        alert('Ya tienes registrada esta medición. ¡Pésate de nuevo para una nueva! 💪');
+        return;
+      }
+      const { error } = await supabase.from('body_measurements').insert({
+        user_id: user.id, weight_kg: m.weight_kg, body_fat_pct: m.body_fat_pct, measured_at: m.measured_at, source: 'vesync',
+      });
+      if (error) { alert('No se pudo guardar: ' + error.message); return; }
+      await fetchMeasurements();
+    } finally {
+      setSyncingScale(false);
+    }
+  };
+
   const calcTrend = (key, unit = '') => {
     if (!latestMeasurement || !previousMeasurement) return null;
     const curr = latestMeasurement[key];
@@ -322,6 +349,11 @@ function Evolucion() {
                     {new Date(latestMeasurement.measured_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
                   </span>
                 )}
+                {hasData && (
+                  <button onClick={syncScale} disabled={syncingScale} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(255,145,77,0.12)', color: 'var(--primary)', border: 'none', borderRadius: '10px', padding: '6px 11px', fontWeight: 700, fontSize: '0.74rem', cursor: 'pointer' }}>
+                    <Scale size={13} /> {syncingScale ? '…' : 'Sincronizar'}
+                  </button>
+                )}
                 <button onClick={fetchMeasurements} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', display: 'flex', alignItems: 'center' }}>
                   <RefreshCw size={15} />
                 </button>
@@ -329,20 +361,20 @@ function Evolucion() {
             </div>
 
             {!hasData && !loadingMeasurements ? (
-              /* Estado vacío — próximamente */
+              /* Estado vacío — conectar báscula vía Salud */
               <div style={{
                 background: 'var(--app-surface-solid)', borderRadius: '24px', padding: '28px 20px',
                 boxShadow: 'var(--card-shadow)', border: '1px dashed var(--border-subtle)',
                 textAlign: 'center'
               }}>
-                <Scale size={36} color="var(--primary)" style={{ opacity: 0.5, marginBottom: '12px' }} />
-                <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--on-surface)', margin: '0 0 4px' }}>Composición corporal</p>
-                <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 12px' }}>
-                  Próximamente podrás conectar tu báscula inteligente para ver tus métricas de composición corporal.
+                <Scale size={36} color="var(--primary)" style={{ opacity: 0.6, marginBottom: '12px' }} />
+                <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--on-surface)', margin: '0 0 4px' }}>Conecta tu báscula</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 16px', lineHeight: 1.5 }}>
+                  Pésate con tu báscula inteligente y, con tu app (VeSync) sincronizada a Salud, trae aquí tu peso y composición.
                 </p>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,139,66,0.1)', color: 'var(--primary)', fontSize: '0.72rem', fontWeight: 800, padding: '4px 12px', borderRadius: '99px', letterSpacing: '0.05em' }}>
-                  <Clock size={12} /> PRÓXIMAMENTE
-                </span>
+                <button onClick={syncScale} disabled={syncingScale} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '14px', padding: '12px 22px', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 10px 24px rgba(255,145,77,0.35)' }}>
+                  <Scale size={16} /> {syncingScale ? 'Sincronizando…' : 'Sincronizar con mi báscula'}
+                </button>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -400,19 +432,19 @@ function Evolucion() {
             )}
           </motion.section>
 
-          {/* BOTÓN BÁSCULA — próximamente */}
+          {/* BOTÓN SINCRONIZAR BÁSCULA */}
           {hasData && (
             <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.25 }} style={{ marginTop: '16px' }}>
-              <div style={{
+              <button onClick={syncScale} disabled={syncingScale} style={{
                 width: '100%', padding: '15px', borderRadius: '20px',
                 background: 'var(--app-surface-solid)', boxShadow: 'var(--card-shadow)',
                 border: '1px solid var(--border-subtle)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                color: 'var(--on-surface-variant)', fontWeight: 700, fontSize: '0.9rem',
-                fontFamily: 'var(--font-body)', opacity: 0.6
+                color: 'var(--primary)', fontWeight: 700, fontSize: '0.9rem',
+                fontFamily: 'var(--font-body)', cursor: 'pointer'
               }}>
-                <Scale size={18} /> Conexión con báscula — <span style={{ color: 'var(--primary)', opacity: 1 }}>Próximamente</span>
-              </div>
+                <Scale size={18} /> {syncingScale ? 'Sincronizando…' : 'Sincronizar nueva medición'}
+              </button>
             </motion.section>
           )}
 
