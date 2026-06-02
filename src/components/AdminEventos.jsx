@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Pencil, Sparkles, ImagePlus, Loader2, Camera, X, Save, MapPin, CalendarDays, Ticket, Bell, Users, ChevronDown, Tag } from 'lucide-react';
+import { Plus, Trash2, Pencil, Sparkles, ImagePlus, Loader2, Camera, X, Save, MapPin, CalendarDays, Ticket, Bell, Users, ChevronDown, Tag, CheckCircle2, AlertTriangle, Send } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { uploadImage } from '../lib/cafeImage';
 
@@ -51,11 +51,19 @@ export default function AdminEventos() {
     const { data } = await supabase.from('event_registrations').select('user_id, users(full_name, email)').eq('event_id', id).order('created_at', { ascending: true });
     setRegView(v => ({ ...v, [id]: data || [] }));
   };
-  const avisar = async (ev) => {
-    if (!confirm(`¿Avisar a todas las clientas sobre "${ev.title}"?`)) return;
+  const [nm, setNm] = useState(null); // modal de aviso { ev, stage, result, error, recipients, loadingRec }
+  const avisar = (ev) => setNm({ ev, stage: 'confirm' });
+  const doNotify = async () => {
+    const ev = nm.ev;
+    setNm(m => ({ ...m, stage: 'sending' }));
     const { data, error } = await notifyClients(ev);
-    if (error || data?.error) alert('No se pudo enviar el aviso: ' + (error?.message || data?.error || 'error'));
-    else alert(`Aviso enviado a ${data?.sent ?? 0} clientas · push entregado a ${data?.pushed ?? 0} dispositivos.`);
+    if (error || data?.error) setNm(m => ({ ...m, stage: 'error', error: error?.message || data?.error || 'error' }));
+    else setNm(m => ({ ...m, stage: 'done', result: data }));
+  };
+  const viewRecipients = async () => {
+    setNm(m => ({ ...m, loadingRec: true }));
+    const { data } = await supabase.from('users').select('full_name, email, avatar_url').eq('role', 'CLIENT').order('full_name', { ascending: true });
+    setNm(m => ({ ...m, recipients: data || [], loadingRec: false }));
   };
 
   const blank = { title: '', description: '', event_date: '', location: '', image_url: '', price: '', capacity: '', registration_open: false, notify: true };
@@ -80,11 +88,14 @@ export default function AdminEventos() {
     };
     if (form.id) await supabase.from('events').update(payload).eq('id', form.id);
     else await supabase.from('events').insert(payload);
-    if (form.notify) {
-      const { data, error } = await notifyClients(payload);
-      if (error || data?.error) alert('Evento guardado, pero el aviso falló: ' + (error?.message || data?.error || 'error'));
-    }
+    const willNotify = form.notify;
     setSaving(false); setForm(null); load();
+    if (willNotify) {
+      setNm({ ev: payload, stage: 'sending' });
+      const { data, error } = await notifyClients(payload);
+      if (error || data?.error) setNm({ ev: payload, stage: 'error', error: error?.message || data?.error || 'error' });
+      else setNm({ ev: payload, stage: 'done', result: data });
+    }
   };
   const del = async (e) => { if (confirm(`¿Eliminar el evento "${e.title}"?`)) { await supabase.from('events').delete().eq('id', e.id); load(); } };
 
@@ -169,6 +180,80 @@ export default function AdminEventos() {
           ))}
         </div>
       )}
+
+      {/* Modal de aviso (bonito, reemplaza confirm/alert) */}
+      <AnimatePresence>
+        {nm && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => nm.stage !== 'sending' && setNm(null)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <motion.div onClick={e => e.stopPropagation()} initial={{ scale: 0.9, opacity: 0, y: 18 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0 }} transition={{ type: 'spring', damping: 22, stiffness: 240 }}
+              style={{ width: 'min(420px, 100%)', maxHeight: '85vh', background: '#fff', borderRadius: '26px', padding: '28px 24px', boxShadow: '0 24px 60px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', overflow: 'hidden', textAlign: 'center' }}>
+
+              {nm.stage === 'confirm' && (
+                <>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'linear-gradient(135deg, #FF914D, #E68245)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 10px 24px rgba(255,145,77,0.4)' }}><Bell size={30} color="#fff" /></div>
+                  <h2 style={{ margin: '0 0 8px', fontFamily: 'var(--font-display)', fontSize: '1.45rem', color: INK }}>Enviar aviso</h2>
+                  <p style={{ margin: '0 0 22px', color: 'var(--on-surface-variant)', fontSize: '0.95rem', lineHeight: 1.5 }}>Se notificará a <strong style={{ color: INK }}>todas las clientas</strong> (in-app + push) sobre el evento <strong style={{ color: PRIMARY }}>{nm.ev.title}</strong>.</p>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={() => setNm(null)} style={{ flex: 1, padding: '13px', borderRadius: '14px', border: '1.5px solid rgba(0,0,0,0.1)', background: '#fff', color: INK, fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>Cancelar</button>
+                    <button onClick={doNotify} style={{ flex: 1.4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', padding: '13px', borderRadius: '14px', border: 'none', background: PRIMARY, color: '#fff', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer', boxShadow: '0 10px 24px rgba(255,145,77,0.35)' }}><Send size={16} /> Enviar aviso</button>
+                  </div>
+                </>
+              )}
+
+              {nm.stage === 'sending' && (
+                <div style={{ padding: '24px 0' }}>
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} style={{ width: '50px', height: '50px', borderRadius: '50%', border: '4px solid rgba(255,145,77,0.25)', borderTopColor: PRIMARY, margin: '0 auto 16px' }} />
+                  <p style={{ margin: 0, fontWeight: 700, color: INK }}>Enviando aviso…</p>
+                </div>
+              )}
+
+              {nm.stage === 'error' && (
+                <>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'rgba(186,26,26,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}><AlertTriangle size={30} color="#ba1a1a" /></div>
+                  <h2 style={{ margin: '0 0 8px', fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: INK }}>No se pudo enviar</h2>
+                  <p style={{ margin: '0 0 22px', color: 'var(--on-surface-variant)', fontSize: '0.9rem', lineHeight: 1.5 }}>{nm.error}</p>
+                  <button onClick={() => setNm(null)} style={{ width: '100%', padding: '13px', borderRadius: '14px', border: 'none', background: 'rgba(0,0,0,0.06)', color: INK, fontWeight: 700, cursor: 'pointer' }}>Cerrar</button>
+                </>
+              )}
+
+              {nm.stage === 'done' && (
+                <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.05 }}
+                    style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(135deg, #22C55E, #16A34A)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', boxShadow: '0 10px 24px rgba(34,197,94,0.4)', flexShrink: 0 }}><CheckCircle2 size={36} color="#fff" strokeWidth={2.5} /></motion.div>
+                  <h2 style={{ margin: '0 0 14px', fontFamily: 'var(--font-display)', fontSize: '1.45rem', color: INK, flexShrink: 0 }}>¡Aviso enviado!</h2>
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexShrink: 0 }}>
+                    <div style={{ flex: 1, background: 'rgba(255,145,77,0.1)', borderRadius: '16px', padding: '12px' }}>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: PRIMARY, fontFamily: 'var(--font-display)', lineHeight: 1 }}>{nm.result?.sent ?? 0}</div>
+                      <div style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '4px' }}>Clientas</div>
+                    </div>
+                    <div style={{ flex: 1, background: 'rgba(34,197,94,0.1)', borderRadius: '16px', padding: '12px' }}>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#16A34A', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{nm.result?.pushed ?? 0}</div>
+                      <div style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '4px' }}>Push entregado</div>
+                    </div>
+                  </div>
+
+                  {!nm.recipients ? (
+                    <button onClick={viewRecipients} disabled={nm.loadingRec} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', padding: '11px', borderRadius: '13px', border: '1.5px solid rgba(0,0,0,0.1)', background: '#fff', color: INK, fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', marginBottom: '10px', flexShrink: 0 }}>
+                      {nm.loadingRec ? 'Cargando…' : <><Users size={15} color={PRIMARY} /> Ver a quiénes llegó</>}
+                    </button>
+                  ) : (
+                    <div style={{ overflowY: 'auto', textAlign: 'left', background: 'rgba(0,0,0,0.02)', borderRadius: '14px', padding: '8px', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {nm.recipients.map((r, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 8px' }}>
+                          {r.avatar_url ? <img src={r.avatar_url} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} /> : <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,145,77,0.14)', color: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.74rem', flexShrink: 0 }}>{(r.full_name || r.email || '?').charAt(0).toUpperCase()}</div>}
+                          <span style={{ fontSize: '0.86rem', color: INK, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.full_name || r.email}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button onClick={() => setNm(null)} style={{ width: '100%', padding: '13px', borderRadius: '14px', border: 'none', background: PRIMARY, color: '#fff', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer', flexShrink: 0 }}>Listo</button>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

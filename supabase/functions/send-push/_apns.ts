@@ -32,22 +32,27 @@ export async function sendAPNs(token: string, title: string, body: string, data:
     body: JSON.stringify(payload),
   });
 
-  const primary = Deno.env.get('APNS_ENV') === 'sandbox' ? APNS_HOST_DEV : APNS_HOST_PROD;
-  const fallback = primary === APNS_HOST_PROD ? APNS_HOST_DEV : APNS_HOST_PROD;
+  // Enviar a AMBOS entornos en paralelo: el token pertenece a uno (producción o
+  // sandbox); el otro falla en silencio. Así el push llega sin importar si el
+  // build es de Xcode (sandbox) o de TestFlight/App Store (producción), sin
+  // depender del texto exacto del error. Se considera entregado si CUALQUIERA
+  // de los dos responde ok.
+  const settled = await Promise.allSettled([post(APNS_HOST_PROD), post(APNS_HOST_DEV)]);
+  const ok = settled.some(r => r.status === 'fulfilled' && (r.value as Response).ok);
+  if (ok) return;
 
-  let res = await post(primary);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    // Token del otro entorno (p.ej. build de Xcode = sandbox vs APNs producción)
-    // → reintentar en el host alterno para que el push llegue igual.
-    if (res.status === 400 && err?.reason === 'BadDeviceToken') {
-      res = await post(fallback);
-      if (res.ok) return;
-      const err2 = await res.json().catch(() => ({}));
-      throw new Error(`APNs error ${res.status}: ${JSON.stringify(err2)}`);
+  // Ambos fallaron → token muerto/ inválido. Recolectar el motivo para que
+  // send-push pueda borrarlo (BadDeviceToken / Unregistered / 410).
+  const reasons: string[] = [];
+  for (const r of settled) {
+    if (r.status === 'fulfilled') {
+      const e = await (r.value as Response).json().catch(() => ({}));
+      reasons.push(`${(r.value as Response).status}:${e?.reason ?? ''}`);
+    } else {
+      reasons.push(String((r as PromiseRejectedResult).reason));
     }
-    throw new Error(`APNs error ${res.status}: ${JSON.stringify(err)}`);
   }
+  throw new Error(`APNs error ${reasons.join(' / ')}`);
 }
 
 async function generateAPNsJWT(keyId: string, teamId: string, pem: string): Promise<string> {
