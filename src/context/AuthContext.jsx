@@ -39,6 +39,8 @@ export const AuthProvider = ({ children }) => {
   const [myReservations, setMyReservations] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [coaches, setCoaches] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [classTemplates, setClassTemplates] = useState([]);
   const [avatarUrl, setAvatarUrl] = useState(null);
 
   // Centro de notificaciones in-app (tabla notification_logs en tiempo real)
@@ -321,6 +323,8 @@ export const AuthProvider = ({ children }) => {
     fetchCafeProducts();
     fetchBadgeConfigs();
     fetchCoaches();
+    fetchCategories();
+    fetchTemplates();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -491,6 +495,104 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       return { success: false, error: err };
     }
+  };
+
+  const updateClass = async (classId, fields) => {
+    try {
+      const { data, error } = await supabase.from('classes').update(fields).eq('id', classId).select().single();
+      if (!error && data) setGlobalClasses(prev => prev.map(c => c.id === classId ? data : c));
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
+  // ============================================
+  // CATEGORÍAS DE CLASE (catálogo gestionable)
+  // ============================================
+  const fetchCategories = async () => {
+    try {
+      const { data } = await supabase.from('class_categories').select('*').order('name', { ascending: true });
+      if (data) setCategories(data);
+    } catch (err) { console.error(err); }
+  };
+
+  const addCategory = async (name, color) => {
+    try {
+      const { data, error } = await supabase.from('class_categories').insert({ name: name.trim(), color }).select().single();
+      if (!error && data) setCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+      return { success: !error, error };
+    } catch (err) { return { success: false, error: err }; }
+  };
+
+  // Renombra y/o recolorea una categoría y actualiza TODAS sus clases de golpe
+  const updateCategory = async (id, { name, color, oldName }) => {
+    try {
+      const { error } = await supabase.from('class_categories').update({ name: name.trim(), color }).eq('id', id);
+      if (error) return { success: false, error };
+      await supabase.from('classes').update({ category: name.trim(), category_color: color }).eq('category', oldName);
+      await Promise.all([fetchCategories(), fetchGlobalClasses()]);
+      return { success: true };
+    } catch (err) { return { success: false, error: err }; }
+  };
+
+  const deleteCategory = async (id) => {
+    try {
+      const { error } = await supabase.from('class_categories').delete().eq('id', id);
+      if (!error) setCategories(prev => prev.filter(c => c.id !== id));
+      return { success: !error, error };
+    } catch (err) { return { success: false, error: err }; }
+  };
+
+  // ============================================
+  // PLANTILLAS DE SEMANA
+  // ============================================
+  const fetchTemplates = async () => {
+    try {
+      const { data } = await supabase.from('class_templates').select('*').order('created_at', { ascending: false });
+      if (data) setClassTemplates(data);
+    } catch (err) { console.error(err); }
+  };
+
+  const saveTemplate = async (name, items) => {
+    try {
+      const { data, error } = await supabase.from('class_templates').insert({ name: name.trim(), items }).select().single();
+      if (!error && data) setClassTemplates(prev => [data, ...prev]);
+      return { success: !error, error };
+    } catch (err) { return { success: false, error: err }; }
+  };
+
+  const deleteTemplate = async (id) => {
+    try {
+      const { error } = await supabase.from('class_templates').delete().eq('id', id);
+      if (!error) setClassTemplates(prev => prev.filter(t => t.id !== id));
+      return { success: !error, error };
+    } catch (err) { return { success: false, error: err }; }
+  };
+
+  // Aplica una plantilla creando clases en cada día coincidente del rango
+  const applyTemplate = async (items, startDateStr, endDateStr) => {
+    try {
+      const start = new Date(startDateStr + 'T12:00:00');
+      const end = new Date(endDateStr + 'T12:00:00');
+      const toCreate = [];
+      let cur = new Date(start);
+      while (cur <= end) {
+        (items || []).forEach(it => {
+          if (it.day === cur.getDay()) {
+            toCreate.push({
+              title: it.title, time: it.time, instructor: it.instructor || '', coach_id: it.coach_id || null,
+              category: it.category || null, category_color: it.category_color || null,
+              description: it.description || null, date: cur.toISOString().split('T')[0],
+              day: cur.getDay(), spots: it.spots || 10, level: it.level || 'Todos los niveles',
+            });
+          }
+        });
+        cur.setDate(cur.getDate() + 1);
+      }
+      if (toCreate.length === 0) return { success: false, error: { message: 'No hay días coincidentes en el rango.' } };
+      return await addMultipleClasses(toCreate);
+    } catch (err) { return { success: false, error: err }; }
   };
 
   const addRecipe = async (recipeData) => {
@@ -1100,7 +1202,10 @@ export const AuthProvider = ({ children }) => {
       coaches, addMultipleClasses,
       notifications, unreadCount, fetchNotifications, markNotificationsRead, sendNotification,
       notifOpen, setNotifOpen,
-      cafeProducts, fetchCafeProducts, addCafeProduct, updateCafeProduct, deleteCafeProduct
+      cafeProducts, fetchCafeProducts, addCafeProduct, updateCafeProduct, deleteCafeProduct,
+      updateClass,
+      categories, fetchCategories, addCategory, updateCategory, deleteCategory,
+      classTemplates, fetchTemplates, saveTemplate, deleteTemplate, applyTemplate
     }}>
       {children}
     </AuthContext.Provider>

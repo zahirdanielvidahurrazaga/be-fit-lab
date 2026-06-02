@@ -10,8 +10,10 @@ import AdminClientas from '../components/AdminClientas';
 import AdminNutricion from '../components/AdminNutricion';
 import AdminEventos from '../components/AdminEventos';
 import ScheduleStoryExport from '../components/ScheduleStoryExport';
-import { DEFAULT_CATEGORIES, PASTEL_PALETTE, resolveCatColor } from '../lib/categories';
-import { Coffee, Bell, UserCog, Sparkles } from 'lucide-react';
+import AdminCategoryManager from '../components/AdminCategoryManager';
+import AdminWeekTemplates from '../components/AdminWeekTemplates';
+import { DEFAULT_CATEGORIES, PASTEL_PALETTE, resolveCatColor, categoryLabel } from '../lib/categories';
+import { Coffee, Bell, UserCog, Sparkles, Copy, Trash2, Tag, LayoutTemplate, MoreHorizontal } from 'lucide-react';
 
 const daysOfWeek = [
   { num: 1, label: 'Lunes' },
@@ -24,7 +26,9 @@ const daysOfWeek = [
 ];
 
 function Admin() {
-  const { user, logout, globalClasses, recipes, updateClassSpots, checkInClient, addClass, deleteClass, addRecipe, deleteRecipe, allUsers, coaches, activatePlan, fetchClassesByDayOfWeek, fetchGlobalClasses, assignCustomBadge, removeCustomBadge, badgeConfigs, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig, addMultipleClasses, setNotifOpen } = useAuth();
+  const { user, logout, globalClasses, recipes, updateClassSpots, checkInClient, addClass, deleteClass, updateClass, addRecipe, deleteRecipe, allUsers, coaches, activatePlan, fetchClassesByDayOfWeek, fetchGlobalClasses, assignCustomBadge, removeCustomBadge, badgeConfigs, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig, addMultipleClasses, setNotifOpen,
+    categories, addCategory, updateCategory, deleteCategory,
+    classTemplates, saveTemplate, deleteTemplate, applyTemplate } = useAuth();
   const isScrolled = useScrollDetect(30);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('mostrador');
@@ -56,6 +60,10 @@ function Admin() {
   const [classMode, setClassMode] = useState('single');
   const [addingCategory, setAddingCategory] = useState(false); // form de categoría nueva
   const [addingLevel, setAddingLevel] = useState(false);       // form de nivel nuevo
+  const [editingClassId, setEditingClassId] = useState(null);  // edición de clase existente
+  const [showCatManager, setShowCatManager] = useState(false); // sheet gestor de categorías
+  const [showTemplates, setShowTemplates] = useState(false);   // sheet plantillas de semana
+  const [showClassMenu, setShowClassMenu] = useState(false);   // menú ⋯ del calendario
   const [newClass, setNewClass] = useState({
     title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1',
     description: '',
@@ -239,7 +247,7 @@ function Admin() {
     if (classMode === 'single') {
       if (!newClass.date) return showToast("Selecciona una fecha.", "error");
       const d = new Date(newClass.date + "T12:00:00");
-      result = await addClass({
+      const payload = {
         title: newClass.title,
         time: newClass.time,
         instructor: newClass.instructor,
@@ -251,7 +259,8 @@ function Admin() {
         spots: parseInt(newClass.spots),
         level: newClass.level,
         category_color: newClass.category_color || null
-      });
+      };
+      result = editingClassId ? await updateClass(editingClassId, payload) : await addClass(payload);
     } else {
       if (!newClass.startDate || !newClass.endDate || newClass.daysOfWeek.length === 0) {
         return showToast("Selecciona el rango de fechas y los días.", "error");
@@ -288,7 +297,9 @@ function Admin() {
       return;
     }
 
-    showToast("¡Clase(s) creadas con éxito!");
+    showToast(editingClassId ? "¡Clase actualizada!" : "¡Clase(s) creadas con éxito!");
+    setEditingClassId(null);
+    setAddingCategory(false); setAddingLevel(false);
     setShowAddClass(false);
     setNewClass({
       title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1',
@@ -300,6 +311,23 @@ function Admin() {
     });
     fetchGlobalClasses(); // Refresh
   };
+
+  // Prellenar el form con una clase existente (para editar o duplicar)
+  const prefillFromClass = (c) => {
+    setClassMode('single');
+    setAddingCategory(false); setAddingLevel(false);
+    setNewClass({
+      title: c.title || '', time: c.time || '', instructor: c.instructor || '', coach_id: c.coach_id || '',
+      spots: c.spots ?? 10, level: c.level || 'Todos los niveles',
+      category: c.category || 'Fuerza', category_color: resolveCatColor(c.category, c.category_color),
+      description: c.description || '',
+      date: c.date || todayStr, startDate: c.date || todayStr, endDate: c.date || todayStr, daysOfWeek: []
+    });
+  };
+  const openEditClass = (c) => { prefillFromClass(c); setEditingClassId(c.id); };
+  const duplicateClass = (c) => { prefillFromClass(c); setEditingClassId(null); showToast('Clase copiada — ajusta fecha/hora y guarda', 'success'); };
+  const cancelEdit = () => { setEditingClassId(null); setAddingCategory(false); setAddingLevel(false);
+    setNewClass({ title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1', description: '', date: todayStr, startDate: todayStr, endDate: todayStr, daysOfWeek: [] }); };
 
   const handleCreateRecipe = async (e) => {
     e.preventDefault();
@@ -394,8 +422,9 @@ function Admin() {
     return `${h}:${String(mm).padStart(2, '0')} ${ap}`;
   };
 
-  // Categorías y niveles disponibles (default + los que ya existan en clases)
+  // Categorías disponibles: el catálogo gestionable (class_categories); si está vacío, defaults + las que existan en clases
   const allCategories = (() => {
+    if (categories?.length) return categories.map(c => ({ name: c.name, label: categoryLabel(c.name), color: c.color }));
     const map = new Map();
     DEFAULT_CATEGORIES.forEach(c => map.set(c.name, { name: c.name, label: c.label, color: c.color }));
     (globalClasses || []).forEach(c => { if (c.category && !map.has(c.category)) map.set(c.category, { name: c.category, label: c.category, color: resolveCatColor(c.category, c.category_color) }); });
@@ -407,6 +436,10 @@ function Admin() {
     (globalClasses || []).forEach(c => { if (c.level) set.add(c.level); });
     return [...set];
   })();
+
+  const stepBtn = { width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' };
+  const actionBtn = { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '9px', borderRadius: '10px', border: 'none', background: 'rgba(0,0,0,0.04)', color: 'var(--on-surface)', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', fontFamily: 'var(--font-body)' };
+  const menuItem = { width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 700, color: 'var(--on-surface)', textAlign: 'left', fontFamily: 'var(--font-body)' };
   const labelStyle = { fontSize: '0.78rem', fontWeight: 700, color: 'var(--on-surface-variant)', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' };
 
   const getRuleDescription = (type, value) => {
@@ -734,6 +767,21 @@ function Admin() {
                           >
                             <CalendarPlus size={18} /> Carga Masiva
                           </button>
+                          <div style={{ position: 'relative' }}>
+                            <button onClick={() => setShowClassMenu(v => !v)} style={{ background: 'rgba(0,0,0,0.05)', border: 'none', padding: '8px 11px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                              <MoreHorizontal size={18} color="var(--black)" />
+                            </button>
+                            {showClassMenu && (
+                              <>
+                                <div onClick={() => setShowClassMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+                                <div style={{ position: 'absolute', right: 0, top: '46px', zIndex: 41, background: 'white', borderRadius: '14px', boxShadow: '0 12px 30px rgba(0,0,0,0.15)', border: '1px solid var(--border-subtle)', overflow: 'hidden', minWidth: '210px' }}>
+                                  <button onClick={() => { setShowClassMenu(false); setShowCatManager(true); }} style={menuItem}><Tag size={16} color="var(--primary)" /> Gestionar categorías</button>
+                                  <div style={{ height: '1px', background: 'var(--border-subtle, rgba(0,0,0,0.05))' }} />
+                                  <button onClick={() => { setShowClassMenu(false); setShowTemplates(true); }} style={menuItem}><LayoutTemplate size={16} color="var(--primary)" /> Plantillas de semana</button>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
       
@@ -854,22 +902,22 @@ function Admin() {
                           </h4>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {selectedDayClasses.length > 0 ? selectedDayClasses.map((c) => (
-                              <div key={c.id} style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', borderRadius: '16px', border: '1px solid var(--border-subtle)', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
-                                <div style={{ flex: 1 }}>
-                                  <h3 style={{ fontSize: '1.05rem', margin: '0 0 4px 0', fontFamily: 'var(--font-display)' }}>{c.title}</h3>
-                                  <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: 0, fontWeight: 600 }}>{c.time} • {c.instructor}</p>
+                              <div key={c.id} style={{ padding: '14px 16px', background: 'white', borderRadius: '16px', border: '1px solid var(--border-subtle)', borderLeft: `5px solid ${resolveCatColor(c.category, c.category_color)}`, boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <h3 style={{ fontSize: '1.05rem', margin: '0 0 4px 0', fontFamily: 'var(--font-display)' }}>{c.title}</h3>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: 0, fontWeight: 600 }}>{c.time} • {c.instructor || 'Sin coach'}</p>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                    <button onClick={() => updateClassSpots(c.id, Math.max(0, c.spots - 1))} style={stepBtn}><Minus size={14} color="var(--black)" /></button>
+                                    <span style={{ fontSize: '1.05rem', fontWeight: 800, color: c.spots === 0 ? '#FF4D4D' : 'var(--primary)', minWidth: '22px', textAlign: 'center' }}>{c.spots}</span>
+                                    <button onClick={() => updateClassSpots(c.id, c.spots + 1)} style={stepBtn}><Plus size={14} color="var(--black)" /></button>
+                                  </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <button onClick={() => updateClassSpots(c.id, Math.max(0, c.spots - 1))} style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                    <Minus size={14} color="var(--black)" />
-                                  </button>
-                                  <span style={{ fontSize: '1.1rem', fontWeight: 800, color: c.spots === 0 ? '#FF4D4D' : 'var(--primary)', minWidth: '24px', textAlign: 'center' }}>{c.spots}</span>
-                                  <button onClick={() => updateClassSpots(c.id, c.spots + 1)} style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                    <Plus size={14} color="var(--black)" />
-                                  </button>
-                                  <button onClick={() => deleteClass(c.id)} style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: '#FF4D4D15', color: '#FF4D4D', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '5px', cursor: 'pointer' }}>
-                                    <Minus size={14} />
-                                  </button>
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                                  <button onClick={() => openEditClass(c)} style={actionBtn}><Pencil size={14} /> Editar</button>
+                                  <button onClick={() => duplicateClass(c)} style={actionBtn}><Copy size={14} /> Duplicar</button>
+                                  <button onClick={() => deleteClass(c.id)} style={{...actionBtn, color: '#FF4D4D', background: '#FF4D4D12'}}><Trash2 size={14} /> Eliminar</button>
                                 </div>
                               </div>
                             )) : (
@@ -881,9 +929,14 @@ function Admin() {
 
                       {/* Formulario de Creación */}
                       <div style={{ background: 'white', padding: '20px', borderRadius: '20px', border: '1px solid var(--border-subtle)', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
-                        <h4 style={{ fontSize: '1rem', marginBottom: '15px', color: 'var(--black)' }}>
-                          {selectedCalendarDay === 'bulk' ? 'Configurar Rango Masivo' : 'Añadir clase a este día'}
-                        </h4>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                          <h4 style={{ fontSize: '1rem', margin: 0, color: editingClassId ? 'var(--primary)' : 'var(--black)' }}>
+                            {editingClassId ? '✏️ Editar clase' : (selectedCalendarDay === 'bulk' ? 'Configurar Rango Masivo' : 'Añadir clase a este día')}
+                          </h4>
+                          {editingClassId && (
+                            <button onClick={cancelEdit} style={{ background: 'none', border: 'none', color: 'var(--on-surface-variant)', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>Cancelar</button>
+                          )}
+                        </div>
 
                         {classMode === 'range' && (
                           <div style={{ marginBottom: '15px' }}>
@@ -996,7 +1049,7 @@ function Admin() {
                           await handleCreateClass(e);
                           if (classMode === 'range') setCalendarView('month');
                         }} style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'var(--primary)', color: 'white', fontWeight: 800, border: 'none', cursor: 'pointer' }}>
-                          {classMode === 'single' ? 'Guardar Clase' : 'Generar Clases Múltiples'}
+                          {editingClassId ? 'Guardar cambios' : (classMode === 'single' ? 'Guardar Clase' : 'Generar Clases Múltiples')}
                         </button>
                       </div>
                     </motion.div>
@@ -1303,6 +1356,30 @@ function Admin() {
           <span>{toast.message}</span>
         </div>
       )}
+
+      {/* Gestor de categorías */}
+      <AdminCategoryManager
+        open={showCatManager}
+        onClose={() => setShowCatManager(false)}
+        categories={categories || []}
+        onAdd={addCategory}
+        onUpdate={updateCategory}
+        onDelete={deleteCategory}
+        showToast={showToast}
+      />
+
+      {/* Plantillas de semana */}
+      <AdminWeekTemplates
+        open={showTemplates}
+        onClose={() => setShowTemplates(false)}
+        templates={classTemplates || []}
+        classes={globalClasses}
+        refDate={selectedCalendarDay && selectedCalendarDay !== 'bulk' ? selectedCalendarDay : todayStr}
+        onSave={saveTemplate}
+        onDelete={deleteTemplate}
+        onApply={applyTemplate}
+        showToast={showToast}
+      />
     </div>
   );
 }
