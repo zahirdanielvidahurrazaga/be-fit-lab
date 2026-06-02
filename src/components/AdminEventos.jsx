@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Pencil, Sparkles, ImagePlus, Loader2, Camera, X, Save, MapPin, CalendarDays } from 'lucide-react';
+import { Plus, Trash2, Pencil, Sparkles, ImagePlus, Loader2, Camera, X, Save, MapPin, CalendarDays, Ticket, Bell, Users, ChevronDown, Tag } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { uploadImage } from '../lib/cafeImage';
 
@@ -34,15 +34,33 @@ export default function AdminEventos() {
   const [events, setEvents] = useState([]);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [counts, setCounts] = useState({});
+  const [regView, setRegView] = useState({}); // eventId -> array de inscritas (o undefined)
 
   const load = async () => {
     const { data } = await supabase.from('events').select('*').order('event_date', { ascending: false, nullsFirst: false });
     setEvents(data || []);
+    const { data: regs } = await supabase.from('event_registrations').select('event_id');
+    const c = {}; (regs || []).forEach(r => { c[r.event_id] = (c[r.event_id] || 0) + 1; });
+    setCounts(c);
   };
   useEffect(() => { load(); }, []);
 
-  const blank = { title: '', description: '', event_date: '', location: '', image_url: '' };
-  const startEdit = (e) => setForm({ id: e.id, title: e.title || '', description: e.description || '', event_date: toLocalInput(e.event_date), location: e.location || '', image_url: e.image_url || '' });
+  const viewRegs = async (id) => {
+    if (regView[id]) { setRegView(v => ({ ...v, [id]: undefined })); return; }
+    const { data } = await supabase.from('event_registrations').select('user_id, users(full_name, email)').eq('event_id', id).order('created_at', { ascending: true });
+    setRegView(v => ({ ...v, [id]: data || [] }));
+  };
+  const avisar = (ev) => { if (confirm(`¿Avisar a todas las clientas sobre "${ev.title}"?`)) { notifyClients(ev); alert('Aviso enviado.'); } };
+
+  const blank = { title: '', description: '', event_date: '', location: '', image_url: '', price: '', registration_open: false, notify: true };
+  const startEdit = (e) => setForm({ id: e.id, title: e.title || '', description: e.description || '', event_date: toLocalInput(e.event_date), location: e.location || '', image_url: e.image_url || '', price: e.price ?? '', registration_open: !!e.registration_open, notify: false });
+
+  const notifyClients = (ev) => supabase.functions.invoke('notify-event', { body: {
+    title: '✨ Nuevo evento: ' + ev.title,
+    body: ev.event_date ? `${new Date(ev.event_date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })} · ¡Entérate de los detalles en la app!` : '¡Entérate de los detalles en la app!',
+    type: 'general',
+  } });
 
   const save = async () => {
     if (!form.title.trim()) { alert('Falta el título.'); return; }
@@ -51,9 +69,12 @@ export default function AdminEventos() {
       title: form.title.trim(), description: form.description.trim() || null,
       event_date: form.event_date ? new Date(form.event_date).toISOString() : null,
       location: form.location.trim() || null, image_url: form.image_url || null,
+      price: form.price === '' ? null : (parseInt(form.price, 10) || 0),
+      registration_open: !!form.registration_open,
     };
     if (form.id) await supabase.from('events').update(payload).eq('id', form.id);
     else await supabase.from('events').insert(payload);
+    if (form.notify) notifyClients(payload);
     setSaving(false); setForm(null); load();
   };
   const del = async (e) => { if (confirm(`¿Eliminar el evento "${e.title}"?`)) { await supabase.from('events').delete().eq('id', e.id); load(); } };
@@ -79,7 +100,17 @@ export default function AdminEventos() {
                 <input type="datetime-local" value={form.event_date} onChange={e => setForm({ ...form, event_date: e.target.value })} style={{ ...input, flex: '1 1 200px' }} />
                 <input placeholder="Lugar (ej. El estudio)" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} style={{ ...input, flex: '1 1 160px' }} />
               </div>
-              <textarea placeholder="Descripción" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} style={{ ...input, marginBottom: '14px', resize: 'vertical' }} />
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                <input type="number" placeholder="Precio $ (vacío = sin costo)" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} style={{ ...input, flex: '1 1 160px' }} />
+                <button type="button" onClick={() => setForm({ ...form, registration_open: !form.registration_open })} style={{ flex: '1 1 160px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', padding: '11px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.84rem', background: form.registration_open ? 'rgba(34,197,94,0.12)' : 'rgba(0,0,0,0.05)', color: form.registration_open ? '#16A34A' : 'var(--on-surface-variant)' }}>
+                  <Ticket size={15} /> {form.registration_open ? 'Inscripción ABIERTA' : 'Inscripción cerrada'}
+                </button>
+              </div>
+              <textarea placeholder="Descripción" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} style={{ ...input, marginBottom: '12px', resize: 'vertical' }} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', cursor: 'pointer', fontSize: '0.88rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>
+                <input type="checkbox" checked={form.notify} onChange={e => setForm({ ...form, notify: e.target.checked })} style={{ width: '18px', height: '18px', accentColor: PRIMARY }} />
+                <Bell size={15} color={PRIMARY} /> Avisar a las clientas (push + notificación)
+              </label>
               <button onClick={save} disabled={saving} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: PRIMARY, color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}><Save size={16} /> {saving ? 'Guardando…' : (form.id ? 'Guardar cambios' : 'Crear evento')}</button>
             </div>
           </motion.div>
@@ -91,19 +122,39 @@ export default function AdminEventos() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' }}>
           {events.map(e => (
-            <div key={e.id} style={{ background: '#fff', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)', padding: '12px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-              {e.image_url ? <img src={e.image_url} alt="" style={{ width: '64px', height: '64px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 }} /> : <div style={{ width: '64px', height: '64px', borderRadius: '12px', background: 'rgba(255,145,77,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Sparkles size={24} color={PRIMARY} /></div>}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 800, color: INK, fontSize: '0.95rem', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.title}</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
-                  {e.event_date && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', color: 'var(--on-surface-variant)' }}><CalendarDays size={12} /> {new Date(e.event_date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}
-                  {e.location && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', color: 'var(--on-surface-variant)' }}><MapPin size={12} /> {e.location}</span>}
+            <div key={e.id} style={{ background: '#fff', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)', padding: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                {e.image_url ? <img src={e.image_url} alt="" style={{ width: '64px', height: '64px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 }} /> : <div style={{ width: '64px', height: '64px', borderRadius: '12px', background: 'rgba(255,145,77,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Sparkles size={24} color={PRIMARY} /></div>}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, color: INK, fontSize: '0.95rem', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.title}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                    {e.event_date && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', color: 'var(--on-surface-variant)' }}><CalendarDays size={12} /> {new Date(e.event_date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}
+                    {e.location && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', color: 'var(--on-surface-variant)' }}><MapPin size={12} /> {e.location}</span>}
+                    {e.price != null && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', color: PRIMARY, fontWeight: 700 }}><Tag size={12} /> {e.price === 0 ? 'Gratis' : `$${e.price}`}</span>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                  <button onClick={() => startEdit(e)} style={{ width: '32px', height: '32px', borderRadius: '9px', border: 'none', background: 'rgba(255,145,77,0.12)', color: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Pencil size={15} /></button>
+                  <button onClick={() => del(e)} style={{ width: '32px', height: '32px', borderRadius: '9px', border: 'none', background: 'rgba(186,26,26,0.08)', color: '#ba1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Trash2 size={15} /></button>
                 </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
-                <button onClick={() => startEdit(e)} style={{ width: '32px', height: '32px', borderRadius: '9px', border: 'none', background: 'rgba(255,145,77,0.12)', color: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Pencil size={15} /></button>
-                <button onClick={() => del(e)} style={{ width: '32px', height: '32px', borderRadius: '9px', border: 'none', background: 'rgba(186,26,26,0.08)', color: '#ba1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Trash2 size={15} /></button>
+              {/* Acciones inferiores */}
+              <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+                {e.registration_open && (
+                  <button onClick={() => viewRegs(e.id)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(34,197,94,0.1)', color: '#16A34A', border: 'none', borderRadius: '9px', padding: '7px 11px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
+                    <Users size={13} /> {counts[e.id] || 0} inscritas <ChevronDown size={12} />
+                  </button>
+                )}
+                <button onClick={() => avisar(e)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(255,145,77,0.12)', color: PRIMARY, border: 'none', borderRadius: '9px', padding: '7px 11px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
+                  <Bell size={13} /> Avisar
+                </button>
               </div>
+              {regView[e.id] && (
+                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {regView[e.id].length === 0 ? <span style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)' }}>Aún no hay inscritas.</span>
+                    : regView[e.id].map((r, i) => <div key={i} style={{ fontSize: '0.84rem', color: INK, display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', background: PRIMARY }} />{r.users?.full_name || r.users?.email || 'Clienta'}</div>)}
+                </div>
+              )}
             </div>
           ))}
         </div>
