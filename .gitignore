@@ -43,3 +43,6 @@ check_error.js
 
 # Archivos duplicados generados por cap sync (basura)
 **/config [0-9]*.xml
+
+# Fotos fuente pesadas (no versionar; los assets servidos van en public/)
+Fotos/

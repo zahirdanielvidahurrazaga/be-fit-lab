@@ -79,7 +79,7 @@ manifest ya habilita `READ_WEIGHT` + `READ_BODY_FAT`.
 ## Pendientes / próximos pasos
 - [ ] **Probar en dispositivo real** el wizard de fotos (cámara en vivo + siluetas). En Simulador cae a galería.
 - [ ] Vista coach/admin para revisar fotos de progreso de clientas (RLS ya lo permite).
-- [ ] Comparador lado a lado de fotos entre sesiones.
+- [x] Comparador lado a lado de fotos entre sesiones (`CompareModal` en ProgressPhotos.jsx). ✅
 - [ ] Push recordatorio a las 6 semanas para nueva sesión de fotos.
 - [ ] Pasar Stripe a claves **LIVE**.
 - [ ] Rebuild **AAB de Android** (en la PC con el keystore).
