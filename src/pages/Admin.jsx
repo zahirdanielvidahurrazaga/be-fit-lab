@@ -9,6 +9,7 @@ import AdminReportes from '../components/AdminReportes';
 import AdminClientas from '../components/AdminClientas';
 import AdminNutricion from '../components/AdminNutricion';
 import AdminEventos from '../components/AdminEventos';
+import ScheduleStoryExport from '../components/ScheduleStoryExport';
 import { Coffee, Bell, UserCog, Sparkles } from 'lucide-react';
 
 const daysOfWeek = [
@@ -676,19 +677,27 @@ function Admin() {
                 <section>
                   {calendarView === 'month' ? (
                     <>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', gap: '10px', flexWrap: 'wrap' }}>
                         <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: 0, fontWeight: 800 }}>Calendario</h2>
-                        <button 
-                          onClick={() => {
-                            setNewClass(prev => ({...prev, date: todayStr, startDate: todayStr, endDate: todayStr}));
-                            setClassMode('range');
-                            setSelectedCalendarDay('bulk');
-                            setCalendarView('day');
-                          }} 
-                          style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(255,139,66,0.3)' }}
-                        >
-                          <CalendarPlus size={18} /> Carga Masiva
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <ScheduleStoryExport
+                            classes={globalClasses}
+                            selectedDateStr={todayStr}
+                            buttonLabel="Horarios"
+                            buttonStyle={{ background: 'rgba(255,145,77,0.12)', color: 'var(--primary)', border: '1px solid rgba(255,145,77,0.3)', padding: '8px 14px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'var(--font-body)' }}
+                          />
+                          <button
+                            onClick={() => {
+                              setNewClass(prev => ({...prev, date: todayStr, startDate: todayStr, endDate: todayStr}));
+                              setClassMode('range');
+                              setSelectedCalendarDay('bulk');
+                              setCalendarView('day');
+                            }}
+                            style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(255,139,66,0.3)' }}
+                          >
+                            <CalendarPlus size={18} /> Carga Masiva
+                          </button>
+                        </div>
                       </div>
       
                       {/* Navegación del Calendario */}

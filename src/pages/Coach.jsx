@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { CheckCircle2, ChevronRight, Users, Activity, QrCode, Calendar, User, ClipboardList } from 'lucide-react';
+import { ChevronRight, Users, Activity, QrCode, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { QRCodeCanvas } from 'qrcode.react';
+import ScheduleStoryExport from '../components/ScheduleStoryExport';
 
 function Coach() {
-  const { user, logout, globalClasses, fetchClassReservations, avatarUrl } = useAuth();
+  const { user, logout, globalClasses, avatarUrl } = useAuth();
   const navigate = useNavigate();
   const scrolled = useScrollDetect(30);
 
@@ -22,13 +23,7 @@ function Coach() {
   const [calendarView, setCalendarView] = useState('month'); // 'month' | 'day'
   const [selectedDateStr, setSelectedDateStr] = useState(todayStr);
 
-  // ── Class detail state ──────────────────────────────────────────────
-  const [selectedClass, setSelectedClass] = useState(null);
-  const [classAlumnas, setClassAlumnas] = useState([]);
-  const [loadingAlumnas, setLoadingAlumnas] = useState(false);
-
   // ── Nav state ───────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState('agenda');
   const [showQR, setShowQR] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
@@ -82,20 +77,6 @@ function Coach() {
 
   const coachName = (user?.user_metadata?.full_name || user?.email?.split('@')[0] || '').toLowerCase();
   const isMyClass = (c) => coachName && c.instructor.toLowerCase().includes(coachName);
-
-  const openClassDetail = async (c) => {
-    setSelectedClass(c);
-    setLoadingAlumnas(true);
-    const reservations = await fetchClassReservations(c.id);
-    setClassAlumnas(reservations);
-    setLoadingAlumnas(false);
-  };
-
-  const handleManualCheckIn = (reservationId) => {
-    setClassAlumnas(prev =>
-      prev.map(a => a.reservationId === reservationId ? { ...a, checkedIn: !a.checkedIn } : a)
-    );
-  };
 
   // ── Shared calendar renderer ────────────────────────────────────────
   // getDotsForDate(dateStr) => { mine: number, others: number }
@@ -213,69 +194,6 @@ function Coach() {
 
   // ── Tab: Agenda (mis clases) ────────────────────────────────────────
   const renderAgenda = () => {
-    const getDotsForDate = (dateStr) => ({ mine: getMyClassesForDate(dateStr).length, others: 0 });
-
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* Métricas */}
-        <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-          <div style={{ padding: '20px', background: 'linear-gradient(135deg, #1A1C1E, #2C302E)', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
-            <div style={{ color: 'var(--accent)', marginBottom: '12px', background: 'rgba(255,145,77,0.15)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={20} /></div>
-            <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{totalAlumnasHoy}</div>
-            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', fontWeight: 700, marginTop: '5px' }}>Alumnas Hoy</div>
-          </div>
-          <div style={{ padding: '20px', background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
-            <div style={{ color: 'var(--primary)', marginBottom: '12px', background: 'rgba(255,145,77,0.1)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Activity size={20} /></div>
-            <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{myClasses.length}</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, marginTop: '5px' }}>Clases de Hoy</div>
-          </div>
-        </section>
-
-        {/* Calendario */}
-        <section>{renderCalendar(getDotsForDate)}</section>
-
-        {/* Lista de mis clases (solo en vista día) */}
-        {calendarView === 'day' && (
-          <section>
-            <h4 style={{ fontSize: '1.1rem', margin: '0 0 15px 0', color: 'var(--black)', fontFamily: 'var(--font-display)', textTransform: 'capitalize' }}>
-              {new Date(selectedDateStr + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
-            </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              {myClasses.length > 0 ? myClasses.map(c => {
-                const ocupacion = (c.max_spots || 10) - c.spots;
-                const porcentaje = Math.round((ocupacion / (c.max_spots || 10)) * 100);
-                return (
-                  <div key={c.id} onClick={() => openClassDetail(c)} className="ios-glass-card" style={{ padding: '20px', background: 'white', display: 'flex', alignItems: 'center', cursor: 'pointer', border: '1px solid rgba(0,0,0,0.02)' }}>
-                    <div style={{ width: '50px', height: '50px', borderRadius: '14px', background: 'var(--surface)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginRight: '15px' }}>
-                      <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'var(--font-display)' }}>{c.time.split(' ')[0]}</span>
-                      <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--on-surface-variant)' }}>{c.time.split(' ')[1] || 'AM'}</span>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{ fontSize: '1.1rem', margin: '0 0 4px 0', fontFamily: 'var(--font-display)' }}>{c.title}</h3>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ flex: 1, height: '4px', background: 'rgba(0,0,0,0.05)', borderRadius: '2px' }}>
-                          <div style={{ width: `${porcentaje}%`, height: '100%', background: 'var(--primary)', borderRadius: '2px' }} />
-                        </div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--on-surface-variant)' }}>{ocupacion}/{c.max_spots || 10}</span>
-                      </div>
-                    </div>
-                    <ChevronRight size={20} color="var(--on-surface-variant)" style={{ opacity: 0.5, marginLeft: '10px' }} />
-                  </div>
-                );
-              }) : (
-                <div style={{ padding: '40px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.9rem', fontStyle: 'italic', background: 'rgba(55,61,59,0.03)', borderRadius: '16px' }}>
-                  No tienes clases programadas para este día.
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-      </div>
-    );
-  };
-
-  // ── Tab: Todas las clases (con highlight de las mías) ───────────────
-  const renderTodasClases = () => {
     const getDotsForDate = (dateStr) => {
       const mine = getMyClassesForDate(dateStr).length;
       const total = getTodasClasesForDate(dateStr).length;
@@ -284,63 +202,77 @@ function Coach() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div>
-          <h2 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, color: 'var(--black)' }}>Todas las Clases</h2>
-          <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.9rem', margin: '4px 0 0' }}>
-            Ocupación de todas las coaches.{' '}
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }} /> Tuya
-            </span>
-          </p>
-        </div>
+        {/* Hero del día — estilo premium con foto (mismo lenguaje que Portal) */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+          style={{
+            padding: '24px', borderRadius: '32px',
+            backgroundImage: `linear-gradient(145deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.66) 100%), url('/fotos-hero/IMG_5381.JPG')`,
+            backgroundSize: 'cover', backgroundPosition: 'center 40%',
+            boxShadow: '0 20px 40px rgba(230, 114, 43, 0.25)',
+            position: 'relative', overflow: 'hidden', minHeight: '180px'
+          }}
+        >
+          {/* Brillo suave superior tipo glass */}
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 100%)', pointerEvents: 'none' }} />
 
-        {/* Calendario compartido — dots naranja para las mías, gris para el resto */}
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Panel de hoy</span>
+            <h2 style={{ fontSize: '1.9rem', color: '#fff', margin: '6px 0 18px', fontFamily: 'var(--font-display)', lineHeight: 1.05, textShadow: '0 2px 10px rgba(0,0,0,0.2)', textTransform: 'capitalize' }}>
+              {new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </h2>
+
+            {/* Pills glass con las métricas del día */}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              {[{ icon: <Users size={18} color="#fff" />, n: totalAlumnasHoy, l: 'Alumnas hoy' },
+                { icon: <Activity size={18} color="#fff" />, n: myClasses.length, l: 'Clases hoy' }].map(s => (
+                <div key={s.l} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,0,0,0.32)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', padding: '12px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.12)' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'rgba(255,145,77,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{s.icon}</div>
+                  <div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fff', lineHeight: 1, fontFamily: 'var(--font-display)' }}>{s.n}</div>
+                    <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.75)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '3px' }}>{s.l}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.section>
+
+        {/* Compartir horarios a Instagram */}
+        <ScheduleStoryExport classes={globalClasses} selectedDateStr={selectedDateStr} />
+
+        {/* Calendario */}
         <section>{renderCalendar(getDotsForDate)}</section>
 
-        {/* Lista de todas las clases (solo en vista día) */}
+        {/* Lista de clases del día — todas, con las tuyas destacadas */}
         {calendarView === 'day' && (
           <section>
-            <h4 style={{ fontSize: '1.1rem', margin: '0 0 15px 0', color: 'var(--black)', fontFamily: 'var(--font-display)', textTransform: 'capitalize' }}>
+            <h4 style={{ fontSize: '1.1rem', margin: '0 0 6px 0', color: 'var(--black)', fontFamily: 'var(--font-display)', textTransform: 'capitalize' }}>
               {new Date(selectedDateStr + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
             </h4>
+            <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.8rem', margin: '0 0 15px' }}>
+              Todas las clases del estudio.{' '}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }} /> Tuya
+              </span>
+            </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {todasClases.length > 0 ? todasClases.map(c => {
                 const esMia = isMyClass(c);
                 const ocupacion = (c.max_spots || 10) - c.spots;
                 const porcentaje = Math.round((ocupacion / (c.max_spots || 10)) * 100);
                 return (
-                  <div
-                    key={c.id}
-                    className="ios-glass-card"
-                    style={{
-                      padding: '16px 20px',
-                      background: esMia ? 'white' : 'rgba(255,255,255,0.6)',
-                      display: 'flex', alignItems: 'center',
-                      border: esMia ? '1.5px solid var(--primary)' : '1px solid rgba(0,0,0,0.04)',
-                      borderLeft: esMia ? '4px solid var(--primary)' : '1px solid rgba(0,0,0,0.04)',
-                      opacity: esMia ? 1 : 0.75,
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    {/* Hora */}
+                  <div key={c.id} className="ios-glass-card" style={{ padding: '16px 20px', background: esMia ? 'white' : 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', border: esMia ? '1.5px solid var(--primary)' : '1px solid rgba(0,0,0,0.04)', borderLeft: esMia ? '4px solid var(--primary)' : '1px solid rgba(0,0,0,0.04)', opacity: esMia ? 1 : 0.7, transition: 'all 0.2s' }}>
                     <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: esMia ? 'rgba(255,139,66,0.08)' : 'var(--surface)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginRight: '14px', flexShrink: 0 }}>
                       <span style={{ fontSize: '0.95rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: esMia ? 'var(--primary)' : 'var(--black)' }}>{c.time.split(' ')[0]}</span>
                       <span style={{ fontSize: '0.55rem', fontWeight: 800, color: 'var(--on-surface-variant)' }}>{c.time.split(' ')[1] || 'AM'}</span>
                     </div>
-
-                    {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
                         <h3 style={{ fontSize: '1rem', margin: 0, fontFamily: 'var(--font-display)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.title}</h3>
-                        {esMia && (
-                          <span style={{ flexShrink: 0, fontSize: '0.6rem', fontWeight: 800, color: 'var(--primary)', background: 'rgba(255,139,66,0.1)', padding: '2px 7px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            Mía
-                          </span>
-                        )}
+                        {esMia && <span style={{ flexShrink: 0, fontSize: '0.6rem', fontWeight: 800, color: 'var(--primary)', background: 'rgba(255,139,66,0.1)', padding: '2px 7px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mía</span>}
                       </div>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: esMia ? 'var(--primary)' : 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        {c.instructor}
-                      </span>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: esMia ? 'var(--primary)' : 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{c.instructor}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
                         <div style={{ flex: 1, height: '3px', background: 'rgba(0,0,0,0.06)', borderRadius: '2px' }}>
                           <div style={{ width: `${porcentaje}%`, height: '100%', background: esMia ? 'var(--primary)' : 'rgba(0,0,0,0.2)', borderRadius: '2px', transition: 'width 0.3s' }} />
@@ -405,89 +337,17 @@ function Coach() {
 
       <main className="dashboard-main" style={{ display: 'block', maxWidth: '600px', margin: '0 auto', width: '100%', paddingBottom: '100px' }}>
         <div style={{ width: '100%', maxWidth: '1200px', margin: '0 auto', animation: 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}>
-          {activeTab === 'agenda' && renderAgenda()}
-          {activeTab === 'todas_clases' && renderTodasClases()}
+          {renderAgenda()}
         </div>
       </main>
 
-      {/* Nav */}
-      <nav className={`ios-bottom-nav ${scrolled ? 'scrolled' : ''}`}>
-        <div onClick={() => setActiveTab('agenda')} className={`nav-item ${activeTab === 'agenda' ? 'active' : ''}`}>
-          <Calendar size={22} strokeWidth={2.5} />
-          <span>Agenda</span>
-        </div>
+      {/* Nav — solo el QR del coach (un único calendario, sin pestañas) */}
+      <nav className={`ios-bottom-nav ${scrolled ? 'scrolled' : ''}`} style={{ justifyContent: 'center' }}>
         <button className="nav-qr-button" onClick={() => setShowQR(true)}>
           <QrCode size={24} strokeWidth={2.5} />
         </button>
-        <div onClick={() => setActiveTab('todas_clases')} className={`nav-item ${activeTab === 'todas_clases' ? 'active' : ''}`}>
-          <ClipboardList size={22} strokeWidth={2.5} />
-          <span>Clases</span>
-        </div>
       </nav>
 
-      {/* Bottom sheet — detalle de clase + lista de alumnas */}
-      <AnimatePresence>
-        {selectedClass && (
-          <div className="modal-overlay" onClick={() => setSelectedClass(null)}>
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              drag="y"
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.2}
-              onDragEnd={(_, info) => { if (info.offset.y > 100 || info.velocity.y > 500) setSelectedClass(null); }}
-              onClick={(e) => e.stopPropagation()}
-              className="modal-drawer"
-              style={{ background: 'var(--surface-lowest)', padding: '20px 20px 40px' }}
-            >
-              <div className="modal-close-pill" onClick={() => setSelectedClass(null)} />
-              <div style={{ textAlign: 'center', marginBottom: '25px' }}>
-                <div style={{ display: 'inline-block', padding: '6px 12px', background: 'rgba(255,145,77,0.1)', color: 'var(--primary)', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '10px' }}>{selectedClass.time}</div>
-                <h2 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0 }}>{selectedClass.title}</h2>
-                <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.9rem', margin: '5px 0 0' }}>Lista de Asistencia</p>
-              </div>
-              <div style={{ background: 'white', borderRadius: '24px', padding: '15px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)' }}>
-                {loadingAlumnas ? (
-                  <div style={{ padding: '30px', textAlign: 'center', color: 'var(--on-surface-variant)' }}>Cargando lista de asistencia...</div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {classAlumnas.length > 0 ? classAlumnas.map((a, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 10px', borderBottom: i < classAlumnas.length - 1 ? '1px solid rgba(0,0,0,0.03)' : 'none' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'var(--primary)' }}>
-                            {(a.name || 'AL').substring(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{a.name}</div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', textTransform: 'uppercase' }}>{a.plan || 'Plan Normal'}</div>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleManualCheckIn(a.reservationId)}
-                          style={{
-                            width: '36px', height: '36px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
-                            background: a.checkedIn ? 'rgba(34,197,94,0.1)' : 'var(--surface)',
-                            color: a.checkedIn ? '#22C55E' : 'var(--on-surface-variant)'
-                          }}
-                        >
-                          <CheckCircle2 size={20} />
-                        </button>
-                      </div>
-                    )) : (
-                      <div style={{ padding: '20px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.85rem' }}>
-                        Aún no hay alumnas inscritas en esta clase.
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* QR Bottom Sheet */}
       <AnimatePresence>

@@ -11,6 +11,9 @@ import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence, useScroll, useTransform, useInView, useSpring as useMotionSpring } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 
+// Link de react-router con animaciones de framer-motion (hover naranja + desplazamiento)
+const MotionLink = motion(Link);
+
 // ── Instagram SVG (not in lucide-react v1.x) ─────────────────────────────────
 const InstagramIcon = ({ size = 20, color = 'currentColor' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -952,44 +955,20 @@ export default function Landing() {
 
       <ParallaxTestimonials />
 
-      {/* ── App Download ──────────────────────────────────────────── */}
-      <section id="agenda-info" style={{ padding:'12rem 5%', background:'var(--surface-lowest)', position:'relative', overflow:'hidden' }}>
-        <div style={{ maxWidth:'1200px', margin:'0 auto', display:'flex', flexWrap:'wrap', gap:'6rem', alignItems:'center' }}>
-          <motion.div variants={slideRight} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ flex:'1 1 500px' }}>
-            <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Be Fit Lab App</span>
-            <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0', lineHeight:1.05, color:'var(--black)', letterSpacing:'-0.04em' }}>Tu estudio,<br/><span style={{ color:'var(--primary)' }}>en tu bolsillo.</span></h2>
-            <p style={{ fontSize:'1.25rem', color:'var(--on-surface-variant)', lineHeight:1.6, marginBottom:'3rem', fontWeight:400 }}>Reserva clases, sigue tu progreso, recibe planes de nutrición personalizados y gestiona tu membresía — todo en una App diseñada exclusivamente para socias.</p>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:'16px' }}>
-              <motion.a whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }} href="https://apps.apple.com/mx/app/be-fit-lab/id6772008660" target="_blank" rel="noopener noreferrer">
-                <img src="/assets/appstore.svg" alt="App Store" style={{ height:'54px', width:'auto', display:'block' }}/>
-              </motion.a>
-              <img src="/assets/googleplay.svg" alt="Próximamente Google Play" style={{ height:'54px', width:'auto', opacity:0.3, filter:'grayscale(1)', cursor:'not-allowed' }}/>
-            </div>
-          </motion.div>
-          <motion.div variants={stagger(0.1)} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ flex:'1 1 400px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1.5rem' }}>
-            {[{icon:<Calendar size={24} color="var(--primary)"/>,t:'Reservas',d:'Agenda y cancela en segundos'},{icon:<TrendingUp size={24} color="var(--primary)"/>,t:'Tu progreso',d:'Gráficas de evolución'},{icon:<Utensils size={24} color="var(--primary)"/>,t:'Nutrición',d:'Planes y recetario'},{icon:<Smartphone size={24} color="var(--primary)"/>,t:'Todo en uno',d:'Exclusivo para socias'}].map(({icon,t,d}) => (
-              <motion.div key={t} variants={scaleIn} whileHover={{ y:-6 }} transition={SPRING}
-                style={{ background:'var(--surface)', borderRadius:'32px', padding:'32px', boxShadow:'0 10px 40px rgba(0,0,0,0.02)' }}>
-                <div style={{ background:'var(--surface-lowest)', width:'56px', height:'56px', borderRadius:'20px', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'20px', boxShadow:'0 4px 20px rgba(0,0,0,0.05)' }}>{icon}</div>
-                <div style={{ fontWeight:700, fontSize:'1.1rem', marginBottom:'8px', color:'var(--black)' }}>{t}</div>
-                <div style={{ fontSize:'0.9rem', color:'var(--on-surface-variant)', lineHeight:1.5 }}>{d}</div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
+      {/* ── App Download (mockup de teléfono con scroll cinemático) ─── */}
+      <AppShowcase />
 
       {/* ── FAQ ───────────────────────────────────────────────────── */}
-      <section id="faq" style={{ padding:'12rem 5%', background:'var(--black)', position:'relative', overflow:'hidden' }}>
+      <section id="faq" style={{ padding:'12rem 5%', background:'linear-gradient(180deg, #FFF6F0 0%, #FDF1EA 100%)', position:'relative', overflow:'hidden' }}>
         <div style={{ maxWidth:'800px', margin:'0 auto', position:'relative', zIndex:1 }}>
           <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ textAlign:'center', marginBottom:'6rem' }}>
-            <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'rgba(255,255,255,0.6)' }}>Preguntas frecuentes</span>
-            <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0', color:'white', letterSpacing:'-0.04em' }}>Resolvemos tus dudas.</h2>
+            <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Preguntas frecuentes</span>
+            <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0', color:'var(--black)', letterSpacing:'-0.04em' }}>Resolvemos tus dudas.</h2>
           </motion.div>
           <motion.div variants={stagger(0.07)} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
             {FAQ_ITEMS.map((item,i) => (
               <motion.div key={i} variants={fadeUp}>
-                <FAQItem q={item.q} a={item.a} open={openFAQ===i} onToggle={() => setOpenFAQ(openFAQ===i?null:i)} dark/>
+                <FAQItem q={item.q} a={item.a} open={openFAQ===i} onToggle={() => setOpenFAQ(openFAQ===i?null:i)}/>
               </motion.div>
             ))}
           </motion.div>
@@ -1064,10 +1043,10 @@ export default function Landing() {
                   <motion.button key={l} whileHover={{ x:6, color:'var(--primary)' }} onClick={() => scrollTo(id)} style={{ display:'block', background:'none', border:'none', cursor:'pointer', color:'var(--on-surface-variant)', fontSize:'1rem', padding:'8px 0', fontFamily:'var(--font-body)', textAlign:'left', transition:'color 0.2s' }}>{l}</motion.button>
                 ))}
                 {(col.extra||[]).map(([l,to]) => (
-                  <Link key={l} to={to} style={{ display:'block', color:'var(--on-surface-variant)', fontSize:'1rem', padding:'8px 0', textDecoration:'none' }}>{l}</Link>
+                  <MotionLink key={l} to={to} whileHover={{ x:6, color:'var(--primary)' }} style={{ display:'block', color:'var(--on-surface-variant)', fontSize:'1rem', padding:'8px 0', textDecoration:'none', transition:'color 0.2s' }}>{l}</MotionLink>
                 ))}
                 {(col.links||[]).map(([l,to]) => (
-                  <Link key={l} to={to} style={{ display:'block', color:'var(--on-surface-variant)', fontSize:'1rem', padding:'8px 0', textDecoration:'none' }}>{l}</Link>
+                  <MotionLink key={l} to={to} whileHover={{ x:6, color:'var(--primary)' }} style={{ display:'block', color:'var(--on-surface-variant)', fontSize:'1rem', padding:'8px 0', textDecoration:'none', transition:'color 0.2s' }}>{l}</MotionLink>
                 ))}
                 {col.faq && <motion.button whileHover={{ x:6, color:'var(--primary)' }} onClick={() => scrollTo('faq')} style={{ display:'block', background:'none', border:'none', cursor:'pointer', color:'var(--on-surface-variant)', fontSize:'1rem', padding:'8px 0', fontFamily:'var(--font-body)', textAlign:'left', transition:'color 0.2s' }}>Aviso de cancelación</motion.button>}
               </div>
@@ -1075,7 +1054,7 @@ export default function Landing() {
           </div>
           <div style={{ borderTop:'1px solid rgba(0,0,0,0.08)', paddingTop:'2.2rem', display:'flex', flexWrap:'wrap', justifyContent:'space-between', alignItems:'center', gap:'1rem' }}>
             <p style={{ color:'var(--on-surface-variant)', fontSize:'0.88rem', margin:0 }}>© {new Date().getFullYear()} Be Fit Lab. Todos los derechos reservados.</p>
-            <p style={{ color:'var(--on-surface-variant)', fontSize:'0.88rem', margin:0 }}>Desarrollado por <span style={{ color:'var(--primary)', fontWeight:700 }}>Zahir Daniel Vidahurrazaga Marín</span></p>
+            <p style={{ color:'var(--on-surface-variant)', fontSize:'0.88rem', margin:0 }}>Desarrollado por <motion.a href="https://zahirportafolio.pages.dev" target="_blank" rel="noopener noreferrer" whileHover={{ color:'#E68245' }} style={{ color:'var(--primary)', fontWeight:700, textDecoration:'none', transition:'color 0.2s' }}>Zahir Daniel Vidahurrazaga Marín</motion.a></p>
           </div>
         </div>
       </footer>
@@ -1098,6 +1077,119 @@ export default function Landing() {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
+
+// Pantalla simulada del Portal (PLACEHOLDER).
+// 👉 Para usar tu captura/video real: reemplaza todo el contenido de <PhoneScreen/>
+//    por <img src="/app-screen.png" .../> o un <video src="/app-screen.mp4" autoPlay muted loop playsInline .../>
+//    con style={{ width:'100%', height:'100%', objectFit:'cover' }}.
+function PhoneScreen() {
+  return (
+    <div style={{ width:'100%', height:'100%', background:'linear-gradient(180deg, #FFF7F1 0%, #FFFFFF 60%)', display:'flex', flexDirection:'column', padding:'14px 14px 0', fontFamily:'var(--font-body)', position:'relative' }}>
+      {/* Status bar */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:'0.62rem', fontWeight:700, color:'#0F172A', padding:'2px 6px 10px' }}>
+        <span>19:35</span>
+        <span style={{ letterSpacing:'1px' }}>📶 🔋</span>
+      </div>
+      {/* Saludo */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
+        <div>
+          <div style={{ fontSize:'0.6rem', color:'#94A3B8', fontWeight:600 }}>Buenas noches</div>
+          <div style={{ fontSize:'1.05rem', fontWeight:800, color:'#0F172A', fontFamily:'var(--font-display)', lineHeight:1 }}>Cliente</div>
+        </div>
+        <div style={{ width:'30px', height:'30px', borderRadius:'50%', background:'linear-gradient(135deg, #FF914D, #E07A9C)' }} />
+      </div>
+      {/* Tarjeta de membresía */}
+      <div style={{ background:'linear-gradient(155deg, #2D2928 0%, #4A4544 100%)', borderRadius:'16px', padding:'12px', marginBottom:'14px', position:'relative', overflow:'hidden' }}>
+        <div style={{ fontSize:'0.5rem', fontWeight:800, color:'rgba(255,255,255,0.6)', textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:'4px' }}>Membresía actual</div>
+        <div style={{ fontSize:'1.1rem', fontWeight:800, color:'#fff', fontFamily:'var(--font-display)', marginBottom:'10px' }}>Premium <span style={{ color:'#FF914D' }}>Pass</span></div>
+        <div style={{ display:'flex', gap:'6px' }}>
+          {[['27','Clases'],['4','Racha'],['ON','Estatus']].map(([n,l]) => (
+            <div key={l} style={{ flex:1, background:'rgba(255,255,255,0.08)', borderRadius:'10px', padding:'8px 4px', textAlign:'center' }}>
+              <div style={{ fontSize:'0.85rem', fontWeight:800, color:'#fff' }}>{n}</div>
+              <div style={{ fontSize:'0.45rem', fontWeight:700, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', letterSpacing:'0.08em' }}>{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Explora */}
+      <div style={{ fontSize:'0.8rem', fontWeight:800, color:'#0F172A', fontFamily:'var(--font-display)', marginBottom:'8px' }}>Explora</div>
+      <div style={{ display:'flex', gap:'8px', marginBottom:'14px' }}>
+        {[{bg:'linear-gradient(155deg, #FF914D, #E68245)', icon:<Utensils size={14} color="#fff"/>, t:'Nutrición', s:'Tu recetario', c:'#fff', sc:'rgba(255,255,255,0.8)'},
+          {bg:'#F4F4F5', icon:<TrendingUp size={14} color="#FF914D"/>, t:'Evolución', s:'Tu progreso', c:'#0F172A', sc:'#94A3B8'},
+          {bg:'#F4F4F5', icon:<Calendar size={14} color="#FF914D"/>, t:'Reservas', s:'Agenda', c:'#0F172A', sc:'#94A3B8'}].map((tile) => (
+          <div key={tile.t} style={{ flex:1, background:tile.bg, borderRadius:'12px', padding:'10px 8px', minHeight:'76px', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
+            {tile.icon}
+            <div>
+              <div style={{ fontSize:'0.58rem', fontWeight:800, color:tile.c }}>{tile.t}</div>
+              <div style={{ fontSize:'0.46rem', color:tile.sc, fontWeight:600 }}>{tile.s}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Próximas clases */}
+      <div style={{ fontSize:'0.8rem', fontWeight:800, color:'#0F172A', fontFamily:'var(--font-display)', marginBottom:'8px' }}>Próximas clases</div>
+      <div style={{ background:'#fff', border:'1px solid #F1F1F1', borderRadius:'12px', padding:'10px', display:'flex', alignItems:'center', gap:'8px', boxShadow:'0 4px 16px rgba(0,0,0,0.04)' }}>
+        <div style={{ width:'28px', height:'28px', borderRadius:'8px', background:'linear-gradient(135deg, #FF914D, #E07A9C)' }} />
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:'0.62rem', fontWeight:800, color:'#0F172A' }}>Fuerza y Control</div>
+          <div style={{ fontSize:'0.48rem', color:'#94A3B8', fontWeight:600, letterSpacing:'0.05em' }}>ELENA R.</div>
+        </div>
+        <ChevronRight size={12} color="#CBD5E1" />
+      </div>
+      {/* Tab bar */}
+      <div style={{ marginTop:'auto', display:'flex', justifyContent:'space-around', alignItems:'center', padding:'10px 0 14px', borderTop:'1px solid #F1F1F1' }}>
+        {[{i:<Star size={13} color="#FF914D"/>, on:true},{i:<TrendingUp size={13} color="#CBD5E1"/>},{i:<Calendar size={13} color="#CBD5E1"/>},{i:<Utensils size={13} color="#CBD5E1"/>}].map((t,idx) => (
+          <div key={idx} style={{ width:'26px', height:'26px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', background:t.on?'rgba(255,145,77,0.12)':'transparent' }}>{t.i}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AppShowcase() {
+  const sectionRef = useRef(null);
+  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start end', 'end start'] });
+  // El teléfono crece y sube conforme se hace scroll (estilo Apple)
+  const scaleRaw = useTransform(scrollYProgress, [0, 0.55], [0.82, 1.12]);
+  const yRaw     = useTransform(scrollYProgress, [0, 0.55], [80, -40]);
+  const scale = useMotionSpring(scaleRaw, { stiffness: 120, damping: 28, mass: 0.4 });
+  const y     = useMotionSpring(yRaw,     { stiffness: 120, damping: 28, mass: 0.4 });
+
+  return (
+    <section ref={sectionRef} id="agenda-info" style={{ padding:'14rem 5%', background:'var(--surface-lowest)', position:'relative', overflow:'hidden' }}>
+      <div style={{ maxWidth:'1200px', margin:'0 auto', display:'flex', flexWrap:'wrap', gap:'5rem', alignItems:'center', justifyContent:'center' }}>
+        {/* Texto + descarga */}
+        <motion.div variants={slideRight} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ flex:'1 1 440px' }}>
+          <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Be Fit Lab App</span>
+          <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0', lineHeight:1.05, color:'var(--black)', letterSpacing:'-0.04em' }}>Tu estudio,<br/><span style={{ color:'var(--primary)' }}>en tu bolsillo.</span></h2>
+          <p style={{ fontSize:'1.25rem', color:'var(--on-surface-variant)', lineHeight:1.6, marginBottom:'3rem', fontWeight:400, maxWidth:'480px' }}>Reserva clases, sigue tu progreso, recibe planes de nutrición personalizados y gestiona tu membresía — todo en una App diseñada exclusivamente para socias.</p>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:'16px' }}>
+            <motion.a whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }} href="https://apps.apple.com/mx/app/be-fit-lab/id6772008660" target="_blank" rel="noopener noreferrer">
+              <img src="/assets/appstore.svg" alt="App Store" style={{ height:'54px', width:'auto', display:'block' }}/>
+            </motion.a>
+            <img src="/assets/googleplay.svg" alt="Próximamente Google Play" style={{ height:'54px', width:'auto', opacity:0.3, filter:'grayscale(1)', cursor:'not-allowed' }}/>
+          </div>
+        </motion.div>
+
+        {/* Teléfono */}
+        <div style={{ flex:'1 1 360px', display:'flex', justifyContent:'center', alignItems:'center', position:'relative' }}>
+          {/* Resplandor de marca detrás del teléfono */}
+          <div style={{ position:'absolute', width:'70%', height:'70%', background:'radial-gradient(circle, rgba(255,145,77,0.22) 0%, transparent 70%)', filter:'blur(50px)', pointerEvents:'none' }} />
+          <motion.div style={{ scale, y, willChange:'transform' }}>
+            {/* Marco del iPhone */}
+            <div style={{ width:'300px', maxWidth:'78vw', aspectRatio:'9 / 19.5', background:'#0D0D0C', borderRadius:'52px', padding:'11px', boxShadow:'0 50px 100px rgba(0,0,0,0.28), 0 0 0 2.5px #232323, inset 0 0 0 2px rgba(255,255,255,0.04)', position:'relative' }}>
+              <div style={{ width:'100%', height:'100%', borderRadius:'42px', overflow:'hidden', background:'#fff', position:'relative' }}>
+                {/* Dynamic island */}
+                <div style={{ position:'absolute', top:'11px', left:'50%', transform:'translateX(-50%)', width:'88px', height:'25px', background:'#000', borderRadius:'20px', zIndex:20 }} />
+                <PhoneScreen />
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function ClassCard({ icon, title, desc, tag, bgImage, onClick }) {
   return (
@@ -1145,7 +1237,7 @@ function FAQItem({ q, a, open, onToggle, dark }) {
   return (
     <div style={{ ...(dark?glassDark:glass), borderRadius:'16px', overflow:'hidden' }}>
       <motion.button whileTap={{ scale:0.99 }} onClick={onToggle}
-        style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'32px 40px', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:'24px', cursor:'pointer', textAlign:'left', gap:'16px', fontFamily:'var(--font-body)', transition:'all 0.2s' }}>
+        style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'32px 40px', background:dark?'rgba(255,255,255,0.03)':'transparent', border:dark?'1px solid rgba(255,255,255,0.05)':'none', borderRadius:'24px', cursor:'pointer', textAlign:'left', gap:'16px', fontFamily:'var(--font-body)', transition:'all 0.2s' }}>
         <span style={{ fontWeight:700, fontSize:'1.1rem', color:dark?'white':'var(--black)', lineHeight:1.4, letterSpacing:'-0.01em' }}>{q}</span>
         <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ type:'spring', stiffness:300, damping:25 }}>
           <ChevronDown size={24} color="var(--primary)"/>
@@ -1153,8 +1245,11 @@ function FAQItem({ q, a, open, onToggle, dark }) {
       </motion.button>
       <AnimatePresence initial={false}>
         {open && (
-          <motion.div initial={{ height:0, opacity:0 }} animate={{ height:'auto', opacity:1 }} exit={{ height:0, opacity:0 }} transition={{ duration:0.28, ease:'easeInOut' }} style={{ overflow:'hidden' }}>
-            <div style={{ padding:'0 24px 20px', fontSize:'0.9rem', color:dark?'rgba(255,255,255,0.55)':'#4B5563', lineHeight:1.7 }}>{a}</div>
+          <motion.div initial={{ height:0, opacity:0 }} animate={{ height:'auto', opacity:1 }} exit={{ height:0, opacity:0 }} transition={{ duration:0.34, ease:[0.16,1,0.3,1] }} style={{ overflow:'hidden' }}>
+            <motion.div
+              initial={{ y:-12, opacity:0 }} animate={{ y:0, opacity:1 }} exit={{ y:-8, opacity:0 }}
+              transition={{ duration:0.3, ease:[0.16,1,0.3,1], delay:0.06 }}
+              style={{ padding:'0 40px 28px', fontSize:'0.95rem', color:dark?'rgba(255,255,255,0.55)':'#4B5563', lineHeight:1.7 }}>{a}</motion.div>
           </motion.div>
         )}
       </AnimatePresence>
