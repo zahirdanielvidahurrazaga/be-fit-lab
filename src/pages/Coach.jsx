@@ -8,7 +8,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import ScheduleStoryExport from '../components/ScheduleStoryExport';
 
 function Coach() {
-  const { user, logout, globalClasses, avatarUrl } = useAuth();
+  const { user, logout, globalClasses, avatarUrl, coaches } = useAuth();
   const navigate = useNavigate();
   const scrolled = useScrollDetect(30);
 
@@ -250,7 +250,7 @@ function Coach() {
         </motion.section>
 
         {/* Compartir horarios a Instagram */}
-        <ScheduleStoryExport classes={globalClasses} selectedDateStr={selectedDateStr} />
+        <ScheduleStoryExport classes={globalClasses} coaches={coaches} selectedDateStr={selectedDateStr} />
 
         {/* Calendario */}
         <section>{renderCalendar(getDotsForDate)}</section>

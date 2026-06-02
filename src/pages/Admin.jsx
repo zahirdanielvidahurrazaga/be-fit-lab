@@ -682,6 +682,7 @@ function Admin() {
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <ScheduleStoryExport
                             classes={globalClasses}
+                            coaches={coaches}
                             selectedDateStr={todayStr}
                             buttonLabel="Horarios"
                             buttonStyle={{ background: 'rgba(255,145,77,0.12)', color: 'var(--primary)', border: '1px solid rgba(255,145,77,0.3)', padding: '8px 14px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'var(--font-body)' }}

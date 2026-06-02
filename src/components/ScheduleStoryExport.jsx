@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Share2, X, CalendarRange, CalendarDays, Moon, Sun } from 'lucide-react';
@@ -23,11 +23,34 @@ const CATEGORIES = [
 ];
 const catColor = (cat) => CATEGORIES.find(c => c.key === cat)?.color || '#ECECEC';
 
-// Tokens de tema (oscuro / claro)
-const THEMES = {
-  dark: { bg: 'linear-gradient(165deg, #16181A 0%, #2D2928 100%)', text: '#fff', dim: 'rgba(255,255,255,0.55)', accent: '#FF914D', logoInvert: true, glow: 0.22 },
-  light: { bg: 'linear-gradient(165deg, #FFF7F1 0%, #FDF1EA 100%)', text: '#1A1C1E', dim: 'rgba(0,0,0,0.45)', accent: '#E07A2B', logoInvert: false, glow: 0.16 },
+const hexToRgba = (hex, a) => {
+  const h = (hex || '#ECECEC').replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r},${g},${b},${a})`;
 };
+
+// Tokens de tema (oscuro / claro). Glass "falso" (sin backdrop-filter, para que se capture en el PNG).
+const THEMES = {
+  dark: {
+    bg: 'linear-gradient(165deg, #16181A 0%, #2D2928 100%)', text: '#fff', dim: 'rgba(255,255,255,0.6)', accent: '#FF914D', logoInvert: true, glow: 0.22,
+    glassBg: 'rgba(255,255,255,0.06)', glassBorder: 'rgba(255,255,255,0.16)', glassHi: 'inset 0 1.5px 0 rgba(255,255,255,0.14)',
+    tintHi: 0.30, tintLo: 0.12, chipTitle: 'rgba(255,255,255,0.72)',
+  },
+  light: {
+    bg: 'linear-gradient(165deg, #FFF7F1 0%, #FDF1EA 100%)', text: '#1A1C1E', dim: 'rgba(0,0,0,0.5)', accent: '#E07A2B', logoInvert: false, glow: 0.16,
+    glassBg: 'rgba(255,255,255,0.45)', glassBorder: 'rgba(255,255,255,0.9)', glassHi: 'inset 0 1.5px 0 rgba(255,255,255,0.8)',
+    tintHi: 0.6, tintLo: 0.32, chipTitle: '#9A5B3E',
+  },
+};
+
+// Avatar circular del coach (usa dataURL precargado o iniciales como respaldo)
+const Avatar = ({ url, name, size, ring }) => (
+  <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'linear-gradient(135deg, #FF914D, #E07A9C)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${ring}` }}>
+    {url
+      ? <img src={url} crossOrigin="anonymous" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      : <span style={{ color: '#fff', fontWeight: 800, fontSize: size * 0.42, fontFamily: 'var(--font-display)' }}>{(name || '?').trim().charAt(0).toUpperCase()}</span>}
+  </div>
+);
 
 const parseTime = (t) => {
   const m = (t || '').match(/(\d+):(\d+)\s*(AM|PM)?/i);
@@ -55,31 +78,40 @@ function buildWeek(classes, refDateStr) {
   return { monday, sunday, days };
 }
 
-// Celda de una clase: chip pintado con el color de su categoría
-const ClassCell = ({ c }) => {
+// Celda de una clase: chip "glass" tintado con el color de su categoría
+const ClassCell = ({ c, T, avatarFor }) => {
   if (!c) return <span style={{ color: 'rgba(128,128,128,0.35)', fontSize: 30, fontWeight: 700 }}>–</span>;
+  const color = catColor(c.category);
   return (
-    <div style={{ width: '100%', background: catColor(c.category), borderRadius: 16, padding: '12px 8px', lineHeight: 1.12 }}>
-      <div style={{ fontSize: 26, fontWeight: 800, color: '#2D2928', fontFamily: 'var(--font-display)' }}>{c.instructor}</div>
-      <div style={{ fontSize: 18, fontWeight: 800, color: '#9A5B3E', textTransform: 'uppercase', letterSpacing: '0.03em', marginTop: 2 }}>{c.title}</div>
+    <div style={{
+      width: '100%', borderRadius: 18, padding: '12px 8px 14px',
+      background: `linear-gradient(150deg, ${hexToRgba(color, T.tintHi)}, ${hexToRgba(color, T.tintLo)})`,
+      border: `1.5px solid ${T.glassBorder}`, boxShadow: `${T.glassHi}, 0 6px 18px rgba(0,0,0,0.12)`,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, lineHeight: 1.1
+    }}>
+      <Avatar url={avatarFor?.(c)} name={c.instructor} size={48} ring={T.glassBorder} />
+      <div>
+        <div style={{ fontSize: 25, fontWeight: 800, color: T.text, fontFamily: 'var(--font-display)' }}>{c.instructor}</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: T.chipTitle, textTransform: 'uppercase', letterSpacing: '0.03em', marginTop: 2 }}>{c.title}</div>
+      </div>
     </div>
   );
 };
 
-// Leyenda de categorías
+// Leyenda de categorías — pills glass con barrita de color (no se pierden con el fondo)
 const CategoryLegend = ({ T }) => (
-  <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '14px 28px', marginTop: 30 }}>
+  <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '14px 18px', marginTop: 30 }}>
     {CATEGORIES.map(cat => (
-      <div key={cat.key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ width: 26, height: 26, borderRadius: 8, background: cat.color, border: '1px solid rgba(0,0,0,0.08)' }} />
-        <span style={{ fontSize: 24, fontWeight: 700, color: T.dim }}>{cat.label}</span>
+      <div key={cat.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px', borderRadius: 999, background: T.glassBg, border: `1.5px solid ${T.glassBorder}`, boxShadow: T.glassHi }}>
+        <span style={{ width: 36, height: 14, borderRadius: 7, background: cat.color, border: '1px solid rgba(0,0,0,0.1)' }} />
+        <span style={{ fontSize: 24, fontWeight: 800, color: T.text }}>{cat.label}</span>
       </div>
     ))}
   </div>
 );
 
 // ── La tarjeta (1080×1920) que se captura ──────────────────────────────────
-const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = 'dark' }, ref) => {
+const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = 'dark', avatarFor }, ref) => {
   const T = THEMES[theme] || THEMES.dark;
   const weekdays = week.days.slice(0, 5);
   const weekend = week.days.slice(5, 7);
@@ -98,7 +130,8 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = '
   return (
     <div ref={ref} style={{
       width: 1080, height: 1920, background: T.bg,
-      padding: '90px 70px', boxSizing: 'border-box', position: 'relative', overflow: 'hidden',
+      // Padding superior/inferior amplio = "zona segura" de Instagram (no tapa logo ni título)
+      padding: '150px 70px 240px', boxSizing: 'border-box', position: 'relative', overflow: 'hidden',
       fontFamily: 'var(--font-body)', display: 'flex', flexDirection: 'column'
     }}>
       {/* Glow de marca */}
@@ -116,11 +149,16 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = '
         {mode === 'day' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 22, marginTop: 10 }}>
             {dayData.classes.length > 0 ? dayData.classes.map((c, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 30, background: catColor(c.category), borderRadius: 28, padding: '28px 34px' }}>
-                <div style={{ minWidth: 200, fontSize: 46, fontWeight: 900, color: '#2D2928', fontFamily: 'var(--font-display)' }}>{c.time}</div>
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 26, borderRadius: 28, padding: '24px 30px',
+                background: `linear-gradient(150deg, ${hexToRgba(catColor(c.category), T.tintHi)}, ${hexToRgba(catColor(c.category), T.tintLo)})`,
+                border: `1.5px solid ${T.glassBorder}`, boxShadow: `${T.glassHi}, 0 8px 22px rgba(0,0,0,0.14)`
+              }}>
+                <div style={{ minWidth: 165, fontSize: 46, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)' }}>{c.time}</div>
+                <Avatar url={avatarFor?.(c)} name={c.instructor} size={80} ring={T.glassBorder} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 40, fontWeight: 900, color: '#1A1C1E', fontFamily: 'var(--font-display)' }}>{c.title}</div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: '#9A5B3E', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 4 }}>{c.instructor}</div>
+                  <div style={{ fontSize: 40, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)' }}>{c.title}</div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: T.chipTitle, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 4 }}>{c.instructor}</div>
                 </div>
               </div>
             )) : (
@@ -138,7 +176,7 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = '
                   <div style={{ display: 'flex', alignItems: 'center', fontSize: 28, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)' }}>{time}</div>
                   {weekdays.map(d => (
                     <div key={d.dateStr + time} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                      <ClassCell c={d.classes.find(c => c.time === time)} />
+                      <ClassCell c={d.classes.find(c => c.time === time)} T={T} avatarFor={avatarFor} />
                     </div>
                   ))}
                 </React.Fragment>
@@ -157,7 +195,7 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = '
                       <div style={{ display: 'flex', alignItems: 'center', fontSize: 28, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)' }}>{time}</div>
                       {weekend.map(d => (
                         <div key={d.dateStr + time} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                          <ClassCell c={d.classes.find(c => c.time === time)} />
+                          <ClassCell c={d.classes.find(c => c.time === time)} T={T} avatarFor={avatarFor} />
                         </div>
                       ))}
                     </React.Fragment>
@@ -181,7 +219,7 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = '
   );
 });
 
-export default function ScheduleStoryExport({ classes, selectedDateStr, buttonStyle, buttonLabel = 'Compartir horarios' }) {
+export default function ScheduleStoryExport({ classes, coaches, selectedDateStr, buttonStyle, buttonLabel = 'Compartir horarios' }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState('week'); // 'week' | 'day'
   const [theme, setTheme] = useState('dark'); // 'dark' | 'light'
@@ -193,6 +231,55 @@ export default function ScheduleStoryExport({ classes, selectedDateStr, buttonSt
   const refDate = selectedDateStr || new Date().toISOString().split('T')[0];
   const week = useMemo(() => buildWeek(classes, refDate), [classes, refDate]);
   const dayData = useMemo(() => week.days.find(d => d.dateStr === refDate) || week.days[0], [week, refDate]);
+
+  // Mapa de coaches por id y por nombre, para resolver la foto de cada clase
+  const coachById = useMemo(() => Object.fromEntries((coaches || []).map(co => [co.id, co])), [coaches]);
+  const coachByName = useMemo(() => {
+    const m = {};
+    (coaches || []).forEach(co => { if (co.full_name) m[co.full_name.trim().toLowerCase()] = co; });
+    return m;
+  }, [coaches]);
+
+  const getCoach = (c) => {
+    if (!c) return null;
+    if (c.coach_id && coachById[c.coach_id]) return coachById[c.coach_id];
+    const inst = (c.instructor || '').trim().toLowerCase();
+    if (!inst) return null;
+    if (coachByName[inst]) return coachByName[inst];
+    // coincidencia por primer nombre (ej. "ELENA R." ↔ "Elena Rodríguez")
+    return (coaches || []).find(co => {
+      const fn = (co.full_name || '').trim().toLowerCase();
+      if (!fn) return false;
+      const first = fn.split(' ')[0];
+      return inst.includes(first) || fn.includes(inst.split(' ')[0]);
+    }) || null;
+  };
+
+  // Precarga de fotos de coaches a dataURL (evita problemas de CORS al capturar el PNG)
+  const [avatarData, setAvatarData] = useState({});
+  useEffect(() => {
+    if (!open || !coaches?.length) return;
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all((coaches || []).filter(co => co.avatar_url).map(async co => {
+        try {
+          const res = await fetch(co.avatar_url, { mode: 'cors' });
+          const blob = await res.blob();
+          const dataUrl = await new Promise((resolve, reject) => {
+            const fr = new FileReader();
+            fr.onloadend = () => resolve(fr.result);
+            fr.onerror = reject;
+            fr.readAsDataURL(blob);
+          });
+          return [co.id, dataUrl];
+        } catch { return null; }
+      }));
+      if (!cancelled) setAvatarData(Object.fromEntries(entries.filter(Boolean)));
+    })();
+    return () => { cancelled = true; };
+  }, [open, coaches]);
+
+  const avatarFor = (c) => { const co = getCoach(c); return co ? avatarData[co.id] : null; };
 
   const rangeLabel = useMemo(() => {
     if (mode === 'day') {
@@ -291,7 +378,7 @@ export default function ScheduleStoryExport({ classes, selectedDateStr, buttonSt
             <div style={{ flex: 1, overflow: 'auto', padding: '14px 20px 0', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
               <div style={{ width: PREVIEW_W, height: PREVIEW_W * (1920 / 1080), flexShrink: 0, position: 'relative', overflow: 'hidden', borderRadius: 18, boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
                 <div style={{ position: 'absolute', top: 0, left: 0, width: 1080, height: 1920, transform: `scale(${PREVIEW_W / 1080})`, transformOrigin: 'top left' }}>
-                  <StoryCard ref={cardRef} mode={mode} week={week} dayData={dayData} rangeLabel={rangeLabel} theme={theme} />
+                  <StoryCard ref={cardRef} mode={mode} week={week} dayData={dayData} rangeLabel={rangeLabel} theme={theme} avatarFor={avatarFor} />
                 </div>
               </div>
             </div>
