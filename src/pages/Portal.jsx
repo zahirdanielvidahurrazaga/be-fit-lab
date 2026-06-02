@@ -189,7 +189,7 @@ function Portal() {
             <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '15px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Explora</h2>
             <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '6px', marginLeft: '-5px', paddingLeft: '5px', paddingRight: '5px' }}>
               {[
-                { to: '/cafeteria', img: '/fotos-hero/IMG_5410.JPG', Icon: Coffee, title: 'Peach Coffee Lab', sub: 'Café y smoothies', overlay: 'linear-gradient(160deg, rgba(60,30,15,0.18) 0%, rgba(35,18,8,0.74) 100%)' },
+                { to: '/cafeteria', img: '/fotos-hero/IMG_5410.JPG', Icon: Coffee, title: 'Coffee Lab', sub: 'Café & smoothies', overlay: 'linear-gradient(160deg, rgba(60,30,15,0.18) 0%, rgba(35,18,8,0.74) 100%)' },
                 { to: '/cumpleanos', img: '/fotos-hero/_DSC0444.jpg', Icon: Cake, title: 'Cumpleaños', sub: 'Tu cuenta regresiva', overlay: 'linear-gradient(160deg, rgba(120,40,70,0.25) 0%, rgba(85,28,52,0.74) 100%)' },
                 { to: '/eventos', img: '/fotos-hero/IMG_5376.JPG', Icon: Sparkles, title: 'Eventos', sub: 'Próximas experiencias', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.12) 0%, rgba(20,14,28,0.72) 100%)' },
               ].map(c => (

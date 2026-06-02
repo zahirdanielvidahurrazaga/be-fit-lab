@@ -1055,7 +1055,7 @@ export default function Landing() {
             </div>
             {[
               { title:'Estudio', items:[['Clases','clases'],['Horarios','horarios'],['El Estudio','estudio'],['Coaches','coaches']] },
-              { title:'Explora', items:[['Precios y paquetes','precios'],['Peach Coffee Lab','cafeteria']], extra:[['Iniciar Sesión','/login'],['Crear Cuenta','/registro']] },
+              { title:'Explora', items:[['Precios y paquetes','precios'],['Coffee Lab','cafeteria']], extra:[['Iniciar Sesión','/login'],['Crear Cuenta','/registro']] },
               { title:'Legal', links:[['Términos y condiciones','/terminos'],['Política de privacidad','/privacidad']], faq:true },
             ].map((col) => (
               <div key={col.title}>
