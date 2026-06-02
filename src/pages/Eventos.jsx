@@ -80,8 +80,6 @@ function EventDetail({ ev, user, registered, onToggleReg, onBack }) {
 
   return (
     <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 24 }}>
-      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--on-surface-variant)', fontWeight: 700, fontSize: '0.88rem', marginBottom: '14px', padding: 0 }}><ChevronLeft size={18} /> Eventos</button>
-
       {/* Flyer */}
       {ev.image_url
         ? <img src={ev.image_url} alt={ev.title} onClick={() => setLightbox(ev.image_url)} style={{ width: '100%', borderRadius: '22px', display: 'block', cursor: 'zoom-in', boxShadow: '0 16px 40px rgba(0,0,0,0.12)' }} />

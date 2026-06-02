@@ -51,7 +51,12 @@ export default function AdminEventos() {
     const { data } = await supabase.from('event_registrations').select('user_id, users(full_name, email)').eq('event_id', id).order('created_at', { ascending: true });
     setRegView(v => ({ ...v, [id]: data || [] }));
   };
-  const avisar = (ev) => { if (confirm(`¿Avisar a todas las clientas sobre "${ev.title}"?`)) { notifyClients(ev); alert('Aviso enviado.'); } };
+  const avisar = async (ev) => {
+    if (!confirm(`¿Avisar a todas las clientas sobre "${ev.title}"?`)) return;
+    const { data, error } = await notifyClients(ev);
+    if (error || data?.error) alert('No se pudo enviar el aviso: ' + (error?.message || data?.error || 'error'));
+    else alert(`Aviso enviado a ${data?.sent ?? 0} clientas.`);
+  };
 
   const blank = { title: '', description: '', event_date: '', location: '', image_url: '', price: '', registration_open: false, notify: true };
   const startEdit = (e) => setForm({ id: e.id, title: e.title || '', description: e.description || '', event_date: toLocalInput(e.event_date), location: e.location || '', image_url: e.image_url || '', price: e.price ?? '', registration_open: !!e.registration_open, notify: false });
@@ -74,7 +79,10 @@ export default function AdminEventos() {
     };
     if (form.id) await supabase.from('events').update(payload).eq('id', form.id);
     else await supabase.from('events').insert(payload);
-    if (form.notify) notifyClients(payload);
+    if (form.notify) {
+      const { data, error } = await notifyClients(payload);
+      if (error || data?.error) alert('Evento guardado, pero el aviso falló: ' + (error?.message || data?.error || 'error'));
+    }
     setSaving(false); setForm(null); load();
   };
   const del = async (e) => { if (confirm(`¿Eliminar el evento "${e.title}"?`)) { await supabase.from('events').delete().eq('id', e.id); load(); } };
