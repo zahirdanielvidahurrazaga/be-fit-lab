@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
 import ProfileMenu from '../components/ProfileMenu';
+import ProgressPhotos from '../components/ProgressPhotos';
 
 const isNative = Capacitor.isNativePlatform();
 
@@ -42,6 +43,7 @@ function Evolucion() {
   const [previousMeasurement, setPreviousMeasurement] = useState(null);
   const [loadingMeasurements, setLoadingMeasurements] = useState(true);
   const [syncingScale, setSyncingScale] = useState(false);
+  const [subtab, setSubtab] = useState('resumen'); // resumen | fotos
   const isScrolled = useScrollDetect(30);
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [showGoalModal, setShowGoalModal] = useState(false);
@@ -277,6 +279,32 @@ function Evolucion() {
         </div>
       </header>
 
+      {/* SUB-PESTAÑAS (glass) */}
+      <div style={{ display: 'flex', gap: '8px', padding: '6px 16px 2px', maxWidth: '900px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+        {[['resumen', 'Resumen'], ['fotos', 'Fotos']].map(([id, label]) => {
+          const on = subtab === id;
+          return (
+            <motion.button key={id} onClick={() => setSubtab(id)} whileTap={{ scale: 0.95 }}
+              style={{ padding: '9px 18px', borderRadius: '999px', cursor: 'pointer', fontWeight: 700, fontSize: '0.86rem', whiteSpace: 'nowrap',
+                border: on ? '1px solid rgba(255,255,255,0.5)' : '1px solid var(--glass-border, rgba(255,255,255,0.55))',
+                background: on ? 'linear-gradient(135deg, #FF914D, #E68245)' : 'var(--glass-bg, rgba(255,255,255,0.55))', color: on ? '#fff' : 'var(--on-surface-variant)',
+                backdropFilter: 'blur(18px) saturate(180%)', WebkitBackdropFilter: 'blur(18px) saturate(180%)',
+                boxShadow: on ? '0 8px 20px rgba(255,145,77,0.35)' : '0 2px 10px rgba(0,0,0,0.04)' }}>
+              {label}
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {subtab === 'fotos' && (
+        <main className="dashboard-main" style={{ paddingTop: '10px' }}>
+          <div style={{ width: '100%', maxWidth: '720px', margin: '0 auto', padding: '0 16px' }}>
+            <ProgressPhotos userId={user?.id} />
+          </div>
+        </main>
+      )}
+
+      {subtab === 'resumen' && (
       <main className="dashboard-main" style={{ paddingTop: '10px' }}>
         <div className="dashboard-sidebar">
 
@@ -546,6 +574,7 @@ function Evolucion() {
           )}
         </div>
       </main>
+      )}
 
       {/* QR SHEET */}
       {showQR && (
