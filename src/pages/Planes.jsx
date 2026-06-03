@@ -105,6 +105,10 @@ function Planes() {
           planTitle: selectedPlan.title,
           userId: user.id,
           userEmail: user.email,
+          // Solo en web mandamos el origin real para el redirect de Stripe.
+          // En nativo NO se manda: el origin del WebView (capacitor://befitlab.app)
+          // no es una URL válida para success_url y rompería el checkout.
+          returnUrl: Capacitor.isNativePlatform() ? undefined : window.location.origin,
         },
       });
 
@@ -121,6 +125,9 @@ function Planes() {
         window.open(data.url, '_system');
       } else {
         localStorage.setItem('befit_payment_return', Date.now().toString());
+        // Guardar el plan elegido: al volver de Stripe la pestaña se re-monta y
+        // selectedPlan se pierde; lo restauramos para mostrar título/precio correctos.
+        localStorage.setItem('befit_pending_plan', JSON.stringify(selectedPlan));
         window.location.href = data.url;
       }
     } catch (err) {
@@ -149,14 +156,29 @@ function Planes() {
     // Limpiar el query para que no se reprocese al refrescar
     navigate(location.pathname, { replace: true, state: location.state });
 
+    // Restaurar el plan que el usuario eligió antes de ir a Stripe (la pestaña se
+    // re-montó al volver). Fallback genérico si por algo no estuviera guardado.
+    let pendingPlan = null;
+    try {
+      const raw = localStorage.getItem('befit_pending_plan');
+      if (raw) pendingPlan = JSON.parse(raw);
+    } catch { /* ignore */ }
+    localStorage.removeItem('befit_pending_plan');
+    const fallbackPlan = pendingPlan || { title: plan || 'Tu membresía', price: '' };
+
     if (pay === 'success') {
       // Mostrar el modal en estado "confirmando" y vigilar la activación → portal
       setReturningFromPayment(true);
-      setSelectedPlan(prev => prev || { title: plan || 'Tu membresía', price: '' });
+      setSelectedPlan(prev => prev || fallbackPlan);
       setCheckoutStep(2);
       refreshUserData?.();
       startWatchingPayment();
     } else if (pay === 'cancel') {
+      // Reabrir el modal en el paso de confirmación para que el aviso sea visible
+      // (al volver de Stripe el modal estaba cerrado y el mensaje no se mostraba).
+      setReturningFromPayment(false);
+      setSelectedPlan(prev => prev || fallbackPlan);
+      setCheckoutStep(1);
       setPaymentError('El pago se canceló. Puedes intentarlo de nuevo cuando quieras.');
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps

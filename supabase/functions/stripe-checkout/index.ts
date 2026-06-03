@@ -18,7 +18,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const { planTitle, userId, userEmail } = await req.json();
+    const { planTitle, userId, userEmail, returnUrl } = await req.json();
 
     if (!planTitle || !userId || !userEmail) {
       return Response.json({ error: 'planTitle, userId y userEmail son requeridos' }, { status: 400, headers: corsHeaders });
@@ -66,7 +66,13 @@ serve(async (req) => {
       });
     }
 
-    const appUrl = req.headers.get('origin') || 'https://be-fit-lab.pages.dev';
+    // Web manda returnUrl (window.location.origin) → redirige al MISMO dominio
+    // (producción o localhost en dev). Nativo no lo manda → fallback a la web real.
+    // Nunca usar req.headers.get('origin'): en nativo es capacitor://befitlab.app
+    // y Stripe rechaza ese success_url (rompe el pago de membresía en la app).
+    const appUrl = (typeof returnUrl === 'string' && /^https?:\/\//.test(returnUrl))
+      ? returnUrl.replace(/\/$/, '')
+      : 'https://be-fit-lab.pages.dev';
 
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
