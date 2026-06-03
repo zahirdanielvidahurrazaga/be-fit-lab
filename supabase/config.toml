@@ -1,0 +1,7 @@
+project_id = "fifaowaiokauhuqklzwe"
+
+# El webhook de Stripe NO recibe JWT de Supabase: se autentica con la firma de
+# Stripe (STRIPE_WEBHOOK_SECRET). Debe ser público o Stripe recibe 401 y NINGÚN
+# pago web se activa. No quitar verify_jwt=false.
+[functions.stripe-webhook]
+verify_jwt = false
