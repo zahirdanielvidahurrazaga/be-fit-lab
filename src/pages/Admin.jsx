@@ -4,7 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
-import { PLAN_BY_NAME } from '../lib/plans';
+import { PLANS, PLAN_BY_NAME } from '../lib/plans';
+import { supabase } from '../lib/supabase';
 import AdminCafeteria from '../components/AdminCafeteria';
 import AdminReportes from '../components/AdminReportes';
 import AdminClientas from '../components/AdminClientas';
@@ -27,7 +28,7 @@ const daysOfWeek = [
 ];
 
 function Admin() {
-  const { user, logout, globalClasses, recipes, updateClassSpots, checkInClient, addClass, deleteClass, updateClass, addRecipe, deleteRecipe, allUsers, coaches, activatePlan, fetchClassesByDayOfWeek, fetchGlobalClasses, assignCustomBadge, removeCustomBadge, badgeConfigs, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig, addMultipleClasses, setNotifOpen,
+  const { user, logout, globalClasses, recipes, updateClassSpots, checkInClient, addClass, deleteClass, updateClass, addRecipe, deleteRecipe, allUsers, coaches, activatePlan, fetchAllUsers, fetchClassesByDayOfWeek, fetchGlobalClasses, assignCustomBadge, removeCustomBadge, badgeConfigs, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig, addMultipleClasses, setNotifOpen,
     categories, addCategory, updateCategory, deleteCategory,
     classTemplates, saveTemplate, deleteTemplate, applyTemplate } = useAuth();
   const isScrolled = useScrollDetect(30);
@@ -51,6 +52,13 @@ function Admin() {
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [showInscribirSuccess, setShowInscribirSuccess] = useState(false);
+  // Inscripción real desde recepción (todo en uno)
+  const [newBirth, setNewBirth] = useState('');
+  const [newInscPlan, setNewInscPlan] = useState(''); // '' = sin plan
+  const [newPayMethod, setNewPayMethod] = useState('efectivo');
+  const [tempPass, setTempPass] = useState(() => 'BeFit' + Math.floor(1000 + Math.random() * 9000));
+  const [inscribiendo, setInscribiendo] = useState(false);
+  const [inscDone, setInscDone] = useState(null); // { email, password }
 
   // Pagos
   const [selectedPayMethod, setSelectedPayMethod] = useState('efectivo');
@@ -159,7 +167,7 @@ function Admin() {
   }));
 
   const [selectedAlumnaId, setSelectedAlumnaId] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState('fit');
+  const [selectedPlan, setSelectedPlan] = useState('Plan Fit');
 
   useEffect(() => {
     if (activeTab === 'mostrador' && qrInputRef.current) {
@@ -205,21 +213,35 @@ function Admin() {
     }
   };
 
-  const handleInscribir = () => {
-    if (newName.trim() && newEmail.trim()) {
-      setShowInscribirSuccess(true);
-      setTimeout(() => {
-        setShowInscribirSuccess(false);
-        setNewName(''); setNewEmail(''); setNewPhone('');
-      }, 2500);
-    }
+  const handleInscribir = async () => {
+    const nombre = newName.trim(), correo = newEmail.trim();
+    if (!nombre || !correo) { alert('Falta el nombre o el correo.'); return; }
+    if (!tempPass || tempPass.length < 6) { alert('La contraseña temporal debe tener al menos 6 caracteres.'); return; }
+    setInscribiendo(true);
+    const planInfo = newInscPlan ? PLAN_BY_NAME[newInscPlan] : null;
+    const { data, error } = await supabase.functions.invoke('admin-create-client', {
+      body: {
+        name: nombre, email: correo, password: tempPass, phone: newPhone.trim(),
+        birthDate: newBirth || null,
+        planName: planInfo?.name || null,
+        classCount: planInfo?.classes ?? null,
+      },
+    });
+    setInscribiendo(false);
+    if (error || data?.error) { alert(data?.error || error?.message || 'No se pudo inscribir.'); return; }
+    setInscDone({ email: correo, password: tempPass });
+    fetchAllUsers?.();
+    // Limpiar el formulario y preparar una nueva contraseña
+    setNewName(''); setNewEmail(''); setNewPhone(''); setNewBirth(''); setNewInscPlan('');
+    setTempPass('BeFit' + Math.floor(1000 + Math.random() * 9000));
   };
 
   const handlePago = async () => {
     if (!selectedAlumnaId) return;
     
-    // Nombres/clases canónicos desde la fuente única (src/lib/plans)
-    const planDetails = selectedPlan === 'fit' ? PLAN_BY_NAME['Plan Fit'] : PLAN_BY_NAME['Plan Premium'];
+    // Plan canónico desde la fuente única (src/lib/plans)
+    const planDetails = PLAN_BY_NAME[selectedPlan];
+    if (!planDetails) return;
     await activatePlan(planDetails.name, planDetails.classes, selectedAlumnaId);
     
     setShowPaySuccess(true);
@@ -1063,27 +1085,72 @@ function Admin() {
             {activeTab === 'ventas' && (
               <motion.div key="ventas" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
                 <div className="admin-double-column">
-                  {/* SECCIÓN INSCRIBIR */}
+                  {/* SECCIÓN INSCRIBIR CLIENTA NUEVA (todo en uno: cuenta + plan + cobro) */}
                   <section style={{ width: '100%' }}>
-                    <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', marginBottom: '20px' }}>Inscripción Directa</h2>
-                    {showInscribirSuccess ? (
-                      <SuccessCard message="Alumna registrada exitosamente." />
+                    <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', marginBottom: '20px' }}>Inscribir clienta</h2>
+                    {inscDone ? (
+                      <div className="ios-glass-card" style={{ background: 'var(--surface)', border: 'none', padding: '22px', margin: 0, textAlign: 'center' }}>
+                        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}><CheckCircle2 size={30} color="#16A34A" /></div>
+                        <h3 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: '1.2rem' }}>¡Clienta inscrita!</h3>
+                        <p style={{ margin: '0 0 16px', color: 'var(--on-surface-variant)', fontSize: '0.88rem' }}>Comparte estos datos de acceso con la clienta:</p>
+                        <div style={{ textAlign: 'left', background: 'var(--surface-lowest)', borderRadius: '14px', padding: '14px', marginBottom: '14px' }}>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>Correo</div>
+                          <div style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '10px', wordBreak: 'break-all' }}>{inscDone.email}</div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>Contraseña temporal</div>
+                          <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>{inscDone.password}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button onClick={() => navigator.clipboard?.writeText(`Acceso Be Fit Lab\nCorreo: ${inscDone.email}\nContraseña: ${inscDone.password}`)} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', background: 'var(--surface)', fontWeight: 700, cursor: 'pointer' }}>Copiar</button>
+                          <button onClick={() => setInscDone(null)} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Inscribir otra</button>
+                        </div>
+                        <p style={{ margin: '12px 0 0', color: 'var(--on-surface-variant)', fontSize: '0.74rem' }}>La clienta puede cambiar su contraseña luego desde su perfil.</p>
+                      </div>
                     ) : (
                       <div className="ios-glass-card" style={{ background: 'var(--surface)', border: 'none', padding: '22px', margin: 0 }}>
-                        <div style={{ marginBottom: '16px' }}>
+                        <div style={{ marginBottom: '14px' }}>
                           <label style={labelStyle}>Nombre Completo</label>
                           <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ej. Ana Pérez" style={inputStyle} />
                         </div>
-                        <div style={{ marginBottom: '16px' }}>
+                        <div style={{ marginBottom: '14px' }}>
                           <label style={labelStyle}>Correo Electrónico</label>
                           <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="ana@ejemplo.com" style={inputStyle} />
                         </div>
-                        <div style={{ marginBottom: '22px' }}>
-                          <label style={labelStyle}>WhatsApp</label>
-                          <input type="tel" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="10 dígitos" style={inputStyle} />
+                        <div style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={labelStyle}>WhatsApp</label>
+                            <input type="tel" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="10 dígitos" style={inputStyle} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <label style={labelStyle}>Cumpleaños (opcional)</label>
+                            <input type="date" value={newBirth} onChange={(e) => setNewBirth(e.target.value)} style={inputStyle} />
+                          </div>
                         </div>
-                        <button onClick={handleInscribir} style={{ width: '100%', padding: '15px', borderRadius: '14px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '0.95rem' }}>
-                          Crear Expediente
+                        <div style={{ marginBottom: '14px' }}>
+                          <label style={labelStyle}>Membresía</label>
+                          <select value={newInscPlan} onChange={(e) => setNewInscPlan(e.target.value)} style={{ ...inputStyle, WebkitAppearance: 'none' }}>
+                            <option value="">Sin plan (solo registrar)</option>
+                            {PLANS.map(p => <option key={p.name} value={p.name}>{p.title} — {p.unlimited ? 'ilimitadas' : p.classes + ' clases'} ({p.price})</option>)}
+                          </select>
+                        </div>
+                        {newInscPlan && (
+                          <div style={{ marginBottom: '14px' }}>
+                            <label style={labelStyle}>Método de pago</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                              {['efectivo', 'tarjeta', 'transferencia'].map(m => (
+                                <div key={m} onClick={() => setNewPayMethod(m)} style={{ padding: '12px 8px', textAlign: 'center', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem', background: newPayMethod === m ? 'var(--primary)' : 'var(--surface-lowest)', color: newPayMethod === m ? 'white' : 'var(--on-surface-variant)', border: newPayMethod === m ? '1px solid var(--primary)' : '1px solid rgba(55,61,59,0.08)' }}>{m.toUpperCase()}</div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div style={{ marginBottom: '20px' }}>
+                          <label style={labelStyle}>Contraseña temporal</label>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <input type="text" value={tempPass} onChange={(e) => setTempPass(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+                            <button type="button" onClick={() => setTempPass('BeFit' + Math.floor(1000 + Math.random() * 9000))} style={{ padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', background: 'var(--surface)', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Generar</button>
+                          </div>
+                        </div>
+                        <button onClick={handleInscribir} disabled={inscribiendo} style={{ width: '100%', padding: '15px', borderRadius: '14px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '0.95rem', opacity: inscribiendo ? 0.7 : 1 }}>
+                          {inscribiendo ? 'Inscribiendo…' : 'Inscribir clienta'}
                         </button>
                       </div>
                     )}
@@ -1106,8 +1173,7 @@ function Admin() {
                         <div style={{ marginBottom: '16px' }}>
                           <label style={labelStyle}>Membresía</label>
                           <select value={selectedPlan} onChange={(e)=>setSelectedPlan(e.target.value)} style={{ ...inputStyle, WebkitAppearance: 'none' }}>
-                            <option value="fit">Plan Fit — {PLAN_BY_NAME['Plan Fit'].classes} clases ({PLAN_BY_NAME['Plan Fit'].price})</option>
-                            <option value="premium">Plan Premium — clases ilimitadas ({PLAN_BY_NAME['Plan Premium'].price})</option>
+                            {PLANS.map(p => <option key={p.name} value={p.name}>{p.title} — {p.unlimited ? 'ilimitadas' : p.classes + ' clases'} ({p.price})</option>)}
                           </select>
                         </div>
                         <div style={{ marginBottom: '22px' }}>
