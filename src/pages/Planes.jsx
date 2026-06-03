@@ -16,6 +16,7 @@ function Planes() {
   const [checkoutStep, setCheckoutStep] = useState(1); // 1 = confirm, 2 = waiting, 3 = success
   const [paymentError, setPaymentError] = useState(null);
   const [showCarousel, setShowCarousel] = useState(false);
+  const [returningFromPayment, setReturningFromPayment] = useState(false);
 
   // Si no tiene plan activo, mostrar el carrusel directamente
   const showingCarousel = showCarousel || !membershipStatus || membershipStatus !== 'ACTIVE';
@@ -40,12 +41,14 @@ function Planes() {
     setSelectedPlan(null);
     setIsProcessing(false);
     setPaymentError(null);
+    setReturningFromPayment(false);
   };
 
   // Suscripción Realtime: detecta cuando el webhook de Stripe activa el plan
   const startWatchingPayment = () => {
     if (!user) return;
     if (realtimeChannelRef.current) supabase.removeChannel(realtimeChannelRef.current);
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
 
     const channel = supabase
       .channel(`payment-watch-${user.id}`)
@@ -117,7 +120,8 @@ function Planes() {
       if (Capacitor.isNativePlatform()) {
         window.open(data.url, '_system');
       } else {
-        window.open(data.url, '_blank', 'noopener,noreferrer');
+        localStorage.setItem('befit_payment_return', Date.now().toString());
+        window.location.href = data.url;
       }
     } catch (err) {
       console.error('Error iniciando pago:', err);
@@ -133,6 +137,29 @@ function Planes() {
       window.history.replaceState({}, '');
     }
   }, []);
+
+  // Retorno desde Stripe Checkout (success_url/cancel_url = /planes?payment=...)
+  // Sin esto, la pestaña que vuelve de Stripe se quedaba en la pantalla de planes.
+  useEffect(() => {
+    if (!user) return;
+    const params = new URLSearchParams(location.search);
+    const pay = params.get('payment');
+    if (!pay) return;
+
+    // Limpiar el query para que no se reprocese al refrescar
+    navigate(location.pathname, { replace: true, state: location.state });
+
+    if (pay === 'success') {
+      // Mostrar el modal en estado "confirmando" y vigilar la activación → portal
+      setReturningFromPayment(true);
+      setSelectedPlan(prev => prev || { title: plan || 'Tu membresía', price: '' });
+      setCheckoutStep(2);
+      refreshUserData?.();
+      startWatchingPayment();
+    } else if (pay === 'cancel') {
+      setPaymentError('El pago se canceló. Puedes intentarlo de nuevo cuando quieras.');
+    }
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Limpiar al desmontar
   useEffect(() => {
@@ -324,10 +351,12 @@ function Planes() {
                   <Loader2 size={34} color="var(--primary)" style={{ animation: 'spin 1s linear infinite' }} />
                 </div>
                 <h2 style={{ fontSize: '1.6rem', fontFamily: 'var(--font-display)', color: '#111827', marginBottom: '0.6rem' }}>
-                  Esperando tu pago
+                  {returningFromPayment ? 'Confirmando tu pago' : 'Esperando tu pago'}
                 </h2>
                 <p style={{ color: '#6B7280', fontSize: '0.92rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-                  Completa el pago en la ventana de Stripe que se abrió. Tu membresía se activará automáticamente al confirmar.
+                  {returningFromPayment
+                    ? 'Estamos activando tu membresía. En un momento te llevamos a tu portal.'
+                    : 'Completa el pago en la ventana de Stripe que se abrió. Tu membresía se activará automáticamente al confirmar.'}
                 </p>
                 <button
                   onClick={closeModal}

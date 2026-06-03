@@ -66,7 +66,7 @@ serve(async (req) => {
       });
     }
 
-    const appUrl = 'https://be-fit-lab.pages.dev';
+    const appUrl = req.headers.get('origin') || 'https://be-fit-lab.pages.dev';
 
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
