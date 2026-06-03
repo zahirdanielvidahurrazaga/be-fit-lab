@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, CalendarDays, MapPin, Sparkles, Share2, Check, Ticket, ImagePlus, Loader2, X, Tag, Users } from 'lucide-react';
+import { ChevronLeft, CalendarDays, MapPin, Sparkles, Share2, Check, Ticket, ImagePlus, Loader2, X, Tag, Users, QrCode, Lock, CheckCircle2 } from 'lucide-react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { Capacitor } from '@capacitor/core';
 import { Stripe } from '@capacitor-community/stripe';
 import { supabase } from '../lib/supabase';
@@ -64,8 +65,25 @@ function EventDetail({ ev, user, registered, onReg, processing, onBack }) {
   const [photos, setPhotos] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [lightbox, setLightbox] = useState(null);
+  const [attended, setAttended] = useState(false); // hizo check-in en este evento
+  const [showQR, setShowQR] = useState(false);
   const fileRef = useRef(null);
   const past = isPast(ev.event_date);
+
+  // Estado de asistencia propia (para el QR y para habilitar subir fotos), en vivo
+  useEffect(() => {
+    if (!user?.id) return;
+    let active = true;
+    (async () => {
+      const { data } = await supabase.from('event_registrations').select('checked_in').eq('event_id', ev.id).eq('user_id', user.id).maybeSingle();
+      if (active) setAttended(!!data?.checked_in);
+    })();
+    const ch = supabase.channel(`evreg-${ev.id}-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_registrations', filter: `user_id=eq.${user.id}` },
+        (payload) => { if (payload.new?.event_id === ev.id) setAttended(!!payload.new.checked_in); })
+      .subscribe();
+    return () => { active = false; supabase.removeChannel(ch); };
+  }, [ev.id, user?.id]);
 
   const loadPhotos = async () => {
     const { data } = await supabase.from('event_photos').select('*').eq('event_id', ev.id).order('created_at', { ascending: false });
@@ -135,14 +153,36 @@ function EventDetail({ ev, user, registered, onReg, processing, onBack }) {
         </button>
       </div>
 
+      {/* Mi QR para check-in / estado de asistencia */}
+      {registered && (
+        <div style={{ marginBottom: '22px' }}>
+          {attended ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px', borderRadius: '14px', background: 'rgba(34,197,94,0.1)', color: '#16A34A', fontWeight: 700, fontSize: '0.9rem' }}>
+              <CheckCircle2 size={18} /> ¡Asististe a este evento!
+            </div>
+          ) : !past ? (
+            <button onClick={() => setShowQR(true)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px', borderRadius: '14px', ...glass, color: 'var(--on-surface)', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>
+              <QrCode size={18} color={PRIMARY} /> Mostrar mi QR para check-in
+            </button>
+          ) : null}
+        </div>
+      )}
+
       {/* Galería compartida */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
         <h3 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--on-surface)' }}>Galería {photos.length > 0 && <span style={{ color: 'var(--on-surface-variant)', fontWeight: 500, fontSize: '0.9rem' }}>· {photos.length}</span>}</h3>
-        <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,145,77,0.22)', backdropFilter: 'blur(14px) saturate(180%)', WebkitBackdropFilter: 'blur(14px) saturate(180%)', color: PRIMARY, border: '1px solid rgba(255,255,255,0.4)', borderRadius: '11px', padding: '8px 13px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)' }}>
-          {uploading ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'flex' }}><Loader2 size={15} /></motion.span> : <ImagePlus size={15} />} Subir fotos
-        </button>
+        {attended && (
+          <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,145,77,0.22)', backdropFilter: 'blur(14px) saturate(180%)', WebkitBackdropFilter: 'blur(14px) saturate(180%)', color: PRIMARY, border: '1px solid rgba(255,255,255,0.4)', borderRadius: '11px', padding: '8px 13px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)' }}>
+            {uploading ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ display: 'flex' }}><Loader2 size={15} /></motion.span> : <ImagePlus size={15} />} Subir fotos
+          </button>
+        )}
         <input ref={fileRef} type="file" accept="image/*" multiple onChange={pickPhotos} style={{ display: 'none' }} />
       </div>
+      {!attended && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 13px', borderRadius: '12px', background: 'rgba(0,0,0,0.04)', color: 'var(--on-surface-variant)', fontSize: '0.82rem', marginBottom: '12px' }}>
+          <Lock size={14} /> {registered ? 'Podrás subir fotos después de tu check-in en el evento.' : 'Solo las asistentes al evento pueden subir fotos.'}
+        </div>
+      )}
       {photos.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '34px 20px', color: 'var(--on-surface-variant)', ...glass, borderRadius: '18px' }}>
           <ImagePlus size={28} style={{ opacity: 0.3, marginBottom: '8px' }} />
@@ -158,6 +198,24 @@ function EventDetail({ ev, user, registered, onReg, processing, onBack }) {
           ))}
         </div>
       )}
+
+      {/* Modal QR para check-in */}
+      <AnimatePresence>
+        {showQR && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowQR(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+            <motion.div onClick={e => e.stopPropagation()} initial={{ scale: 0.9, opacity: 0, y: 18 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0 }} transition={{ type: 'spring', damping: 22, stiffness: 240 }}
+              style={{ width: 'min(340px, 100%)', background: '#fff', borderRadius: '26px', padding: '28px 24px', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.3)' }}>
+              <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: '#1A1C1E' }}>Tu código de entrada</h2>
+              <p style={{ margin: '0 0 18px', fontSize: '0.86rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>Muéstralo en la entrada de <strong>{ev.title}</strong> para tu check-in.</p>
+              <div style={{ background: '#fff', padding: '14px', borderRadius: '18px', display: 'inline-block', boxShadow: '0 6px 20px rgba(0,0,0,0.1)', border: '1px solid rgba(0,0,0,0.06)' }}>
+                <QRCodeCanvas value={user?.id || 'befit'} size={200} level="M" />
+              </div>
+              <button onClick={() => setShowQR(false)} style={{ width: '100%', marginTop: '20px', padding: '13px', borderRadius: '14px', border: 'none', background: 'rgba(0,0,0,0.06)', color: '#1A1C1E', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>Cerrar</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>{lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}</AnimatePresence>
     </motion.div>

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Pencil, Sparkles, ImagePlus, Loader2, Camera, X, Save, MapPin, CalendarDays, Ticket, Bell, Users, ChevronDown, Tag, CheckCircle2, AlertTriangle, Send } from 'lucide-react';
+import { Plus, Trash2, Pencil, Sparkles, ImagePlus, Loader2, Camera, X, Save, MapPin, CalendarDays, Ticket, Bell, Users, ChevronDown, Tag, CheckCircle2, AlertTriangle, Send, QrCode, ScanLine, UserCheck } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { uploadImage } from '../lib/cafeImage';
 
@@ -36,6 +36,43 @@ export default function AdminEventos() {
   const [saving, setSaving] = useState(false);
   const [counts, setCounts] = useState({});
   const [regView, setRegView] = useState({}); // eventId -> array de inscritas (o undefined)
+
+  // ── Check-in del evento (lector QR, igual que el mostrador de clases) ──────
+  const [ci, setCi] = useState(null); // { ev, list, feedback }
+  const [ciScan, setCiScan] = useState('');
+  const ciInputRef = useRef(null);
+
+  const openCheckin = async (ev) => {
+    setCi({ ev, list: null, feedback: null });
+    const { data } = await supabase.from('event_registrations')
+      .select('user_id, checked_in, checked_in_at, users(full_name, email, avatar_url)')
+      .eq('event_id', ev.id).order('created_at', { ascending: true });
+    setCi(c => c && c.ev.id === ev.id ? { ...c, list: data || [] } : c);
+  };
+  useEffect(() => { if (ci && ci.list) setTimeout(() => ciInputRef.current?.focus(), 50); }, [ci?.ev?.id, ci?.list]);
+
+  const markAttendance = async (userId) => {
+    if (!ci) return;
+    const reg = (ci.list || []).find(r => r.user_id === userId);
+    if (!reg) { setCi(c => ({ ...c, feedback: { type: 'err', msg: 'No está inscrita en este evento' } })); return; }
+    const name = reg.users?.full_name || reg.users?.email || 'Clienta';
+    if (reg.checked_in) { setCi(c => ({ ...c, feedback: { type: 'dup', name, msg: 'Ya tenía asistencia registrada' } })); return; }
+    const { error } = await supabase.from('event_registrations')
+      .update({ checked_in: true, checked_in_at: new Date().toISOString() })
+      .eq('event_id', ci.ev.id).eq('user_id', userId);
+    if (error) { setCi(c => ({ ...c, feedback: { type: 'err', msg: 'No se pudo registrar' } })); return; }
+    setCi(c => ({
+      ...c,
+      list: (c.list || []).map(r => r.user_id === userId ? { ...r, checked_in: true, checked_in_at: new Date().toISOString() } : r),
+      feedback: { type: 'ok', name, msg: '¡Asistencia registrada!' },
+    }));
+  };
+  const handleEventScan = (e) => {
+    e.preventDefault();
+    const code = ciScan.trim();
+    setCiScan('');
+    if (code) markAttendance(code);
+  };
 
   const load = async () => {
     const { data } = await supabase.from('events').select('*').order('event_date', { ascending: false, nullsFirst: false });
@@ -169,6 +206,11 @@ export default function AdminEventos() {
                 <button onClick={() => avisar(e)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(255,145,77,0.12)', color: PRIMARY, border: 'none', borderRadius: '9px', padding: '7px 11px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
                   <Bell size={13} /> Avisar
                 </button>
+                {(e.registration_open || (e.registered_count ?? counts[e.id] ?? 0) > 0) && (
+                  <button onClick={() => openCheckin(e)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: INK, color: '#fff', border: 'none', borderRadius: '9px', padding: '7px 11px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
+                    <QrCode size={13} /> Check-in
+                  </button>
+                )}
               </div>
               {regView[e.id] && (
                 <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -250,6 +292,75 @@ export default function AdminEventos() {
                   <button onClick={() => setNm(null)} style={{ width: '100%', padding: '13px', borderRadius: '14px', border: 'none', background: PRIMARY, color: '#fff', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer', flexShrink: 0 }}>Listo</button>
                 </div>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de CHECK-IN del evento (lector QR + lista de inscritas) */}
+      <AnimatePresence>
+        {ci && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setCi(null)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+            <motion.div onClick={e => e.stopPropagation()} initial={{ scale: 0.92, opacity: 0, y: 18 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0 }} transition={{ type: 'spring', damping: 22, stiffness: 240 }}
+              style={{ width: 'min(460px, 100%)', maxHeight: '88vh', background: '#fff', borderRadius: '26px', padding: '22px', boxShadow: '0 24px 60px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexShrink: 0 }}>
+                <div>
+                  <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: INK }}>Check-in</h2>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{ci.ev.title}</p>
+                </div>
+                <button onClick={() => setCi(null)} style={{ width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}><X size={17} /></button>
+              </div>
+
+              {/* Lector QR (oscuro, igual que el mostrador). El lector escribe el código y envía. */}
+              <div onClick={() => ciInputRef.current?.focus()} style={{ flexShrink: 0, background: 'linear-gradient(135deg, #1A1C1E, #2C302E)', borderRadius: '18px', padding: '22px 16px', textAlign: 'center', position: 'relative', overflow: 'hidden', cursor: 'pointer', marginBottom: '12px' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '2px', background: 'var(--accent)', opacity: 0.5, boxShadow: '0 0 15px var(--accent)', animation: 'scanLine 3s infinite linear' }} />
+                <ScanLine size={30} color="#fff" style={{ opacity: 0.85, marginBottom: '8px' }} />
+                <h3 style={{ fontSize: '1.1rem', color: '#fff', fontFamily: 'var(--font-display)', margin: 0, letterSpacing: '0.04em' }}>Escanear QR de la clienta</h3>
+                <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.74rem', margin: '6px 0 0', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Aproximar el código</p>
+                <form onSubmit={handleEventScan} style={{ position: 'absolute', top: '-1000px', left: '-1000px' }}>
+                  <input ref={ciInputRef} type="text" value={ciScan} onChange={(e) => setCiScan(e.target.value)} autoFocus autoComplete="off" />
+                </form>
+              </div>
+
+              {/* Feedback del último scan */}
+              <AnimatePresence mode="wait">
+                {ci.feedback && (
+                  <motion.div key={ci.feedback.name + ci.feedback.msg} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 14px', borderRadius: '14px', marginBottom: '12px',
+                      background: ci.feedback.type === 'ok' ? 'rgba(34,197,94,0.12)' : ci.feedback.type === 'dup' ? 'rgba(255,145,77,0.12)' : 'rgba(186,26,26,0.1)' }}>
+                    {ci.feedback.type === 'ok' ? <CheckCircle2 size={20} color="#16A34A" /> : ci.feedback.type === 'dup' ? <UserCheck size={20} color={PRIMARY} /> : <AlertTriangle size={20} color="#ba1a1a" />}
+                    <div style={{ minWidth: 0 }}>
+                      {ci.feedback.name && <div style={{ fontWeight: 800, fontSize: '0.92rem', color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ci.feedback.name}</div>}
+                      <div style={{ fontSize: '0.8rem', fontWeight: 700, color: ci.feedback.type === 'ok' ? '#16A34A' : ci.feedback.type === 'dup' ? PRIMARY : '#ba1a1a' }}>{ci.feedback.msg}</div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Lista de inscritas con su estado + marca manual de respaldo */}
+              <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: INK }}>Inscritas</span>
+                {ci.list && <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--on-surface-variant)' }}>{ci.list.filter(r => r.checked_in).length}/{ci.list.length} asistieron</span>}
+              </div>
+              <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {!ci.list ? (
+                  <div style={{ textAlign: 'center', padding: '24px', color: 'var(--on-surface-variant)' }}><Loader2 size={22} style={{ animation: 'spin 1s linear infinite' }} /></div>
+                ) : ci.list.length === 0 ? (
+                  <span style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', padding: '12px 0' }}>Aún no hay inscritas en este evento.</span>
+                ) : ci.list.map((r) => (
+                  <div key={r.user_id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 11px', borderRadius: '13px', background: r.checked_in ? 'rgba(34,197,94,0.08)' : 'rgba(0,0,0,0.03)' }}>
+                    {r.users?.avatar_url ? <img src={r.users.avatar_url} alt="" style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} /> : <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'rgba(255,145,77,0.14)', color: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.82rem', flexShrink: 0 }}>{(r.users?.full_name || r.users?.email || '?').charAt(0).toUpperCase()}</div>}
+                    <span style={{ flex: 1, minWidth: 0, fontSize: '0.88rem', fontWeight: 600, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.users?.full_name || r.users?.email || 'Clienta'}</span>
+                    {r.checked_in ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.76rem', fontWeight: 800, color: '#16A34A', flexShrink: 0 }}><CheckCircle2 size={15} /> Asistió</span>
+                    ) : (
+                      <button onClick={() => markAttendance(r.user_id)} style={{ flexShrink: 0, fontSize: '0.76rem', fontWeight: 700, color: INK, background: '#fff', border: '1px solid rgba(0,0,0,0.12)', borderRadius: '9px', padding: '6px 10px', cursor: 'pointer' }}>Marcar</button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </motion.div>
           </motion.div>
         )}
