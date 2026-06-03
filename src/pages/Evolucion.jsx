@@ -16,7 +16,7 @@ const isNative = Capacitor.isNativePlatform();
 
 function Evolucion() {
   const navigate = useNavigate();
-  const { user, classesRemaining, avatarUrl, customBadges, badgeConfigs, profileName } = useAuth();
+  const { user, classesRemaining, avatarUrl, customBadges, badgeConfigs, profileName, monthlyGoal, updateMonthlyGoal } = useAuth();
   const [showQR, setShowQR] = useState(false);
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
@@ -54,9 +54,9 @@ function Evolucion() {
   const [classHistory, setClassHistory] = useState([]);
   const [badges, setBadges] = useState([{ icon: '🔒', label: 'Cargando...' }]);
   const [weeklyActivity, setWeeklyActivity] = useState([]);
-  const [targetMonthlyClasses, setTargetMonthlyClasses] = useState(
-    user?.user_metadata?.target_monthly_classes || 0
-  );
+  // La meta vive en la BD (users.target_monthly_classes) vía AuthContext: siempre
+  // fresca (sin el race condition del initial useState con user_metadata).
+  const targetMonthlyClasses = monthlyGoal || 0;
 
   // Calcular score basado en historial de últimos 30 días vs meta
   const [score, setScore] = useState(0);
@@ -79,12 +79,8 @@ function Evolucion() {
   const handleSaveGoal = async () => {
     const newGoal = parseInt(goalInput, 10);
     if (!newGoal || newGoal < 1) return;
-    
-    // Guardar en metadata del usuario
-    await supabase.auth.updateUser({
-      data: { target_monthly_classes: newGoal }
-    });
-    setTargetMonthlyClasses(newGoal);
+    // Guardar en la BD (users.target_monthly_classes) vía AuthContext
+    await updateMonthlyGoal(newGoal);
     setShowGoalModal(false);
   };
 

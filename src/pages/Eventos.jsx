@@ -137,7 +137,7 @@ function EventDetail({ ev, user, registered, onReg, processing, onBack }) {
           const isPaid = ev.price != null && ev.price > 0;
           const full = ev.capacity != null && (ev.registered_count ?? 0) >= ev.capacity && !registered;
           let content, bg = PRIMARY, color = '#fff', disabled = false;
-          if (registered) { content = <><Check size={18} /> {isPaid ? 'Inscrita ✓' : 'Inscrita · Cancelar'}</>; bg = 'rgba(34,197,94,0.12)'; color = '#16A34A'; disabled = isPaid; }
+          if (registered) { content = <><Check size={18} /> {isPaid ? 'Inscrita' : 'Inscrita · Cancelar'}</>; bg = 'rgba(34,197,94,0.12)'; color = '#16A34A'; disabled = isPaid; }
           else if (processing) { content = <><Loader2 size={18} /> Procesando…</>; disabled = true; }
           else if (full) { content = 'Agotado'; bg = 'rgba(0,0,0,0.06)'; color = 'var(--on-surface-variant)'; disabled = true; }
           else if (isPaid) { content = <><Ticket size={18} /> Pagar ${ev.price} e inscribirme</>; }

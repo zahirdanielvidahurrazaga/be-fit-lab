@@ -42,6 +42,7 @@ export const AuthProvider = ({ children }) => {
   const [categories, setCategories] = useState([]);
   const [classTemplates, setClassTemplates] = useState([]);
   const [avatarUrl, setAvatarUrl] = useState(null);
+  const [monthlyGoal, setMonthlyGoal] = useState(0); // meta de clases/mes (users.target_monthly_classes)
 
   // Centro de notificaciones in-app (tabla notification_logs en tiempo real)
   const [notifications, setNotifications] = useState([]);
@@ -64,6 +65,7 @@ export const AuthProvider = ({ children }) => {
     setPlan(null);
     setMembershipStatus('INACTIVE');
     setClassesRemaining(0);
+    setMonthlyGoal(0);
     setMyReservations([]);
     setCustomBadges([]);
     setBadgeConfigs([]);
@@ -733,12 +735,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Meta de clases por mes — vive en users (no en auth metadata) para que se
+  // cargue fresca con el resto del perfil y el staff pueda verla.
+  const updateMonthlyGoal = async (newGoal) => {
+    const goal = parseInt(newGoal, 10);
+    if (!user?.id || !goal || goal < 1) return { success: false };
+    const { error } = await supabase.from('users').update({ target_monthly_classes: goal }).eq('id', user.id);
+    if (!error) setMonthlyGoal(goal);
+    return { success: !error, error };
+  };
+
   const fetchUserData = async (currentUser) => {
     try {
       // 1. Obtener rol y clases restantes
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('role, classes_remaining, membership_plan, membership_status, full_name, custom_badges, avatar_url')
+        .select('role, classes_remaining, membership_plan, membership_status, full_name, custom_badges, avatar_url, target_monthly_classes')
         .eq('id', currentUser.id)
         .single();
         
@@ -763,6 +775,7 @@ export const AuthProvider = ({ children }) => {
         setPlan(userData.membership_plan);
         setMembershipStatus(userData.membership_status || 'INACTIVE');
         setClassesRemaining(userData.classes_remaining || 0);
+        setMonthlyGoal(userData.target_monthly_classes || 0);
         setProfileName(userData.full_name || '');
         setCustomBadges(userData.custom_badges || []);
 
@@ -1192,6 +1205,7 @@ export const AuthProvider = ({ children }) => {
       user, role, plan, membershipStatus, loading, profileName,
       classesRemaining, myReservations, globalClasses, recipes, allUsers,
       avatarUrl, setAvatarUrl, customBadges, badgeConfigs,
+      monthlyGoal, updateMonthlyGoal,
       login, logout, forceCleanSession, fetchAllUsers, refreshUserData,
       bookClass, cancelClass, checkInClient, updateClassSpots, updateReservationCalendarId,
       activatePlan, addClass, deleteClass, addRecipe, deleteRecipe,
