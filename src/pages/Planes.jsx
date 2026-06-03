@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { PricingCarousel } from '../components/PricingCarousel';
 import { motion } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
+import { Stripe } from '@capacitor-community/stripe';
 
 function Planes() {
   const navigate = useNavigate();
@@ -100,18 +101,61 @@ function Planes() {
     setPaymentError(null);
 
     try {
+      // ── NATIVO: hoja de pago DENTRO de la app (igual que la cafetería) ──────
+      // La membresía es una suscripción: stripe-membership-intent crea la sub en
+      // estado incompleto y devuelve el clientSecret de la 1ª factura para la hoja.
+      if (Capacitor.isNativePlatform()) {
+        const { data, error } = await supabase.functions.invoke('stripe-membership-intent', {
+          body: { planTitle: selectedPlan.title, userId: user.id, userEmail: user.email },
+        });
+        if (error) throw new Error(error.message);
+        if (!data?.clientSecret) throw new Error('No se recibió el intent de pago');
+
+        // Presentar la hoja nativa (con Apple Pay si está configurado; si no, tarjeta)
+        try {
+          await Stripe.createPaymentSheet({
+            paymentIntentClientSecret: data.clientSecret,
+            merchantDisplayName: 'Be Fit Lab',
+            enableApplePay: true,
+            applePayMerchantId: 'merchant.com.befitlab.app',
+            countryCode: 'MX',
+          });
+        } catch (e) {
+          await Stripe.createPaymentSheet({
+            paymentIntentClientSecret: data.clientSecret,
+            merchantDisplayName: 'Be Fit Lab',
+          });
+        }
+        const res = await Stripe.presentPaymentSheet();
+
+        if (res?.paymentResult === 'paymentSheetCompleted') {
+          // Pagado: activar el plan en el servidor; la UI reacciona por Realtime/polling
+          startWatchingPayment();
+          setReturningFromPayment(true);
+          setCheckoutStep(2);
+          setIsProcessing(false);
+          await supabase.functions.invoke('stripe-membership-notify', {
+            body: { paymentIntentId: data.paymentIntentId, subscriptionId: data.subscriptionId },
+          });
+        } else {
+          // Cancelado o fallido: volver al paso 1 (sin error si solo canceló)
+          setIsProcessing(false);
+          if (res?.paymentResult && res.paymentResult !== 'paymentSheetCanceled') {
+            setPaymentError('No se pudo completar el pago. Intenta de nuevo.');
+          }
+        }
+        return;
+      }
+
+      // ── WEB: Checkout hospedado (redirige en la misma pestaña) ──────────────
       const { data, error } = await supabase.functions.invoke('stripe-checkout', {
         body: {
           planTitle: selectedPlan.title,
           userId: user.id,
           userEmail: user.email,
-          // Solo en web mandamos el origin real para el redirect de Stripe.
-          // En nativo NO se manda: el origin del WebView (capacitor://befitlab.app)
-          // no es una URL válida para success_url y rompería el checkout.
-          returnUrl: Capacitor.isNativePlatform() ? undefined : window.location.origin,
+          returnUrl: window.location.origin,
         },
       });
-
       if (error) throw new Error(error.message);
       if (!data?.url) throw new Error('No se recibió URL de pago');
 
@@ -120,16 +164,11 @@ function Planes() {
       setCheckoutStep(2);
       setIsProcessing(false);
 
-      // Abrir Stripe Checkout
-      if (Capacitor.isNativePlatform()) {
-        window.open(data.url, '_system');
-      } else {
-        localStorage.setItem('befit_payment_return', Date.now().toString());
-        // Guardar el plan elegido: al volver de Stripe la pestaña se re-monta y
-        // selectedPlan se pierde; lo restauramos para mostrar título/precio correctos.
-        localStorage.setItem('befit_pending_plan', JSON.stringify(selectedPlan));
-        window.location.href = data.url;
-      }
+      localStorage.setItem('befit_payment_return', Date.now().toString());
+      // Guardar el plan elegido: al volver de Stripe la pestaña se re-monta y
+      // selectedPlan se pierde; lo restauramos para mostrar título/precio correctos.
+      localStorage.setItem('befit_pending_plan', JSON.stringify(selectedPlan));
+      window.location.href = data.url;
     } catch (err) {
       console.error('Error iniciando pago:', err);
       setPaymentError(err.message || 'Error al conectar con Stripe. Intenta de nuevo.');

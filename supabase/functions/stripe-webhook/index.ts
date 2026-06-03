@@ -138,30 +138,47 @@ serve(async (req) => {
       else console.log(`✅ Plan activado: ${plan_title} para ${supabase_user_id}`);
     }
 
-    // ── Renovación mensual → resetear clases ────────────────────────────────
+    // ── Cobros de suscripción (primer cobro nativo + renovaciones) ──────────
     if (event.type === 'invoice.payment_succeeded') {
       const invoice = event.data.object as Stripe.Invoice;
-      // Solo procesar renovaciones, no el primer cobro (ya lo maneja checkout.session.completed)
-      if (invoice.billing_reason !== 'subscription_cycle') return new Response('ok');
+      const reason = invoice.billing_reason;
+      // El primer cobro del checkout WEB ya lo maneja checkout.session.completed.
+      // Aquí cubrimos: (a) subscription_create del flujo NATIVO (PaymentSheet, que no
+      // genera checkout.session) como respaldo del stripe-membership-notify, y
+      // (b) subscription_cycle (renovación mensual → resetear clases).
+      if (reason !== 'subscription_create' && reason !== 'subscription_cycle') return new Response('ok');
 
       const subscriptionId = invoice.subscription as string;
+      if (!subscriptionId) return new Response('ok');
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      const { plan_title, class_count } = subscription.metadata ?? {};
+      const { supabase_user_id, plan_title, class_count } = subscription.metadata ?? {};
       if (!plan_title) return new Response('ok');
 
-      const { data: users } = await supabase
-        .from('users')
-        .select('id')
-        .eq('stripe_subscription_id', subscriptionId)
-        .limit(1);
-
-      if (users?.length) {
-        await supabase.from('users').update({
-          membership_status: 'ACTIVE',
-          classes_remaining: parseInt(class_count ?? '0'),
-        }).eq('id', users[0].id);
-
-        console.log(`🔄 Clases renovadas: ${class_count} para usuario ${users[0].id}`);
+      if (reason === 'subscription_create') {
+        // Primer cobro de una suscripción creada con la hoja nativa → activar plan
+        if (supabase_user_id) {
+          await supabase.from('users').update({
+            membership_plan: plan_title,
+            membership_status: 'ACTIVE',
+            classes_remaining: parseInt(class_count ?? '0'),
+            stripe_subscription_id: subscriptionId,
+          }).eq('id', supabase_user_id);
+          console.log(`✅ Plan activado (nativo): ${plan_title} para ${supabase_user_id}`);
+        }
+      } else {
+        // Renovación mensual → resetear clases
+        const { data: users } = await supabase
+          .from('users')
+          .select('id')
+          .eq('stripe_subscription_id', subscriptionId)
+          .limit(1);
+        if (users?.length) {
+          await supabase.from('users').update({
+            membership_status: 'ACTIVE',
+            classes_remaining: parseInt(class_count ?? '0'),
+          }).eq('id', users[0].id);
+          console.log(`🔄 Clases renovadas: ${class_count} para usuario ${users[0].id}`);
+        }
       }
     }
 
