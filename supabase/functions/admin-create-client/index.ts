@@ -28,7 +28,7 @@ serve(async (req) => {
     }
 
     // 2. Datos de la nueva clienta
-    const { name, email, password, phone, birthDate, planName, classCount } = await req.json();
+    const { name, email, password, phone, birthDate, planName, classCount, amount, method } = await req.json();
     const cleanEmail = (email || '').trim().toLowerCase();
     if (!name?.trim() || !cleanEmail || !password) {
       return Response.json({ error: 'Faltan datos (nombre, correo o contraseña).' }, { status: 400, headers: corsHeaders });
@@ -68,6 +68,14 @@ serve(async (req) => {
       // La cuenta de Auth ya quedó creada; reportar pero no es fatal para el login
       console.error('admin-create-client perfil error:', uErr.message);
       return Response.json({ ok: true, userId: uid, warning: 'Cuenta creada, pero hubo un detalle al guardar el perfil: ' + uErr.message }, { headers: corsHeaders });
+    }
+
+    // 5. Registrar la venta de mostrador (para el dashboard financiero)
+    if (planName && Number(amount) > 0) {
+      await admin.from('sales').insert({
+        user_id: uid, sold_by: caller.id, plan_name: planName,
+        amount: Math.round(Number(amount)), method: method || null,
+      });
     }
 
     return Response.json({ ok: true, userId: uid }, { headers: corsHeaders });

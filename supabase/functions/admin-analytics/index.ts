@@ -60,7 +60,7 @@ serve(async (req) => {
 
     let gross = 0, net = 0, fees = 0, count = 0, refunded = 0;
     const byDay: Record<string, number> = {};
-    const byType: Record<string, number> = { cafeteria: 0, membresia: 0, evento: 0 };
+    const byType: Record<string, number> = { cafeteria: 0, membresia: 0, evento: 0, mostrador: 0 };
     const recent: any[] = [];
 
     for (const ch of charges) {
@@ -76,16 +76,37 @@ serve(async (req) => {
       byDay[day] = (byDay[day] || 0) + amount;
       const t = typeOf(ch);
       byType[t] += amount;
-      if (recent.length < 25) {
-        recent.push({
-          id: ch.id,
-          amount,
-          created: ch.created,
-          type: t,
-          email: ch.billing_details?.email || ch.receipt_email || '',
-          status: ch.refunded ? 'refunded' : 'succeeded',
-        });
-      }
+      recent.push({
+        id: ch.id,
+        amount,
+        created: ch.created,
+        type: t,
+        email: ch.billing_details?.email || ch.receipt_email || '',
+        status: ch.refunded ? 'refunded' : 'succeeded',
+      });
+    }
+
+    // Ventas de MOSTRADOR (cobros manuales: efectivo/tarjeta/transferencia).
+    // No tienen comisión de Stripe → suman igual a bruto y neto.
+    const sinceISO = new Date(since * 1000).toISOString();
+    const { data: manualSales } = await supabase
+      .from('sales')
+      .select('id, amount, method, created_at, plan_name, users:user_id(full_name,email)')
+      .gte('created_at', sinceISO).order('created_at', { ascending: false });
+    for (const s of (manualSales || [])) {
+      const amt = Number(s.amount) || 0;
+      if (amt <= 0) continue;
+      gross += amt; net += amt; count++;
+      const day = new Date(s.created_at).toISOString().slice(0, 10);
+      byDay[day] = (byDay[day] || 0) + amt;
+      byType.mostrador += amt;
+      recent.push({
+        id: 's_' + s.id, amount: amt,
+        created: Math.floor(new Date(s.created_at).getTime() / 1000),
+        type: 'mostrador',
+        email: s.users?.full_name || s.users?.email || (s.method ? 'Pago en ' + s.method : ''),
+        status: 'succeeded',
+      });
     }
 
     // Serie adaptable al rango: hasta 30 barras (diarias si el rango es corto,
@@ -109,8 +130,8 @@ serve(async (req) => {
       mode: (Deno.env.get('STRIPE_SECRET_KEY') || '').startsWith('sk_live') ? 'live' : 'test',
       gross: Math.round(gross), net: Math.round(net), fees: Math.round(fees),
       refunded: Math.round(refunded), count,
-      byType: { cafeteria: Math.round(byType.cafeteria), membresia: Math.round(byType.membresia), evento: Math.round(byType.evento) },
-      series, recent,
+      byType: { cafeteria: Math.round(byType.cafeteria), membresia: Math.round(byType.membresia), evento: Math.round(byType.evento), mostrador: Math.round(byType.mostrador) },
+      series, recent: recent.sort((a, b) => b.created - a.created).slice(0, 25),
       avgTicket: count ? Math.round(gross / count) : 0,
     }, { headers: corsHeaders });
   } catch (err: unknown) {

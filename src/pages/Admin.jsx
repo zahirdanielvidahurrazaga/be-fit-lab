@@ -225,6 +225,8 @@ function Admin() {
         birthDate: newBirth || null,
         planName: planInfo?.name || null,
         classCount: planInfo?.classes ?? null,
+        amount: planInfo?.amount ?? null,
+        method: planInfo ? newPayMethod : null,
       },
     });
     setInscribiendo(false);
@@ -243,7 +245,14 @@ function Admin() {
     const planDetails = PLAN_BY_NAME[selectedPlan];
     if (!planDetails) return;
     await activatePlan(planDetails.name, planDetails.classes, selectedAlumnaId);
-    
+    // Registrar la venta de mostrador (para el dashboard financiero)
+    try {
+      await supabase.from('sales').insert({
+        user_id: selectedAlumnaId, sold_by: user.id, plan_name: planDetails.name,
+        amount: planDetails.amount || 0, method: selectedPayMethod,
+      });
+    } catch (e) { /* no bloquear el cobro si falla el registro */ }
+
     setShowPaySuccess(true);
     setTimeout(() => {
       setShowPaySuccess(false);

@@ -254,9 +254,10 @@ export default function AdminReportes() {
                   <SectionTitle>Por tipo de venta</SectionTitle>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {(() => {
-                      const tot = Math.max(1, fin.byType.membresia + fin.byType.cafeteria + (fin.byType.evento || 0));
+                      const tot = Math.max(1, fin.byType.membresia + fin.byType.cafeteria + (fin.byType.evento || 0) + (fin.byType.mostrador || 0));
                       return [
-                        { name: 'Membresías', v: fin.byType.membresia },
+                        { name: 'Membresías (online)', v: fin.byType.membresia },
+                        { name: 'Mostrador', v: fin.byType.mostrador || 0 },
                         { name: 'Cafetería', v: fin.byType.cafeteria },
                         { name: 'Eventos', v: fin.byType.evento || 0 },
                       ].sort((a, b) => b.v - a.v).map((x, i) => (
@@ -276,8 +277,8 @@ export default function AdminReportes() {
                     {fin.recent.length === 0 ? <div style={{ padding: '20px', textAlign: 'center', color: 'var(--on-surface-variant)' }}>Sin transacciones</div>
                     : fin.recent.map((t, i) => (
                       <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i ? '1px solid rgba(0,0,0,0.04)' : 'none' }}>
-                        <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: t.type === 'cafeteria' ? 'rgba(255,145,77,0.12)' : t.type === 'evento' ? 'rgba(224,122,156,0.14)' : 'rgba(26,28,30,0.06)', color: t.type === 'cafeteria' ? PRIMARY : t.type === 'evento' ? '#E07A9C' : INK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          {t.type === 'cafeteria' ? <Coffee size={16} /> : t.type === 'evento' ? <Sparkles size={16} /> : <Crown size={16} />}
+                        <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: t.type === 'cafeteria' ? 'rgba(255,145,77,0.12)' : t.type === 'evento' ? 'rgba(224,122,156,0.14)' : t.type === 'mostrador' ? 'rgba(34,197,94,0.12)' : 'rgba(26,28,30,0.06)', color: t.type === 'cafeteria' ? PRIMARY : t.type === 'evento' ? '#E07A9C' : t.type === 'mostrador' ? '#16A34A' : INK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          {t.type === 'cafeteria' ? <Coffee size={16} /> : t.type === 'evento' ? <Sparkles size={16} /> : t.type === 'mostrador' ? <DollarSign size={16} /> : <Crown size={16} />}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 700, fontSize: '0.85rem', color: INK, textTransform: 'capitalize' }}>{t.type}</div>
