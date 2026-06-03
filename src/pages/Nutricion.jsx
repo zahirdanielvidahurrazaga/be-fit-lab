@@ -9,10 +9,13 @@ import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks
 import ProfileMenu from '../components/ProfileMenu';
 import ClientMealPlan from '../components/ClientMealPlan';
 import NutritionToday from '../components/NutritionToday';
+import { hasMealPlanAccess } from '../lib/plans';
 
 function Nutricion() {
   const navigate = useNavigate();
-  const { user, recipes, classesRemaining, avatarUrl } = useAuth();
+  const { user, plan, recipes, classesRemaining, avatarUrl } = useAuth();
+  // Plan alimenticio personalizado solo para Fit y Premium; los demás ven recetas.
+  const mealPlanAccess = hasMealPlanAccess(plan);
   const [showRecipe, setShowRecipe] = useState(false);
   const [recipeData, setRecipeData] = useState(null);
   const [showQR, setShowQR] = useState(false);
@@ -77,11 +80,30 @@ function Nutricion() {
 
       <main className="dashboard-main">
         <div className="dashboard-sidebar">
-          {/* Plan nutricional real + calendario mensual de comidas */}
-          <ClientMealPlan userId={user?.id} />
+          {/* Plan nutricional real + calendario mensual de comidas (solo Fit/Premium) */}
+          {mealPlanAccess ? (
+            <ClientMealPlan userId={user?.id} />
+          ) : (
+            <div style={{ padding: '22px', borderRadius: '24px', background: 'linear-gradient(135deg, #2D2928 0%, #4A4544 100%)', color: '#fff', position: 'relative', overflow: 'hidden', boxShadow: '0 18px 38px rgba(0,0,0,0.15)' }}>
+              <div style={{ position: 'absolute', top: '-24px', right: '-24px', width: '130px', height: '130px', background: 'rgba(255,145,77,0.18)', borderRadius: '50%', filter: 'blur(34px)' }} />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                  <ChefHat size={16} color="var(--primary)" />
+                  <span style={{ fontSize: '0.64rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Plan alimenticio personalizado</span>
+                </div>
+                <h2 style={{ fontSize: '1.4rem', color: '#fff', margin: '0 0 8px', fontFamily: 'var(--font-display)', lineHeight: 1.15 }}>Disponible en Fit y Premium</h2>
+                <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.72)', lineHeight: 1.5, margin: '0 0 16px' }}>
+                  Mejora tu membresía para que tu coach te diseñe un plan a la medida, mes con mes. Mientras tanto, disfruta nuestras recetas saludables 👇
+                </p>
+                <button onClick={() => navigate('/planes')} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '12px 18px', borderRadius: '14px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer', boxShadow: '0 10px 24px rgba(255,145,77,0.35)' }}>
+                  Ver planes <ChevronRight size={17} />
+                </button>
+              </div>
+            </div>
+          )}
 
-          {/* HIDRATACIÓN - Minimal Circle Progress */}
-          <NutritionToday userId={user?.id} />
+          {/* HIDRATACIÓN + comidas de hoy (las comidas solo si tiene plan) */}
+          <NutritionToday userId={user?.id} showMeals={mealPlanAccess} />
         </div>
 
         <div className="dashboard-content" style={{ marginTop: '5px' }}>

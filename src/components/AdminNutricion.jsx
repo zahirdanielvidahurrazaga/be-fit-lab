@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Pencil, Utensils, CalendarDays, ImagePlus, Loader2, Camera, X, Search, ChevronLeft, ChevronRight, Flame, Clock, Check, Save } from 'lucide-react';
+import { Plus, Trash2, Pencil, Utensils, CalendarDays, ImagePlus, Loader2, Camera, X, Search, ChevronLeft, ChevronRight, Flame, Clock, Check, Save, Salad } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { uploadImage } from '../lib/cafeImage';
+import { hasMealPlanAccess } from '../lib/plans';
 
 const PRIMARY = '#FF914D';
 const INK = '#1A1C1E';
@@ -261,12 +262,13 @@ function Planes() {
 
   const plans = useMemo(() => {
     const s = new Set();
-    (allUsers || []).forEach(u => { if (u.membership_status === 'ACTIVE' && u.membership_plan) s.add(u.membership_plan); });
+    (allUsers || []).forEach(u => { if (u.membership_status === 'ACTIVE' && u.membership_plan && hasMealPlanAccess(u.membership_plan)) s.add(u.membership_plan); });
     return [...s];
   }, [allUsers]);
 
   const clients = useMemo(() => {
-    let arr = (allUsers || []).filter(u => u.role === 'CLIENT');
+    // Solo Fit/Premium reciben plan alimenticio personalizado.
+    let arr = (allUsers || []).filter(u => u.role === 'CLIENT' && hasMealPlanAccess(u.membership_plan));
     if (planFilter !== 'all') arr = arr.filter(u => (u.membership_plan || '') === planFilter);
     const s = q.trim().toLowerCase();
     if (s) arr = arr.filter(u => (u.full_name || '').toLowerCase().includes(s) || (u.email || '').toLowerCase().includes(s));
@@ -304,6 +306,10 @@ function Planes() {
   if (!selected) {
     return (
       <div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', background: 'rgba(255,145,77,0.08)', border: '1px solid rgba(255,145,77,0.2)', borderRadius: '14px', padding: '11px 14px', marginBottom: '14px', fontSize: '0.82rem', color: 'var(--on-surface-variant)', lineHeight: 1.45 }}>
+          <Salad size={16} color={PRIMARY} style={{ flexShrink: 0, marginTop: '1px' }} />
+          <span>Solo las clientas con plan <strong style={{ color: INK }}>Fit</strong> o <strong style={{ color: INK }}>Premium</strong> reciben plan alimenticio personalizado. Las de Inicial y Básico ven solo el recetario.</span>
+        </div>
         <div style={{ position: 'relative', marginBottom: '12px' }}>
           <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--on-surface-variant)' }} />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar clienta por nombre o correo…" style={{ ...input, paddingLeft: '42px' }} />
@@ -312,7 +318,7 @@ function Planes() {
           <Pill active={planFilter === 'all'} onClick={() => setPlanFilter('all')}>Todas</Pill>
           {plans.map(p => <Pill key={p} active={planFilter === p} onClick={() => setPlanFilter(p)}>{p}</Pill>)}
         </div>
-        {clients.length === 0 ? <div style={{ textAlign: 'center', padding: '46px', color: 'var(--on-surface-variant)' }}>Sin clientas</div>
+        {clients.length === 0 ? <div style={{ textAlign: 'center', padding: '46px', color: 'var(--on-surface-variant)' }}>No hay clientas con plan Fit o Premium.</div>
         : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
             {clients.map(u => (
               <button key={u.id} onClick={() => setSelected(u)} style={{ textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', background: '#fff', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)', padding: '12px' }}>

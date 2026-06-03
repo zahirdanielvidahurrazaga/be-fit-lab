@@ -20,13 +20,13 @@ export const PLANS = [
     paymentUrl: '#',
   },
   {
-    name: 'Plan Fit', title: 'Fit', price: '$1,300', classes: 20, unlimited: false,
+    name: 'Plan Fit', title: 'Fit', price: '$1,300', classes: 20, unlimited: false, mealPlan: true,
     lookupKey: 'befit_plan_fit_monthly', subtitle: 'Constancia que transforma',
-    features: ['Acceso a 20 clases', '+100 ideas de recetas', 'Registro de métricas', 'Acceso a la app'],
+    features: ['Acceso a 20 clases', 'Plan alimenticio personalizado', '+100 ideas de recetas', 'Registro de métricas', 'Acceso a la app'],
     paymentUrl: '#',
   },
   {
-    name: 'Plan Premium', title: 'Premium', price: '$1,850', classes: 9999, unlimited: true,
+    name: 'Plan Premium', title: 'Premium', price: '$1,850', classes: 9999, unlimited: true, mealPlan: true,
     lookupKey: 'befit_plan_premium_monthly', subtitle: 'El más completo',
     features: ['Acceso clases ILIMITADAS', '3 invitadas al mes sin costo', 'Plan alimenticio personalizado', '+100 ideas de recetas', 'Registro de métricas', 'Acceso a la app', '10% desc. en cafetería'],
     paymentUrl: '#',
@@ -41,4 +41,10 @@ export function monthlyGoalCap(planName) {
   const p = PLAN_BY_NAME[planName];
   if (!p) return 31;
   return p.unlimited ? 31 : p.classes;
+}
+
+// ¿El plan incluye plan alimenticio personalizado por mes? Solo Fit y Premium.
+// Inicial y Básico solo reciben el recetario.
+export function hasMealPlanAccess(planName) {
+  return !!PLAN_BY_NAME[planName]?.mealPlan;
 }
