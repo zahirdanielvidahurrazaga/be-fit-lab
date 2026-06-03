@@ -2,37 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-const PLANS = [
-  { 
-    title: 'Inicial', 
-    price: '$850', 
-    subtitle: 'Perfecto para probar',
-    features: ['Acceso a 12 clases', '+100 ideas de recetas', 'Registro de métricas', 'Acceso a la app'],
-    paymentUrl: '#'
-  },
-  { 
-    title: 'Básico', 
-    price: '$1,050', 
-    subtitle: 'Para las que van en serio',
-    features: ['Acceso a 15 clases', '+100 ideas de recetas', 'Registro de métricas', 'Acceso a la app'],
-    paymentUrl: '#'
-  },
-  { 
-    title: 'Fit', 
-    price: '$1,300', 
-    subtitle: 'Constancia que transforma',
-    features: ['Acceso a 20 clases', '+100 ideas de recetas', 'Registro de métricas', 'Acceso a la app'],
-    paymentUrl: '#'
-  },
-  { 
-    title: 'Premium', 
-    price: '$1,850', 
-    subtitle: 'El más completo',
-    features: ['Acceso clases ILIMITADAS', '3 invitadas al mes sin costo', 'Plan alimenticio personalizado', '+100 ideas de recetas', 'Registro de métricas', 'Acceso a la app', '10% desc. en cafetería'],
-    paymentUrl: '#'
-  },
-];
+import { PLANS } from '../lib/plans';
 
 export function PricingCarousel({ onSelectPlan }) {
   const [activeIndex, setActiveIndex] = useState(0);

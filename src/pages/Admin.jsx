@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
+import { PLAN_BY_NAME } from '../lib/plans';
 import AdminCafeteria from '../components/AdminCafeteria';
 import AdminReportes from '../components/AdminReportes';
 import AdminClientas from '../components/AdminClientas';
@@ -217,9 +218,9 @@ function Admin() {
   const handlePago = async () => {
     if (!selectedAlumnaId) return;
     
-    // Simular integración de pagos guardando en BD (por simplificar asume que activatePlan actualiza BD)
-    const planDetails = selectedPlan === 'fit' ? { title: 'Plan FIT', classes: 20 } : { title: 'Plan Premium', classes: 30 };
-    await activatePlan(planDetails.title, planDetails.classes, selectedAlumnaId);
+    // Nombres/clases canónicos desde la fuente única (src/lib/plans)
+    const planDetails = selectedPlan === 'fit' ? PLAN_BY_NAME['Plan Fit'] : PLAN_BY_NAME['Plan Premium'];
+    await activatePlan(planDetails.name, planDetails.classes, selectedAlumnaId);
     
     setShowPaySuccess(true);
     setTimeout(() => {
@@ -1105,8 +1106,8 @@ function Admin() {
                         <div style={{ marginBottom: '16px' }}>
                           <label style={labelStyle}>Membresía</label>
                           <select value={selectedPlan} onChange={(e)=>setSelectedPlan(e.target.value)} style={{ ...inputStyle, WebkitAppearance: 'none' }}>
-                            <option value="fit">Plan FIT — 20 clases ($1,200)</option>
-                            <option value="premium">Plan Premium — 30 clases ($1,800)</option>
+                            <option value="fit">Plan Fit — {PLAN_BY_NAME['Plan Fit'].classes} clases ({PLAN_BY_NAME['Plan Fit'].price})</option>
+                            <option value="premium">Plan Premium — clases ilimitadas ({PLAN_BY_NAME['Plan Premium'].price})</option>
                           </select>
                         </div>
                         <div style={{ marginBottom: '22px' }}>

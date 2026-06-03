@@ -6,6 +6,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { useHealth } from '../hooks/useHealth';
 import { supabase } from '../lib/supabase';
+import { monthlyGoalCap, PLAN_BY_NAME } from '../lib/plans';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
@@ -58,11 +59,10 @@ function Evolucion() {
   // fresca (sin el race condition del initial useState con user_metadata).
   const targetMonthlyClasses = monthlyGoal || 0;
 
-  // Tope de la meta = clases que la membresía da al mes (igual que stripe-checkout).
-  // Premium es ilimitado y sin plan no hay tope claro → 31 (≈ 1 clase por día).
-  const PLAN_MONTHLY_MAX = { 'Plan Inicial': 12, 'Plan Básico': 15, 'Plan Fit': 20, 'Plan Premium': 31 };
-  const goalLimit = PLAN_MONTHLY_MAX[plan] ?? 31;
-  const planLimited = goalLimit < 31 && !!PLAN_MONTHLY_MAX[plan]; // plan con tope real
+  // Tope de la meta = clases que da el plan al mes (fuente única en src/lib/plans).
+  const goalLimit = monthlyGoalCap(plan);
+  const planInfo = PLAN_BY_NAME[plan];
+  const planLimited = !!planInfo && !planInfo.unlimited; // plan con tope real (no ilimitado)
 
   // Calcular score basado en historial de últimos 30 días vs meta
   const [score, setScore] = useState(0);
