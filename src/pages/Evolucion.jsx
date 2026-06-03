@@ -16,7 +16,7 @@ const isNative = Capacitor.isNativePlatform();
 
 function Evolucion() {
   const navigate = useNavigate();
-  const { user, classesRemaining, avatarUrl, customBadges, badgeConfigs, profileName, monthlyGoal, updateMonthlyGoal } = useAuth();
+  const { user, plan, classesRemaining, avatarUrl, customBadges, badgeConfigs, profileName, monthlyGoal, updateMonthlyGoal } = useAuth();
   const [showQR, setShowQR] = useState(false);
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
@@ -58,6 +58,12 @@ function Evolucion() {
   // fresca (sin el race condition del initial useState con user_metadata).
   const targetMonthlyClasses = monthlyGoal || 0;
 
+  // Tope de la meta = clases que la membresía da al mes (igual que stripe-checkout).
+  // Premium es ilimitado y sin plan no hay tope claro → 31 (≈ 1 clase por día).
+  const PLAN_MONTHLY_MAX = { 'Plan Inicial': 12, 'Plan Básico': 15, 'Plan Fit': 20, 'Plan Premium': 31 };
+  const goalLimit = PLAN_MONTHLY_MAX[plan] ?? 31;
+  const planLimited = goalLimit < 31 && !!PLAN_MONTHLY_MAX[plan]; // plan con tope real
+
   // Calcular score basado en historial de últimos 30 días vs meta
   const [score, setScore] = useState(0);
 
@@ -77,8 +83,9 @@ function Evolucion() {
   const dashOffset = targetMonthlyClasses === 0 ? circumference : circumference - (score / 100) * circumference;
 
   const handleSaveGoal = async () => {
-    const newGoal = parseInt(goalInput, 10);
+    let newGoal = parseInt(goalInput, 10);
     if (!newGoal || newGoal < 1) return;
+    newGoal = Math.min(newGoal, goalLimit); // no exceder lo que da su plan
     // Guardar en la BD (users.target_monthly_classes) vía AuthContext
     await updateMonthlyGoal(newGoal);
     setShowGoalModal(false);
@@ -800,18 +807,32 @@ function Evolucion() {
               <p style={{ fontSize: '0.9rem', color: 'var(--on-surface-variant)', lineHeight: 1.5, margin: '0 0 20px' }}>
                 ¿Cuántas clases quieres tomar al mes? Esto nos ayudará a calcular tu Score.
               </p>
-              
-              <input 
+
+              <input
                 type="number"
+                min={1}
+                max={goalLimit}
                 value={goalInput}
-                onChange={(e) => setGoalInput(e.target.value)}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === '') { setGoalInput(''); return; }
+                  const n = parseInt(raw, 10);
+                  if (isNaN(n)) return;
+                  setGoalInput(String(Math.min(Math.max(n, 0), goalLimit)));
+                }}
                 placeholder="Ej. 12"
                 style={{
                   width: '100%', padding: '16px', borderRadius: '16px', border: '1px solid var(--border-subtle)',
                   background: 'var(--surface)', fontSize: '1.2rem', textAlign: 'center', fontWeight: 800,
-                  color: 'var(--black)', outline: 'none', marginBottom: '20px'
+                  color: 'var(--black)', outline: 'none', marginBottom: '10px'
                 }}
               />
+
+              <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 20px' }}>
+                {planLimited
+                  ? <>Tu plan <strong style={{ color: 'var(--primary)' }}>{plan}</strong> incluye hasta <strong>{goalLimit}</strong> clases al mes.</>
+                  : <>Máximo <strong>{goalLimit}</strong> clases al mes.</>}
+              </p>
               
               <button 
                 onClick={handleSaveGoal}
