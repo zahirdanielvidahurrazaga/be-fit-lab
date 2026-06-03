@@ -81,33 +81,98 @@ function ListEditor({ label, addLabel, items, onChange, numbered, placeholder })
   );
 }
 
+// "2 huevos" -> {qty:'2', name:'huevos'}; "Aceite de oliva" -> {qty:'', name:'Aceite de oliva'}
+const parseIng = (s) => {
+  const str = (s || '').trim();
+  const sp = str.indexOf(' ');
+  if (sp > 0 && /\d/.test(str.slice(0, sp))) return { qty: str.slice(0, sp), name: str.slice(sp + 1).trim() };
+  return { qty: '', name: str };
+};
+const combineIng = ({ qty, name }) => `${(qty || '').trim()} ${(name || '').trim()}`.trim();
+
+// Editor de ingredientes: cantidad + nombre con autocompletado del catálogo.
+// El nombre se va guardando en la tabla `ingredients` para reusarlo en otras recetas.
+function IngredientEditor({ items, onChange, catalog }) {
+  const [openIdx, setOpenIdx] = useState(-1);
+  const set = (i, patch) => onChange(items.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+  const add = () => onChange([...items, { qty: '', name: '' }]);
+  const remove = (i) => onChange(items.filter((_, idx) => idx !== i));
+  return (
+    <div style={{ marginBottom: '12px' }}>
+      <div style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)', marginBottom: '8px' }}>Ingredientes</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {items.map((it, i) => {
+          const q = (it.name || '').trim().toLowerCase();
+          const sugg = q.length >= 1 ? catalog.filter(c => c.toLowerCase().includes(q) && c.toLowerCase() !== q).slice(0, 6) : [];
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: PRIMARY, flexShrink: 0, marginLeft: '4px' }} />
+              <input value={it.qty} onChange={e => set(i, { qty: e.target.value })} placeholder="Cant." style={{ ...input, flex: '0 0 84px' }} />
+              <div style={{ position: 'relative', flex: 1 }}>
+                <input value={it.name} onChange={e => set(i, { name: e.target.value })}
+                  onFocus={() => setOpenIdx(i)} onBlur={() => setTimeout(() => setOpenIdx(o => (o === i ? -1 : o)), 150)}
+                  placeholder="Ingrediente (ej. huevo)" style={{ ...input, width: '100%' }} />
+                {openIdx === i && sugg.length > 0 && (
+                  <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', border: '1px solid rgba(0,0,0,0.08)', zIndex: 50, overflow: 'hidden', maxHeight: '210px', overflowY: 'auto' }}>
+                    {sugg.map(s => (
+                      <button key={s} type="button" onMouseDown={(e) => { e.preventDefault(); set(i, { name: s }); setOpenIdx(-1); }}
+                        style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 13px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.88rem', color: INK }}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button onClick={() => remove(i)} aria-label="Quitar" style={{ border: 'none', background: 'none', color: '#ba1a1a', cursor: 'pointer', display: 'flex', flexShrink: 0, padding: '4px' }}><Trash2 size={15} /></button>
+            </div>
+          );
+        })}
+      </div>
+      <button onClick={add} style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,145,77,0.12)', color: PRIMARY, border: 'none', borderRadius: '10px', padding: '8px 13px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}><Plus size={15} /> Agregar ingrediente</button>
+    </div>
+  );
+}
+
 // ============ RECETAS ============
 function Recetas() {
   const [recipes, setRecipes] = useState([]);
-  const [form, setForm] = useState(null); // null | {id?, time, title, kcal, time_prep, img, ingredients, steps}
+  const [form, setForm] = useState(null); // null | {id?, time, title, kcal, time_prep, img, ingredients:[{qty,name}], steps}
   const [saving, setSaving] = useState(false);
+  const [catalog, setCatalog] = useState([]); // nombres de ingredientes guardados
 
   const load = async () => {
     const { data } = await supabase.from('recipes').select('*').order('created_at', { ascending: false });
     setRecipes(data || []);
   };
-  useEffect(() => { load(); }, []);
+  const loadCatalog = async () => {
+    const { data } = await supabase.from('ingredients').select('name').order('name', { ascending: true });
+    setCatalog((data || []).map(d => d.name));
+  };
+  useEffect(() => { load(); loadCatalog(); }, []);
 
-  const blank = { time: 'Desayuno', title: '', kcal: '', time_prep: '', img: '', ingredients: [''], steps: [''] };
-  const startAdd = () => setForm({ ...blank, ingredients: [''], steps: [''] });
-  const startEdit = (r) => setForm({ id: r.id, time: r.time || 'Desayuno', title: r.title || '', kcal: r.kcal || '', time_prep: r.time_prep || '', img: r.img || '', ingredients: (r.ingredients || []).length ? [...r.ingredients] : [''], steps: (r.steps || []).length ? [...r.steps] : [''] });
+  const blank = { time: 'Desayuno', title: '', kcal: '', time_prep: '', img: '', ingredients: [{ qty: '', name: '' }], steps: [''] };
+  const startAdd = () => setForm({ ...blank, ingredients: [{ qty: '', name: '' }], steps: [''] });
+  const startEdit = (r) => setForm({ id: r.id, time: r.time || 'Desayuno', title: r.title || '', kcal: r.kcal || '', time_prep: r.time_prep || '', img: r.img || '', ingredients: (r.ingredients || []).length ? r.ingredients.map(parseIng) : [{ qty: '', name: '' }], steps: (r.steps || []).length ? [...r.steps] : [''] });
 
   const save = async () => {
     if (!form.title.trim()) { alert('Falta el título.'); return; }
     setSaving(true);
+    const ingObjs = form.ingredients.filter(i => (i.name || '').trim());
     const payload = {
       time: form.time, title: form.title.trim(), kcal: String(form.kcal || ''), time_prep: form.time_prep || '',
       img: form.img || null,
-      ingredients: form.ingredients.map(s => s.trim()).filter(Boolean),
+      ingredients: ingObjs.map(combineIng),
       steps: form.steps.map(s => s.trim()).filter(Boolean),
     };
     if (form.id) await supabase.from('recipes').update(payload).eq('id', form.id);
     else await supabase.from('recipes').insert(payload);
+    // Guardar ingredientes nuevos en el catálogo (para reusarlos en otras recetas)
+    try {
+      const existing = new Set(catalog.map(c => c.toLowerCase()));
+      const fresh = [...new Set(ingObjs.map(i => i.name.trim()).filter(n => n && n.length <= 40 && !/^\d+$/.test(n)))]
+        .filter(n => !existing.has(n.toLowerCase()));
+      if (fresh.length) { await supabase.from('ingredients').insert(fresh.map(name => ({ name }))); loadCatalog(); }
+    } catch (e) { /* duplicado u otro: ignorar, no bloquea el guardado de la receta */ }
     setSaving(false); setForm(null); load();
   };
   const del = async (r) => { if (confirm(`¿Eliminar "${r.title}"?`)) { await supabase.from('recipes').delete().eq('id', r.id); load(); } };
@@ -141,7 +206,7 @@ function Recetas() {
                 <input placeholder="Kcal (ej. 450)" value={form.kcal} onChange={e => setForm({ ...form, kcal: e.target.value })} style={input} />
                 <input placeholder="Tiempo (ej. 15 min)" value={form.time_prep} onChange={e => setForm({ ...form, time_prep: e.target.value })} style={input} />
               </div>
-              <ListEditor label="Ingredientes" addLabel="ingrediente" items={form.ingredients} onChange={(v) => setForm(f => ({ ...f, ingredients: v }))} placeholder="Ej. 200 g de pollo" />
+              <IngredientEditor items={form.ingredients} onChange={(v) => setForm(f => ({ ...f, ingredients: v }))} catalog={catalog} />
               <ListEditor label="Pasos" addLabel="paso" numbered items={form.steps} onChange={(v) => setForm(f => ({ ...f, steps: v }))} placeholder="Describe el paso…" />
               <button onClick={save} disabled={saving} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: PRIMARY, color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}>
                 <Save size={16} /> {saving ? 'Guardando…' : (form.id ? 'Guardar cambios' : 'Crear receta')}
