@@ -10,7 +10,7 @@ const corsHeaders = {
 
 // Colores de marca Be Fit Lab — paleta "crema + acento durazno" (degradado suave)
 const CREAM: [number, number, number] = [243, 234, 223]; // #F3EADF  fondo crema (dominante)
-const PEACH: [number, number, number] = [229, 154, 114]; // #E59A72  acento durazno (arriba del degradado)
+const PEACH: [number, number, number] = [236, 190, 158]; // #ECBE9E  acento durazno SUAVE (velo arriba)
 const ICON:  [number, number, number] = [199, 93,  58];  // #C75D3A  terracota: ícono + etiquetas
 
 // Marca real Be Fit Lab a COLOR (durazno + hoja, sin texto) — PNG 188×240 transparente.
@@ -42,7 +42,7 @@ serve(async (req) => {
     const memberName = userData.full_name || userData.email.split('@')[0];
     const plan       = userData.membership_plan || 'Sin Plan';
     const classes    = String(userData.classes_remaining ?? 0);
-    const status     = userData.membership_status === 'ACTIVE' ? 'Activa ✓' : 'Inactiva';
+    const status     = userData.membership_status === 'ACTIVE' ? 'Activa' : 'Inactiva';
     const serial     = `BEFIT-${userId.substring(0, 8).toUpperCase()}`;
 
     // ── Android: Google Wallet JWT ────────────────────────────────────────────
@@ -63,7 +63,7 @@ serve(async (req) => {
       // Si el upload falla, se usa el hero anterior para no romper el pase.
       let heroUri = 'https://fifaowaiokauhuqklzwe.supabase.co/storage/v1/object/public/wallet-passes/befit-hero.png';
       try {
-        const heroPng = await generatePNG(1032, 336, (_x, y) => lerpColor(PEACH, CREAM, Math.pow(y / 335, 0.45)));
+        const heroPng = await generatePNG(1032, 336, (_x, y) => lerpColor(PEACH, CREAM, Math.min((y / 335) / 0.20, 1)));
         await supabase.storage
           .from('wallet-passes')
           .upload('befit-hero-gradient.png', heroPng, { contentType: 'image/png', upsert: true });
@@ -147,7 +147,7 @@ serve(async (req) => {
       description: 'Membresía Be Fit Lab',
       foregroundColor: 'rgb(61, 51, 44)',
       backgroundColor: 'rgb(243, 234, 223)',
-      labelColor:      'rgb(194, 101, 63)',
+      labelColor:      'rgb(140, 111, 90)',
       logoText: 'BE FIT LAB',
       storeCard: {
         headerFields: [
@@ -195,8 +195,8 @@ serve(async (req) => {
       strip2x, strip1x,
       icon2x,  icon1x,
     ] = await Promise.all([
-      generatePNG(624, 246, (_x, y) => lerpColor(PEACH, CREAM, Math.pow(y / 245, 0.45))),
-      generatePNG(312, 123, (_x, y) => lerpColor(PEACH, CREAM, Math.pow(y / 122, 0.45))),
+      generatePNG(624, 246, (_x, y) => lerpColor(PEACH, CREAM, Math.min((y / 245) / 0.20, 1))),
+      generatePNG(312, 123, (_x, y) => lerpColor(PEACH, CREAM, Math.min((y / 122) / 0.20, 1))),
       generatePNG(58,  58,  () => ICON),
       generatePNG(29,  29,  () => ICON),
     ]);
