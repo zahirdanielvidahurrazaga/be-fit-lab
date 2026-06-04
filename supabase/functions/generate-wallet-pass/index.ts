@@ -8,9 +8,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Colores de marca Be Fit Lab
-const ORANGE: [number, number, number] = [255, 139, 66];
-const DARK:   [number, number, number] = [28,  28,  26];
+// Colores de marca Be Fit Lab — paleta "durazno cálido" (degradado)
+const ORANGE:      [number, number, number] = [255, 145, 77];  // #FF914D  ícono de marca
+const PEACH:       [number, number, number] = [199, 93,  58];  // #C75D3A  fondo + base de la franja
+const PEACH_LIGHT: [number, number, number] = [233, 149, 111]; // #E9956F  parte alta de la franja (degradado)
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -52,6 +53,17 @@ serve(async (req) => {
       const objectId = `${issuerId}.${serial}`;
       const now      = Math.floor(Date.now() / 1000);
 
+      // Hero con degradado durazno (#E9956F → #C75D3A) subido al bucket público.
+      // Si el upload falla, se usa el hero anterior para no romper el pase.
+      let heroUri = 'https://fifaowaiokauhuqklzwe.supabase.co/storage/v1/object/public/wallet-passes/befit-hero.png';
+      try {
+        const heroPng = await generatePNG(1032, 336, (_x, y) => lerpColor(PEACH_LIGHT, PEACH, y / 335));
+        await supabase.storage
+          .from('wallet-passes')
+          .upload('befit-hero-gradient.png', heroPng, { contentType: 'image/png', upsert: true });
+        heroUri = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/wallet-passes/befit-hero-gradient.png`;
+      } catch (_e) { /* fallback al hero anterior */ }
+
       const jwtPayload = {
         iss: serviceEmail,
         aud: 'google',
@@ -64,7 +76,7 @@ serve(async (req) => {
             classId,
             genericType: 'GENERIC_TYPE_UNSPECIFIED',
             state: 'ACTIVE',
-            hexBackgroundColor: '#1C1C1A',
+            hexBackgroundColor: '#C75D3A',
             logo: {
               sourceUri: { uri: 'https://fifaowaiokauhuqklzwe.supabase.co/storage/v1/object/public/wallet-passes/befit-logo.png' },
               contentDescription: { defaultValue: { language: 'es', value: 'Be Fit Lab' } },
@@ -83,7 +95,7 @@ serve(async (req) => {
               alternateText: serial,
             },
             heroImage: {
-              sourceUri: { uri: 'https://fifaowaiokauhuqklzwe.supabase.co/storage/v1/object/public/wallet-passes/befit-hero.png' },
+              sourceUri: { uri: heroUri },
               contentDescription: { defaultValue: { language: 'es', value: 'Be Fit Lab' } },
             },
           }],
@@ -120,8 +132,8 @@ serve(async (req) => {
       organizationName: 'Be Fit Lab',
       description: 'Membresía Be Fit Lab',
       foregroundColor: 'rgb(255, 255, 255)',
-      backgroundColor: 'rgb(28, 28, 26)',
-      labelColor:      'rgb(255, 139, 66)',
+      backgroundColor: 'rgb(199, 93, 58)',
+      labelColor:      'rgb(255, 233, 220)',
       logoText: 'BE FIT LAB',
       storeCard: {
         headerFields: [
@@ -160,23 +172,20 @@ serve(async (req) => {
     });
 
     // ── 2. Imágenes de marca (PNG generados programáticamente) ───────────────────
-    // strip@2x  — banner naranja→oscuro (624×246 px, storeCard)
+    // strip@2x  — banner con degradado durazno #E9956F→#C75D3A (624×246 px, storeCard)
     // strip     — versión 1x (312×123 px)
-    // icon@2x   — naranja sólido  (58×58 px)
-    // icon      — naranja sólido  (29×29 px)
-    // logo@2x   — naranja sólido  (160×50 px)
-    // logo      — naranja sólido  (80×25 px)
+    // icon@2x   — durazno de marca sólido (58×58 px) — se ve en notificaciones/lock
+    // icon      — durazno de marca sólido (29×29 px)
+    // (sin logo.png: el wordmark "BE FIT LAB" se muestra en blanco vía logoText,
+    //  en vez del cuadro naranja sólido que se veía genérico)
     const [
       strip2x, strip1x,
       icon2x,  icon1x,
-      logo2x,  logo1x,
     ] = await Promise.all([
-      generatePNG(624, 246, (_x, y) => lerpColor(ORANGE, DARK, y / 245)),
-      generatePNG(312, 123, (_x, y) => lerpColor(ORANGE, DARK, y / 122)),
+      generatePNG(624, 246, (_x, y) => lerpColor(PEACH_LIGHT, PEACH, y / 245)),
+      generatePNG(312, 123, (_x, y) => lerpColor(PEACH_LIGHT, PEACH, y / 122)),
       generatePNG(58,  58,  () => ORANGE),
       generatePNG(29,  29,  () => ORANGE),
-      generatePNG(160, 50,  () => ORANGE),
-      generatePNG(80,  25,  () => ORANGE),
     ]);
 
     // ── 3. SHA-1 de cada archivo (Web Crypto) ────────────────────────────────────
@@ -190,12 +199,11 @@ serve(async (req) => {
 
     const [
       passHash, strip2xHash, strip1xHash,
-      icon2xHash, icon1xHash, logo2xHash, logo1xHash,
+      icon2xHash, icon1xHash,
     ] = await Promise.all([
       sha1Hex(passJsonBytes),
       sha1Hex(strip2x), sha1Hex(strip1x),
       sha1Hex(icon2x),  sha1Hex(icon1x),
-      sha1Hex(logo2x),  sha1Hex(logo1x),
     ]);
 
     const manifest = JSON.stringify({
@@ -204,8 +212,6 @@ serve(async (req) => {
       'strip@2x.png': strip2xHash,
       'icon.png':     icon1xHash,
       'icon@2x.png':  icon2xHash,
-      'logo.png':     logo1xHash,
-      'logo@2x.png':  logo2xHash,
     });
 
     // ── 4. Firma PKCS#7 ──────────────────────────────────────────────────────────
@@ -248,8 +254,6 @@ serve(async (req) => {
       ['strip@2x.png',  strip2x],
       ['icon.png',      icon1x],
       ['icon@2x.png',   icon2x],
-      ['logo.png',      logo1x],
-      ['logo@2x.png',   logo2x],
     ];
 
     const zipBytes = buildZip(files);
