@@ -248,9 +248,9 @@ function Planes() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             style={{ 
-              padding: '24px', borderRadius: '32px', 
-              background: '#ffffff',
-              border: '1px solid rgba(0,0,0,0.05)',
+              padding: '24px', borderRadius: '32px',
+              background: 'var(--app-surface-solid)',
+              border: '1px solid var(--border-subtle)',
               boxShadow: '0 20px 40px rgba(0,0,0,0.06)',
               position: 'relative', overflow: 'hidden'
             }}
@@ -319,7 +319,7 @@ function Planes() {
       )}
       
       <div style={{ textAlign: 'center', marginTop: '4rem' }}>
-        <button onClick={() => navigate(-1)} style={{ padding: '0.8rem 2rem', border: '1px solid #1A1C1E', background: 'transparent', borderRadius: '30px', cursor: 'pointer', fontWeight: 600 }}>Volver</button>
+        <button onClick={() => navigate(-1)} style={{ padding: '0.8rem 2rem', border: '1px solid var(--on-surface-variant)', background: 'transparent', color: 'var(--on-surface)', borderRadius: '30px', cursor: 'pointer', fontWeight: 600 }}>Volver</button>
       </div>
 
       {/* STRIPE CHECKOUT MODAL */}
@@ -334,40 +334,40 @@ function Planes() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.25 }}
             style={{
-              background: 'white', borderRadius: '24px', width: '100%', maxWidth: '420px',
+              background: 'var(--app-surface-solid)', borderRadius: '24px', width: '100%', maxWidth: '420px',
               overflow: 'hidden', boxShadow: '0 25px 60px rgba(0,0,0,0.25)'
             }}
           >
             {/* ── Paso 1: Confirmar compra ── */}
             {checkoutStep === 1 && (
               <>
-                <div style={{ background: '#F9FAFB', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E5E7EB' }}>
+                <div style={{ background: 'var(--surface-low)', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--divider)' }}>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#6B7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Resumen de compra</div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#111827', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Resumen de compra</div>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--on-surface)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       {selectedPlan.title}
                       <span style={{ color: 'var(--primary)' }}>${selectedPlan.price}</span>
-                      <span style={{ fontSize: '0.8rem', color: '#9CA3AF', fontWeight: 500 }}>/mes</span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-muted)', fontWeight: 500 }}>/mes</span>
                     </div>
                   </div>
-                  <button onClick={closeModal} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: '4px' }}>
+                  <button onClick={closeModal} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--on-surface-muted)', padding: '4px' }}>
                     <X size={22} />
                   </button>
                 </div>
 
                 <div style={{ padding: '24px' }}>
                   {/* Detalle del plan */}
-                  <div style={{ background: '#FFF8F0', borderRadius: '14px', padding: '16px', marginBottom: '20px', border: '1px solid rgba(255,139,66,0.15)' }}>
+                  <div style={{ background: 'var(--surface-low)', borderRadius: '14px', padding: '16px', marginBottom: '20px', border: '1px solid rgba(255,139,66,0.15)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                       <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Calendar size={18} color="var(--primary)" />
                       </div>
                       <div>
-                        <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#111' }}>Suscripción mensual</div>
-                        <div style={{ fontSize: '0.78rem', color: '#888' }}>Se renueva automáticamente cada mes</div>
+                        <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--on-surface)' }}>Suscripción mensual</div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-muted)' }}>Se renueva automáticamente cada mes</div>
                       </div>
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#666', lineHeight: 1.5 }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>
                       Al hacer clic en "Ir a pagar" serás redirigida a la página segura de <strong>Stripe</strong> para ingresar tu tarjeta. El pago está encriptado y seguro.
                     </div>
                   </div>
@@ -398,7 +398,7 @@ function Planes() {
                     }
                   </button>
 
-                  <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '0.73rem', color: '#9CA3AF' }}>
+                  <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '0.73rem', color: 'var(--on-surface-muted)' }}>
                     Pago seguro procesado por Stripe · Cancela cuando quieras
                   </div>
                 </div>
@@ -411,17 +411,17 @@ function Planes() {
                 <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
                   <Loader2 size={34} color="var(--primary)" style={{ animation: 'spin 1s linear infinite' }} />
                 </div>
-                <h2 style={{ fontSize: '1.6rem', fontFamily: 'var(--font-display)', color: '#111827', marginBottom: '0.6rem' }}>
+                <h2 style={{ fontSize: '1.6rem', fontFamily: 'var(--font-display)', color: 'var(--on-surface)', marginBottom: '0.6rem' }}>
                   {returningFromPayment ? 'Confirmando tu pago' : 'Esperando tu pago'}
                 </h2>
-                <p style={{ color: '#6B7280', fontSize: '0.92rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+                <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.92rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
                   {returningFromPayment
                     ? 'Estamos activando tu membresía. En un momento te llevamos a tu portal.'
                     : 'Completa el pago en la ventana de Stripe que se abrió. Tu membresía se activará automáticamente al confirmar.'}
                 </p>
                 <button
                   onClick={closeModal}
-                  style={{ padding: '10px 24px', borderRadius: '100px', border: '1px solid #E5E7EB', background: 'white', color: '#6B7280', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+                  style={{ padding: '10px 24px', borderRadius: '100px', border: '1px solid var(--border-subtle)', background: 'var(--app-surface-solid)', color: 'var(--on-surface-variant)', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
                 >
                   Cancelar
                 </button>
@@ -439,10 +439,10 @@ function Planes() {
                 >
                   <Check size={36} color="#22C55E" />
                 </motion.div>
-                <h2 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', color: '#111827', marginBottom: '0.5rem' }}>
+                <h2 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', color: 'var(--on-surface)', marginBottom: '0.5rem' }}>
                   ¡Pago Aprobado!
                 </h2>
-                <p style={{ color: '#6B7280', fontSize: '0.95rem', marginBottom: '1rem' }}>
+                <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.95rem', marginBottom: '1rem' }}>
                   Activando tu membresía...
                 </p>
                 <div style={{ display: 'inline-block', padding: '8px 20px', background: 'rgba(255,139,66,0.1)', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)' }}>

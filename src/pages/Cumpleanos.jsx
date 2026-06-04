@@ -76,7 +76,7 @@ function MiniMonth({ year, month, bdays, today, onOpen }) {
   return (
     <div onClick={() => onOpen(month)} style={{ cursor: 'pointer' }}>
       <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '1.05rem', fontWeight: 600, letterSpacing: '0.12em', textAlign: 'center', color: 'var(--on-surface)', textTransform: 'uppercase' }}>{MESES[month]}</div>
-      <div style={{ height: '1px', background: 'rgba(0,0,0,0.18)', margin: '6px 4px 8px' }} />
+      <div style={{ height: '1px', background: 'var(--divider)', margin: '6px 4px 8px' }} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1px', textAlign: 'center' }}>
         {WEEKDAYS.map((w, i) => (
           <span key={'w' + i} style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '0.62rem', fontWeight: 600, color: 'var(--on-surface-variant)', paddingBottom: '3px' }}>{w}</span>
@@ -204,7 +204,7 @@ function Cumpleanos() {
   // Tarjeta neutra (igual que la card del calendario) para no desentonar
   const cardWhite = {
     background: 'var(--surface-lowest)',
-    border: '1px solid rgba(0,0,0,0.04)',
+    border: '1px solid var(--border-subtle)',
     boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
   };
 
@@ -235,7 +235,7 @@ function Cumpleanos() {
             <div style={{ borderRadius: '28px', padding: '30px 24px', textAlign: 'center', ...cardWhite }}>
               <Cake size={40} color="#E07A9C" style={{ marginBottom: '12px' }} />
               <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--black)' }}>¿Cuándo es tu cumple?</h2>
-              <p style={{ margin: '0 0 18px', fontSize: '0.9rem', color: '#7A5C63', lineHeight: 1.5 }}>Agrégalo en tu perfil y te preparamos una sorpresa 🎉</p>
+              <p style={{ margin: '0 0 18px', fontSize: '0.9rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>Agrégalo en tu perfil y te preparamos una sorpresa 🎉</p>
               <button onClick={() => navigate('/mi-cuenta')} style={{ background: '#E07A9C', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '16px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 20px rgba(224,122,156,0.35)' }}>Agregar mi cumpleaños</button>
             </div>
           ) : countdown?.isToday ? (
@@ -243,7 +243,7 @@ function Cumpleanos() {
               <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', background: 'rgba(255,255,255,0.25)', borderRadius: '50%' }} />
               <PartyPopper size={46} color="#C2456E" style={{ marginBottom: '10px', position: 'relative' }} />
               <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: 'var(--black)', position: 'relative' }}>¡Hoy es tu día! 🎉</h2>
-              <p style={{ margin: 0, fontSize: '1rem', color: '#7A3A4E', fontWeight: 600, position: 'relative' }}>Feliz cumpleaños, {me.full_name?.split(' ')[0] || 'hermosa'} 💕</p>
+              <p style={{ margin: 0, fontSize: '1rem', color: 'var(--on-surface-variant)', fontWeight: 600, position: 'relative' }}>Feliz cumpleaños, {me.full_name?.split(' ')[0] || 'hermosa'} 💕</p>
             </div>
           ) : (
             <div style={{ borderRadius: '28px', padding: '28px 24px', ...cardWhite, position: 'relative', overflow: 'hidden' }}>
@@ -273,7 +273,7 @@ function Cumpleanos() {
 
         {/* CALENDARIO */}
         <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.25 }} style={{ marginTop: '30px' }}>
-          <div style={{ background: 'var(--surface-lowest)', borderRadius: '28px', padding: '24px 16px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.04)' }}>
+          <div style={{ background: 'var(--surface-lowest)', borderRadius: '28px', padding: '24px 16px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', border: '1px solid var(--border-subtle)' }}>
 
             {view === 'year' ? (
               <>
@@ -319,7 +319,7 @@ function Cumpleanos() {
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', damping: 24, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              style={{ width: 'min(360px, 100%)', maxHeight: '70vh', overflowY: 'auto', borderRadius: '26px', padding: '22px', background: 'rgba(255,255,255,0.62)', backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)', border: '1px solid rgba(255,255,255,0.6)', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}>
+              style={{ width: 'min(360px, 100%)', maxHeight: '70vh', overflowY: 'auto', borderRadius: '26px', padding: '22px', background: 'var(--glass-bg)', backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)', border: '1px solid var(--glass-border)', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                 <div>
                   <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#C2456E', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Cumpleaños</div>

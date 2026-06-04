@@ -162,7 +162,7 @@ function Nutricion() {
                 <div style={{
                   position: 'absolute', top: '20px', left: '20px',
                   background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)',
-                  padding: '8px 16px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 800, color: 'var(--black)'
+                  padding: '8px 16px', borderRadius: '16px', fontSize: '0.75rem', fontWeight: 800, color: '#1A1C1E'
                 }}>
                   {recipeData?.time}
                 </div>
@@ -175,10 +175,10 @@ function Nutricion() {
                 <h2 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', marginBottom: '12px', lineHeight: 1.1 }}>{recipeData?.title}</h2>
                 
                 <div style={{ display: 'flex', gap: '15px', marginBottom: '25px' }}>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: '#8a7266' }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--on-surface-muted)' }}>
                      <Clock size={16} /> {recipeData?.timePrep}
                    </div>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: '#8a7266' }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--on-surface-muted)' }}>
                      <Flame size={16} /> {recipeData?.kcal} kcal
                    </div>
                 </div>
@@ -207,7 +207,7 @@ function Nutricion() {
                         }}>
                           {i+1}
                         </div>
-                        <p style={{ margin: 0, fontSize: '0.95rem', color: '#564338', lineHeight: 1.6, fontWeight: 500 }}>{step}</p>
+                        <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--on-surface-variant)', lineHeight: 1.6, fontWeight: 500 }}>{step}</p>
                       </div>
                     ))}
                   </div>
@@ -279,7 +279,7 @@ function Nutricion() {
               style={{ padding: '12px 24px 20px', background: 'var(--surface)', position: 'relative' }}
             >
               <div className="sheet-handle" />
-              <button onClick={() => setShowQR(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '14px', right: '16px', width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }}>
+              <button onClick={() => setShowQR(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '14px', right: '16px', width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'var(--fill-subtle)', color: 'var(--on-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }}>
                 <X size={17} color="var(--on-surface)" />
               </button>
               
@@ -314,7 +314,7 @@ function Nutricion() {
                   </div>
                 </div>
                 
-                <div className="wallet-footer" style={{ borderTop: '1px dashed rgba(0,0,0,0.05)', paddingTop: '20px', paddingBottom: '20px', justifyContent: 'center' }}>
+                <div className="wallet-footer" style={{ borderTop: '1px dashed var(--divider)', paddingTop: '20px', paddingBottom: '20px', justifyContent: 'center' }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '0.65rem', color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--primary)'}}>sesiones</span></div>
@@ -423,13 +423,13 @@ function MealItem({ meal, isFavorite, onFavorite, onClick }) {
           <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>{time}</div>
           <button 
             onClick={onFavorite}
-            style={{ border: 'none', background: 'transparent', padding: '0', cursor: 'pointer', color: isFavorite ? '#FF4D4D' : '#ddc1b3' }}
+            style={{ border: 'none', background: 'transparent', padding: '0', cursor: 'pointer', color: isFavorite ? '#FF4D4D' : 'var(--on-surface-muted)' }}
           >
             <Heart size={18} fill={isFavorite ? '#FF4D4D' : 'transparent'} />
           </button>
         </div>
         <h3 style={{ fontSize: '1.05rem', color: 'var(--black)', marginBottom: '8px', fontFamily: 'var(--font-display)', lineHeight: 1.2, fontWeight: 800 }}>{title}</h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.75rem', color: '#8a7266', fontWeight: 700 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.75rem', color: 'var(--on-surface-muted)', fontWeight: 700 }}>
            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <Flame size={14} color="var(--primary)" /> {kcal} kcal
            </div>

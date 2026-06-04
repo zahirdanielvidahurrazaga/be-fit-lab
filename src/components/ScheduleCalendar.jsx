@@ -72,15 +72,15 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, onReser
     <div style={{ maxWidth: '600px', margin: '0 auto', width: '100%' }}>
       {calendarView === 'month' ? (
         <motion.div key="month-view" initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-10}} transition={{duration:0.2}}>
-          <div className="ios-glass-card" style={{ padding: '20px', background: 'white', margin: 0, borderRadius: '24px', boxShadow: '0 10px 40px rgba(0,0,0,0.05)' }}>
+          <div className="ios-glass-card" style={{ padding: '20px', background: 'var(--app-surface-solid)', margin: 0, borderRadius: '24px', boxShadow: '0 10px 40px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <button onClick={prevMonth} style={{ background: 'rgba(0,0,0,0.04)', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <button onClick={prevMonth} style={{ background: 'var(--fill-subtle)', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                 <ChevronRight size={20} color="var(--black)" style={{ transform: 'rotate(180deg)' }} />
               </button>
               <h3 style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)', margin: 0, textTransform: 'capitalize', color: 'var(--black)' }}>
                 {monthNames[currentMonth]} {currentYear}
               </h3>
-              <button onClick={nextMonth} style={{ background: 'rgba(0,0,0,0.04)', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <button onClick={nextMonth} style={{ background: 'var(--fill-subtle)', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                 <ChevronRight size={20} color="var(--black)" />
               </button>
             </div>
@@ -145,7 +145,7 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, onReser
             </button>
           </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px', marginBottom: '25px', background: 'white', padding: '15px 10px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px', marginBottom: '25px', background: 'var(--app-surface-solid)', padding: '15px 10px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
             {getWeekDays(selectedDateStr).map((d, i) => {
               const isSelected = d.dateStr === selectedDateStr;
               const classesOnDay = getClassesForDate(d.dateStr);
@@ -248,9 +248,9 @@ export function ClassItem({ classData, full, onReserve, coaches, badgeConfigs })
         </div>
         
         <div style={{ flex: 1 }}>
-          <h3 style={{ fontSize: '1.15rem', color: 'var(--black)', margin: '0 0 2px 0', fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1.2 }}>{title}</h3>
+          <h3 style={{ fontSize: '1.15rem', color: '#2D2928', margin: '0 0 2px 0', fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1.2 }}>{title}</h3>
           {category && (
-            <p style={{ margin: '0 0 4px 0', fontSize: '0.65rem', color: 'var(--on-surface-variant)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <p style={{ margin: '0 0 4px 0', fontSize: '0.65rem', color: '#6F6157', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Entrenamiento de {category === 'Relajacion' ? 'Relajación' : category}
             </p>
           )}

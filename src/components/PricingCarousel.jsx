@@ -53,7 +53,7 @@ export function PricingCarousel({ onSelectPlan }) {
                 position: 'absolute',
                 width: '100%',
                 height: '560px',
-                background: isActive ? '#ffffff' : 'rgba(240, 240, 245, 0.95)',
+                background: isActive ? 'var(--app-surface-solid)' : 'var(--surface-low)',
                 borderRadius: '32px',
                 boxShadow: isActive ? '0 40px 80px rgba(255, 122, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.8)' : '0 10px 30px rgba(0,0,0,0.05)',
                 display: 'flex',
@@ -87,8 +87,8 @@ export function PricingCarousel({ onSelectPlan }) {
 
               {/* Contenido Principal (Caja Blanca Solapada) */}
               <div style={{ 
-                background: isActive ? '#ffffff' : 'rgba(255,255,255,0.85)', 
-                margin: '-24px 0 0 0', 
+                background: isActive ? 'var(--app-surface-solid)' : 'var(--surface-low)',
+                margin: '-24px 0 0 0',
                 borderRadius: '24px 24px 0 0', 
                 padding: '24px', 
                 flex: 1,
@@ -100,11 +100,11 @@ export function PricingCarousel({ onSelectPlan }) {
               }}>
                 {/* Caja de Precio */}
                 <div style={{ 
-                  background: isActive ? 'white' : 'rgba(255,255,255,0.5)', 
-                  borderRadius: '16px', 
-                  padding: '20px', 
-                  boxShadow: isActive ? '0 10px 30px rgba(0,0,0,0.05)' : 'none', 
-                  border: isActive ? '1px solid rgba(0,0,0,0.05)' : '1px solid transparent',
+                  background: isActive ? 'var(--surface-low)' : 'transparent',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  boxShadow: isActive ? '0 10px 30px rgba(0,0,0,0.05)' : 'none',
+                  border: isActive ? '1px solid var(--border-subtle, rgba(0,0,0,0.05))' : '1px solid transparent',
                   marginBottom: '20px' 
                 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '16px' }}>

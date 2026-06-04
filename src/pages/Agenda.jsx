@@ -296,7 +296,7 @@ function Agenda() {
 
                   {/* Descripción de la clase */}
                   {modalData?.description && (
-                    <div style={{ marginBottom: '16px', padding: '14px 16px', background: 'rgba(0,0,0,0.02)', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.03)' }}>
+                    <div style={{ marginBottom: '16px', padding: '14px 16px', background: 'var(--fill-subtle)', borderRadius: '16px', border: '1px solid var(--divider)' }}>
                       <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>{modalData.description}</p>
                     </div>
                   )}
@@ -307,17 +307,17 @@ function Agenda() {
                     if (!coachInfo) return null;
                     const hasBio = coachInfo.bio || coachInfo.experience;
                     return (
-                      <div style={{ marginBottom: '20px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                      <div style={{ marginBottom: '20px', borderRadius: '16px', border: '1px solid var(--divider)', overflow: 'hidden' }}>
                         {/* Fila siempre visible — avatar + nombre + botón */}
                         <button
                           onClick={() => hasBio && setShowCoachDetail(v => !v)}
                           style={{
                             width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
-                            padding: '13px 14px', background: 'rgba(0,0,0,0.02)',
+                            padding: '13px 14px', background: 'var(--fill-subtle)',
                             border: 'none', cursor: hasBio ? 'pointer' : 'default', textAlign: 'left'
                           }}
                         >
-                          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--surface)', overflow: 'hidden', flexShrink: 0, border: '2px solid white', boxShadow: '0 3px 8px rgba(0,0,0,0.08)' }}>
+                          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--surface)', overflow: 'hidden', flexShrink: 0, border: '2px solid var(--app-surface-solid)', boxShadow: '0 3px 8px rgba(0,0,0,0.08)' }}>
                             {coachInfo.avatar_url
                               ? <img src={coachInfo.avatar_url} alt="Coach" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 'bold', fontSize: '1rem' }}>{(coachInfo.full_name || 'C').charAt(0).toUpperCase()}</div>
@@ -401,7 +401,7 @@ function Agenda() {
               style={{ padding: '12px 24px 20px', background: 'var(--surface)' }}
             >
               <div className="sheet-handle" />
-              <button onClick={() => setShowQR(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '14px', right: '16px', width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.06)', color: 'var(--on-surface)', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 5 }}>✕</button>
+              <button onClick={() => setShowQR(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '14px', right: '16px', width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'var(--fill-subtle)', color: 'var(--on-surface)', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 5 }}>✕</button>
               
               <div className="wallet-card" style={{ 
                 background: 'var(--surface-low)', 
@@ -434,7 +434,7 @@ function Agenda() {
                   </div>
                 </div>
                 
-                <div className="wallet-footer" style={{ borderTop: '1px dashed rgba(0,0,0,0.05)', paddingTop: '20px', paddingBottom: '20px', justifyContent: 'center' }}>
+                <div className="wallet-footer" style={{ borderTop: '1px dashed var(--divider)', paddingTop: '20px', paddingBottom: '20px', justifyContent: 'center' }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '0.65rem', color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--primary)'}}>sesiones</span></div>

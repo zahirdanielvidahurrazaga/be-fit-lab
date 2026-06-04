@@ -205,13 +205,13 @@ function EventDetail({ ev, user, registered, onReg, processing, onBack }) {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowQR(false)}
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
             <motion.div onClick={e => e.stopPropagation()} initial={{ scale: 0.9, opacity: 0, y: 18 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0 }} transition={{ type: 'spring', damping: 22, stiffness: 240 }}
-              style={{ width: 'min(340px, 100%)', background: '#fff', borderRadius: '26px', padding: '28px 24px', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.3)' }}>
-              <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: '#1A1C1E' }}>Tu código de entrada</h2>
+              style={{ width: 'min(340px, 100%)', background: 'var(--app-surface-solid)', borderRadius: '26px', padding: '28px 24px', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.3)' }}>
+              <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--on-surface)' }}>Tu código de entrada</h2>
               <p style={{ margin: '0 0 18px', fontSize: '0.86rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>Muéstralo en la entrada de <strong>{ev.title}</strong> para tu check-in.</p>
               <div style={{ background: '#fff', padding: '14px', borderRadius: '18px', display: 'inline-block', boxShadow: '0 6px 20px rgba(0,0,0,0.1)', border: '1px solid rgba(0,0,0,0.06)' }}>
                 <QRCodeCanvas value={user?.id || 'befit'} size={200} level="M" />
               </div>
-              <button onClick={() => setShowQR(false)} style={{ width: '100%', marginTop: '20px', padding: '13px', borderRadius: '14px', border: 'none', background: 'rgba(0,0,0,0.06)', color: '#1A1C1E', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>Cerrar</button>
+              <button onClick={() => setShowQR(false)} style={{ width: '100%', marginTop: '20px', padding: '13px', borderRadius: '14px', border: 'none', background: 'var(--fill-subtle)', color: 'var(--on-surface)', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>Cerrar</button>
             </motion.div>
           </motion.div>
         )}

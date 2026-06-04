@@ -84,7 +84,7 @@ function ProfileMenu() {
                 background: 'var(--surface-lowest)',
                 borderRadius: '22px',
                 boxShadow: '0 16px 40px rgba(0,0,0,0.18)',
-                border: '1px solid rgba(0,0,0,0.05)',
+                border: '1px solid var(--border-subtle)',
                 padding: '8px',
                 zIndex: 100,
                 overflow: 'hidden',
@@ -94,7 +94,7 @@ function ProfileMenu() {
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '12px',
                 padding: '10px 12px 12px',
-                borderBottom: '1px solid rgba(0,0,0,0.06)', marginBottom: '6px',
+                borderBottom: '1px solid var(--divider)', marginBottom: '6px',
               }}>
                 <div style={{
                   width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
@@ -156,7 +156,7 @@ function ProfileMenu() {
                   display: 'flex', alignItems: 'center', gap: '12px',
                   padding: '11px 12px', borderRadius: '14px', cursor: 'pointer',
                   color: '#ba1a1a', fontSize: '0.9rem', fontWeight: 700, textAlign: 'left',
-                  marginTop: '4px', borderTop: '1px solid rgba(0,0,0,0.06)',
+                  marginTop: '4px', borderTop: '1px solid var(--divider)',
                 }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(186,26,26,0.08)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}

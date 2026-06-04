@@ -63,11 +63,11 @@ export default function ClientMealPlan({ userId }) {
       </motion.div>
 
       {/* Calendario mensual de comidas */}
-      <div style={{ background: 'var(--app-surface-solid, #fff)', borderRadius: '24px', border: '1px solid rgba(0,0,0,0.05)', padding: '18px' }}>
+      <div style={{ background: 'var(--app-surface-solid, #fff)', borderRadius: '24px', border: '1px solid var(--border-subtle)', padding: '18px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-          <button onClick={() => setCal(new Date(y, m - 1, 1))} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid rgba(0,0,0,0.08)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--on-surface)' }}><ChevronLeft size={17} /></button>
+          <button onClick={() => setCal(new Date(y, m - 1, 1))} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid var(--border-subtle)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--on-surface)' }}><ChevronLeft size={17} /></button>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', fontWeight: 800, color: 'var(--on-surface)' }}>{MESES[m]} {y}</div>
-          <button onClick={() => setCal(new Date(y, m + 1, 1))} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid rgba(0,0,0,0.08)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--on-surface)' }}><ChevronRight size={17} /></button>
+          <button onClick={() => setCal(new Date(y, m + 1, 1))} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid var(--border-subtle)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--on-surface)' }}><ChevronRight size={17} /></button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px', textAlign: 'center', marginBottom: '5px' }}>
           {WEEKDAYS.map((w, i) => <span key={i} style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)' }}>{w}</span>)}
@@ -90,7 +90,7 @@ export default function ClientMealPlan({ userId }) {
         </div>
 
         {/* Comidas del día seleccionado */}
-        <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+        <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid var(--divider)' }}>
           <div style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)', marginBottom: '10px' }}>
             {new Date(selDay + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
           </div>

@@ -292,7 +292,7 @@ function Cafeteria() {
               return (
                 <motion.button key={t.key} onClick={() => setActiveCat(t.key)} whileTap={{ scale: 0.94 }} animate={{ scale: active ? 1.04 : 1 }} transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                   style={{ border: '1px solid rgba(255,255,255,0.65)', borderRadius: '999px', padding: '11px 22px', cursor: 'pointer', fontWeight: 800, fontSize: '0.92rem', whiteSpace: 'nowrap',
-                    background: active ? 'linear-gradient(135deg, #FF914D, #E68245)' : 'rgba(255,255,255,0.5)', color: active ? '#fff' : 'var(--on-surface-variant)',
+                    background: active ? 'linear-gradient(135deg, #FF914D, #E68245)' : 'rgba(255,255,255,0.5)', color: active ? '#fff' : '#6B7280',
                     backdropFilter: 'blur(16px) saturate(180%)', WebkitBackdropFilter: 'blur(16px) saturate(180%)',
                     boxShadow: active ? '0 12px 26px rgba(255,145,77,0.42), inset 0 1px 0 rgba(255,255,255,0.4)' : '0 4px 14px rgba(80,50,30,0.07), inset 0 1px 0 rgba(255,255,255,0.7)' }}>
                   {t.label}

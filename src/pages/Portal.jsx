@@ -249,7 +249,7 @@ function Portal() {
             <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '15px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Tu semana</h2>
             <div style={{ display: 'flex', gap: '10px' }}>
               <StatPill icon={<Flame size={16} />} value="1.2k" label="kcal" color="var(--primary)" />
-              <StatPill icon={<Activity size={16} />} value="3" label="clases" color="#2D2928" />
+              <StatPill icon={<Activity size={16} />} value="3" label="clases" color="var(--on-surface)" />
               <StatPill icon={<Sparkles size={16} />} value="85" label="pts" color="var(--accent)" />
             </div>
           </motion.section>
@@ -262,7 +262,7 @@ function Portal() {
         <div className="modal-overlay" onClick={() => { setShowCancelModal(false); setCancelError(false); }}>
           <div className="glass-modal" onClick={(e) => e.stopPropagation()}>
             <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', marginBottom: '15px' }}>Detalle de Reserva</h2>
-            <div style={{ background: 'rgba(55,61,59,0.03)', padding: '15px', borderRadius: '16px', marginBottom: '16px', textAlign: 'left' }}>
+            <div style={{ background: 'var(--fill-subtle)', padding: '15px', borderRadius: '16px', marginBottom: '16px', textAlign: 'left' }}>
               <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--on-surface)' }}>{selectedReservation?.title}</div>
               <div style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 600, marginTop: '5px' }}>{selectedReservation?.time}</div>
             </div>
@@ -323,7 +323,7 @@ function Portal() {
             style={{ padding: '12px 24px 20px', background: 'var(--surface)' }}
           >
             <div className="sheet-handle" />
-            <button onClick={() => setShowQR(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '14px', right: '16px', width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.06)', color: 'var(--on-surface)', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 5 }}>✕</button>
+            <button onClick={() => setShowQR(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '14px', right: '16px', width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'var(--fill-subtle)', color: 'var(--on-surface)', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 5 }}>✕</button>
             
             <div className="wallet-card" style={{ 
               background: 'var(--surface-low)', 
@@ -356,7 +356,7 @@ function Portal() {
                 </div>
               </div>
               
-              <div className="wallet-footer" style={{ borderTop: '1px dashed rgba(0,0,0,0.05)', paddingTop: '20px', paddingBottom: '20px', justifyContent: 'center' }}>
+              <div className="wallet-footer" style={{ borderTop: '1px dashed var(--divider)', paddingTop: '20px', paddingBottom: '20px', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '0.65rem', color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
                   <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{classesRemaining >= 9999 ? '∞' : classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--primary)'}}>{classesRemaining >= 9999 ? 'ilimitadas' : 'sesiones'}</span></div>
@@ -488,7 +488,7 @@ function TicketCard({ title, time, instructor, color, canCancel, onClick }) {
       </div>
 
       {/* Dashed Divider */}
-      <div style={{ borderTop: '1px dashed rgba(0,0,0,0.08)', marginLeft: '20px', marginRight: '20px' }} />
+      <div style={{ borderTop: '1px dashed var(--divider)', marginLeft: '20px', marginRight: '20px' }} />
 
       {/* Bottom Section */}
       <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

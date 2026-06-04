@@ -35,12 +35,12 @@ export default function NutritionToday({ userId, showMeals = true }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
           <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: `${WATER}1A`, color: WATER, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Droplets size={17} /></div>
           <div style={{ display: 'flex', gap: '6px' }}>
-            <button onClick={() => setGlasses(g => Math.max(0, g - 1))} aria-label="Quitar vaso" style={{ width: '26px', height: '26px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.05)', color: 'var(--on-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Minus size={14} /></button>
+            <button onClick={() => setGlasses(g => Math.max(0, g - 1))} aria-label="Quitar vaso" style={{ width: '26px', height: '26px', borderRadius: '50%', border: 'none', background: 'var(--fill-subtle)', color: 'var(--on-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Minus size={14} /></button>
             <button onClick={() => setGlasses(g => g + 1)} aria-label="Agregar vaso" style={{ width: '26px', height: '26px', borderRadius: '50%', border: 'none', background: WATER, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Plus size={14} /></button>
           </div>
         </div>
         <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--on-surface)', lineHeight: 1 }}>{(glasses * 0.25).toFixed(2).replace(/\.00$/, '')}<span style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', marginLeft: '4px', fontWeight: 700 }}>L</span></div>
-        <div style={{ height: '6px', background: 'rgba(0,0,0,0.06)', borderRadius: '4px', overflow: 'hidden', margin: '8px 0 5px' }}>
+        <div style={{ height: '6px', background: 'var(--divider)', borderRadius: '4px', overflow: 'hidden', margin: '8px 0 5px' }}>
           <motion.div animate={{ width: `${pct}%` }} transition={{ type: 'spring', stiffness: 120, damping: 18 }} style={{ height: '100%', background: WATER, borderRadius: '4px' }} />
         </div>
         <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{glasses}/{GOAL} vasos hoy</div>

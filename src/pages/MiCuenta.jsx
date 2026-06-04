@@ -386,7 +386,7 @@ function MiCuenta() {
                 placeholder="Tu nombre"
                 style={inputStyle}
                 onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
-                onBlur={(e) => e.target.style.borderColor = '#ddc1b3'}
+                onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
               />
             </div>
 
@@ -399,7 +399,7 @@ function MiCuenta() {
                 placeholder="+52 000 000 0000"
                 style={inputStyle}
                 onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
-                onBlur={(e) => e.target.style.borderColor = '#ddc1b3'}
+                onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
               />
             </div>
 
@@ -411,7 +411,7 @@ function MiCuenta() {
                 onChange={(e) => setBirthDate(e.target.value)}
                 style={inputStyle}
                 onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
-                onBlur={(e) => e.target.style.borderColor = '#ddc1b3'}
+                onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
               />
             </div>
 
@@ -424,7 +424,7 @@ function MiCuenta() {
                   readOnly
                   style={inputReadOnlyStyle}
                 />
-                <Mail size={16} color="#8a7266" style={{ position: 'absolute', right: '18px', top: '50%', transform: 'translateY(-50%)' }} />
+                <Mail size={16} color="var(--on-surface-muted)" style={{ position: 'absolute', right: '18px', top: '50%', transform: 'translateY(-50%)' }} />
               </div>
             </div>
           </div>
@@ -444,7 +444,7 @@ function MiCuenta() {
                 rows={4}
                 style={{ ...inputStyle, resize: 'none', fontFamily: 'inherit' }}
                 onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
-                onBlur={(e) => e.target.style.borderColor = '#ddc1b3'}
+                onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
               />
             </div>
 
@@ -457,7 +457,7 @@ function MiCuenta() {
                 placeholder="Ej. Reformer Pro, 5 años de exp."
                 style={inputStyle}
                 onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
-                onBlur={(e) => e.target.style.borderColor = '#ddc1b3'}
+                onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
               />
             </div>
           </div>
@@ -527,7 +527,7 @@ function MiCuenta() {
             </h3>
 
             {classHistory.length === 0 ? (
-              <p style={{ fontSize: '0.85rem', color: '#8a7266', textAlign: 'center', padding: '20px 0' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-muted)', textAlign: 'center', padding: '20px 0' }}>
                 Aún no tienes clases completadas
               </p>
             ) : (
@@ -535,7 +535,7 @@ function MiCuenta() {
                 <div key={i} style={{
                   display: 'flex', alignItems: 'center', gap: '14px',
                   padding: '12px 0',
-                  borderBottom: i < classHistory.length - 1 ? '1px solid #f0ede9' : 'none'
+                  borderBottom: i < classHistory.length - 1 ? '1px solid var(--divider)' : 'none'
                 }}>
                   <div style={{
                     width: '40px', height: '40px', borderRadius: '14px',
@@ -544,10 +544,10 @@ function MiCuenta() {
                     <Check size={18} color="var(--primary)" />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1c1c1a', margin: 0 }}>
+                    <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--on-surface)', margin: 0 }}>
                       {item.classes?.title || 'Clase'}
                     </p>
-                    <p style={{ fontSize: '0.75rem', color: '#8a7266', margin: '2px 0 0' }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-muted)', margin: '2px 0 0' }}>
                       {item.classes?.instructor || 'Coach'} · {item.classes?.time || ''} · {dayNames[item.classes?.day] || ''}
                     </p>
                   </div>
@@ -572,7 +572,7 @@ function MiCuenta() {
                 placeholder="Nombre del contacto"
                 style={inputStyle}
                 onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
-                onBlur={(e) => e.target.style.borderColor = '#ddc1b3'}
+                onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
               />
             </div>
 
@@ -585,7 +585,7 @@ function MiCuenta() {
                 placeholder="+52 000 000 0000"
                 style={inputStyle}
                 onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
-                onBlur={(e) => e.target.style.borderColor = '#ddc1b3'}
+                onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
               />
             </div>
           </div>

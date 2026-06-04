@@ -344,11 +344,11 @@ function Ajustes() {
           }}>
             <Lock size={24} color="#00677e" />
           </div>
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, fontFamily: 'DM Sans', color: '#1c1c1a' }}>Cambiar Contraseña</h2>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, fontFamily: 'DM Sans', color: 'var(--on-surface)' }}>Cambiar Contraseña</h2>
         </div>
 
         <div style={{ marginBottom: '14px' }}>
-          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#564338', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', display: 'block' }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', display: 'block' }}>
             Nueva contraseña
           </label>
           <input
@@ -361,7 +361,7 @@ function Ajustes() {
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#564338', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', display: 'block' }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', display: 'block' }}>
             Confirmar contraseña
           </label>
           <input
@@ -413,10 +413,10 @@ function Ajustes() {
           }}>
             <Trash2 size={28} color="#ba1a1a" />
           </div>
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '0 0 8px', fontFamily: 'DM Sans', color: '#1c1c1a' }}>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '0 0 8px', fontFamily: 'DM Sans', color: 'var(--on-surface)' }}>
             {deleteStep === 1 ? '¿Eliminar tu cuenta?' : '¿Estás segura?'}
           </h2>
-          <p style={{ fontSize: '0.9rem', color: '#564338', marginBottom: '24px' }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--on-surface-variant)', marginBottom: '24px' }}>
             {deleteStep === 1
               ? 'Se eliminarán todos tus datos, reservaciones e historial. Esta acción no se puede deshacer.'
               : 'Esta es tu última oportunidad. Al confirmar, tu cuenta será eliminada permanentemente.'}
@@ -441,9 +441,9 @@ function Ajustes() {
             style={{
               width: '100%', padding: '16px',
               borderRadius: '9999px',
-              border: '1px solid #ddc1b3', background: 'transparent',
+              border: '1px solid var(--border-subtle)', background: 'transparent',
               fontSize: '1rem', fontWeight: 600, fontFamily: 'DM Sans',
-              color: '#564338', cursor: 'pointer'
+              color: 'var(--on-surface-variant)', cursor: 'pointer'
             }}
           >
             Cancelar
