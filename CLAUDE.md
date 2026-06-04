@@ -76,6 +76,14 @@ manifest ya habilita `READ_WEIGHT` + `READ_BODY_FAT`.
 - **Nutrición**, **Cumpleaños** (calendario mensual), **Insignias** (reglas: TOTAL_CLASSES, DIFFERENT_COACHES, WEEKLY_CLASSES, PROFILE_COMPLETE, MANUAL).
 - Info estudio: Blvrd 22 Sur 5123, Villa Carmel, 72567 Puebla. Tel/WhatsApp +52 221 266 4253. IG @befit.lab. Mapa embebido (requiere `frame-src` de google/openstreetmap en el CSP de `index.html`).
 
+## Estado actual (última sesión: 2026-06-04)
+- **Modo oscuro reconstruido** (palette cálido de marca `#15110E` + 7 tokens semánticos en `src/index.css`). SOLO aplica al rol **CLIENT**, se activa en **Ajustes**; la cafetería se deja clara a propósito. Commit **`7927fb5`** *"feat(tema): reconstruir modo oscuro..."*.
+- ✅ **Commit y push hechos correctamente**: `origin/main = 7927fb5`, web ya desplegada en Cloudflare.
+- ✅ **`npx cap copy ios` ya aplicado** (se usó `copy`, NO `sync`, porque el `dist/` ya estaba construido y no cambiaron deps nativas). Verificado: `dist/index.html` == `ios/App/App/public/index.html` y los JS con hash coinciden. **No hace falta re-sincronizar.**
+- ⏳ **Pendiente del usuario:** probar el modo oscuro en **Xcode / iPhone real** (`open ios/App/App.xcworkspace`).
+- ⚠️ **Repo de trabajo = `~/Desktop/be-fit-lab`** (fuente de verdad, tiene este CLAUDE.md). La copia vieja `~/Projects/be-fit-lab` (19 may, historia divergente) fue **eliminada** el 2026-06-04 para evitar confusiones.
+- ⚠️ Gotcha de entorno: `npm run build` tarda ~14 min y el proceso `vite` queda colgado tras "✓ built" → matarlo con `pkill -f "vite build"`.
+
 ## Pendientes / próximos pasos
 - [ ] **Probar en dispositivo real** el wizard de fotos (cámara en vivo + siluetas). En Simulador cae a galería.
 - [ ] Vista coach/admin para revisar fotos de progreso de clientas (RLS ya lo permite).
