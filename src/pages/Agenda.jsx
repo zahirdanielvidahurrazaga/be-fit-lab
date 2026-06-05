@@ -13,11 +13,12 @@ import { supabase } from '../lib/supabase';
 import { ScheduleCalendar } from '../components/ScheduleCalendar';
 import ProfileMenu from '../components/ProfileMenu';
 import { NextClassTicket } from '../components/NextClassTicket';
+import { ClassListSkeleton } from '../components/Skeleton';
 
 function Agenda() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, classesRemaining, bookClass, globalClasses, updateReservationCalendarId, avatarUrl, coaches, badgeConfigs, myReservations } = useAuth();
+  const { user, plan, classesRemaining, bookClass, globalClasses, updateReservationCalendarId, avatarUrl, coaches, badgeConfigs, myReservations, classesLoaded } = useAuth();
   
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
@@ -159,13 +160,17 @@ function Agenda() {
 
           {/* Calendario Estilo Apple */}
           <section style={{ marginBottom: '10px' }}>
-            <ScheduleCalendar
-              globalClasses={globalClasses}
-              coaches={coaches}
-              badgeConfigs={badgeConfigs}
-              myReservations={myReservations}
-              onReserve={handleReserveClick}
-            />
+            {!classesLoaded && globalClasses.length === 0 ? (
+              <ClassListSkeleton />
+            ) : (
+              <ScheduleCalendar
+                globalClasses={globalClasses}
+                coaches={coaches}
+                badgeConfigs={badgeConfigs}
+                myReservations={myReservations}
+                onReserve={handleReserveClick}
+              />
+            )}
           </section>
         </div>
 

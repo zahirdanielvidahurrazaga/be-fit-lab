@@ -3,6 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Plus, Sparkles, Lock, X, Check, CalendarClock, Info, Image as ImageIcon, RotateCcw, ChevronLeft, Trash2, Columns } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { compressCafeImage } from '../lib/cafeImage';
+import { scheduleProgressPhotoReminder } from '../hooks/useLocalNotifications';
+import poseFront from '../assets/poses/pose-front.png';
+import poseSide from '../assets/poses/pose-side.png';
 
 const PRIMARY = '#FF914D';
 const SIX_WEEKS = 42 * 24 * 60 * 60 * 1000;
@@ -11,40 +14,23 @@ const SIX_WEEKS = 42 * 24 * 60 * 60 * 1000;
 // Figura humana semitransparente que orienta a la clienta sobre cómo pararse.
 // Respira sutilmente (motion) para que se note que es una guía.
 function PoseGuide({ angle }) {
-  const stroke = 'rgba(255,255,255,0.85)';
-  const line = { fill: 'none', stroke, strokeWidth: 8, strokeLinecap: 'round', strokeLinejoin: 'round' };
-
-  const Front = (
-    <>
-      <path d="M60 52 C48 52 42 38 42 26 C42 14 48 4 60 4 C72 4 78 14 78 26 C78 38 72 52 60 52 Z" fill={stroke} />
-      {/* Torso & Hips */}
-      <path d="M60 58 C35 58 28 80 30 110 C32 140 38 150 38 150 L38 270 C38 276 48 276 48 270 L48 155 L60 155 L72 155 L72 270 C72 276 82 276 82 270 L82 150 C82 150 88 140 90 110 C92 80 85 58 60 58 Z" {...line} />
-      {/* Arms */}
-      <path d="M30 80 C15 110 12 145 12 160 M90 80 C105 110 108 145 108 160" {...line} />
-    </>
-  );
-
-  const Side = (
-    <>
-      <path d="M55 52 C45 52 40 40 40 28 C40 16 48 6 58 6 C68 6 72 18 70 30 C68 42 63 52 55 52 Z M40 28 C35 32 30 35 30 35 C35 40 40 42 45 42" fill={stroke} strokeLinecap="round" strokeLinejoin="round" />
-      {/* Torso side */}
-      <path d="M52 58 C40 65 38 90 42 110 C46 130 50 150 50 150 L45 270 C45 276 55 276 55 270 L60 155 L65 270 C65 276 75 276 75 270 L70 150 C70 150 75 130 75 110 C75 90 65 65 52 58 Z" {...line} />
-      {/* Arm side */}
-      <path d="M50 70 C40 100 38 135 38 150" {...line} />
-    </>
-  );
-
-  const content = angle === 'front' ? Front
-    : angle === 'left' ? Side
-    : <g transform="translate(120,0) scale(-1,1)">{Side}</g>;
+  // Silueta femenina real (dominio público, recoloreada a blanco translúcido) que
+  // orienta la pose. 'front' = de frente; 'left'/'right' = perfil (el derecho se
+  // refleja en espejo). El contenedor padre la centra sobre la cámara en vivo.
+  const src = angle === 'front' ? poseFront : poseSide;
+  const flip = angle === 'right';
 
   return (
-    <motion.svg viewBox="0 0 120 280" preserveAspectRatio="xMidYMid meet"
-      animate={{ opacity: [0.45, 0.8, 0.45], scale: [1, 1.015, 1] }}
-      transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
-      style={{ width: '65%', height: '95%', filter: 'drop-shadow(0 0 12px rgba(0,0,0,0.6))' }}>
-      {content}
-    </motion.svg>
+    <div style={{ height: '94%', display: 'flex', alignItems: 'center', justifyContent: 'center', transform: flip ? 'scaleX(-1)' : 'none' }}>
+      <motion.img
+        src={src}
+        alt=""
+        aria-hidden="true"
+        animate={{ opacity: [0.55, 0.85, 0.55], scale: [1, 1.012, 1] }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ height: '100%', width: 'auto', maxWidth: '78%', objectFit: 'contain', filter: 'drop-shadow(0 0 14px rgba(0,0,0,0.55))' }}
+      />
+    </div>
   );
 }
 
@@ -122,15 +108,16 @@ function CompareModal({ sessions, onClose }) {
           ))}
         </div>
 
-        <div style={{ flex: 1, padding: '0 16px 20px', display: 'flex', gap: '10px' }}>
+        <div style={{ flex: 1, padding: '0 16px 20px', display: 'flex', gap: '10px', alignItems: 'flex-start', overflowY: 'auto' }}>
           {[ { sess: sess1, val: s1, set: setS1, label: 'Antes' }, { sess: sess2, val: s2, set: setS2, label: 'Después' } ].map((col, idx) => (
-            <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div key={idx} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <select value={col.val} onChange={e => col.set(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '10px', border: '1px solid var(--border-subtle, rgba(0,0,0,0.1))', background: 'var(--surface-low)', color: 'var(--on-surface)', fontSize: '0.8rem', fontWeight: 600, outline: 'none' }}>
                 {sessions.map(s => <option key={s.id} value={s.id}>{new Date(s.taken_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: '2-digit' })}</option>)}
               </select>
-              <div style={{ flex: 1, background: '#101010', borderRadius: '16px', overflow: 'hidden', position: 'relative' }}>
+              {/* Proporción fija vertical + contain = foto completa sin deformar ni recortar */}
+              <div style={{ width: '100%', aspectRatio: '3 / 4', background: '#101010', borderRadius: '16px', overflow: 'hidden', position: 'relative' }}>
                 {col.sess?.urls?.[angle] ? (
-                  <img src={col.sess.urls[angle]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={col.sess.urls[angle]} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)' }}><Camera size={24} /></div>
                 )}
@@ -216,6 +203,8 @@ function CaptureWizard({ userId, onClose, onSaved }) {
       }
       const { error } = await supabase.from('progress_photos').insert({ user_id: userId, ...cols });
       if (error) throw error;
+      // Reprograma el recordatorio: 6 semanas desde esta sesión.
+      scheduleProgressPhotoReminder(ts);
       onSaved();
     } catch (e) { alert('No se pudieron subir las fotos: ' + (e.message || e)); }
     finally { setSaving(false); }
@@ -380,6 +369,15 @@ export default function ProgressPhotos({ userId }) {
     setSessions(withUrls);
   };
   useEffect(() => { load(); }, [userId]);
+
+  // Asegura el recordatorio de 6 semanas para quienes ya tenían fotos antes de
+  // existir esta feature (al guardar nuevas ya se reprograma en el wizard).
+  // Idempotente: el ID fijo hace que se reemplace, no se acumule.
+  useEffect(() => {
+    if (sessions && sessions.length > 0) {
+      scheduleProgressPhotoReminder(new Date(sessions[0].taken_at).getTime());
+    }
+  }, [sessions]);
 
   const confirmDeletePhoto = async () => {
     if (!photoToDelete) return;

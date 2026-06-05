@@ -147,6 +147,48 @@ export async function notifyReservationConfirmed(reservation) {
   }
 }
 
+// ───────── Recordatorio de fotos de progreso (cada 6 semanas) ─────────
+// ID fijo: reprogramar siempre reemplaza el anterior (no se acumulan).
+const PROGRESS_PHOTO_REMINDER_ID = 1900000001;
+const SIX_WEEKS_MS = 42 * 24 * 60 * 60 * 1000;
+
+// Programa (o reprograma) el aviso a las 6 semanas desde `fromTime`.
+// Se llama al guardar una sesión de fotos y al cargar (idempotente por el ID fijo).
+export async function scheduleProgressPhotoReminder(fromTime = Date.now()) {
+  if (!isNative()) return;
+
+  const savedPref = localStorage.getItem('befit_notifications');
+  if (savedPref === 'false') return;
+
+  try {
+    const at = new Date(fromTime + SIX_WEEKS_MS);
+    if (at <= new Date()) return; // ya vencido → no agendar en el pasado
+
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: PROGRESS_PHOTO_REMINDER_ID,
+        title: '📸 ¡Hora de tus fotos de progreso!',
+        body: 'Han pasado 6 semanas. Toma tus 3 fotos (frente y perfiles) y mira cuánto has avanzado 💪',
+        schedule: { at, allowWhileIdle: true },
+        sound: 'default',
+        iconColor: '#FF8B42',
+        extra: { kind: 'progress_photo_reminder' },
+      }],
+    });
+  } catch (err) {
+    console.error('Error programando recordatorio de fotos:', err);
+  }
+}
+
+export async function cancelProgressPhotoReminder() {
+  if (!isNative()) return;
+  try {
+    await LocalNotifications.cancel({ notifications: [{ id: PROGRESS_PHOTO_REMINDER_ID }] });
+  } catch (err) {
+    console.error('Error cancelando recordatorio de fotos:', err);
+  }
+}
+
 function buildClassDate(reservation) {
   if (!reservation?.time) return null;
 

@@ -10,6 +10,7 @@ import ProfileMenu from '../components/ProfileMenu';
 import ClientMealPlan from '../components/ClientMealPlan';
 import NutritionToday from '../components/NutritionToday';
 import CalorieTracker from '../components/CalorieTracker';
+import { RecipeGridSkeleton } from '../components/Skeleton';
 import { hasMealPlanAccess } from '../lib/plans';
 
 // Tipos de comida (mismo orden que en el panel de admin) para filtrar recetas
@@ -17,7 +18,7 @@ const MEAL_TIMES = ['Desayuno', 'Snack AM', 'Comida', 'Snack PM', 'Cena'];
 
 function Nutricion() {
   const navigate = useNavigate();
-  const { user, plan, recipes, classesRemaining, avatarUrl,
+  const { user, plan, recipes, recipesLoaded, classesRemaining, avatarUrl,
     favoriteRecipeIds, toggleRecipeFavorite, logFood } = useAuth();
   // Plan alimenticio personalizado solo para Fit y Premium; los demás ven recetas.
   const mealPlanAccess = hasMealPlanAccess(plan);
@@ -177,7 +178,9 @@ function Nutricion() {
               </div>
             )}
 
-            {meals.length === 0 ? (
+            {meals.length === 0 && !recipesLoaded ? (
+              <RecipeGridSkeleton />
+            ) : meals.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--on-surface-variant)', background: 'var(--app-surface-solid)', borderRadius: '20px', border: '1px solid var(--border-subtle, rgba(0,0,0,0.05))' }}>
                 <Utensils size={30} style={{ opacity: 0.3, marginBottom: '10px' }} />
                 <p style={{ margin: 0, fontWeight: 600 }}>Pronto habrá recetas aquí</p>

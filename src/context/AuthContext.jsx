@@ -36,6 +36,11 @@ export const AuthProvider = ({ children }) => {
   const [globalClasses, setGlobalClasses] = useState([]);
   const [recipes, setRecipes] = useState([]);
   const [cafeProducts, setCafeProducts] = useState([]);
+  // Flags de "ya hizo la 1ª carga" → para distinguir "cargando" de "vacío real"
+  // y mostrar skeletons hasta que el dataset trajo respuesta del servidor.
+  const [classesLoaded, setClassesLoaded] = useState(false);
+  const [recipesLoaded, setRecipesLoaded] = useState(false);
+  const [cafeProductsLoaded, setCafeProductsLoaded] = useState(false);
   const [myReservations, setMyReservations] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [coaches, setCoaches] = useState([]);
@@ -399,6 +404,8 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setClassesLoaded(true);
     }
   };
 
@@ -408,12 +415,14 @@ export const AuthProvider = ({ children }) => {
         .from('recipes')
         .select('*')
         .order('created_at', { ascending: true });
-        
+
       if (data) {
         setRecipes(data);
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setRecipesLoaded(true);
     }
   };
 
@@ -640,6 +649,8 @@ export const AuthProvider = ({ children }) => {
       if (!error && data) setCafeProducts(data);
     } catch (err) {
       console.error('Error cargando productos de cafetería:', err);
+    } finally {
+      setCafeProductsLoaded(true);
     }
   };
 
@@ -1353,6 +1364,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user, role, plan, membershipStatus, loading, profileName,
       classesRemaining, myReservations, globalClasses, recipes, allUsers,
+      classesLoaded, recipesLoaded, cafeProductsLoaded,
       avatarUrl, setAvatarUrl, customBadges, badgeConfigs,
       monthlyGoal, updateMonthlyGoal,
       favoriteRecipeIds, toggleRecipeFavorite,

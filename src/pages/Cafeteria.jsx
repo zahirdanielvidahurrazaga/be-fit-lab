@@ -10,6 +10,7 @@ import CafeProductSheet from '../components/CafeProductSheet';
 import CafeCartSheet from '../components/CafeCartSheet';
 import CafeOrderTracking from '../components/CafeOrderTracking';
 import CafeOrderHistory from '../components/CafeOrderHistory';
+import { CafeMenuSkeleton } from '../components/Skeleton';
 
 // Los cafés sembrados son PNG con fondo blanco (necesitan multiply para integrarse);
 // las fotos subidas desde Admin son JPEG y van con blend normal.
@@ -21,7 +22,7 @@ const cardItem = { hidden: { opacity: 0, y: 22, scale: 0.97 }, visible: { opacit
 
 function Cafeteria() {
   const navigate = useNavigate();
-  const { user, cafeProducts } = useAuth();
+  const { user, cafeProducts, cafeProductsLoaded } = useAuth();
   const isNative = Capacitor.isNativePlatform();
   const [activeWidgetIndex, setActiveWidgetIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -284,6 +285,9 @@ function Cafeteria() {
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: isNative ? '30px 20px' : '60px 40px' }}>
         
         <motion.div variants={containerVariants} initial="hidden" animate="visible">
+
+          {/* Skeleton de carga (menú aún no llega del servidor) */}
+          {!cafeProductsLoaded && (cafeProducts || []).length === 0 && <CafeMenuSkeleton />}
 
           {/* TABS por categoría (liquid glass) */}
           <motion.div variants={itemVariants} style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '34px' }}>
