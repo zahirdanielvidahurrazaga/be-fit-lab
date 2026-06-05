@@ -46,7 +46,7 @@ export default function ClientMealPlan({ userId }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Header del plan (real, estilo premium oscuro) */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-        style={{ padding: '24px', borderRadius: '28px', background: 'linear-gradient(135deg, #2D2928 0%, #4A4544 100%)', color: 'white', position: 'relative', overflow: 'hidden', boxShadow: '0 18px 38px rgba(0,0,0,0.15)' }}>
+        style={{ padding: '24px', borderRadius: '28px', background: 'linear-gradient(135deg, #3A2118 0%, #B06A4A 100%)', color: 'white', position: 'relative', overflow: 'hidden', boxShadow: '0 18px 38px rgba(58,33,24,0.28)' }}>
         <div style={{ position: 'absolute', top: '-24px', right: '-24px', width: '130px', height: '130px', background: 'rgba(255,145,77,0.18)', borderRadius: '50%', filter: 'blur(34px)' }} />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
