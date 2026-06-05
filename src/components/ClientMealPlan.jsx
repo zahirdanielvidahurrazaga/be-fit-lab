@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Salad, ChevronLeft, ChevronRight, Flame } from 'lucide-react';
+import { Salad, ChevronLeft, ChevronRight, Flame, CheckCircle2, Circle, Utensils } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 const PRIMARY = '#FF914D';
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -16,11 +17,25 @@ const buildCells = (year, month) => {
   return cells;
 };
 
-export default function ClientMealPlan({ userId }) {
+export default function ClientMealPlan({ userId, onOpenRecipe }) {
+  const { todayLog, logFood, removeFoodLog, recipes } = useAuth();
+  // Resolver la receta completa de una comida del plan (por recipe_id, o por título
+  // como fallback si el admin la escribió a mano). Permite abrir el detalle al tocar.
+  const resolveRecipe = (meal) => meal.recipe_id
+    ? (recipes || []).find(r => r.id === meal.recipe_id)
+    : (recipes || []).find(r => r.title === meal.title);
   const [plan, setPlan] = useState(null);
   const [cal, setCal] = useState(new Date());
   const [daysMap, setDaysMap] = useState({});
   const [selDay, setSelDay] = useState(ymd(new Date()));
+
+  // Marcar comidas del plan como consumidas — solo para el día de hoy.
+  const isPlanMealEaten = (meal) => todayLog.some(r => r.source === 'plan' && r.meal_time === meal.time && r.title === meal.title);
+  const togglePlanMeal = (meal) => {
+    const existing = todayLog.find(r => r.source === 'plan' && r.meal_time === meal.time && r.title === meal.title);
+    if (existing) removeFoodLog(existing.id);
+    else logFood({ title: meal.title, kcal: meal.kcal, source: 'plan', meal_time: meal.time });
+  };
 
   useEffect(() => {
     if (!userId) return;
@@ -95,16 +110,43 @@ export default function ClientMealPlan({ userId }) {
             {new Date(selDay + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
           </div>
           <AnimatePresence mode="wait">
-            <motion.div key={selDay} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <motion.div key={selDay} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {selMeals.length === 0
                 ? <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.86rem', margin: '4px 0' }}>{hasAnyMeals ? 'Sin comidas para este día.' : 'Aún no tienes comidas asignadas este mes.'}</p>
-                : selMeals.map((meal, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,145,77,0.06)', borderRadius: '12px', padding: '10px 12px' }}>
-                    <span style={{ fontSize: '0.62rem', fontWeight: 800, color: PRIMARY, textTransform: 'uppercase', background: 'rgba(255,145,77,0.14)', padding: '3px 8px', borderRadius: '7px', flexShrink: 0 }}>{meal.time}</span>
-                    <span style={{ flex: 1, fontWeight: 600, color: 'var(--on-surface)', fontSize: '0.9rem' }}>{meal.title}</span>
-                    {meal.kcal ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.74rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}><Flame size={12} color={PRIMARY} /> {meal.kcal}</span> : null}
-                  </div>
-                ))}
+                : selMeals.map((meal, i) => {
+                  const selIsToday = selDay === ymd(today);
+                  const eaten = selIsToday && isPlanMealEaten(meal);
+                  const recipe = resolveRecipe(meal);
+                  const openable = !!recipe && !!onOpenRecipe;
+                  return (
+                  <motion.div key={i} whileTap={openable ? { scale: 0.985 } : undefined}
+                    onClick={openable ? () => onOpenRecipe(recipe) : undefined}
+                    style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--surface-low)', border: `1px solid ${eaten ? 'rgba(46,160,67,0.25)' : 'var(--border-subtle)'}`, borderRadius: '16px', padding: '10px', transition: 'border-color 0.2s', cursor: openable ? 'pointer' : 'default' }}>
+                    {/* Miniatura de la receta (o placeholder) */}
+                    <div style={{ width: '52px', height: '52px', borderRadius: '13px', overflow: 'hidden', flexShrink: 0, background: 'rgba(255,145,77,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {recipe?.img
+                        ? <img src={recipe.img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <Utensils size={20} color={PRIMARY} />}
+                    </div>
+                    {/* Centro: tipo de comida + título + kcal */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.6rem', fontWeight: 800, color: PRIMARY, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>{meal.time}</div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--on-surface)', lineHeight: 1.2, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meal.title}</span>
+                        {openable && <ChevronRight size={14} style={{ color: 'var(--on-surface-muted)', flexShrink: 0 }} />}
+                      </div>
+                      {meal.kcal ? <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginTop: '3px' }}><Flame size={11} color={PRIMARY} /> {meal.kcal} kcal</div> : null}
+                    </div>
+                    {/* Check de consumido (solo hoy) */}
+                    {selIsToday && (
+                      <button onClick={(e) => { e.stopPropagation(); togglePlanMeal(meal); }} aria-label={eaten ? 'Marcar como no consumida' : 'Marcar como consumida'}
+                        style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'flex', flexShrink: 0, color: eaten ? '#2EA043' : 'var(--on-surface-muted)' }}>
+                        {eaten ? <CheckCircle2 size={24} /> : <Circle size={24} />}
+                      </button>
+                    )}
+                  </motion.div>
+                  );
+                })}
             </motion.div>
           </AnimatePresence>
         </div>

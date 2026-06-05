@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
 import { addClassToCalendar } from '../hooks/useCalendar';
+import { classDateTime } from '../hooks/useLocalNotifications';
 import { supabase } from '../lib/supabase';
 import { ScheduleCalendar } from '../components/ScheduleCalendar';
 import ProfileMenu from '../components/ProfileMenu';
@@ -47,9 +48,15 @@ function Agenda() {
     }
   };
 
-  const handleReserveClick = (classObj) => {
+  const handleReserveClick = (classObj, dateStr) => {
     if (!user) {
       navigate(isNative ? '/login' : '/planes');
+      return;
+    }
+    // Bloqueo de seguridad: no reservar una clase cuya fecha/hora ya pasó.
+    const dt = classDateTime(dateStr, classObj?.time);
+    if (dt && dt < new Date()) {
+      alert("Esta clase ya terminó.");
       return;
     }
     if (classesRemaining <= 0) {
@@ -152,10 +159,11 @@ function Agenda() {
 
           {/* Calendario Estilo Apple */}
           <section style={{ marginBottom: '10px' }}>
-            <ScheduleCalendar 
+            <ScheduleCalendar
               globalClasses={globalClasses}
               coaches={coaches}
               badgeConfigs={badgeConfigs}
+              myReservations={myReservations}
               onReserve={handleReserveClick}
             />
           </section>

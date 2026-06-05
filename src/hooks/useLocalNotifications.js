@@ -11,14 +11,29 @@ export async function requestNotificationPermission() {
 }
 
 // Calcula la próxima fecha concreta en que ocurre una clase
+// Parsea "07:00" / "7:00 AM" / "7 PM" → { hour, min } en formato 24h.
+export function parseTimeStr(timeStr) {
+  const [rawHour, rawMin] = String(timeStr || '').replace(/AM|PM/gi, '').trim().split(':');
+  let hour = parseInt(rawHour, 10) || 0;
+  const min = parseInt(rawMin || '0', 10) || 0;
+  if (/PM/i.test(timeStr) && hour !== 12) hour += 12;
+  if (/AM/i.test(timeStr) && hour === 12) hour = 0;
+  return { hour, min };
+}
+
+// Fecha+hora concreta de una clase en una fecha dada ('YYYY-MM-DD' + timeStr).
+export function classDateTime(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return null;
+  const { hour, min } = parseTimeStr(timeStr);
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setHours(hour, min, 0, 0);
+  return d;
+}
+
 export function getNextClassOccurrence(dayOfWeek, timeStr) {
   const now = new Date();
 
-  const [rawHour, rawMin] = timeStr.replace(/AM|PM/gi, '').trim().split(':');
-  let hour = parseInt(rawHour, 10);
-  const min = parseInt(rawMin || '0', 10);
-  if (/PM/i.test(timeStr) && hour !== 12) hour += 12;
-  if (/AM/i.test(timeStr) && hour === 12) hour = 0;
+  const { hour, min } = parseTimeStr(timeStr);
 
   const candidate = new Date(now);
   const daysUntil = (dayOfWeek - now.getDay() + 7) % 7;

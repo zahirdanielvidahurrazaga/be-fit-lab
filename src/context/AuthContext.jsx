@@ -44,6 +44,12 @@ export const AuthProvider = ({ children }) => {
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [monthlyGoal, setMonthlyGoal] = useState(0); // meta de clases/mes (users.target_monthly_classes)
 
+  // Nutrición — favoritos persistentes + tracker de calorías consumidas (food_log)
+  const [favoriteRecipeIds, setFavoriteRecipeIds] = useState(() => new Set()); // recipe_favorites
+  const [todayLog, setTodayLog] = useState([]);              // food_log del día de hoy
+  const [selfCalorieGoal, setSelfCalorieGoal] = useState(null); // users.calorie_goal (meta propia)
+  const [planCalories, setPlanCalories] = useState(null);       // nutrition_plans.calories (objetivo Fit/Premium)
+
   // Centro de notificaciones in-app (tabla notification_logs en tiempo real)
   const [notifications, setNotifications] = useState([]);
   const unreadCount = notifications.filter(n => !n.read_at).length;
@@ -52,6 +58,9 @@ export const AuthProvider = ({ children }) => {
 
   // Flag para evitar que onAuthStateChange sobreescriba un plan recién activado
   const planJustActivatedRef = useRef(false);
+  // Garantiza que la recarga de datos compartidos (clases, recetas, cafetería, etc.)
+  // corra UNA vez por login, ya con la auth lista (evita el "no cargó hasta reabrir").
+  const sharedLoadedForRef = useRef(null);
 
   // Función para limpiar sesión fantasma por completo
   const forceCleanSession = async () => {
@@ -311,6 +320,7 @@ export const AuthProvider = ({ children }) => {
         setPlan(null);
         setMembershipStatus('INACTIVE');
         setUser(null);
+        sharedLoadedForRef.current = null;
         setGlobalClasses([]);
         setRecipes([]);
         setMyReservations([]);
@@ -750,7 +760,7 @@ export const AuthProvider = ({ children }) => {
       // 1. Obtener rol y clases restantes
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('role, classes_remaining, membership_plan, membership_status, full_name, custom_badges, avatar_url, target_monthly_classes')
+        .select('role, classes_remaining, membership_plan, membership_status, full_name, custom_badges, avatar_url, target_monthly_classes, calorie_goal')
         .eq('id', currentUser.id)
         .single();
         
@@ -776,6 +786,7 @@ export const AuthProvider = ({ children }) => {
         setMembershipStatus(userData.membership_status || 'INACTIVE');
         setClassesRemaining(userData.classes_remaining || 0);
         setMonthlyGoal(userData.target_monthly_classes || 0);
+        setSelfCalorieGoal(userData.calorie_goal ?? null);
         setProfileName(userData.full_name || '');
         setCustomBadges(userData.custom_badges || []);
 
@@ -798,6 +809,17 @@ export const AuthProvider = ({ children }) => {
         setRole('CLIENT');
         setPlan('none');
         setMembershipStatus('INACTIVE');
+      }
+
+      // Cargar favoritos + diario + objetivo aquí garantiza auth lista (el query a
+      // users ya pasó RLS) → evita que queden vacíos por carrera en arranque nativo.
+      loadNutritionTracking(currentUser.id);
+      // Recargar TODOS los datos compartidos (clases, recetas, cafetería, etc.) una
+      // sola vez por login, ya con la auth lista. Soluciona de forma general el
+      // "no cargó hasta reabrir" para todo lo que depende de realtime / RLS.
+      if (sharedLoadedForRef.current !== currentUser.id) {
+        sharedLoadedForRef.current = currentUser.id;
+        loadSharedData();
       }
 
       // 2. Obtener mis reservas
@@ -829,6 +851,121 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Nutrición: favoritos persistentes + diario de calorías consumidas (food_log)
+  // ──────────────────────────────────────────────────────────────────────────
+  const localToday = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  // ── SOLUCIÓN GENERAL al "no cargó hasta reabrir" ──────────────────────────
+  // Recarga TODOS los datos compartidos/realtime con la auth ya lista. El fetch
+  // del montaje puede correr sin sesión (varias tablas tienen RLS → vuelven
+  // vacías) y el socket de realtime tarda/falla en conectar en arranque nativo,
+  // así que no es fiable como única fuente. Esto se dispara una vez por login
+  // desde fetchUserData (después de que el query a `users` ya pasó RLS).
+  const loadSharedData = () => {
+    fetchGlobalClasses();
+    fetchRecipes();
+    fetchCafeProducts();
+    fetchBadgeConfigs();
+    fetchCoaches();
+    fetchCategories();
+    fetchTemplates();
+  };
+
+  // Carga favoritos + registro del día + objetivo del plan. Se llama desde
+  // fetchUserData (auth ya garantizada por el query previo a users) Y desde el
+  // efecto de user.id, para que NUNCA se queden vacíos por una carrera en el
+  // arranque nativo (la sesión se restaura async y un query temprano daba RLS vacío).
+  const loadNutritionTracking = async (uid) => {
+    if (!uid) return;
+    const [{ data: favs }, { data: log }, { data: np }] = await Promise.all([
+      supabase.from('recipe_favorites').select('recipe_id').eq('user_id', uid),
+      supabase.from('food_log').select('*').eq('user_id', uid).eq('log_date', localToday()).order('created_at', { ascending: true }),
+      supabase.from('nutrition_plans').select('calories').eq('user_id', uid).eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    ]);
+    setFavoriteRecipeIds(new Set((favs || []).map(f => f.recipe_id)));
+    setTodayLog(log || []);
+    setPlanCalories(np?.calories ?? null);
+  };
+
+  useEffect(() => {
+    const uid = user?.id;
+    if (!uid) {
+      setFavoriteRecipeIds(new Set());
+      setTodayLog([]);
+      setPlanCalories(null);
+      return;
+    }
+    loadNutritionTracking(uid);
+  }, [user?.id]);
+
+  // Marca/desmarca una receta como favorita (optimista + persistente).
+  const toggleRecipeFavorite = async (recipeId) => {
+    if (!user?.id || !recipeId) return;
+    const isFav = favoriteRecipeIds.has(recipeId);
+    setFavoriteRecipeIds(prev => {
+      const next = new Set(prev);
+      if (isFav) next.delete(recipeId); else next.add(recipeId);
+      return next;
+    });
+    try {
+      if (isFav) {
+        await supabase.from('recipe_favorites').delete().eq('user_id', user.id).eq('recipe_id', recipeId);
+      } else {
+        await supabase.from('recipe_favorites').insert({ user_id: user.id, recipe_id: recipeId });
+      }
+    } catch (e) {
+      // revertir si falla la persistencia
+      setFavoriteRecipeIds(prev => {
+        const next = new Set(prev);
+        if (isFav) next.add(recipeId); else next.delete(recipeId);
+        return next;
+      });
+    }
+  };
+
+  // Registra una comida consumida hoy en el diario (food_log). Devuelve la fila creada.
+  const logFood = async ({ title, kcal = 0, source = 'recipe', recipe_id = null, meal_time = null }) => {
+    if (!user?.id || !title) return null;
+    const row = {
+      user_id: user.id,
+      log_date: localToday(),
+      title,
+      kcal: parseInt(kcal, 10) || 0,
+      source,
+      recipe_id,
+      meal_time,
+    };
+    const { data, error } = await supabase.from('food_log').insert(row).select().single();
+    if (!error && data) {
+      setTodayLog(prev => [...prev, data]);
+      return data;
+    }
+    return null;
+  };
+
+  // Quita un ítem del diario de hoy.
+  const removeFoodLog = async (id) => {
+    if (!id) return;
+    setTodayLog(prev => prev.filter(r => r.id !== id));
+    try { await supabase.from('food_log').delete().eq('id', id); } catch (e) {}
+  };
+
+  // Fija la meta de calorías propia (clientas sin plan personalizado).
+  const updateCalorieGoal = async (n) => {
+    if (!user?.id) return;
+    const val = parseInt(n, 10);
+    const goal = Number.isFinite(val) && val > 0 ? val : null;
+    setSelfCalorieGoal(goal);
+    try { await supabase.from('users').update({ calorie_goal: goal }).eq('id', user.id); } catch (e) {}
+  };
+
+  const todayConsumed = todayLog.reduce((s, r) => s + (r.kcal || 0), 0);
+  const calorieGoal = planCalories ?? selfCalorieGoal ?? null; // objetivo efectivo del día
 
   const bookClass = async (classObj) => {
     if (!user) return false;
@@ -1183,21 +1320,33 @@ export const AuthProvider = ({ children }) => {
   }, [user, role]);
 
   const logout = async () => {
-    if (user) unregisterPushToken(user.id);
+    // 1) Limpiar el estado local PRIMERO. Así la UI redirige al login de inmediato
+    //    aunque cualquier paso posterior (push token, signOut) falle o se cuelgue.
+    sharedLoadedForRef.current = null;
     setUser(null);
     setRole(null);
     setPlan(null);
+    setMembershipStatus('INACTIVE');
+    setClassesRemaining(0);
     setGlobalClasses([]);
     setMyReservations([]);
     setAllUsers([]);
     setBadgeConfigs([]);
     setNotifications([]);
-    // Limpiar flags de sesión
     localStorage.removeItem('befit_remember_me');
     sessionStorage.removeItem('befit_session_active');
-    // Forzar light mode al cerrar sesión
     document.documentElement.setAttribute('data-theme', 'light');
-    await supabase.auth.signOut();
+
+    // 2) Desregistrar push (best-effort; nunca debe romper el logout).
+    try { if (user) unregisterPushToken(user.id); } catch (e) {}
+
+    // 3) Cerrar sesión SIN red (`scope: 'local'`): solo borra la sesión guardada,
+    //    instantáneo y sin el cuelgue de Web Locks/red que dejaba la sesión viva
+    //    (de ahí el "no me cierra sesión hasta refrescar"). Best-effort.
+    try { await supabase.auth.signOut({ scope: 'local' }); } catch (e) {}
+
+    // 4) Respaldo: borrar a mano cualquier token persistido por si signOut no alcanzó.
+    try { Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-')) localStorage.removeItem(k); }); } catch (e) {}
   };
 
   return (
@@ -1206,6 +1355,8 @@ export const AuthProvider = ({ children }) => {
       classesRemaining, myReservations, globalClasses, recipes, allUsers,
       avatarUrl, setAvatarUrl, customBadges, badgeConfigs,
       monthlyGoal, updateMonthlyGoal,
+      favoriteRecipeIds, toggleRecipeFavorite,
+      todayLog, todayConsumed, calorieGoal, planCalories, logFood, removeFoodLog, updateCalorieGoal,
       login, logout, forceCleanSession, fetchAllUsers, refreshUserData,
       bookClass, cancelClass, checkInClient, updateClassSpots, updateReservationCalendarId,
       activatePlan, addClass, deleteClass, addRecipe, deleteRecipe,

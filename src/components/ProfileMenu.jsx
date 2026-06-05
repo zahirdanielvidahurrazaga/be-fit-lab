@@ -150,7 +150,7 @@ function ProfileMenu() {
 
               {/* Cerrar sesión */}
               <button
-                onClick={() => { setOpen(false); logout(); }}
+                onClick={() => { setOpen(false); logout(); navigate('/login', { replace: true }); }}
                 style={{
                   width: '100%', border: 'none', background: 'transparent',
                   display: 'flex', alignItems: 'center', gap: '12px',

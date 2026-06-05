@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Lock, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { resolveCatColor, categoryLabel } from '../lib/categories';
+import { classDateTime } from '../hooks/useLocalNotifications';
 
 // Leyenda de categorías presentes (barra glass bajo el calendario)
 function CategoryLegendBar({ globalClasses }) {
@@ -25,7 +26,8 @@ function CategoryLegendBar({ globalClasses }) {
   );
 }
 
-export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, onReserve }) {
+export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReservations, onReserve }) {
+  const reservedIds = new Set((myReservations || []).map(r => r.classId));
   const todayStr = new Date().toISOString().split('T')[0];
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
   const currentMonth = currentMonthDate.getMonth();
@@ -181,17 +183,24 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, onReser
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             {(() => {
               const classesToday = getClassesForDate(selectedDateStr);
+              const now = new Date();
               return classesToday.length > 0 ? (
-                classesToday.map(c => (
-                  <ClassItem 
+                classesToday.map(c => {
+                  const dt = classDateTime(selectedDateStr, c.time);
+                  const isPast = dt ? dt < now : false;
+                  return (
+                  <ClassItem
                     key={c.id}
                     classData={c}
-                    full={c.spots === 0} 
-                    onReserve={() => onReserve(c)}
+                    full={c.spots === 0}
+                    isPast={isPast}
+                    isReserved={reservedIds.has(c.id)}
+                    onReserve={() => onReserve(c, selectedDateStr)}
                     coaches={coaches}
                     badgeConfigs={badgeConfigs}
                   />
-                ))
+                  );
+                })
               ) : (
                 <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.9rem', fontStyle: 'italic', background: 'var(--surface-low)', borderRadius: '16px', border: '1px solid var(--border-subtle)' }}>
                   No hay clases programadas para este día.
@@ -207,18 +216,19 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, onReser
   );
 }
 
-export function ClassItem({ classData, full, onReserve, coaches, badgeConfigs }) {
+export function ClassItem({ classData, full, isPast, isReserved, onReserve, coaches, badgeConfigs }) {
   const { time, title, instructor, spots, category, category_color, coach_id } = classData;
 
   const bgColor = resolveCatColor(category, category_color);
+  const disabled = full || isPast || isReserved; // no se puede (re)reservar
 
   return (
-    <motion.div 
+    <motion.div
       className="tour-class-card"
-      whileTap={{ scale: 0.98 }}
-      onClick={() => { if(!full && onReserve) onReserve(); }}
-      style={{ 
-        marginBottom: '16px', cursor: full ? 'default' : 'pointer'
+      whileTap={disabled ? undefined : { scale: 0.98 }}
+      onClick={() => { if(!disabled && onReserve) onReserve(); }}
+      style={{
+        marginBottom: '16px', cursor: disabled ? 'default' : 'pointer'
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', paddingLeft: '5px' }}>
@@ -231,7 +241,7 @@ export function ClassItem({ classData, full, onReserve, coaches, badgeConfigs })
         padding: '20px', display: 'flex', alignItems: 'center', gap: '20px',
         background: bgColor, borderRadius: '28px', boxShadow: 'var(--card-shadow)', 
         border: '1px solid var(--border-subtle)', position: 'relative', overflow: 'hidden',
-        opacity: full ? 0.6 : 1, transition: 'all 0.3s ease'
+        opacity: isPast ? 0.5 : full ? 0.6 : 1, transition: 'all 0.3s ease'
       }}>
         <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', background: '#FCF9F5', flexShrink: 0, border: '2px solid white', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
            {(() => {
@@ -265,20 +275,20 @@ export function ClassItem({ classData, full, onReserve, coaches, badgeConfigs })
              })()}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: full ? '#FF4D4D' : '#22C55E' }}></div>
-             <span style={{ fontSize: '0.75rem', color: '#8a7266', fontWeight: 700 }}>
-                {full ? 'Clase llena' : `${spots} lugares disponibles`}
+             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isPast ? '#8a7266' : isReserved ? '#16A34A' : full ? '#FF4D4D' : '#22C55E' }}></div>
+             <span style={{ fontSize: '0.75rem', color: isReserved ? '#16A34A' : '#8a7266', fontWeight: 700 }}>
+                {isPast ? 'Ya terminó' : isReserved ? 'Ya reservada' : full ? 'Clase llena' : `${spots} lugares disponibles`}
              </span>
           </div>
         </div>
 
-        <div style={{ 
-          width: '40px', height: '40px', borderRadius: '15px', 
-          background: full ? 'rgba(0,0,0,0.03)' : 'rgba(255,139,66,0.1)', 
+        <div style={{
+          width: '40px', height: '40px', borderRadius: '15px',
+          background: isReserved ? 'rgba(22,163,74,0.12)' : disabled ? 'rgba(0,0,0,0.03)' : 'rgba(255,139,66,0.1)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: full ? '#8a7266' : 'var(--primary)'
+          color: isReserved ? '#16A34A' : disabled ? '#8a7266' : 'var(--primary)'
         }}>
-          <ChevronRight size={20} />
+          {isPast ? <Lock size={17} /> : isReserved ? <Check size={20} /> : <ChevronRight size={20} />}
         </div>
       </div>
     </motion.div>

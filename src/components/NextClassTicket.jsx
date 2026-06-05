@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
-import { QrCode, CalendarPlus, Check } from 'lucide-react';
+import { QrCode, CalendarPlus, Check, Sparkles } from 'lucide-react';
 import { addClassToCalendar } from '../hooks/useCalendar';
 import { supabase } from '../lib/supabase';
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChefHat, Flame, Clock, User, Calendar, Utensils, TrendingUp, CheckCircle2, Droplets, Play, QrCode, ChevronRight, Heart, Info, Scale, Wallet, X } from 'lucide-react';
+import { ChefHat, Flame, Clock, User, Calendar, Utensils, TrendingUp, CheckCircle2, Droplets, Play, QrCode, ChevronRight, Heart, Info, Scale, Wallet, X, Plus, Check } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -9,6 +9,7 @@ import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks
 import ProfileMenu from '../components/ProfileMenu';
 import ClientMealPlan from '../components/ClientMealPlan';
 import NutritionToday from '../components/NutritionToday';
+import CalorieTracker from '../components/CalorieTracker';
 import { hasMealPlanAccess } from '../lib/plans';
 
 // Tipos de comida (mismo orden que en el panel de admin) para filtrar recetas
@@ -16,14 +17,18 @@ const MEAL_TIMES = ['Desayuno', 'Snack AM', 'Comida', 'Snack PM', 'Cena'];
 
 function Nutricion() {
   const navigate = useNavigate();
-  const { user, plan, recipes, classesRemaining, avatarUrl } = useAuth();
+  const { user, plan, recipes, classesRemaining, avatarUrl,
+    favoriteRecipeIds, toggleRecipeFavorite, logFood } = useAuth();
   // Plan alimenticio personalizado solo para Fit y Premium; los demás ven recetas.
   const mealPlanAccess = hasMealPlanAccess(plan);
   const [showRecipe, setShowRecipe] = useState(false);
   const [recipeData, setRecipeData] = useState(null);
+  const [recipeLogged, setRecipeLogged] = useState(false);
   const [showQR, setShowQR] = useState(false);
-  const [favorites, setFavorites] = useState([]);
   const [activeCat, setActiveCat] = useState('Todas');
+  // Fit/Premium: el recetario completo se oculta por defecto (su foco es su plan);
+  // se puede abrir con "Ver recetario completo". Las demás clientas siempre lo ven.
+  const [showRecipeBook, setShowRecipeBook] = useState(false);
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletAdded, setWalletAdded] = useState(() => !!localStorage.getItem('befit_wallet_added'));
@@ -56,31 +61,47 @@ function Nutricion() {
 
   const handleMealClick = (meal) => {
     setRecipeData(meal);
+    setRecipeLogged(false);
     setShowRecipe(true);
   };
 
-  const toggleFavorite = (id, e) => {
-    e.stopPropagation();
-    setFavorites(prev => 
-      prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
-    );
+  const handleLogFromDrawer = async () => {
+    if (!recipeData) return;
+    const row = await handleLogMeal(recipeData);
+    if (row) { setRecipeLogged(true); setTimeout(() => setRecipeLogged(false), 1800); }
   };
 
-  // Recetas globales + filtro por categoría + receta destacada
+  const handleFavorite = (id, e) => {
+    e.stopPropagation();
+    toggleRecipeFavorite(id);
+  };
+
+  // Registrar una receta como consumida hoy (diario de calorías)
+  const handleLogMeal = (meal, e) => {
+    if (e) e.stopPropagation();
+    return logFood({ title: meal.title, kcal: meal.kcal, source: 'recipe', recipe_id: meal.id, meal_time: meal.time });
+  };
+
+  // Recetas globales + filtro por categoría / favoritas + receta destacada
   const meals = recipes || [];
+  const hasFavorites = meals.some(m => favoriteRecipeIds.has(m.id));
   const categories = MEAL_TIMES.filter(t => meals.some(m => m.time === t));
-  const filtered = activeCat === 'Todas' ? meals : meals.filter(m => m.time === activeCat);
+  const filtered = activeCat === 'Todas'
+    ? meals
+    : activeCat === 'Favoritas'
+      ? meals.filter(m => favoriteRecipeIds.has(m.id))
+      : meals.filter(m => m.time === activeCat);
   const featured = activeCat === 'Todas' ? filtered[0] : null;
   const listMeals = featured ? filtered.slice(1) : filtered;
 
   return (
     <div className="mobile-app-container" style={{ background: 'var(--app-bg)' }}>
       {/* HEADER UNIFICADO */}
-      <header className="ios-header" style={{ paddingBottom: '5px', background: 'transparent' }}>
+      <header className="ios-header" style={{ paddingBottom: '16px', background: 'transparent' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
           <div>
-            <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>Plan Nutricional</p>
-            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Healthy Era</h1>
+            <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 3px', fontWeight: 600 }}>Plan Nutricional</p>
+            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--on-surface)' }}>Healthy Era</h1>
           </div>
           <ProfileMenu />
         </div>
@@ -88,46 +109,55 @@ function Nutricion() {
 
       <motion.main className="dashboard-main" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }}>
         <div className="dashboard-sidebar">
-          {/* Plan nutricional real + calendario mensual de comidas (solo Fit/Premium) */}
-          {mealPlanAccess ? (
-            <ClientMealPlan userId={user?.id} />
-          ) : (
-            <div style={{ padding: '22px', borderRadius: '24px', background: 'linear-gradient(135deg, #3A2118 0%, #B06A4A 100%)', color: '#fff', position: 'relative', overflow: 'hidden', boxShadow: '0 18px 38px rgba(58,33,24,0.28)' }}>
-              <div style={{ position: 'absolute', top: '-24px', right: '-24px', width: '130px', height: '130px', background: 'rgba(255,145,77,0.18)', borderRadius: '50%', filter: 'blur(34px)' }} />
-              <div style={{ position: 'relative', zIndex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                  <ChefHat size={16} color="var(--primary)" />
-                  <span style={{ fontSize: '0.64rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Plan alimenticio personalizado</span>
-                </div>
-                <h2 style={{ fontSize: '1.4rem', color: '#fff', margin: '0 0 8px', fontFamily: 'var(--font-display)', lineHeight: 1.15 }}>Disponible en Fit y Premium</h2>
-                <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.72)', lineHeight: 1.5, margin: '0 0 16px' }}>
-                  Mejora tu membresía para que tu coach te diseñe un plan a la medida, mes con mes. Mientras tanto, disfruta nuestras recetas saludables 👇
-                </p>
-                <button onClick={() => navigate('/planes')} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '12px 18px', borderRadius: '14px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer', boxShadow: '0 10px 24px rgba(255,145,77,0.35)' }}>
-                  Ver planes <ChevronRight size={17} />
-                </button>
-              </div>
-            </div>
+          {/* Plan nutricional real + calendario mensual de comidas (solo Fit/Premium).
+              El anuncio de upgrade para quienes NO tienen plan se movió al fondo,
+              arriba de la información nutricional. */}
+          {mealPlanAccess && (
+            <ClientMealPlan userId={user?.id} onOpenRecipe={handleMealClick} />
           )}
 
-          {/* HIDRATACIÓN + comidas de hoy (las comidas solo si tiene plan) */}
-          <NutritionToday userId={user?.id} showMeals={mealPlanAccess} />
+          {/* TRACKER DE CALORÍAS CONSUMIDAS — para todas las clientas */}
+          <CalorieTracker />
+
+          {/* HIDRATACIÓN (rastreador de agua) */}
+          <NutritionToday userId={user?.id} showMeals={false} />
         </div>
 
-        <div className="dashboard-content" style={{ marginTop: '5px' }}>
+        <div className="dashboard-content">
+          {/* Fit/Premium: recetario oculto por defecto (su foco es su plan del día) */}
+          {mealPlanAccess && !showRecipeBook ? (
+            <button onClick={() => setShowRecipeBook(true)} style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: '14px', textAlign: 'left',
+              padding: '16px 18px', borderRadius: '20px', border: '1px solid var(--border-subtle)',
+              background: 'var(--app-surface-solid)', boxShadow: 'var(--card-shadow)', cursor: 'pointer'
+            }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '13px', background: 'rgba(255,145,77,0.12)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <ChefHat size={20} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--on-surface)', fontFamily: 'var(--font-display)' }}>Ver recetario completo</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>Explora nuestras {meals.length} recetas saludables</div>
+              </div>
+              <ChevronRight size={20} color="var(--on-surface-variant)" />
+            </button>
+          ) : (
           <section>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-               <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--on-surface)', fontFamily: 'var(--font-display)' }}>Recetas saludables</h2>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,145,77,0.1)', padding: '6px 12px', borderRadius: '99px' }}>
-                 <Utensils size={12} color="var(--primary)" />
-                 <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 800 }}>{meals.length}</span>
-               </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+               <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--on-surface)', fontFamily: 'var(--font-display)' }}>Recetas saludables</h2>
+               {mealPlanAccess ? (
+                 <button onClick={() => setShowRecipeBook(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', border: 'none', background: 'transparent', color: 'var(--on-surface-variant)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>Ocultar</button>
+               ) : (
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,145,77,0.1)', padding: '6px 12px', borderRadius: '99px' }}>
+                   <Utensils size={12} color="var(--primary)" />
+                   <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 800 }}>{meals.length}</span>
+                 </div>
+               )}
             </div>
 
-            {/* Chips de filtro por tipo de comida */}
-            {categories.length > 0 && (
-              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '16px', scrollbarWidth: 'none' }}>
-                {['Todas', ...categories].map(cat => {
+            {/* Chips de filtro por tipo de comida (+ Favoritas) */}
+            {(categories.length > 0 || hasFavorites) && (
+              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '20px', scrollbarWidth: 'none' }}>
+                {['Todas', ...(hasFavorites ? ['Favoritas'] : []), ...categories].map(cat => {
                   const on = cat === activeCat;
                   return (
                     <button key={cat} onClick={() => setActiveCat(cat)} style={{
@@ -137,7 +167,11 @@ function Nutricion() {
                       color: on ? '#fff' : 'var(--on-surface-variant)',
                       fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
                       boxShadow: on ? '0 6px 16px rgba(255,139,66,0.3)' : 'none', transition: 'all 0.2s'
-                    }}>{cat}</button>
+                    }}>
+                      {cat === 'Favoritas'
+                        ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Heart size={12} fill={on ? '#fff' : 'transparent'} /> Favoritas</span>
+                        : cat}
+                    </button>
                   );
                 })}
               </div>
@@ -148,16 +182,24 @@ function Nutricion() {
                 <Utensils size={30} style={{ opacity: 0.3, marginBottom: '10px' }} />
                 <p style={{ margin: 0, fontWeight: 600 }}>Pronto habrá recetas aquí</p>
               </div>
+            ) : filtered.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '34px 20px', color: 'var(--on-surface-variant)', background: 'var(--app-surface-solid)', borderRadius: '20px', border: '1px solid var(--border-subtle, rgba(0,0,0,0.05))' }}>
+                <Heart size={28} style={{ opacity: 0.3, marginBottom: '10px' }} />
+                <p style={{ margin: 0, fontWeight: 600 }}>
+                  {activeCat === 'Favoritas' ? 'Aún no tienes recetas favoritas' : 'No hay recetas en este filtro'}
+                </p>
+              </div>
             ) : (
               <>
                 {featured && <FeaturedRecipe meal={featured} onClick={() => handleMealClick(featured)} />}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: featured ? '16px' : 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', marginTop: featured ? '18px' : 0 }}>
                   {listMeals.map(meal => (
                     <MealItem
                       key={meal.id}
                       meal={meal}
-                      isFavorite={favorites.includes(meal.id)}
-                      onFavorite={(e) => toggleFavorite(meal.id, e)}
+                      isFavorite={favoriteRecipeIds.has(meal.id)}
+                      onFavorite={(e) => handleFavorite(meal.id, e)}
+                      onLog={(e) => handleLogMeal(meal, e)}
                       onClick={() => handleMealClick(meal)}
                     />
                   ))}
@@ -165,6 +207,7 @@ function Nutricion() {
               </>
             )}
           </section>
+          )}
         </div>
       </motion.main>
 
@@ -183,12 +226,15 @@ function Nutricion() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="modal-drawer" 
-              onClick={(e) => e.stopPropagation()} 
-              style={{ paddingBottom: '40px', background: 'var(--surface)', overflowY: 'auto', maxHeight: '92vh', WebkitOverflowScrolling: 'touch' }}
+              className="modal-drawer"
+              onClick={(e) => e.stopPropagation()}
+              style={{ padding: 0, background: 'var(--surface)', maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
             >
-              <div className="sheet-handle"></div>
-              
+              <div className="sheet-handle" style={{ flexShrink: 0, margin: '12px auto 4px' }}></div>
+
+              {/* Zona scrollable (patrón robusto iOS: contenedor flex column + interior flex:1 con scroll) */}
+              <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', padding: '8px 20px calc(env(safe-area-inset-bottom, 0px) + 40px)' }}>
+
               <div style={{ height: '240px', borderRadius: '28px', overflow: 'hidden', marginBottom: '24px', position: 'relative', boxShadow: '0 15px 35px rgba(0,0,0,0.1)' }}>
                 <img src={recipeData?.img} alt="Recipe" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 <div style={{
@@ -203,22 +249,26 @@ function Nutricion() {
                 </button>
               </div>
 
-              <div style={{ padding: '0 10px' }}>
-                <h2 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', marginBottom: '12px', lineHeight: 1.1 }}>{recipeData?.title}</h2>
-                
-                <div style={{ display: 'flex', gap: '15px', marginBottom: '25px' }}>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--on-surface-muted)' }}>
-                     <Clock size={16} /> {recipeData?.time_prep}
-                   </div>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--on-surface-muted)' }}>
-                     <Flame size={16} /> {recipeData?.kcal} kcal
-                   </div>
+              <div style={{ padding: '0 4px' }}>
+                <h2 style={{ fontSize: '1.9rem', fontFamily: 'var(--font-display)', margin: '0 0 14px', lineHeight: 1.12, color: 'var(--on-surface)' }}>{recipeData?.title}</h2>
+
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '26px', flexWrap: 'wrap' }}>
+                   {recipeData?.time_prep && (
+                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--fill-subtle)', padding: '8px 14px', borderRadius: '99px', fontSize: '0.8rem', fontWeight: 700, color: 'var(--on-surface-variant)' }}>
+                       <Clock size={14} /> {recipeData.time_prep}
+                     </span>
+                   )}
+                   {recipeData?.kcal && (
+                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,145,77,0.1)', padding: '8px 14px', borderRadius: '99px', fontSize: '0.8rem', fontWeight: 800, color: 'var(--primary)' }}>
+                       <Flame size={14} /> {recipeData.kcal} kcal
+                     </span>
+                   )}
                 </div>
 
                 <div style={{ background: 'var(--app-surface-solid)', borderRadius: '24px', padding: '24px', boxShadow: 'var(--card-shadow)', marginBottom: '24px', border: '1px solid var(--border-subtle)' }}>
                   <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '16px', color: 'var(--on-surface)' }}>Ingredientes</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
-                    {recipeData?.ingredients.map((ing, i) => (
+                    {(recipeData?.ingredients || []).map((ing, i) => (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: 'var(--surface-low)', borderRadius: '14px', fontSize: '0.9rem', color: 'var(--on-surface)', fontWeight: 500 }}>
                         <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary)' }}></div>
                         {ing}
@@ -228,9 +278,9 @@ function Nutricion() {
                 </div>
 
                 <div style={{ marginBottom: '30px' }}>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '16px', color: 'var(--black)' }}>Preparación</h4>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '16px', color: 'var(--on-surface)' }}>Preparación</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {recipeData?.steps.map((step, i) => (
+                    {(recipeData?.steps || []).map((step, i) => (
                       <div key={i} style={{ display: 'flex', gap: '15px' }}>
                         <div style={{ 
                           width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary)', 
@@ -245,18 +295,53 @@ function Nutricion() {
                   </div>
                 </div>
 
-                <button onClick={() => setShowRecipe(false)} style={{ 
-                  width: '100%', padding: '18px', borderRadius: '99px', border: 'none',
-                  background: 'var(--black)', color: 'white', fontSize: '1rem', fontWeight: 800,
-                  boxShadow: '0 15px 35px rgba(0,0,0,0.15)', cursor: 'pointer'
+                <button onClick={handleLogFromDrawer} style={{
+                  width: '100%', padding: '17px', borderRadius: '18px', marginBottom: '10px',
+                  border: recipeLogged ? '1px solid rgba(46,160,67,0.28)' : 'none',
+                  background: recipeLogged ? 'rgba(46,160,67,0.12)' : 'linear-gradient(135deg, var(--primary), var(--primary-dim))',
+                  color: recipeLogged ? '#2EA043' : '#fff', fontSize: '1rem', fontWeight: 800, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  boxShadow: recipeLogged ? 'none' : '0 12px 26px rgba(255,145,77,0.34)', transition: 'all 0.2s'
                 }}>
-                  Listo, volver al menú
+                  {recipeLogged ? <><Check size={18} /> Registrada en tu día</> : <><Plus size={18} /> Me lo comí</>}
+                </button>
+
+                <button onClick={() => setShowRecipe(false)} style={{
+                  width: '100%', padding: '16px', borderRadius: '18px',
+                  border: '1px solid var(--border-subtle)',
+                  background: 'var(--fill-subtle)', color: 'var(--on-surface-variant)', fontSize: '0.95rem', fontWeight: 700,
+                  boxShadow: 'none', cursor: 'pointer'
+                }}>
+                  Volver al menú
                 </button>
               </div>
+              </div>{/* /zona scrollable */}
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ANUNCIO DE UPGRADE (solo planes sin plan personalizado) — al fondo */}
+      {!mealPlanAccess && (
+        <div style={{ padding: '0 16px', maxWidth: '600px', margin: '0 auto 18px', width: '100%' }}>
+          <div style={{ padding: '22px', borderRadius: '24px', background: 'linear-gradient(135deg, #3A2118 0%, #B06A4A 100%)', color: '#fff', position: 'relative', overflow: 'hidden', boxShadow: '0 18px 38px rgba(58,33,24,0.28)' }}>
+            <div style={{ position: 'absolute', top: '-24px', right: '-24px', width: '130px', height: '130px', background: 'rgba(255,145,77,0.18)', borderRadius: '50%', filter: 'blur(34px)' }} />
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <ChefHat size={16} color="var(--primary)" />
+                <span style={{ fontSize: '0.64rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Plan alimenticio personalizado</span>
+              </div>
+              <h2 style={{ fontSize: '1.4rem', color: '#fff', margin: '0 0 8px', fontFamily: 'var(--font-display)', lineHeight: 1.15 }}>Disponible en Fit y Premium</h2>
+              <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.72)', lineHeight: 1.5, margin: '0 0 16px' }}>
+                Mejora tu membresía para que tu coach te diseñe un plan a la medida, mes con mes.
+              </p>
+              <button onClick={() => navigate('/planes')} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '12px 18px', borderRadius: '14px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer', boxShadow: '0 10px 24px rgba(255,145,77,0.35)' }}>
+                Ver planes <ChevronRight size={17} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* DISCLAIMER NUTRICIONAL */}
       <div style={{ padding: '0 16px 140px', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
@@ -462,14 +547,22 @@ function FeaturedRecipe({ meal, onClick }) {
   );
 }
 
-function MealItem({ meal, isFavorite, onFavorite, onClick }) {
+function MealItem({ meal, isFavorite, onFavorite, onLog, onClick }) {
   const { time, title, kcal, img, time_prep } = meal;
+  const [logged, setLogged] = useState(false);
+
+  const handleLog = async (e) => {
+    e.stopPropagation();
+    const row = await onLog(e);
+    if (row) { setLogged(true); setTimeout(() => setLogged(false), 1600); }
+  };
+
   return (
-    <motion.div 
+    <motion.div
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      style={{ 
-        padding: '16px', display: 'flex', gap: '16px', alignItems: 'center', cursor: 'pointer', 
+      style={{
+        padding: '16px', display: 'flex', gap: '16px', alignItems: 'center', cursor: 'pointer',
         background: 'var(--app-surface-solid)', borderRadius: '24px', boxShadow: 'var(--card-shadow)',
         border: '1px solid var(--border-subtle)', position: 'relative'
       }}
@@ -477,10 +570,10 @@ function MealItem({ meal, isFavorite, onFavorite, onClick }) {
       <div style={{ width: '90px', height: '90px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0 }}>
         <img src={img} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </div>
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>{time}</div>
-          <button 
+          <button
             onClick={onFavorite}
             style={{ border: 'none', background: 'transparent', padding: '0', cursor: 'pointer', color: isFavorite ? '#FF4D4D' : 'var(--on-surface-muted)' }}
           >
@@ -488,13 +581,27 @@ function MealItem({ meal, isFavorite, onFavorite, onClick }) {
           </button>
         </div>
         <h3 style={{ fontSize: '1.05rem', color: 'var(--black)', marginBottom: '8px', fontFamily: 'var(--font-display)', lineHeight: 1.2, fontWeight: 800 }}>{title}</h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.75rem', color: 'var(--on-surface-muted)', fontWeight: 700 }}>
-           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Flame size={14} color="var(--primary)" /> {kcal} kcal
-           </div>
-           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Clock size={14} /> {time_prep}
-           </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.75rem', color: 'var(--on-surface-muted)', fontWeight: 700 }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Flame size={14} color="var(--primary)" /> {kcal} kcal
+             </div>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Clock size={14} /> {time_prep}
+             </div>
+          </div>
+          <button
+            onClick={handleLog}
+            style={{
+              flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '5px',
+              padding: '7px 12px', borderRadius: '99px', border: 'none', cursor: 'pointer',
+              background: logged ? 'rgba(46,160,67,0.14)' : 'rgba(255,145,77,0.12)',
+              color: logged ? '#2EA043' : 'var(--primary)', fontSize: '0.72rem', fontWeight: 800,
+              transition: 'all 0.2s', whiteSpace: 'nowrap'
+            }}
+          >
+            {logged ? <><Check size={13} /> Registrada</> : <><Plus size={13} /> Me lo comí</>}
+          </button>
         </div>
       </div>
     </motion.div>

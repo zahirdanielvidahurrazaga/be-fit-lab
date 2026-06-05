@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Calendar, Utensils, TrendingUp, User, QrCode, ChevronRight, Activity, Flame, Sparkles, Clock, MapPin, X, Lock, Wallet, Coffee, Cake } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getNextClassOccurrence } from '../hooks/useLocalNotifications';
+import { getNextClassOccurrence, classDateTime } from '../hooks/useLocalNotifications';
 import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
 import { QRCodeCanvas } from 'qrcode.react';
 import { motion } from 'framer-motion';
@@ -13,7 +13,7 @@ import ProfileMenu from '../components/ProfileMenu';
 function Portal() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, logout, classesRemaining, myReservations, cancelClass, profileName, globalClasses, avatarUrl, setShowTour } = useAuth();
+  const { user, plan, logout, classesRemaining, myReservations, cancelClass, profileName, globalClasses, avatarUrl, setShowTour, coaches, badgeConfigs } = useAuth();
   
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
@@ -67,6 +67,34 @@ function Portal() {
     const fiveHoursBefore = new Date(nextOccurrence.getTime() - 5 * 60 * 60 * 1000);
     return new Date() < fiveHoursBefore;
   };
+
+  // Fecha+hora real de la clase de una reserva (clase de fecha fija o recurrente).
+  const reservationClassDate = (res) => {
+    const c = globalClasses?.find(cl => cl.id === res.classId);
+    if (!c || !c.time) return null;
+    if (c.date) return classDateTime(c.date, c.time);
+    if (c.day !== undefined) return getNextClassOccurrence(c.day, c.time);
+    return null;
+  };
+
+  // "en 22 min" / "en 5 h" / "en 3 días"
+  const formatCountdown = (date) => {
+    if (!date) return null;
+    const ms = date.getTime() - Date.now();
+    if (ms <= 0) return 'Ahora';
+    const mins = Math.round(ms / 60000);
+    if (mins < 60) return `en ${mins} min`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return `en ${hrs} h`;
+    const days = Math.round(hrs / 24);
+    return `en ${days} ${days === 1 ? 'día' : 'días'}`;
+  };
+
+  // Próximas clases: ocultar las que ya pasaron + ordenar por más cercana.
+  const upcomingReservations = (myReservations || [])
+    .map(res => ({ res, classObj: globalClasses?.find(c => c.id === res.classId), classDate: reservationClassDate(res) }))
+    .filter(({ classDate }) => !classDate || classDate.getTime() >= Date.now())
+    .sort((a, b) => (a.classDate?.getTime() || Infinity) - (b.classDate?.getTime() || Infinity));
 
   const rawName = profileName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Cliente';
   const userName = rawName.split(' ')[0]; // Solo el primer nombre para el saludo
@@ -212,15 +240,18 @@ function Portal() {
               <Link className="tour-agendar-btn" to="/agenda" style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textDecoration: 'none' }}>Ver todo →</Link>
             </div>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {myReservations && myReservations.length > 0 ? (
-                myReservations.map((res, index) => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {upcomingReservations.length > 0 ? (
+                upcomingReservations.map(({ res, classObj, classDate }, index) => (
                   <TicketCard
-                    key={index}
+                    key={res.id || index}
                     title={res.title}
                     time={res.time}
                     instructor={res.instructor}
-                    color={res.color || 'var(--primary)'}
+                    coachId={classObj?.coach_id}
+                    coaches={coaches}
+                    badgeConfigs={badgeConfigs}
+                    countdown={formatCountdown(classDate)}
                     canCancel={canCancelReservation(res)}
                     onClick={() => handleCancelClick(res)}
                   />
@@ -456,55 +487,70 @@ function Portal() {
 }
 
 /* TICKET-STYLE CLASS CARD */
-function TicketCard({ title, time, instructor, color, canCancel, onClick }) {
+function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, countdown, canCancel, onClick }) {
+  // Foto real del coach (mismo patrón que ScheduleCalendar): coach_id → nombre →
+  // email → coach único → perfil público (badge COACH_PROFILE). Fallback: inicial.
+  const publicCoachProfile = badgeConfigs?.find(b => b.rule_type === 'COACH_PROFILE');
+  const coachInfo = (coaches || []).find(c => (coachId && c.id === coachId) || c.full_name === instructor || c.email === instructor)
+                  || (coaches?.length === 1 ? coaches[0] : null)
+                  || (publicCoachProfile ? { full_name: publicCoachProfile.label, avatar_url: publicCoachProfile.icon } : null);
+  const photoUrl = coachInfo?.avatar_url;
+  const coachName = coachInfo?.full_name || instructor;
+  const initial = (coachName || 'C').charAt(0).toUpperCase();
+  const STUB = 96; // ancho del talón
+
   return (
     <div
       onClick={onClick}
       style={{
-        background: 'var(--app-surface-solid)', borderRadius: '24px', overflow: 'hidden',
-        boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)',
-        cursor: 'pointer', transition: 'transform 0.2s ease',
-        opacity: canCancel ? 1 : 0.85,
+        position: 'relative', display: 'flex', background: 'var(--app-surface-solid)',
+        borderRadius: '22px', overflow: 'hidden', boxShadow: 'var(--card-shadow)',
+        border: '1px solid var(--border-subtle)', cursor: 'pointer', opacity: canCancel ? 1 : 0.85,
       }}
     >
-      {/* Top Section */}
-      <div style={{ padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ width: '50px', height: '50px', borderRadius: '50%', overflow: 'hidden', background: 'var(--surface)', flexShrink: 0 }}>
-            <img src={`https://i.pravatar.cc/150?u=${instructor}`} alt={instructor} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      {/* Muescas del boleto (cortes del color del fondo sobre la perforación) */}
+      <div style={{ position: 'absolute', top: -9, right: STUB - 9, width: 18, height: 18, borderRadius: '50%', background: 'var(--app-bg)' }} />
+      <div style={{ position: 'absolute', bottom: -9, right: STUB - 9, width: 18, height: 18, borderRadius: '50%', background: 'var(--app-bg)' }} />
+
+      {/* Sección principal */}
+      <div style={{ flex: 1, minWidth: 0, padding: '16px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <div style={{ width: '58px', height: '58px', borderRadius: '50%', overflow: 'hidden', background: 'var(--surface-low)', flexShrink: 0, border: '2.5px solid var(--app-surface-solid)', boxShadow: '0 5px 14px rgba(0,0,0,0.1)' }}>
+            {photoUrl
+              ? <img src={photoUrl} alt={coachName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 800, fontSize: '1.35rem', fontFamily: 'var(--font-display)' }}>{initial}</div>}
           </div>
-          <div>
-            <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{title}</h4>
-            <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', marginTop: '3px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-              {instructor}
-            </div>
+          <div style={{ minWidth: 0 }}>
+            <h4 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--on-surface)', fontFamily: 'var(--font-display)', lineHeight: 1.12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h4>
+            <div style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', marginTop: '4px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{coachName}</div>
           </div>
         </div>
-        {canCancel
-          ? <ChevronRight size={18} color="var(--on-surface-variant)" opacity={0.3} />
-          : <Lock size={15} color="var(--on-surface-variant)" opacity={0.4} />
-        }
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
+            <MapPin size={13} color="var(--on-surface-variant)" style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>BE FIT LAB</span>
+          </div>
+          {canCancel ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: 800, color: 'var(--primary)', whiteSpace: 'nowrap' }}>
+              Gestionar <ChevronRight size={13} />
+            </span>
+          ) : (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.64rem', fontWeight: 700, color: 'var(--on-surface-variant)', background: 'var(--fill-subtle)', padding: '4px 9px', borderRadius: '8px', whiteSpace: 'nowrap' }}>
+              <Lock size={11} /> Sin cancelación
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Dashed Divider */}
-      <div style={{ borderTop: '1px dashed var(--divider)', marginLeft: '20px', marginRight: '20px' }} />
-
-      {/* Bottom Section */}
-      <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Clock size={14} color="var(--primary)" />
-          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)' }}>{time}</span>
-        </div>
-        {canCancel ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <MapPin size={14} color="var(--on-surface-variant)" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--on-surface-variant)' }}>BEFIT LAB</span>
-          </div>
-        ) : (
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', background: 'rgba(0,0,0,0.04)', padding: '4px 10px', borderRadius: '8px' }}>
-            Sin cancelación
-          </span>
+      {/* Talón perforado */}
+      <div style={{ width: `${STUB}px`, flexShrink: 0, background: 'var(--surface-low)', borderLeft: '2px dashed var(--divider)', padding: '14px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '2px' }}>
+        <span style={{ fontSize: '0.55rem', fontWeight: 800, color: 'var(--on-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Hora</span>
+        <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--on-surface)', fontFamily: 'var(--font-display)', lineHeight: 1.05 }}>{time}</span>
+        {countdown && (
+          <span style={{ marginTop: '4px', fontSize: '0.62rem', fontWeight: 800, color: 'var(--primary)', background: 'rgba(255,145,77,0.12)', padding: '3px 8px', borderRadius: '99px', whiteSpace: 'nowrap' }}>{countdown}</span>
         )}
+        <span style={{ marginTop: '4px', fontSize: '0.5rem', fontWeight: 800, color: 'var(--on-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Clase</span>
       </div>
     </div>
   );
