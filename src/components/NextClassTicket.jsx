@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
-import { QrCode, CalendarPlus, Check, Sparkles } from 'lucide-react';
+import { QrCode, CalendarPlus, Check } from 'lucide-react';
 import { addClassToCalendar } from '../hooks/useCalendar';
 import { supabase } from '../lib/supabase';
 
@@ -67,7 +67,7 @@ function TicketPhoto({ children }) {
       height: PHOTO_H,
       backgroundImage: `linear-gradient(150deg, rgba(58,32,22,0.30) 0%, rgba(38,22,16,0.78) 100%), url('${TICKET_PHOTO}')`,
       backgroundSize: 'cover',
-      backgroundPosition: 'center 30%',
+      backgroundPosition: 'center 20%',
       borderRadius: '28px 28px 0 0',
       padding: '18px 22px',
       display: 'flex',
@@ -144,7 +144,7 @@ export function NextClassTicket({ myReservations, globalClasses, coaches, classe
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.8rem', letterSpacing: '0.18em', textShadow: '0 2px 8px rgba(0,0,0,0.35)' }}>BE FIT LAB</span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', padding: '5px 11px', borderRadius: 20, fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.12em' }}>
-              <Sparkles size={12} /> PASE DE CLASE
+              PASE DE CLASE
             </span>
           </div>
           <span style={{ color: 'rgba(255,255,255,0.95)', fontFamily: 'var(--font-display)', fontSize: '1.15rem', textShadow: '0 2px 10px rgba(0,0,0,0.4)' }}>Tu próxima clase te espera ✦</span>
