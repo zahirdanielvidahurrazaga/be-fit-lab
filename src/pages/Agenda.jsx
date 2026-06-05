@@ -11,11 +11,12 @@ import { addClassToCalendar } from '../hooks/useCalendar';
 import { supabase } from '../lib/supabase';
 import { ScheduleCalendar } from '../components/ScheduleCalendar';
 import ProfileMenu from '../components/ProfileMenu';
+import { NextClassTicket } from '../components/NextClassTicket';
 
 function Agenda() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, classesRemaining, bookClass, globalClasses, updateReservationCalendarId, avatarUrl, coaches, badgeConfigs } = useAuth();
+  const { user, plan, classesRemaining, bookClass, globalClasses, updateReservationCalendarId, avatarUrl, coaches, badgeConfigs, myReservations } = useAuth();
   
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
@@ -114,57 +115,16 @@ function Agenda() {
       <motion.main className="dashboard-main" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }}>
         
         <div className="dashboard-sidebar">
-          {/* Tarjeta de Membresía Premium - Rediseño Luxury */}
+          {/* Boarding pass — Tu próxima clase (datos reales) */}
           {user ? (
-            <motion.section 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              style={{ marginBottom: '25px' }}
-            >
-              <div style={{ 
-                padding: '28px', borderRadius: '32px', 
-                background: 'linear-gradient(135deg, #1C1C1A 0%, #3D3D3D 100%)',
-                color: 'white', position: 'relative', overflow: 'hidden',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
-                border: '1px solid rgba(255,255,255,0.05)'
-              }}>
-                {/* Decorative element */}
-                <div style={{ 
-                  position: 'absolute', top: '-20px', right: '-20px', 
-                  width: '120px', height: '120px', 
-                  background: 'rgba(255,139,66,0.15)', borderRadius: '50%', 
-                  filter: 'blur(40px)' 
-                }} />
-
-                <div style={{ position: 'relative', zIndex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-                    <div>
-                      <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '4px' }}>Membresía Actual</p>
-                      <h2 style={{ fontSize: '2rem', color: 'white', margin: 0, fontFamily: 'var(--font-display)', fontWeight: 500 }}>{plan || 'Premium'}</h2>
-                    </div>
-                    <div style={{ background: 'rgba(255,139,66,0.1)', padding: '6px 12px', borderRadius: '12px', border: '1px solid rgba(255,139,66,0.2)' }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--primary)' }}>ACTIVA</span>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                      <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '5px' }}>Disponibles</p>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                        <span style={{ fontSize: '1.8rem', fontWeight: 900, color: 'white' }}>{classesRemaining}</span>
-                        <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>clases</span>
-                      </div>
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                      <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '5px' }}>Próxima Clase</p>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white', marginTop: '10px' }}>
-                        Hoy, 18:00
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.section>
+            <NextClassTicket
+              myReservations={myReservations}
+              globalClasses={globalClasses}
+              coaches={coaches}
+              classesRemaining={classesRemaining}
+              userId={user.id}
+              onShowQR={() => setShowQR(true)}
+            />
           ) : (
             <section style={{ marginBottom: '25px' }}>
               <div style={{ 
