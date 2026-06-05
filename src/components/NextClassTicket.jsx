@@ -67,7 +67,7 @@ function TicketPhoto({ children }) {
       height: PHOTO_H,
       backgroundImage: `linear-gradient(150deg, rgba(58,32,22,0.30) 0%, rgba(38,22,16,0.78) 100%), url('${TICKET_PHOTO}')`,
       backgroundSize: 'cover',
-      backgroundPosition: 'center 20%',
+      backgroundPosition: 'center 15%',
       borderRadius: '28px 28px 0 0',
       padding: '18px 22px',
       display: 'flex',
