@@ -15,15 +15,35 @@ import useEmblaCarousel from 'embla-carousel-react';
 // Se sirven por URL solo en la web → no engordan el binario nativo.
 const VIDEO_BASE = 'https://fifaowaiokauhuqklzwe.supabase.co/storage/v1/object/public/Video/';
 
-// Asegura el autoplay: React no aplica bien el atributo `muted`, así que lo
-// forzamos por propiedad y disparamos play() (silencioso si el navegador lo bloquea).
-const autoplayVideo = (v) => {
-  if (!v) return;
-  v.muted = true;
-  v.setAttribute('muted', '');
-  const p = v.play?.();
-  if (p && p.catch) p.catch(() => {});
-};
+// Video de fondo con autoplay ROBUSTO: fuerza muted (React no setea bien el
+// atributo → autoplay bloqueado), reproduce al entrar en viewport
+// (IntersectionObserver) y reintenta en canplay/loadeddata.
+function AutoVideo({ src, poster, label }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    v.muted = true; v.defaultMuted = true;
+    const play = () => { const p = v.play?.(); if (p && p.catch) p.catch(() => {}); };
+    const io = new IntersectionObserver(
+      (es) => es.forEach(e => (e.isIntersecting ? play() : v.pause())),
+      { threshold: 0.2 }
+    );
+    io.observe(v);
+    v.addEventListener('canplay', play);
+    v.addEventListener('loadeddata', play);
+    play();
+    return () => { io.disconnect(); v.removeEventListener('canplay', play); v.removeEventListener('loadeddata', play); };
+  }, []);
+  return (
+    <>
+      <video ref={ref} src={src} poster={poster} muted loop playsInline autoPlay preload="auto"
+        style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} />
+      <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, transparent 62%, rgba(0,0,0,0.45) 100%)', pointerEvents:'none' }} />
+      <span style={{ position:'absolute', left:'20px', bottom:'20px', padding:'8px 16px', borderRadius:'999px', background:'rgba(255,255,255,0.16)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.28)', color:'#fff', fontSize:'0.8rem', fontWeight:800, letterSpacing:'0.04em' }}>{label}</span>
+    </>
+  );
+}
 
 // Link de react-router con animaciones de framer-motion (hover naranja + desplazamiento)
 const MotionLink = motion(Link);
@@ -828,17 +848,11 @@ export default function Landing() {
             style={{ display:'flex', gap:'24px', justifyContent:'center', flexWrap:'wrap', maxWidth:'860px', margin:'0 auto' }}>
             {/* Video del estudio */}
             <motion.div variants={scaleIn} style={{ position:'relative', flex:'1 1 320px', maxWidth:'400px', aspectRatio:'9 / 16', borderRadius:'32px', overflow:'hidden', background:'var(--surface)', boxShadow:'0 30px 80px rgba(0,0,0,0.12)' }}>
-              <video ref={autoplayVideo} src={`${VIDEO_BASE}estudio.mp4`} poster="/videos-posters/estudio.jpg" autoPlay muted loop playsInline preload="auto"
-                style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} />
-              <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, transparent 62%, rgba(0,0,0,0.45) 100%)', pointerEvents:'none' }} />
-              <span style={{ position:'absolute', left:'20px', bottom:'20px', padding:'8px 16px', borderRadius:'999px', background:'rgba(255,255,255,0.16)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.28)', color:'#fff', fontSize:'0.8rem', fontWeight:800, letterSpacing:'0.04em' }}>El estudio</span>
+              <AutoVideo src={`${VIDEO_BASE}estudio.mp4`} poster="/videos-posters/estudio.jpg" label="El estudio" />
             </motion.div>
             {/* Video de cumpleaños */}
             <motion.div variants={scaleIn} style={{ position:'relative', flex:'1 1 320px', maxWidth:'400px', aspectRatio:'9 / 16', borderRadius:'32px', overflow:'hidden', background:'var(--surface)', boxShadow:'0 30px 80px rgba(0,0,0,0.12)' }}>
-              <video ref={autoplayVideo} src={`${VIDEO_BASE}cumple.mp4`} poster="/videos-posters/cumple.jpg" autoPlay muted loop playsInline preload="auto"
-                style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} />
-              <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, transparent 62%, rgba(0,0,0,0.45) 100%)', pointerEvents:'none' }} />
-              <span style={{ position:'absolute', left:'20px', bottom:'20px', padding:'8px 16px', borderRadius:'999px', background:'rgba(255,255,255,0.16)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.28)', color:'#fff', fontSize:'0.8rem', fontWeight:800, letterSpacing:'0.04em' }}>Cumpleaños</span>
+              <AutoVideo src={`${VIDEO_BASE}cumple.mp4`} poster="/videos-posters/cumple.jpg" label="Cumpleaños" />
             </motion.div>
           </motion.div>
         </div>
