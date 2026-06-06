@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronRight, Users, Activity, QrCode, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { todayLocalStr } from '../lib/dates';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
@@ -13,7 +14,7 @@ function Coach() {
   const navigate = useNavigate();
   const scrolled = useScrollDetect(30);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = todayLocalStr();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
 

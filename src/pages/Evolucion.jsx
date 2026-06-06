@@ -318,7 +318,7 @@ function Evolucion() {
             <motion.section className="tour-badges-section" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
               {/* Hero con foto del estudio */}
               <div style={{ position: 'relative', borderRadius: '26px', overflow: 'hidden', marginBottom: '20px', minHeight: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '20px', backgroundColor: '#2a1d16', boxShadow: '0 20px 44px rgba(58,33,24,0.26)' }}>
-                <img src="/fotos-hero/IMG_5383.JPG" alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 65%' }} />
+                <img src="/fotos-hero/IMG_5383.JPG" alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 60%' }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(40,26,18,0.30) 0%, rgba(40,26,18,0.55) 50%, rgba(26,17,12,0.92) 100%)' }} />
                 <div style={{ position: 'relative', zIndex: 1 }}>
                   <h2 style={{ fontSize: '1.45rem', fontWeight: 900, margin: '0 0 4px', fontFamily: 'var(--font-display)', color: '#fff', textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>Tus insignias</h2>
@@ -631,7 +631,7 @@ function Evolucion() {
               <div className="wallet-footer" style={{ borderTop: '1px dashed var(--divider)', paddingTop: '20px', paddingBottom: '20px', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '0.65rem', color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{classesRemaining} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--primary)' }}>sesiones</span></div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{classesRemaining >= 9000 ? '∞' : classesRemaining} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--primary)' }}>{classesRemaining >= 9000 ? 'ilimitadas' : 'sesiones'}</span></div>
                 </div>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { todayLocalStr } from '../lib/dates';
 import { LogOut, Users, Activity, QrCode, CheckCircle2, Plus, Minus, Calendar, CalendarPlus, ChevronRight, BarChart3, Phone, Mail, TrendingUp, DollarSign, Utensils, Award, Pencil, Menu } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -76,9 +77,9 @@ function Admin() {
   const [newClass, setNewClass] = useState({
     title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1',
     description: '',
-    date: new Date().toISOString().split('T')[0],
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
+    date: todayLocalStr(),
+    startDate: todayLocalStr(),
+    endDate: todayLocalStr(),
     daysOfWeek: []
   });
   
@@ -148,7 +149,7 @@ function Admin() {
   const selectedDayClasses = getClassesForDate(selectedCalendarDay);
   
   // Métricas del día de hoy (para dashboard)
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = todayLocalStr();
   const todayClasses = getClassesForDate(todayStr);
   
   const totalAlumnasHoy = todayClasses.reduce((acc, c) => acc + ((c.max_spots || 10) - c.spots), 0);
@@ -336,9 +337,9 @@ function Admin() {
     setNewClass({
       title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1',
       description: '',
-      date: new Date().toISOString().split('T')[0],
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date().toISOString().split('T')[0],
+      date: todayLocalStr(),
+      startDate: todayLocalStr(),
+      endDate: todayLocalStr(),
       daysOfWeek: []
     });
     fetchGlobalClasses(); // Refresh
@@ -673,7 +674,7 @@ function Admin() {
                               {scannedClient.name}
                             </div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginTop: '2px' }}>
-                              {scannedClient.plan} · {scannedClient.classesRemaining} clases restantes
+                              {scannedClient.plan} · {scannedClient.classesRemaining >= 9000 ? '∞' : scannedClient.classesRemaining} clases restantes
                             </div>
                             <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', color: '#16a34a', fontWeight: 700 }}>
                               <CheckCircle2 size={13} />
@@ -746,7 +747,7 @@ function Admin() {
                               {entry.name || 'Desconocido'}
                             </div>
                             <div style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginTop: '2px' }}>
-                              {entry.plan || 'Sin plan'} · {entry.classesRemaining ?? '—'} clases restantes
+                              {entry.plan || 'Sin plan'} · {entry.classesRemaining == null ? '—' : (entry.classesRemaining >= 9000 ? '∞' : entry.classesRemaining)} clases restantes
                             </div>
                           </div>
 

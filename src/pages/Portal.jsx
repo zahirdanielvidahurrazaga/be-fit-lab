@@ -188,10 +188,10 @@ function Portal() {
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '14px', background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', padding: '10px 16px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)' }}>
                 <div>
                   <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#fff', lineHeight: 1, fontFamily: 'var(--font-display)', textAlign: 'center' }}>
-                    {classesRemaining >= 9999 ? '∞' : classesRemaining}
+                    {classesRemaining >= 9000 ? '∞' : classesRemaining}
                   </div>
                   <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.7)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '3px', textAlign: 'center' }}>
-                    {classesRemaining >= 9999 ? 'Ilimitadas' : 'Clases'}
+                    {classesRemaining >= 9000 ? 'Ilimitadas' : 'Clases'}
                   </div>
                 </div>
                 <button 
@@ -389,7 +389,7 @@ function Portal() {
               <div className="wallet-footer" style={{ borderTop: '1px dashed var(--divider)', paddingTop: '20px', paddingBottom: '20px', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '0.65rem', color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{classesRemaining >= 9999 ? '∞' : classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--primary)'}}>{classesRemaining >= 9999 ? 'ilimitadas' : 'sesiones'}</span></div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{classesRemaining >= 9000 ? '∞' : classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--primary)'}}>{classesRemaining >= 9000 ? 'ilimitadas' : 'sesiones'}</span></div>
                 </div>
               </div>
             </div>

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, Trash2, CalendarPlus, LayoutTemplate } from 'lucide-react';
+import { todayLocalStr } from '../lib/dates';
 
-const todayStr = () => new Date().toISOString().split('T')[0];
+const todayStr = () => todayLocalStr();
 
 // Captura las clases de la semana que contiene refDate como items reutilizables (por día de la semana)
 function buildWeekItems(classes, refDate) {

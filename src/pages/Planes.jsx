@@ -274,7 +274,7 @@ function Planes() {
                 
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--primary)', fontFamily: 'var(--font-display)', lineHeight: 0.9 }}>
-                    {classesRemaining}
+                    {classesRemaining >= 9000 ? '∞' : classesRemaining}
                   </div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>
                     Clases Restantes

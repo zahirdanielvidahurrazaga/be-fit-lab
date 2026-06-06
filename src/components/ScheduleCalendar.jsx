@@ -3,6 +3,7 @@ import { ChevronRight, Lock, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { resolveCatColor, categoryLabel } from '../lib/categories';
 import { classDateTime } from '../hooks/useLocalNotifications';
+import { toLocalDateStr } from '../lib/dates';
 
 // Leyenda de categorías presentes (barra glass bajo el calendario)
 function CategoryLegendBar({ globalClasses }) {
@@ -28,7 +29,7 @@ function CategoryLegendBar({ globalClasses }) {
 
 export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReservations, onReserve }) {
   const reservedIds = new Set((myReservations || []).map(r => r.classId));
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = toLocalDateStr();
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
   const currentMonth = currentMonthDate.getMonth();
   const currentYear = currentMonthDate.getFullYear();
@@ -53,7 +54,7 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
       const current = new Date(monday);
       current.setDate(monday.getDate() + i);
       return {
-        dateStr: current.toISOString().split('T')[0],
+        dateStr: toLocalDateStr(current),
         dayNum: current.getDate(),
         dayName: ['L', 'M', 'M', 'J', 'V', 'S', 'D'][i]
       };

@@ -112,7 +112,7 @@ export function NextClassTicket({ myReservations, globalClasses, coaches, classe
   );
   const coachName = coach?.full_name || next?.res?.instructor || 'Be Fit Lab';
   const title = next?.res?.title || next?.cls?.title || 'Tu clase';
-  const dispChip = classesRemaining >= 9999 ? '∞ disponibles' : `${classesRemaining} disponibles`;
+  const dispChip = classesRemaining >= 9000 ? '∞ disponibles' : `${classesRemaining} disponibles`;
 
   const handleCal = async () => {
     if (!next || calState === 'adding' || calState === 'added') return;

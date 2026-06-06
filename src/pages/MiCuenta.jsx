@@ -494,7 +494,7 @@ function MiCuenta() {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <p style={{ fontSize: '2.8rem', fontWeight: 900, margin: 0, lineHeight: 1, color: '#FF8B42', fontFamily: 'DM Sans' }}>
-                  {classesRemaining}
+                  {classesRemaining >= 9000 ? '∞' : classesRemaining}
                 </p>
                 <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', margin: 0, fontWeight: 600 }}>
                   clases restantes

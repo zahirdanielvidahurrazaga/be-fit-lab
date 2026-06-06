@@ -983,9 +983,9 @@ export const AuthProvider = ({ children }) => {
     
     if (classesRemaining > 0 && classObj.spots > 0) {
       try {
-        // Optimistic UI Update
-        setClassesRemaining(prev => prev - 1);
-        setGlobalClasses(prev => prev.map(c => 
+        // Optimistic UI Update — los planes ilimitados (sentinel ≥9000) NO descuentan.
+        if (classesRemaining < 9000) setClassesRemaining(prev => prev - 1);
+        setGlobalClasses(prev => prev.map(c =>
           c.id === classObj.id ? { ...c, spots: c.spots - 1 } : c
         ));
         setMyReservations(prev => [...prev, {
@@ -1043,8 +1043,8 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      // Optimistic UI Update
-      setClassesRemaining(prev => prev + 1);
+      // Optimistic UI Update — los planes ilimitados (sentinel ≥9000) NO suman.
+      if (classesRemaining < 9000) setClassesRemaining(prev => prev + 1);
       setMyReservations(prev => prev.filter(res => res.classId !== classId));
       if (classObj) {
         setGlobalClasses(prev => prev.map(c => 

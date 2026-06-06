@@ -5,6 +5,7 @@ import { Share2, X, CalendarRange, CalendarDays, Moon, Sun } from 'lucide-react'
 import { toPng } from 'html-to-image';
 import { Capacitor } from '@capacitor/core';
 import { resolveCatColor, categoryLabel } from '../lib/categories';
+import { todayLocalStr } from '../lib/dates';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Generador de "Horarios" para Instagram Stories (formato 1080×1920).
@@ -237,7 +238,7 @@ export default function ScheduleStoryExport({ classes, coaches, selectedDateStr,
   const PREVIEW_W = Math.min(300, (typeof window !== 'undefined' ? window.innerWidth : 360) - 56);
 
   // Fecha de referencia seleccionable (en día = ese día; en semana = la semana que la contiene)
-  const [refDate, setRefDate] = useState(selectedDateStr || new Date().toISOString().split('T')[0]);
+  const [refDate, setRefDate] = useState(selectedDateStr || todayLocalStr());
   const week = useMemo(() => buildWeek(classes, refDate), [classes, refDate]);
   const dayData = useMemo(() => week.days.find(d => d.dateStr === refDate) || week.days[0], [week, refDate]);
 
