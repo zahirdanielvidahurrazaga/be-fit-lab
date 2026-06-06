@@ -239,7 +239,7 @@ function Portal() {
                 { to: '/cumpleanos', img: '/fotos-hero/cumple.png', Icon: Cake, title: 'Cumpleaños', sub: 'Tu cuenta regresiva', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)' },
                 { to: '/eventos', img: '/fotos-hero/_DSC0470.jpg', Icon: Sparkles, title: 'Eventos', sub: 'Próximas experiencias', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)' },
               ].map(c => (
-                <motion.div key={c.to} onClick={() => navigate(c.to)} whileTap={{ scale: 0.97 }}
+                <motion.div key={c.to} data-tour={`explora-${c.to.slice(1)}`} onClick={() => navigate(c.to)} whileTap={{ scale: 0.97 }}
                   style={{ flex: '0 0 auto', width: '210px', height: '250px', borderRadius: '26px', cursor: 'pointer', position: 'relative', overflow: 'hidden', backgroundImage: `${c.overlay}, url('${c.img}')`, backgroundSize: 'cover', backgroundPosition: 'center', padding: '18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 14px 34px rgba(0,0,0,0.18)' }}>
                   <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: 'rgba(255,255,255,0.20)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <c.Icon size={24} color="#fff" strokeWidth={2} />

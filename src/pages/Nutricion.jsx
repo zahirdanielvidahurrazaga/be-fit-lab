@@ -142,7 +142,7 @@ function Nutricion() {
               <ChevronRight size={20} color="var(--on-surface-variant)" />
             </button>
           ) : (
-          <section>
+          <section id="tour-recetario">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
                <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--on-surface)', fontFamily: 'var(--font-display)' }}>Recetas saludables</h2>
                {mealPlanAccess ? (
