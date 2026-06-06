@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Flame, User, Calendar, Utensils, TrendingUp, Award, Target, ChevronRight, QrCode, Zap, Droplets, Scale, RefreshCw, Heart, Clock, Wallet, X, Check } from 'lucide-react';
+import { Activity, Flame, User, Calendar, Utensils, TrendingUp, Award, Target, ChevronRight, QrCode, Zap, Droplets, Scale, RefreshCw, Heart, Clock, Wallet, X, Check, Lock } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -14,6 +14,10 @@ import ProfileMenu from '../components/ProfileMenu';
 import ProgressPhotos from '../components/ProgressPhotos';
 
 const isNative = Capacitor.isNativePlatform();
+
+// Animaciones de las insignias (entrada escalonada tipo "pop")
+const badgeGrid = { hidden: {}, visible: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } } };
+const badgeItem = { hidden: { opacity: 0, y: 18, scale: 0.8 }, visible: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 220, damping: 18 } } };
 
 function Evolucion() {
   const navigate = useNavigate();
@@ -312,16 +316,23 @@ function Evolucion() {
           <motion.main key="insignias" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="dashboard-main" style={{ paddingTop: '10px' }}>
           <div style={{ width: '100%', maxWidth: '720px', margin: '0 auto', padding: '0 16px' }}>
             <motion.section className="tour-badges-section" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '6px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Tus insignias</h2>
-              <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', margin: '0 0 18px', lineHeight: 1.5 }}>
-                Desbloquéalas asistiendo a clases, completando tu perfil y manteniendo tu constancia. Toca cualquiera para ver cómo conseguirla.
-              </p>
+              {/* Hero con foto del estudio */}
+              <div style={{ position: 'relative', borderRadius: '26px', overflow: 'hidden', marginBottom: '20px', minHeight: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '20px', backgroundColor: '#2a1d16', boxShadow: '0 20px 44px rgba(58,33,24,0.26)' }}>
+                <img src="/fotos-hero/IMG_5383.JPG" alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(40,26,18,0.30) 0%, rgba(40,26,18,0.55) 50%, rgba(26,17,12,0.92) 100%)' }} />
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <h2 style={{ fontSize: '1.45rem', fontWeight: 900, margin: '0 0 4px', fontFamily: 'var(--font-display)', color: '#fff', textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>Tus insignias</h2>
+                  <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.9)', margin: 0, lineHeight: 1.5, textShadow: '0 1px 6px rgba(0,0,0,0.4)' }}>
+                    Gánalas con tu constancia. Toca cualquiera para ver cómo conseguirla.
+                  </p>
+                </div>
+              </div>
               {badges.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(88px, 1fr))', gap: '18px 12px', justifyItems: 'center' }}>
+                <motion.div variants={badgeGrid} initial="hidden" animate="visible" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: '20px 12px', justifyItems: 'center' }}>
                   {badges.map((b, i) => (
                     <BadgeIcon key={i} icon={b.icon} label={b.label} locked={b.locked} onClick={() => setSelectedBadge(b)} />
                   ))}
-                </div>
+                </motion.div>
               ) : (
                 <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--on-surface-variant)' }}>
                   <Award size={32} style={{ opacity: 0.3, marginBottom: '10px' }} />
@@ -339,43 +350,46 @@ function Evolucion() {
 
           {/* PROGRESS RING */}
           <motion.section initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6 }}>
-            <div 
+            <div
               className="tour-score-section"
               onClick={() => setShowGoalModal(true)}
               style={{
-                background: 'var(--app-surface-solid)', borderRadius: '32px', padding: '30px 20px',
-                boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)',
-                textAlign: 'center', position: 'relative', overflow: 'hidden', cursor: 'pointer'
+                position: 'relative', borderRadius: '32px', overflow: 'hidden', cursor: 'pointer',
+                padding: '34px 20px 30px', textAlign: 'center', backgroundColor: '#2a1d16',
+                boxShadow: '0 24px 50px rgba(58,33,24,0.30)', border: '1px solid rgba(255,255,255,0.10)'
               }}
             >
-              <div style={{ position: 'absolute', top: '-30%', left: '50%', transform: 'translateX(-50%)', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(255,139,66,0.08) 0%, transparent 70%)', borderRadius: '50%' }} />
-              <div style={{ position: 'relative', width: '180px', height: '180px', margin: '0 auto 20px' }}>
+              {/* Foto aspiracional del estudio + overlay cálido para legibilidad */}
+              <img src="/fotos-hero/IMG_5396.JPG" alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 22%' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(40,26,18,0.42) 0%, rgba(40,26,18,0.58) 45%, rgba(26,17,12,0.88) 100%)' }} />
+              <div style={{ position: 'relative', zIndex: 1, fontSize: '0.66rem', fontWeight: 800, color: 'rgba(255,255,255,0.78)', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: '14px' }}>Tu meta del mes</div>
+              <div style={{ position: 'relative', zIndex: 1, width: '180px', height: '180px', margin: '0 auto 18px' }}>
                 <svg width="180" height="180" viewBox="0 0 180 180" style={{ transform: 'rotate(-90deg)' }}>
-                  <circle cx="90" cy="90" r="70" fill="none" stroke="var(--border-subtle)" strokeWidth="10" />
-                  <circle cx="90" cy="90" r="70" fill="none" stroke="url(#progressGradient)" strokeWidth="10" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset} style={{ transition: 'stroke-dashoffset 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }} />
+                  <circle cx="90" cy="90" r="70" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="11" />
+                  <circle cx="90" cy="90" r="70" fill="none" stroke="url(#progressGradient)" strokeWidth="11" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset} style={{ transition: 'stroke-dashoffset 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)', filter: 'drop-shadow(0 2px 8px rgba(255,145,77,0.55))' }} />
                   <defs>
                     <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#FF8B42" />
-                      <stop offset="100%" stopColor="#EEBA89" />
+                      <stop offset="0%" stopColor="#FFB37A" />
+                      <stop offset="100%" stopColor="#FF914D" />
                     </linearGradient>
                   </defs>
                 </svg>
                 <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                  <div style={{ fontSize: targetMonthlyClasses === 0 ? '1.8rem' : '2.8rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--black)', lineHeight: 1 }}>
+                  <div style={{ fontSize: targetMonthlyClasses === 0 ? '1.8rem' : '2.9rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: '#fff', lineHeight: 1, textShadow: '0 2px 14px rgba(0,0,0,0.45)' }}>
                     {targetMonthlyClasses === 0 ? '0' : score}
                   </div>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Score</div>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.82)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Score</div>
                 </div>
               </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginBottom: '5px' }}>
+              <div style={{ position: 'relative', zIndex: 1, fontSize: '0.86rem', color: 'rgba(255,255,255,0.92)', fontWeight: 600, marginBottom: '12px', textShadow: '0 1px 8px rgba(0,0,0,0.4)' }}>
                 {targetMonthlyClasses === 0 ? (
-                  <span style={{ color: 'var(--primary)' }}>Toca aquí para definir tu meta</span>
+                  <span style={{ color: '#FFC79E', fontWeight: 800 }}>Toca aquí para definir tu meta</span>
                 ) : (
-                  <>Has superado el <span style={{ fontWeight: 800, color: 'var(--primary)' }}>{score}%</span> de tus objetivos</>
+                  <>Has superado el <span style={{ fontWeight: 800, color: '#FFC79E' }}>{score}%</span> de tus objetivos</>
                 )}
               </div>
               {targetMonthlyClasses > 0 && (
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,139,66,0.08)', padding: '6px 14px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center', gap: '7px', background: 'rgba(255,255,255,0.16)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', padding: '8px 16px', borderRadius: '14px', fontSize: '0.7rem', fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em', border: '1px solid rgba(255,255,255,0.25)' }}>
                   <Award size={14} /> Meta: {targetMonthlyClasses} clases/mes
                 </div>
               )}
@@ -853,13 +867,37 @@ function Evolucion() {
 
 function BadgeIcon({ icon, label, locked, onClick }) {
   return (
-    <div onClick={onClick} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flexShrink: 0, opacity: locked ? 0.4 : 1, filter: locked ? 'grayscale(100%)' : 'none', position: 'relative' }}>
-      <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--app-surface-solid)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', boxShadow: 'var(--card-shadow)' }}>
-        {icon}
+    <motion.div
+      variants={badgeItem}
+      onClick={onClick}
+      whileTap={{ scale: 0.92 }}
+      whileHover={{ y: -3 }}
+      style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '9px', position: 'relative' }}
+    >
+      <div style={{
+        position: 'relative', width: '74px', height: '74px', borderRadius: '22px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+        background: locked ? 'var(--surface-elevated)' : 'linear-gradient(150deg, #FFF3E9 0%, #FFE0C7 100%)',
+        border: locked ? '1px solid var(--border-subtle)' : '1px solid rgba(255,145,77,0.35)',
+        boxShadow: locked ? 'none' : '0 10px 24px rgba(255,145,77,0.28), inset 0 1px 0 rgba(255,255,255,0.6)'
+      }}>
+        {/* halo brillante "respirando" para las desbloqueadas */}
+        {!locked && (
+          <motion.div aria-hidden
+            animate={{ opacity: [0.45, 0.85, 0.45], scale: [1, 1.12, 1] }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ position: 'absolute', inset: '-30%', background: 'radial-gradient(circle at 50% 38%, rgba(255,177,118,0.6) 0%, transparent 60%)', pointerEvents: 'none' }}
+          />
+        )}
+        <span style={{ position: 'relative', fontSize: '2rem', lineHeight: 1, filter: locked ? 'grayscale(100%)' : 'none', opacity: locked ? 0.5 : 1 }}>{icon}</span>
+        {locked && (
+          <div style={{ position: 'absolute', bottom: '5px', right: '5px', width: '22px', height: '22px', borderRadius: '50%', background: 'var(--app-surface-solid)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.12)' }}>
+            <Lock size={11} color="var(--on-surface-variant)" />
+          </div>
+        )}
       </div>
-      <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--on-surface-variant)', maxWidth: '70px', textAlign: 'center', lineHeight: 1.1 }}>{label}</span>
-      {locked && <div style={{ position: 'absolute', top: '0px', right: '0px', background: 'var(--surface)', borderRadius: '50%', padding: '2px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', fontSize: '0.7rem' }}>🔒</div>}
-    </div>
+      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: locked ? 'var(--on-surface-variant)' : 'var(--on-surface)', maxWidth: '84px', textAlign: 'center', lineHeight: 1.15 }}>{label}</span>
+    </motion.div>
   );
 }
 
