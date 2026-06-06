@@ -9,18 +9,7 @@ import { supabase } from '../lib/supabase';
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']; // lunes primero
 
-const FRASES = [
-  'El _proceso_ que hoy te pesa, mañana será tu mayor _recompensa_.',
-  'Tu _cuerpo_ escucha todo lo que tu _mente_ dice.',
-  'Cada clase es un _regalo_ que te das a ti misma.',
-  'No se trata de ser _perfecta_, sino de ser _constante_.',
-  'Tu única _competencia_ eres tú de ayer.',
-  'Brilla por _dentro_ y se notará por _fuera_.',
-  'Hoy es un buen día para _empezar_ de nuevo.',
-];
-
 const parseYMD = (s) => { const [y, m, d] = s.split('-').map(Number); return { y, m, d }; };
-const dayOfYear = () => { const n = new Date(); return Math.floor((n - new Date(n.getFullYear(), 0, 0)) / 86400000); };
 const buildCells = (year, month) => {
   const offset = (new Date(year, month, 1).getDay() + 6) % 7; // lunes primero
   const total = new Date(year, month + 1, 0).getDate();
@@ -29,17 +18,6 @@ const buildCells = (year, month) => {
   for (let d = 1; d <= total; d++) cells.push(d);
   return cells;
 };
-
-function Frase({ text }) {
-  const parts = text.split('_');
-  return (
-    <p style={{ fontFamily: "'Caveat', cursive", color: '#3A3632', fontSize: '2.1rem', lineHeight: 1.35, fontWeight: 600, margin: 0, textAlign: 'center' }}>
-      {parts.map((seg, i) => i % 2 === 1
-        ? <span key={i} style={{ textDecoration: 'underline', textUnderlineOffset: '4px' }}>{seg}</span>
-        : <span key={i}>{seg}</span>)}
-    </p>
-  );
-}
 
 function Avatar({ p, size = 44, ring = 'var(--primary)' }) {
   return (
@@ -51,21 +29,21 @@ function Avatar({ p, size = 44, ring = 'var(--primary)' }) {
   );
 }
 
-// Unidad de la cuenta regresiva con número que "rueda" al cambiar
+// Unidad de la cuenta regresiva como "sticker" blanco sobre el collage crema.
 function Unit({ value, label }) {
   return (
-    <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
-      <div style={{ position: 'relative', height: '2.6rem', overflow: 'hidden' }}>
+    <div style={{ flex: 1, maxWidth: '76px', background: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 6px 16px rgba(80,55,30,0.12)', padding: '11px 4px 8px', textAlign: 'center' }}>
+      <div style={{ position: 'relative', height: '2.05rem', overflow: 'hidden' }}>
         <AnimatePresence initial={false}>
           <motion.div key={value}
             initial={{ y: '100%', opacity: 0 }} animate={{ y: '0%', opacity: 1 }} exit={{ y: '-100%', opacity: 0 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.95rem', fontWeight: 800, color: 'var(--black)', lineHeight: 1, fontFamily: 'var(--font-display)', fontVariantNumeric: 'tabular-nums' }}>
+            style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.7rem', fontWeight: 800, color: '#2E2018', lineHeight: 1, fontFamily: 'var(--font-display)', fontVariantNumeric: 'tabular-nums' }}>
             {String(value).padStart(2, '0')}
           </motion.div>
         </AnimatePresence>
       </div>
-      <div style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '6px' }}>{label}</div>
+      <div style={{ fontSize: '0.58rem', fontWeight: 800, color: '#8A7A6E', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '4px' }}>{label}</div>
     </div>
   );
 }
@@ -88,13 +66,13 @@ function MiniMonth({ year, month, bdays, today, onOpen }) {
           return (
             <span key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1px 0' }}>
               {ppl ? (
-                <span style={{ width: '20px', height: '20px', borderRadius: '50%', overflow: 'hidden', border: '1.5px solid #E07A9C', background: 'rgba(224,122,156,0.15)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ width: '20px', height: '20px', borderRadius: '50%', overflow: 'hidden', border: '1.5px solid #FF914D', background: 'rgba(255,145,77,0.15)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                   {ppl[0].avatar_url
                     ? <img src={ppl[0].avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <Cake size={10} color="#E07A9C" />}
+                    : <Cake size={10} color="#FF914D" />}
                 </span>
               ) : (
-                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '50%', fontSize: '0.62rem', fontVariantNumeric: 'tabular-nums', fontWeight: 500, color: 'var(--on-surface)', border: isToday ? '1.5px solid #E07A9C' : '1.5px solid transparent' }}>{d}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '50%', fontSize: '0.62rem', fontVariantNumeric: 'tabular-nums', fontWeight: 500, color: 'var(--on-surface)', border: isToday ? '1.5px solid #FF914D' : '1.5px solid transparent' }}>{d}</span>
               )}
             </span>
           );
@@ -126,16 +104,16 @@ function BigMonth({ year, month, bdays, today, onDayClick }) {
                 minHeight: '52px', borderRadius: '14px', padding: '4px 2px',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
                 cursor: ppl ? 'pointer' : 'default',
-                background: ppl ? 'rgba(224,122,156,0.10)' : 'transparent',
-                border: isToday ? '1.5px solid #E07A9C' : '1.5px solid transparent',
+                background: ppl ? 'rgba(255,145,77,0.10)' : 'transparent',
+                border: isToday ? '1.5px solid #FF914D' : '1.5px solid transparent',
               }}>
-              <span style={{ fontSize: '0.72rem', fontVariantNumeric: 'tabular-nums', fontWeight: ppl ? 800 : 500, color: ppl ? '#C2456E' : 'var(--on-surface)' }}>{d}</span>
+              <span style={{ fontSize: '0.72rem', fontVariantNumeric: 'tabular-nums', fontWeight: ppl ? 800 : 500, color: ppl ? '#C75D3A' : 'var(--on-surface)' }}>{d}</span>
               {ppl && (
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   {ppl.slice(0, 2).map((p, idx) => (
                     <div key={p.id} style={{ marginLeft: idx === 0 ? 0 : '-7px' }}><Avatar p={p} size={22} ring="#fff" /></div>
                   ))}
-                  {ppl.length > 2 && <span style={{ marginLeft: '2px', fontSize: '0.6rem', fontWeight: 800, color: '#C2456E' }}>+{ppl.length - 2}</span>}
+                  {ppl.length > 2 && <span style={{ marginLeft: '2px', fontSize: '0.6rem', fontWeight: 800, color: '#C75D3A' }}>+{ppl.length - 2}</span>}
                 </div>
               )}
             </div>
@@ -171,7 +149,6 @@ function Cumpleanos() {
     })();
   }, []);
 
-  const frase = useMemo(() => FRASES[dayOfYear() % FRASES.length], []);
   const year = now.getFullYear();
   const today = { month: now.getMonth(), day: now.getDate() };
   const me = people.find(p => p.id === user?.id);
@@ -207,6 +184,13 @@ function Cumpleanos() {
     border: '1px solid var(--border-subtle)',
     boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
   };
+  // Card del collage de cumpleaños (papel kraft + recortes). Proporción del arte.
+  const collageCard = {
+    position: 'relative', maxWidth: '380px', margin: '0 auto', width: '100%',
+    aspectRatio: '940 / 1600', borderRadius: '28px', overflow: 'hidden',
+    backgroundColor: '#EDE6D8', boxShadow: '0 20px 44px rgba(80,55,30,0.16)',
+  };
+  const collageImg = { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' };
 
   return (
     <div className="mobile-app-container" style={{ background: 'var(--app-bg)', minHeight: '100vh' }}>
@@ -233,42 +217,35 @@ function Cumpleanos() {
             </div>
           ) : !me?.birth_date ? (
             <div style={{ borderRadius: '28px', padding: '30px 24px', textAlign: 'center', ...cardWhite }}>
-              <Cake size={40} color="#E07A9C" style={{ marginBottom: '12px' }} />
+              <Cake size={40} color="#FF914D" style={{ marginBottom: '12px' }} />
               <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--black)' }}>¿Cuándo es tu cumple?</h2>
               <p style={{ margin: '0 0 18px', fontSize: '0.9rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>Agrégalo en tu perfil y te preparamos una sorpresa 🎉</p>
-              <button onClick={() => navigate('/mi-cuenta')} style={{ background: '#E07A9C', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '16px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 20px rgba(224,122,156,0.35)' }}>Agregar mi cumpleaños</button>
+              <button onClick={() => navigate('/mi-cuenta')} style={{ background: '#FF914D', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '16px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 20px rgba(255,145,77,0.35)' }}>Agregar mi cumpleaños</button>
             </div>
           ) : countdown?.isToday ? (
-            <div style={{ borderRadius: '28px', padding: '36px 24px', textAlign: 'center', ...cardWhite, position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', background: 'rgba(255,255,255,0.25)', borderRadius: '50%' }} />
-              <PartyPopper size={46} color="#C2456E" style={{ marginBottom: '10px', position: 'relative' }} />
-              <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: 'var(--black)', position: 'relative' }}>¡Hoy es tu día! 🎉</h2>
-              <p style={{ margin: 0, fontSize: '1rem', color: 'var(--on-surface-variant)', fontWeight: 600, position: 'relative' }}>Feliz cumpleaños, {me.full_name?.split(' ')[0] || 'hermosa'} 💕</p>
+            <div style={collageCard}>
+              <img src="/cumple/birthday-bg.jpg" alt="" aria-hidden="true" style={collageImg} />
+              <div style={{ position: 'absolute', left: 0, right: 0, top: '45%', transform: 'translateY(-50%)', textAlign: 'center', padding: '0 26px' }}>
+                <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.86)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', borderRadius: '20px', padding: '18px 22px', boxShadow: '0 10px 26px rgba(80,55,30,0.16)' }}>
+                  <h2 style={{ margin: '0 0 4px', fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: '#2E2018' }}>¡Hoy es tu día! 🎉</h2>
+                  <p style={{ margin: 0, fontSize: '0.92rem', color: '#7A6A5E', fontWeight: 600 }}>Feliz cumpleaños, {me.full_name?.split(' ')[0] || 'hermosa'} 🧡</p>
+                </div>
+              </div>
             </div>
           ) : (
-            <div style={{ borderRadius: '28px', padding: '28px 24px', ...cardWhite, position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: '-25px', right: '-25px', width: '100px', height: '100px', background: 'rgba(255,255,255,0.25)', borderRadius: '50%' }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', position: 'relative' }}>
-                <Gift size={20} color="#E07A9C" />
-                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#C2456E', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Tu cumpleaños</span>
-              </div>
-              <div style={{ display: 'flex', gap: '4px', position: 'relative' }}>
-                <Unit value={countdown.days} label="días" />
-                <Unit value={countdown.hours} label="hrs" />
-                <Unit value={countdown.mins} label="min" />
-                <Unit value={countdown.secs} label="seg" />
+            <div style={collageCard}>
+              <img src="/cumple/birthday-bg.jpg" alt="" aria-hidden="true" style={collageImg} />
+              <div style={{ position: 'absolute', left: 0, right: 0, top: '44%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '0 16px' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, letterSpacing: '0.16em', color: '#C75D3A' }}>FALTAN</span>
+                <div style={{ display: 'flex', gap: '8px', width: '100%', justifyContent: 'center' }}>
+                  <Unit value={countdown.days} label="días" />
+                  <Unit value={countdown.hours} label="hrs" />
+                  <Unit value={countdown.mins} label="min" />
+                  <Unit value={countdown.secs} label="seg" />
+                </div>
               </div>
             </div>
           )}
-        </motion.section>
-
-        {/* FRASE (estilo post-it con washi tape) */}
-        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }} style={{ marginTop: '24px', display: 'flex', justifyContent: 'center' }}>
-          <div style={{ position: 'relative', transform: 'rotate(-2.5deg)', background: '#FAF6EF', padding: '42px 26px 36px', borderRadius: '6px', boxShadow: '0 16px 32px rgba(0,0,0,0.12)', maxWidth: '330px', width: '100%' }}>
-            {/* Washi tape */}
-            <div style={{ position: 'absolute', top: '-13px', left: '50%', transform: 'translateX(-50%) rotate(-3deg)', width: '128px', height: '30px', background: 'rgba(224,122,156,0.28)', borderLeft: '2px dashed rgba(255,255,255,0.7)', borderRight: '2px dashed rgba(255,255,255,0.7)', backdropFilter: 'blur(1px)' }} />
-            <Frase text={frase} />
-          </div>
         </motion.section>
 
         {/* CALENDARIO */}
@@ -322,7 +299,7 @@ function Cumpleanos() {
               style={{ width: 'min(360px, 100%)', maxHeight: '70vh', overflowY: 'auto', borderRadius: '26px', padding: '22px', background: 'var(--glass-bg)', backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)', border: '1px solid var(--glass-border)', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                 <div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#C2456E', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Cumpleaños</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#C75D3A', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Cumpleaños</div>
                   <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, color: 'var(--on-surface)' }}>{selectedDay.day} de {MESES[selectedDay.month]}</div>
                 </div>
                 <button onClick={() => setSelectedDay(null)} aria-label="Cerrar" style={{ width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
@@ -336,13 +313,13 @@ function Cumpleanos() {
                   const isBdayToday = today.month === selectedDay.month && today.day === selectedDay.day;
                   return (
                     <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <Avatar p={p} size={46} ring={mine ? '#E07A9C' : 'var(--primary)'} />
+                      <Avatar p={p} size={46} ring={mine ? '#FF914D' : 'var(--primary)'} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--on-surface)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.full_name || 'Be Fit Lab'}{mine ? ' (tú)' : ''}</span>
                           {isCoach && <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--primary)', background: 'rgba(255,145,77,0.12)', padding: '2px 7px', borderRadius: '8px', textTransform: 'uppercase' }}>Coach</span>}
                         </div>
-                        {isBdayToday && <span style={{ fontSize: '0.78rem', color: '#C2456E', fontWeight: 700 }}>¡Hoy! 🎉</span>}
+                        {isBdayToday && <span style={{ fontSize: '0.78rem', color: '#C75D3A', fontWeight: 700 }}>¡Hoy! 🎉</span>}
                       </div>
                     </div>
                   );
