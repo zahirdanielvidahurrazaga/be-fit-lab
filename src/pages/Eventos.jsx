@@ -360,17 +360,6 @@ export default function Eventos() {
       </header>
 
       <main style={{ padding: '10px 18px calc(env(safe-area-inset-bottom,0px) + 120px)', maxWidth: '640px', margin: '0 auto' }}>
-        {!selectedLive && (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ marginBottom: '22px' }}>
-            <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-              <p style={{ fontSize: '0.72rem', fontWeight: 800, color: PRIMARY, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 3px' }}>La tribu</p>
-              <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', margin: 0, color: 'var(--on-surface)' }}>Así se viven nuestros eventos</h2>
-            </div>
-            <div style={{ position: 'relative', width: '100%', maxWidth: '300px', margin: '0 auto', aspectRatio: '9 / 16', borderRadius: '24px', overflow: 'hidden', background: 'var(--surface-low)', boxShadow: '0 20px 44px rgba(0,0,0,0.16)' }}>
-              <AutoVideo src={`${VIDEO_BASE}eventos.mp4`} poster="/videos-posters/eventos.jpg" />
-            </div>
-          </motion.div>
-        )}
         <AnimatePresence mode="wait">
           {selectedLive ? (
             <EventDetail key="detail" ev={selectedLive} user={user} registered={regs.has(selectedLive.id)} onReg={handleReg} processing={processing} onBack={() => setSelected(null)} />
@@ -385,11 +374,14 @@ export default function Eventos() {
           ) : (
             <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {next && (
-                <div style={{ background: 'linear-gradient(135deg, #2D2928 0%, #4A4544 100%)', borderRadius: '24px', padding: '22px', color: '#fff', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', background: 'rgba(255,145,77,0.2)', borderRadius: '50%', filter: 'blur(34px)' }} />
+                <div style={{ background: '#2D2928', borderRadius: '24px', padding: '22px', color: '#fff', position: 'relative', overflow: 'hidden', minHeight: '190px', boxShadow: '0 20px 44px rgba(0,0,0,0.18)' }}>
+                  {/* Video de eventos de fondo */}
+                  <AutoVideo src={`${VIDEO_BASE}eventos.mp4`} poster="/videos-posters/eventos.jpg" />
+                  {/* Overlay para que la cuenta regresiva se lea encima */}
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(20,16,13,0.86) 0%, rgba(20,16,13,0.58) 55%, rgba(20,16,13,0.82) 100%)', pointerEvents: 'none' }} />
                   <div style={{ position: 'relative', zIndex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '6px' }}><Sparkles size={14} color={PRIMARY} /><span style={{ fontSize: '0.64rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Próximo evento</span></div>
-                    <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: '0 0 16px', lineHeight: 1.1, color: '#fff' }}>{next.title}</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '6px' }}><Sparkles size={14} color={PRIMARY} /><span style={{ fontSize: '0.64rem', fontWeight: 800, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Próximo evento</span></div>
+                    <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: '0 0 16px', lineHeight: 1.1, color: '#fff', textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>{next.title}</h2>
                     <Countdown date={next.event_date} />
                   </div>
                 </div>
