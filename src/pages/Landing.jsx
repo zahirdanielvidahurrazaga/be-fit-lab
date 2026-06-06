@@ -11,6 +11,10 @@ import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence, useScroll, useTransform, useInView, useSpring as useMotionSpring } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 
+// Videos de marca hospedados en Supabase Storage (bucket público `videos`).
+// Se sirven por URL solo en la web → no engordan el binario nativo.
+const VIDEO_BASE = 'https://fifaowaiokauhuqklzwe.supabase.co/storage/v1/object/public/videos/';
+
 // Link de react-router con animaciones de framer-motion (hover naranja + desplazamiento)
 const MotionLink = motion(Link);
 
@@ -804,15 +808,29 @@ export default function Landing() {
       {/* ── El Estudio ────────────────────────────────────────────── */}
       <section id="estudio" style={{ padding:'12rem 5%', background:'var(--surface-lowest)', position:'relative', overflow:'hidden' }}>
         <div style={{ maxWidth:'1200px', margin:'0 auto', position:'relative', zIndex:1 }}>
-          <motion.div variants={slideRight} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ marginBottom:'6rem', textAlign:'center' }}>
+          <motion.div variants={slideRight} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ marginBottom:'4rem', textAlign:'center' }}>
             <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Instalaciones</span>
-            <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0', color:'var(--black)', letterSpacing:'-0.04em' }}>Un espacio diseñado<br/><span style={{ color:'var(--primary)' }}>para inspirarte.</span></h2>
+            <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0 1rem', color:'var(--black)', letterSpacing:'-0.04em' }}>Un espacio diseñado<br/><span style={{ color:'var(--primary)' }}>para inspirarte.</span></h2>
+            <p style={{ fontSize:'1.05rem', color:'var(--on-surface-variant)', maxWidth:'520px', margin:'0 auto', lineHeight:1.6 }}>Cada detalle está pensado para que entrenar y celebrar se sienta como un ritual.</p>
           </motion.div>
           <motion.div variants={stagger(0.1)} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }}
-            style={{ display:'grid', gridTemplateColumns:'repeat(12,1fr)', gridTemplateRows:'auto', gap:'24px' }}>
-            <motion.div variants={scaleIn} style={{ gridColumn:'span 8', gridRow:'span 2', background:`url("/assets/evolucion_lifestyle.png")`, backgroundColor:'var(--surface)', backgroundSize:'cover', backgroundPosition:'center', borderRadius:'32px', minHeight:'500px' }}/>
-            <motion.div variants={scaleIn} style={{ gridColumn:'span 4', background:`url("/reformer_card.png")`, backgroundColor:'var(--surface)', backgroundSize:'cover', backgroundPosition:'center', borderRadius:'32px', minHeight:'238px' }}/>
-            <motion.div variants={scaleIn} style={{ gridColumn:'span 4', background:`url("/strength_card.png")`, backgroundColor:'var(--surface)', backgroundSize:'cover', backgroundPosition:'center', borderRadius:'32px', minHeight:'238px' }}/>
+            style={{ display:'grid', gridTemplateColumns:'repeat(12,1fr)', gridAutoRows:'238px', gap:'24px' }}>
+            {/* Video del estudio (grande) */}
+            <motion.div variants={scaleIn} style={{ gridColumn:'span 8', gridRow:'span 2', position:'relative', borderRadius:'32px', overflow:'hidden', background:'var(--surface)', boxShadow:'0 30px 80px rgba(0,0,0,0.10)' }}>
+              <video src={`${VIDEO_BASE}estudio.mp4`} poster="/assets/evolucion_lifestyle.png" autoPlay muted loop playsInline preload="none"
+                style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} />
+              <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.42) 100%)', pointerEvents:'none' }} />
+              <span style={{ position:'absolute', left:'22px', bottom:'22px', padding:'8px 16px', borderRadius:'999px', background:'rgba(255,255,255,0.16)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.28)', color:'#fff', fontSize:'0.8rem', fontWeight:800, letterSpacing:'0.04em' }}>El estudio</span>
+            </motion.div>
+            {/* Video de cumpleaños */}
+            <motion.div variants={scaleIn} style={{ gridColumn:'span 4', position:'relative', borderRadius:'32px', overflow:'hidden', background:'var(--surface)', boxShadow:'0 20px 50px rgba(0,0,0,0.08)' }}>
+              <video src={`${VIDEO_BASE}cumple.mp4`} poster="/fotos-hero/cumple.png" autoPlay muted loop playsInline preload="none"
+                style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} />
+              <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.42) 100%)', pointerEvents:'none' }} />
+              <span style={{ position:'absolute', left:'18px', bottom:'18px', padding:'7px 14px', borderRadius:'999px', background:'rgba(255,255,255,0.16)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.28)', color:'#fff', fontSize:'0.78rem', fontWeight:800, letterSpacing:'0.04em' }}>Cumpleaños</span>
+            </motion.div>
+            {/* Foto del estudio */}
+            <motion.div variants={scaleIn} style={{ gridColumn:'span 4', background:`url("/reformer_card.png")`, backgroundColor:'var(--surface)', backgroundSize:'cover', backgroundPosition:'center', borderRadius:'32px', boxShadow:'0 20px 50px rgba(0,0,0,0.08)' }}/>
           </motion.div>
         </div>
       </section>
