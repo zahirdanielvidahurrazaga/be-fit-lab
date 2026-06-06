@@ -32,18 +32,18 @@ function Avatar({ p, size = 44, ring = 'var(--primary)' }) {
 // Unidad de la cuenta regresiva como "sticker" blanco sobre el collage crema.
 function Unit({ value, label }) {
   return (
-    <div style={{ flex: 1, maxWidth: '76px', background: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 6px 16px rgba(80,55,30,0.12)', padding: '11px 4px 8px', textAlign: 'center' }}>
-      <div style={{ position: 'relative', height: '2.05rem', overflow: 'hidden' }}>
+    <div style={{ flex: 1, maxWidth: '58px', background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', borderRadius: '13px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 5px 13px rgba(80,55,30,0.12)', padding: '9px 3px 6px', textAlign: 'center' }}>
+      <div style={{ position: 'relative', height: '1.65rem', overflow: 'hidden' }}>
         <AnimatePresence initial={false}>
           <motion.div key={value}
             initial={{ y: '100%', opacity: 0 }} animate={{ y: '0%', opacity: 1 }} exit={{ y: '-100%', opacity: 0 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.7rem', fontWeight: 800, color: '#2E2018', lineHeight: 1, fontFamily: 'var(--font-display)', fontVariantNumeric: 'tabular-nums' }}>
+            style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.35rem', fontWeight: 800, color: '#2E2018', lineHeight: 1, fontFamily: 'var(--font-display)', fontVariantNumeric: 'tabular-nums' }}>
             {String(value).padStart(2, '0')}
           </motion.div>
         </AnimatePresence>
       </div>
-      <div style={{ fontSize: '0.58rem', fontWeight: 800, color: '#8A7A6E', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '4px' }}>{label}</div>
+      <div style={{ fontSize: '0.52rem', fontWeight: 800, color: '#8A7A6E', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '3px' }}>{label}</div>
     </div>
   );
 }
@@ -53,10 +53,10 @@ function Unit({ value, label }) {
 function CollageDecor() {
   const Balloon = ({ cx, cy, col, rot }) => (
     <g transform={`rotate(${rot} ${cx} ${cy})`}>
-      <ellipse cx={cx} cy={cy} rx="19" ry="24" fill={col} />
-      <ellipse cx={cx - 6} cy={cy - 8} rx="4.5" ry="7" fill="rgba(255,255,255,0.45)" />
-      <path d={`M${cx} ${cy + 24} l-2.5 5 l5 0 z`} fill={col} />
-      <path d={`M${cx} ${cy + 29} q6 16 -2 32`} stroke="rgba(120,90,60,0.45)" strokeWidth="1.3" fill="none" />
+      <ellipse cx={cx} cy={cy} rx="15" ry="19" fill={col} />
+      <ellipse cx={cx - 5} cy={cy - 6} rx="3.6" ry="5.5" fill="rgba(255,255,255,0.45)" />
+      <path d={`M${cx} ${cy + 19} l-2 4 l4 0 z`} fill={col} />
+      <path d={`M${cx} ${cy + 23} q5 13 -2 26`} stroke="rgba(120,90,60,0.45)" strokeWidth="1.1" fill="none" />
     </g>
   );
   const Sparkle = ({ x, y, s, c }) => (
@@ -64,14 +64,14 @@ function CollageDecor() {
   );
   return (
     <>
-      <img src="/cumple/garland.png" alt="" aria-hidden="true" style={{ position: 'absolute', top: '3%', left: '50%', transform: 'translateX(-50%)', width: '84%', pointerEvents: 'none' }} />
-      <img src="/cumple/cake.png" alt="" aria-hidden="true" style={{ position: 'absolute', bottom: '2%', left: '50%', transform: 'translateX(-50%)', width: '26%', pointerEvents: 'none' }} />
-      <svg viewBox="0 0 360 360" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-        <Balloon cx={40} cy={152} col="#A8D0E6" rot={-8} />
-        <Balloon cx={322} cy={120} col="#F4C7C2" rot={7} />
-        <Balloon cx={330} cy={214} col="#F6D3A8" rot={-5} />
-        <Sparkle x={42} y={300} s={1.4} c="#D9B25A" />
-        <Sparkle x={314} y={296} s={1.05} c="#D9B25A" />
+      <img src="/cumple/happybday.png" alt="" aria-hidden="true" style={{ position: 'absolute', top: '5%', left: '50%', transform: 'translateX(-50%)', width: '80%', pointerEvents: 'none' }} />
+      <img src="/cumple/cake.png" alt="" aria-hidden="true" style={{ position: 'absolute', bottom: '1.5%', left: '50%', transform: 'translateX(-50%)', width: '21%', pointerEvents: 'none' }} />
+      <svg viewBox="0 0 290 290" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+        <Balloon cx={30} cy={150} col="#A8D0E6" rot={-8} />
+        <Balloon cx={260} cy={128} col="#F4C7C2" rot={7} />
+        <Balloon cx={266} cy={200} col="#F6D3A8" rot={-5} />
+        <Sparkle x={32} y={238} s={1.2} c="#D9B25A" />
+        <Sparkle x={255} y={236} s={0.95} c="#D9B25A" />
       </svg>
     </>
   );
@@ -215,10 +215,10 @@ function Cumpleanos() {
   };
   // Card del collage de cumpleaños (papel kraft + recortes), cuadrada.
   const collageCard = {
-    position: 'relative', maxWidth: '360px', margin: '0 auto', width: '100%',
-    aspectRatio: '1 / 1', borderRadius: '28px', overflow: 'hidden',
+    position: 'relative', maxWidth: '290px', margin: '0 auto', width: '100%',
+    aspectRatio: '1 / 1', borderRadius: '26px', overflow: 'hidden',
     backgroundImage: 'url(/cumple/kraft.jpg)', backgroundSize: 'cover', backgroundPosition: 'center',
-    boxShadow: '0 20px 44px rgba(80,55,30,0.16)',
+    boxShadow: '0 18px 40px rgba(80,55,30,0.16)',
   };
 
   return (
@@ -254,24 +254,21 @@ function Cumpleanos() {
           ) : countdown?.isToday ? (
             <div style={collageCard}>
               <CollageDecor />
-              <div style={{ position: 'absolute', left: 0, right: 0, top: '45%', transform: 'translateY(-50%)', textAlign: 'center', padding: '0 26px' }}>
-                <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.86)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', borderRadius: '20px', padding: '18px 22px', boxShadow: '0 10px 26px rgba(80,55,30,0.16)' }}>
-                  <h2 style={{ margin: '0 0 4px', fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: '#2E2018' }}>¡Hoy es tu día! 🎉</h2>
-                  <p style={{ margin: 0, fontSize: '0.92rem', color: '#7A6A5E', fontWeight: 600 }}>Feliz cumpleaños, {me.full_name?.split(' ')[0] || 'hermosa'} 🧡</p>
+              <div style={{ position: 'absolute', left: 0, right: 0, top: '60%', transform: 'translateY(-50%)', textAlign: 'center', padding: '0 22px' }}>
+                <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', borderRadius: '16px', padding: '13px 16px', boxShadow: '0 8px 20px rgba(80,55,30,0.16)' }}>
+                  <h2 style={{ margin: '0 0 3px', fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: '#2E2018' }}>¡Hoy es tu día! 🎉</h2>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#7A6A5E', fontWeight: 600 }}>Feliz cumple, {me.full_name?.split(' ')[0] || 'hermosa'} 🧡</p>
                 </div>
               </div>
             </div>
           ) : (
             <div style={collageCard}>
               <CollageDecor />
-              <div style={{ position: 'absolute', left: 0, right: 0, top: '44%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '0 16px' }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 800, letterSpacing: '0.16em', color: '#C75D3A' }}>FALTAN</span>
-                <div style={{ display: 'flex', gap: '8px', width: '100%', justifyContent: 'center' }}>
-                  <Unit value={countdown.days} label="días" />
-                  <Unit value={countdown.hours} label="hrs" />
-                  <Unit value={countdown.mins} label="min" />
-                  <Unit value={countdown.secs} label="seg" />
-                </div>
+              <div style={{ position: 'absolute', left: 0, right: 0, top: '62%', transform: 'translateY(-50%)', display: 'flex', gap: '6px', justifyContent: 'center', padding: '0 14px' }}>
+                <Unit value={countdown.days} label="días" />
+                <Unit value={countdown.hours} label="hrs" />
+                <Unit value={countdown.mins} label="min" />
+                <Unit value={countdown.secs} label="seg" />
               </div>
             </div>
           )}
