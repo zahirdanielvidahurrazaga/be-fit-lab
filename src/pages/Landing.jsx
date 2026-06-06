@@ -453,7 +453,7 @@ export default function Landing() {
       {/* ════════════════════════════════════════════════════════════ */}
       <section style={{ minHeight:'100vh', display:'flex', alignItems:'flex-end', padding:'10rem 5% 6rem', position:'relative', overflow:'hidden' }}>
         {/* Fondo a Color */}
-        <div style={{ position:'absolute', inset:0, zIndex:0, backgroundImage:'url("/fotos-hero/IMG_5376.JPG")', backgroundSize:'cover', backgroundPosition:'center 30%', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', inset:0, zIndex:0, backgroundImage:'url("/fotos-hero/_DSC3309.jpg")', backgroundSize:'cover', backgroundPosition:'center 22%', pointerEvents:'none' }} />
         {/* Gradiente sutil inferior para legibilidad del texto */}
         <div style={{ position:'absolute', inset:0, zIndex:1, background:'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%)', pointerEvents:'none' }} />
         
