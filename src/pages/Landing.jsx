@@ -13,7 +13,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 
 // Videos de marca hospedados en Supabase Storage (bucket público `videos`).
 // Se sirven por URL solo en la web → no engordan el binario nativo.
-const VIDEO_BASE = 'https://fifaowaiokauhuqklzwe.supabase.co/storage/v1/object/public/videos/';
+const VIDEO_BASE = 'https://fifaowaiokauhuqklzwe.supabase.co/storage/v1/object/public/Video/';
 
 // Link de react-router con animaciones de framer-motion (hover naranja + desplazamiento)
 const MotionLink = motion(Link);
