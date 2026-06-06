@@ -61,8 +61,9 @@ export default function ClientMealPlan({ userId, onOpenRecipe }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Header del plan (real, estilo premium oscuro) */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-        style={{ padding: '24px', borderRadius: '28px', background: 'linear-gradient(135deg, #3A2118 0%, #B06A4A 100%)', color: 'white', position: 'relative', overflow: 'hidden', boxShadow: '0 18px 38px rgba(58,33,24,0.28)' }}>
-        <div style={{ position: 'absolute', top: '-24px', right: '-24px', width: '130px', height: '130px', background: 'rgba(255,145,77,0.18)', borderRadius: '50%', filter: 'blur(34px)' }} />
+        style={{ padding: '24px', borderRadius: '28px', backgroundColor: '#2A1B12', color: 'white', position: 'relative', overflow: 'hidden', minHeight: '150px', boxShadow: '0 18px 38px rgba(58,33,24,0.28)' }}>
+        <img src="/fotos-hero/_DSC3272.jpg" alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg, rgba(40,26,18,0.92) 0%, rgba(40,26,18,0.66) 50%, rgba(58,33,24,0.32) 100%)', pointerEvents: 'none' }} />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <Salad size={14} color={PRIMARY} />

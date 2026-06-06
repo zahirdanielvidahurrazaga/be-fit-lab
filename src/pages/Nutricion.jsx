@@ -327,8 +327,9 @@ function Nutricion() {
       {/* ANUNCIO DE UPGRADE (solo planes sin plan personalizado) — al fondo */}
       {!mealPlanAccess && (
         <div style={{ padding: '0 16px', maxWidth: '600px', margin: '0 auto 18px', width: '100%' }}>
-          <div style={{ padding: '22px', borderRadius: '24px', background: 'linear-gradient(135deg, #3A2118 0%, #B06A4A 100%)', color: '#fff', position: 'relative', overflow: 'hidden', boxShadow: '0 18px 38px rgba(58,33,24,0.28)' }}>
-            <div style={{ position: 'absolute', top: '-24px', right: '-24px', width: '130px', height: '130px', background: 'rgba(255,145,77,0.18)', borderRadius: '50%', filter: 'blur(34px)' }} />
+          <div style={{ padding: '22px', borderRadius: '24px', backgroundColor: '#2A1B12', color: '#fff', position: 'relative', overflow: 'hidden', boxShadow: '0 18px 38px rgba(58,33,24,0.28)' }}>
+            <img src="/fotos-hero/_DSC3272.jpg" alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 18%' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg, rgba(40,26,18,0.94) 0%, rgba(40,26,18,0.72) 50%, rgba(58,33,24,0.38) 100%)', pointerEvents: 'none' }} />
             <div style={{ position: 'relative', zIndex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                 <ChefHat size={16} color="var(--primary)" />
