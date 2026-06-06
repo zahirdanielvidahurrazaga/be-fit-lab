@@ -318,7 +318,7 @@ function Evolucion() {
             <motion.section className="tour-badges-section" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
               {/* Hero con foto del estudio */}
               <div style={{ position: 'relative', borderRadius: '26px', overflow: 'hidden', marginBottom: '20px', minHeight: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '20px', backgroundColor: '#2a1d16', boxShadow: '0 20px 44px rgba(58,33,24,0.26)' }}>
-                <img src="/fotos-hero/IMG_5383.JPG" alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }} />
+                <img src="/fotos-hero/IMG_5383.JPG" alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 42%' }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(40,26,18,0.30) 0%, rgba(40,26,18,0.55) 50%, rgba(26,17,12,0.92) 100%)' }} />
                 <div style={{ position: 'relative', zIndex: 1 }}>
                   <h2 style={{ fontSize: '1.45rem', fontWeight: 900, margin: '0 0 4px', fontFamily: 'var(--font-display)', color: '#fff', textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>Tus insignias</h2>
@@ -877,9 +877,14 @@ function BadgeIcon({ icon, label, locked, onClick }) {
       <div style={{
         position: 'relative', width: '74px', height: '74px', borderRadius: '22px',
         display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-        background: locked ? 'var(--surface-elevated)' : 'linear-gradient(150deg, #FFF3E9 0%, #FFE0C7 100%)',
-        border: locked ? '1px solid var(--border-subtle)' : '1px solid rgba(255,145,77,0.35)',
-        boxShadow: locked ? 'none' : '0 10px 24px rgba(255,145,77,0.28), inset 0 1px 0 rgba(255,255,255,0.6)'
+        background: locked
+          ? 'var(--glass-bg, rgba(255,255,255,0.5))'
+          : 'linear-gradient(150deg, rgba(255,234,214,0.62) 0%, rgba(255,180,120,0.40) 100%)',
+        backdropFilter: 'blur(18px) saturate(180%)', WebkitBackdropFilter: 'blur(18px) saturate(180%)',
+        border: locked ? '1px solid var(--glass-border, rgba(255,255,255,0.5))' : '1px solid rgba(255,255,255,0.55)',
+        boxShadow: locked
+          ? 'inset 0 1px 0 rgba(255,255,255,0.4)'
+          : '0 10px 26px rgba(255,145,77,0.26), inset 0 1px 0 rgba(255,255,255,0.65)'
       }}>
         {/* halo brillante "respirando" para las desbloqueadas */}
         {!locked && (
