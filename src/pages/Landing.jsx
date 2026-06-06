@@ -19,16 +19,28 @@ const VIDEO_BASE = 'https://fifaowaiokauhuqklzwe.supabase.co/storage/v1/object/p
 // atributo → autoplay bloqueado), reproduce al entrar en viewport
 // (IntersectionObserver) y reintenta en canplay/loadeddata.
 function AutoVideo({ src, poster, label }) {
+  const wrapRef = useRef(null);
   const ref = useRef(null);
+  const [load, setLoad] = useState(false);   // carga perezosa del video
   const [needTap, setNeedTap] = useState(false); // si el navegador bloquea el autoplay
+
+  // 1) Solo descarga el video cuando el tile está cerca del viewport.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((es) => {
+      if (es.some(e => e.isIntersecting)) { setLoad(true); io.disconnect(); }
+    }, { rootMargin: '300px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  // 2) Una vez cargado, reproduce al estar visible y pausa al salir.
   useEffect(() => {
     const v = ref.current;
-    if (!v) return;
+    if (!v || !load) return;
     v.muted = true; v.defaultMuted = true;
-    const tryPlay = () => {
-      const p = v.play?.();
-      if (p && p.then) p.then(() => setNeedTap(false)).catch(() => setNeedTap(true));
-    };
+    const tryPlay = () => { const p = v.play?.(); if (p && p.then) p.then(() => setNeedTap(false)).catch(() => setNeedTap(true)); };
     const onPlaying = () => setNeedTap(false);
     const io = new IntersectionObserver(
       (es) => es.forEach(e => (e.isIntersecting ? tryPlay() : v.pause())),
@@ -39,19 +51,20 @@ function AutoVideo({ src, poster, label }) {
     v.addEventListener('loadeddata', tryPlay);
     v.addEventListener('playing', onPlaying);
     tryPlay();
-    // Respaldo: si tras 1.5s sigue pausado, mostramos el botón de play.
-    const t = setTimeout(() => { if (v.paused) setNeedTap(true); }, 1500);
-    return () => { io.disconnect(); v.removeEventListener('canplay', tryPlay); v.removeEventListener('loadeddata', tryPlay); v.removeEventListener('playing', onPlaying); clearTimeout(t); };
-  }, []);
+    return () => { io.disconnect(); v.removeEventListener('canplay', tryPlay); v.removeEventListener('loadeddata', tryPlay); v.removeEventListener('playing', onPlaying); };
+  }, [load]);
+
   const onTap = () => {
+    setLoad(true);
     const v = ref.current; if (!v) return;
     v.muted = true;
     const p = v.play?.();
     if (p && p.then) p.then(() => setNeedTap(false)).catch(() => {});
   };
+
   return (
-    <>
-      <video ref={ref} src={src} poster={poster} muted loop playsInline autoPlay preload="auto" onClick={onTap}
+    <div ref={wrapRef} style={{ position:'absolute', inset:0 }}>
+      <video ref={ref} src={load ? src : undefined} poster={poster} muted loop playsInline autoPlay preload="metadata" onClick={onTap}
         style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', cursor:'pointer' }} />
       <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, transparent 62%, rgba(0,0,0,0.45) 100%)', pointerEvents:'none' }} />
       {needTap && (
@@ -60,7 +73,7 @@ function AutoVideo({ src, poster, label }) {
         </button>
       )}
       <span style={{ position:'absolute', left:'20px', bottom:'20px', padding:'8px 16px', borderRadius:'999px', background:'rgba(255,255,255,0.16)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.28)', color:'#fff', fontSize:'0.8rem', fontWeight:800, letterSpacing:'0.04em', pointerEvents:'none' }}>{label}</span>
-    </>
+    </div>
   );
 }
 
@@ -862,16 +875,20 @@ export default function Landing() {
             <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0 1rem', color:'var(--black)', letterSpacing:'-0.04em' }}>Un espacio diseñado<br/><span style={{ color:'var(--primary)' }}>para inspirarte.</span></h2>
             <p style={{ fontSize:'1.05rem', color:'var(--on-surface-variant)', maxWidth:'520px', margin:'0 auto', lineHeight:1.6 }}>Cada detalle está pensado para que entrenar y celebrar se sienta como un ritual.</p>
           </motion.div>
-          {/* Dos videos verticales (9:16) lado a lado — formato de celular */}
+          {/* Videos verticales (9:16) lado a lado — formato de celular */}
           <motion.div variants={stagger(0.12)} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }}
-            style={{ display:'flex', gap:'24px', justifyContent:'center', flexWrap:'wrap', maxWidth:'860px', margin:'0 auto' }}>
+            style={{ display:'flex', gap:'24px', justifyContent:'center', flexWrap:'wrap', maxWidth:'1140px', margin:'0 auto' }}>
             {/* Video del estudio */}
-            <motion.div variants={scaleIn} style={{ position:'relative', flex:'1 1 320px', maxWidth:'400px', aspectRatio:'9 / 16', borderRadius:'32px', overflow:'hidden', background:'var(--surface)', boxShadow:'0 30px 80px rgba(0,0,0,0.12)' }}>
+            <motion.div variants={scaleIn} style={{ position:'relative', flex:'1 1 300px', maxWidth:'360px', aspectRatio:'9 / 16', borderRadius:'32px', overflow:'hidden', background:'var(--surface)', boxShadow:'0 30px 80px rgba(0,0,0,0.12)' }}>
               <AutoVideo src={`${VIDEO_BASE}estudio.mp4`} poster="/videos-posters/estudio.jpg" label="El estudio" />
             </motion.div>
             {/* Video de cumpleaños */}
-            <motion.div variants={scaleIn} style={{ position:'relative', flex:'1 1 320px', maxWidth:'400px', aspectRatio:'9 / 16', borderRadius:'32px', overflow:'hidden', background:'var(--surface)', boxShadow:'0 30px 80px rgba(0,0,0,0.12)' }}>
+            <motion.div variants={scaleIn} style={{ position:'relative', flex:'1 1 300px', maxWidth:'360px', aspectRatio:'9 / 16', borderRadius:'32px', overflow:'hidden', background:'var(--surface)', boxShadow:'0 30px 80px rgba(0,0,0,0.12)' }}>
               <AutoVideo src={`${VIDEO_BASE}cumple.mp4`} poster="/videos-posters/cumple.jpg" label="Cumpleaños" />
+            </motion.div>
+            {/* Video de eventos */}
+            <motion.div variants={scaleIn} style={{ position:'relative', flex:'1 1 300px', maxWidth:'360px', aspectRatio:'9 / 16', borderRadius:'32px', overflow:'hidden', background:'var(--surface)', boxShadow:'0 30px 80px rgba(0,0,0,0.12)' }}>
+              <AutoVideo src={`${VIDEO_BASE}eventos.mp4`} poster="/videos-posters/eventos.jpg" label="Eventos" />
             </motion.div>
           </motion.div>
         </div>
