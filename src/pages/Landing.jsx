@@ -818,14 +818,14 @@ export default function Landing() {
             style={{ display:'flex', gap:'24px', justifyContent:'center', flexWrap:'wrap', maxWidth:'860px', margin:'0 auto' }}>
             {/* Video del estudio */}
             <motion.div variants={scaleIn} style={{ position:'relative', flex:'1 1 320px', maxWidth:'400px', aspectRatio:'9 / 16', borderRadius:'32px', overflow:'hidden', background:'var(--surface)', boxShadow:'0 30px 80px rgba(0,0,0,0.12)' }}>
-              <video src={`${VIDEO_BASE}estudio.mp4`} poster="/reformer_card.png" autoPlay muted loop playsInline preload="none"
+              <video src={`${VIDEO_BASE}estudio.mp4`} poster="/videos-posters/estudio.jpg" autoPlay muted loop playsInline preload="none"
                 style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} />
               <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, transparent 62%, rgba(0,0,0,0.45) 100%)', pointerEvents:'none' }} />
               <span style={{ position:'absolute', left:'20px', bottom:'20px', padding:'8px 16px', borderRadius:'999px', background:'rgba(255,255,255,0.16)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.28)', color:'#fff', fontSize:'0.8rem', fontWeight:800, letterSpacing:'0.04em' }}>El estudio</span>
             </motion.div>
             {/* Video de cumpleaños */}
             <motion.div variants={scaleIn} style={{ position:'relative', flex:'1 1 320px', maxWidth:'400px', aspectRatio:'9 / 16', borderRadius:'32px', overflow:'hidden', background:'var(--surface)', boxShadow:'0 30px 80px rgba(0,0,0,0.12)' }}>
-              <video src={`${VIDEO_BASE}cumple.mp4`} poster="/fotos-hero/cumple.png" autoPlay muted loop playsInline preload="none"
+              <video src={`${VIDEO_BASE}cumple.mp4`} poster="/videos-posters/cumple.jpg" autoPlay muted loop playsInline preload="none"
                 style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} />
               <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, transparent 62%, rgba(0,0,0,0.45) 100%)', pointerEvents:'none' }} />
               <span style={{ position:'absolute', left:'20px', bottom:'20px', padding:'8px 16px', borderRadius:'999px', background:'rgba(255,255,255,0.16)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.28)', color:'#fff', fontSize:'0.8rem', fontWeight:800, letterSpacing:'0.04em' }}>Cumpleaños</span>
