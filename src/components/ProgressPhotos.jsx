@@ -48,11 +48,28 @@ const glass = {
   boxShadow: '0 8px 28px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.4)',
 };
 
+// Todas las fotos de progreso se capturan y guardan en formato vertical 2:3.
+const PHOTO_AR = 2 / 3;            // ancho / alto
+const PHOTO_AR_CSS = '2 / 3';     // mismo valor para el CSS aspect-ratio
+
+// Recorta el CENTRO de una fuente (video o imagen) a 2:3 vertical y devuelve un canvas.
+function cropToPortrait(source, srcW, srcH, mirror = false) {
+  let sw = srcW, sh = srcW / PHOTO_AR;     // intenta usar todo el ancho
+  if (sh > srcH) { sh = srcH; sw = srcH * PHOTO_AR; } // si no cabe, usa todo el alto
+  const sx = (srcW - sw) / 2, sy = (srcH - sh) / 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(sw); canvas.height = Math.round(sh);
+  const ctx = canvas.getContext('2d');
+  if (mirror) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); } // des-espejar selfie
+  ctx.drawImage(source, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
 // ───────────────────────── Tarjeta con flip ─────────────────────────
 function FlipCard({ label, url, session, angleKey, onDeleteIndividual }) {
   const [flipped, setFlipped] = useState(false);
   return (
-    <div style={{ perspective: '1100px', aspectRatio: '3 / 4' }}>
+    <div style={{ perspective: '1100px', aspectRatio: '2 / 3' }}>
       <motion.div animate={{ rotateY: flipped ? 180 : 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         style={{ position: 'relative', width: '100%', height: '100%', transformStyle: 'preserve-3d' }}>
         
@@ -115,9 +132,9 @@ function CompareModal({ sessions, onClose }) {
                 {sessions.map(s => <option key={s.id} value={s.id}>{new Date(s.taken_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: '2-digit' })}</option>)}
               </select>
               {/* Proporción fija vertical + contain = foto completa sin deformar ni recortar */}
-              <div style={{ width: '100%', aspectRatio: '3 / 4', background: '#101010', borderRadius: '16px', overflow: 'hidden', position: 'relative' }}>
+              <div style={{ width: '100%', aspectRatio: '2 / 3', background: '#101010', borderRadius: '16px', overflow: 'hidden', position: 'relative' }}>
                 {col.sess?.urls?.[angle] ? (
-                  <img src={col.sess.urls[angle]} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  <img src={col.sess.urls[angle]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)' }}><Camera size={24} /></div>
                 )}
@@ -170,22 +187,31 @@ function CaptureWizard({ userId, onClose, onSaved }) {
 
   const capture = () => {
     const v = videoRef.current; if (!v || !v.videoWidth) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = v.videoWidth; canvas.height = v.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.translate(canvas.width, 0); ctx.scale(-1, 1); // des-espejar el selfie
-    ctx.drawImage(v, 0, 0);
+    const canvas = cropToPortrait(v, v.videoWidth, v.videoHeight, true); // 2:3 + des-espejado
     canvas.toBlob(blob => {
       if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      setShots(s => ({ ...s, [cur.key]: { blob, url } }));
+      setShots(s => ({ ...s, [cur.key]: { blob, url: URL.createObjectURL(blob) } }));
       stopCam();
     }, 'image/jpeg', 0.9);
   };
   const pickGallery = (e) => {
     const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
-    setShots(s => ({ ...s, [cur.key]: { blob: f, url: URL.createObjectURL(f) } }));
-    stopCam();
+    // Normaliza la foto de galería al mismo 2:3 vertical (recorte centrado).
+    const img = new Image();
+    img.onload = () => {
+      const canvas = cropToPortrait(img, img.naturalWidth, img.naturalHeight, false);
+      canvas.toBlob(blob => {
+        if (!blob) return;
+        setShots(s => ({ ...s, [cur.key]: { blob, url: URL.createObjectURL(blob) } }));
+        stopCam();
+      }, 'image/jpeg', 0.9);
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = () => { // fallback: usar el archivo tal cual si no se pudo procesar
+      setShots(s => ({ ...s, [cur.key]: { blob: f, url: URL.createObjectURL(f) } }));
+      stopCam();
+    };
+    img.src = URL.createObjectURL(f);
   };
   const retake = () => { setShots(s => { const n = { ...s }; delete n[cur.key]; return n; }); startCam(); };
 
@@ -236,7 +262,7 @@ function CaptureWizard({ userId, onClose, onSaved }) {
           {!isReview ? (
             <>
               {/* Área de cámara / foto */}
-              <div style={{ position: 'relative', width: '100%', aspectRatio: '3 / 4', borderRadius: '22px', overflow: 'hidden', background: '#101010', marginBottom: '12px' }}>
+              <div style={{ position: 'relative', width: '100%', aspectRatio: '2 / 3', borderRadius: '22px', overflow: 'hidden', background: '#101010', marginBottom: '12px' }}>
                 {shot ? (
                   <img src={shot.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : camActive ? (
@@ -297,7 +323,7 @@ function CaptureWizard({ userId, onClose, onSaved }) {
               <p style={{ margin: '6px 0 14px', fontSize: '0.86rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>¡Listo! Revisa tus 3 fotos y guarda tu sesión. Quedarán privadas detrás de cada tarjeta.</p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '18px' }}>
                 {ANGLES.map((a, i) => (
-                  <div key={a.key} style={{ position: 'relative', aspectRatio: '3 / 4', borderRadius: '14px', overflow: 'hidden', background: '#000' }}>
+                  <div key={a.key} style={{ position: 'relative', aspectRatio: '2 / 3', borderRadius: '14px', overflow: 'hidden', background: '#000' }}>
                     {shots[a.key] ? <img src={shots[a.key].url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
                     <button onClick={() => setStep(i)} style={{ position: 'absolute', top: '6px', right: '6px', width: '24px', height: '24px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.55)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><RotateCcw size={13} /></button>
                     <span style={{ position: 'absolute', bottom: '6px', left: '6px', fontSize: '0.62rem', fontWeight: 800, color: '#fff', background: 'rgba(0,0,0,0.5)', padding: '2px 7px', borderRadius: '6px' }}>{a.label}</span>
