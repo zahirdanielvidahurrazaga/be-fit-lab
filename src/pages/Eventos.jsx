@@ -8,6 +8,7 @@ import { Stripe } from '@capacitor-community/stripe';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { uploadImage } from '../lib/cafeImage';
+import AutoVideo, { VIDEO_BASE } from '../components/AutoVideo';
 
 const PRIMARY = '#FF914D';
 // Liquid glass (theme-aware vía --glass-bg/--glass-border de index.css)
@@ -359,6 +360,17 @@ export default function Eventos() {
       </header>
 
       <main style={{ padding: '10px 18px calc(env(safe-area-inset-bottom,0px) + 120px)', maxWidth: '640px', margin: '0 auto' }}>
+        {!selectedLive && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ marginBottom: '22px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+              <p style={{ fontSize: '0.72rem', fontWeight: 800, color: PRIMARY, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 3px' }}>La tribu</p>
+              <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', margin: 0, color: 'var(--on-surface)' }}>Así se viven nuestros eventos</h2>
+            </div>
+            <div style={{ position: 'relative', width: '100%', maxWidth: '300px', margin: '0 auto', aspectRatio: '9 / 16', borderRadius: '24px', overflow: 'hidden', background: 'var(--surface-low)', boxShadow: '0 20px 44px rgba(0,0,0,0.16)' }}>
+              <AutoVideo src={`${VIDEO_BASE}eventos.mp4`} poster="/videos-posters/eventos.jpg" />
+            </div>
+          </motion.div>
+        )}
         <AnimatePresence mode="wait">
           {selectedLive ? (
             <EventDetail key="detail" ev={selectedLive} user={user} registered={regs.has(selectedLive.id)} onReg={handleReg} processing={processing} onBack={() => setSelected(null)} />
