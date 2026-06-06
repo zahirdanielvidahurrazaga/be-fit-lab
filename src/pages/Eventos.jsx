@@ -374,14 +374,17 @@ export default function Eventos() {
           ) : (
             <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {next && (
-                <div style={{ background: '#2D2928', borderRadius: '24px', padding: '22px', color: '#fff', position: 'relative', overflow: 'hidden', minHeight: '190px', boxShadow: '0 20px 44px rgba(0,0,0,0.18)' }}>
+                <div style={{ background: '#2D2928', borderRadius: '28px', color: '#fff', position: 'relative', overflow: 'hidden', aspectRatio: '1 / 1', boxShadow: '0 24px 50px rgba(0,0,0,0.22)' }}>
                   {/* Video de eventos de fondo */}
                   <AutoVideo src={`${VIDEO_BASE}eventos.mp4`} poster="/videos-posters/eventos.jpg" />
-                  {/* Overlay para que la cuenta regresiva se lea encima */}
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(20,16,13,0.86) 0%, rgba(20,16,13,0.58) 55%, rgba(20,16,13,0.82) 100%)', pointerEvents: 'none' }} />
-                  <div style={{ position: 'relative', zIndex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '6px' }}><Sparkles size={14} color={PRIMARY} /><span style={{ fontSize: '0.64rem', fontWeight: 800, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Próximo evento</span></div>
-                    <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: '0 0 16px', lineHeight: 1.1, color: '#fff', textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>{next.title}</h2>
+                  {/* Overlay: oscuro arriba/abajo (texto + contador legibles), claro al centro (se ve el video) */}
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(18,14,11,0.88) 0%, rgba(18,14,11,0.30) 36%, rgba(18,14,11,0.40) 60%, rgba(18,14,11,0.92) 100%)', pointerEvents: 'none' }} />
+                  {/* Contenido: título arriba, cuenta regresiva abajo */}
+                  <div style={{ position: 'absolute', inset: 0, zIndex: 1, padding: '28px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '8px' }}><Sparkles size={15} color={PRIMARY} /><span style={{ fontSize: '0.66rem', fontWeight: 800, color: 'rgba(255,255,255,0.82)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Próximo evento</span></div>
+                      <h2 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.08, color: '#fff', textShadow: '0 2px 14px rgba(0,0,0,0.55)' }}>{next.title}</h2>
+                    </div>
                     <Countdown date={next.event_date} />
                   </div>
                 </div>
