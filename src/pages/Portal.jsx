@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Utensils, TrendingUp, User, QrCode, ChevronRight, Activity, Flame, Sparkles, Clock, MapPin, X, Lock, Wallet, Coffee, Cake } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
+import { useHealth } from '../hooks/useHealth';
 import { getNextClassOccurrence, classDateTime } from '../hooks/useLocalNotifications';
 import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -98,6 +100,27 @@ function Portal() {
 
   const rawName = profileName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Cliente';
   const userName = rawName.split(' ')[0]; // Solo el primer nombre para el saludo
+
+  // ── Resumen "Tu semana" (datos reales) ──────────────────────────────────
+  const { healthData, fetchTodayData } = useHealth();
+  const [history, setHistory] = useState(null); // reservas con check-in (asistidas)
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('reservations').select('created_at').eq('user_id', user.id).eq('checked_in', true)
+      .then(({ data }) => setHistory(data || []));
+    fetchTodayData(); // salud de hoy si ya está conectada (no pide permiso)
+  }, [user]);
+
+  const weekStats = (() => {
+    const now = new Date();
+    const dow = (now.getDay() + 6) % 7; // 0 = lunes
+    const monday = new Date(now); monday.setHours(0, 0, 0, 0); monday.setDate(now.getDate() - dow);
+    const perDay = [0, 0, 0, 0, 0, 0, 0];
+    (history || []).forEach(h => { const d = new Date(h.created_at); if (d >= monday) perDay[(d.getDay() + 6) % 7]++; });
+    const weekCount = perDay.reduce((a, b) => a + b, 0);
+    const total = (history || []).length;
+    return { perDay, weekCount, total, points: total * 10, todayIdx: dow, maxDay: Math.max(1, ...perDay) };
+  })();
   const greeting = new Date().getHours() < 12 ? 'Buenos días' : new Date().getHours() < 18 ? 'Buenas tardes' : 'Buenas noches';
 
   return (
@@ -275,14 +298,41 @@ function Portal() {
             </div>
           </motion.section>
 
-          {/* WEEKLY STATS MINI */}
+          {/* TU SEMANA — resumen interactivo (clases, salud, puntos) */}
           <motion.section id="tour-tu-semana" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5, delay:0.35}} style={{ marginTop: '25px' }}>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '15px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Tu semana</h2>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <StatPill icon={<Flame size={16} />} value="1.2k" label="kcal" color="var(--primary)" />
-              <StatPill icon={<Activity size={16} />} value="3" label="clases" color="var(--on-surface)" />
-              <StatPill icon={<Sparkles size={16} />} value="85" label="pts" color="var(--accent)" />
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Tu semana</h2>
+              <span style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>{weekStats.weekCount} {weekStats.weekCount === 1 ? 'clase' : 'clases'}</span>
             </div>
+
+            {/* Gráfica de barras: clases por día de la semana */}
+            <motion.div onClick={() => navigate('/evolucion')} whileTap={{ scale: 0.99 }} style={{ background: 'var(--app-surface-solid)', borderRadius: '22px', padding: '18px 16px 14px', boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)', cursor: 'pointer', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '7px' }}>
+                {weekStats.perDay.map((c, i) => {
+                  const isToday = i === weekStats.todayIdx;
+                  const h = c > 0 ? Math.max(20, (c / weekStats.maxDay) * 100) : 7;
+                  return (
+                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px' }}>
+                      <div style={{ width: '100%', height: '72px', display: 'flex', alignItems: 'flex-end' }}>
+                        <motion.div initial={{ height: 0 }} animate={{ height: `${h}%` }} transition={{ delay: 0.1 + i * 0.05, type: 'spring', stiffness: 120, damping: 16 }}
+                          style={{ width: '100%', maxWidth: '26px', margin: '0 auto', borderRadius: '8px',
+                            background: isToday ? 'linear-gradient(to top, var(--primary), var(--accent))' : (c > 0 ? '#EEBA89' : 'var(--border-subtle)'),
+                            boxShadow: isToday ? '0 4px 12px rgba(255,139,66,0.3)' : 'none', opacity: c === 0 && !isToday ? 0.45 : 1 }} />
+                      </div>
+                      <span style={{ fontSize: '0.64rem', fontWeight: 800, color: isToday ? 'var(--primary)' : 'var(--on-surface-variant)' }}>{['L', 'M', 'M', 'J', 'V', 'S', 'D'][i]}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+
+            {/* 3 cards tappables con número animado */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <StatCard icon={<Activity size={16} />} value={weekStats.weekCount} label="clases" color="var(--primary)" onClick={() => navigate('/agenda')} />
+              <StatCard icon={<Flame size={16} />} value={healthData.calories} label="kcal hoy" color="#FF6B6B" onClick={() => navigate('/evolucion')} />
+              <StatCard icon={<Sparkles size={16} />} value={weekStats.points} label="puntos" color="var(--accent)" onClick={() => navigate('/evolucion')} />
+            </div>
+            <p style={{ fontSize: '0.66rem', color: 'var(--on-surface-variant)', textAlign: 'center', margin: '9px 0 0', fontWeight: 600 }}>Ganas 10 puntos por cada clase ✦</p>
           </motion.section>
         </div>
 
@@ -557,17 +607,37 @@ function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, c
 }
 
 /* STAT PILL */
-function StatPill({ icon, value, label, color }) {
+// Número que cuenta hacia arriba (ease-out) al montar / cambiar de valor.
+function AnimatedNumber({ value }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const to = Number(value) || 0;
+    let raf; const start = performance.now(); const dur = 700;
+    const tick = (t) => {
+      const p = Math.min(1, (t - start) / dur);
+      setN(Math.round(to * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return <>{n.toLocaleString('es-MX')}</>;
+}
+
+// Tarjeta de stat tappable con número animado (o "—" si no hay dato).
+function StatCard({ icon, value, label, color, onClick }) {
+  const hasValue = value !== null && value !== undefined;
   return (
-    <div style={{ 
-      flex: 1, background: 'var(--app-surface-solid)', borderRadius: '20px', padding: '16px 12px', 
-      textAlign: 'center', border: '1px solid var(--border-subtle)',
-      boxShadow: 'var(--card-shadow)'
+    <motion.button onClick={onClick} whileTap={{ scale: 0.95 }} style={{
+      flex: 1, background: 'var(--app-surface-solid)', borderRadius: '20px', padding: '15px 8px',
+      textAlign: 'center', border: '1px solid var(--border-subtle)', boxShadow: 'var(--card-shadow)', cursor: 'pointer'
     }}>
-      <div style={{ color: color, marginBottom: '8px', display: 'flex', justifyContent: 'center' }}>{icon}</div>
-      <div style={{ fontSize: '1.3rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--black)', lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: '0.65rem', color: 'var(--on-surface-variant)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>{label}</div>
-    </div>
+      <div style={{ color, marginBottom: '7px', display: 'flex', justifyContent: 'center' }}>{icon}</div>
+      <div style={{ fontSize: '1.3rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--black)', lineHeight: 1 }}>
+        {hasValue ? <AnimatedNumber value={value} /> : '—'}
+      </div>
+      <div style={{ fontSize: '0.62rem', color: 'var(--on-surface-variant)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '4px' }}>{label}</div>
+    </motion.button>
   );
 }
 
