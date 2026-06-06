@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Cake, Gift, PartyPopper, User, X } from 'lucide-react';
+import { ChevronLeft, Cake, User, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { useAuth } from '../context/AuthContext';
@@ -45,6 +45,35 @@ function Unit({ value, label }) {
       </div>
       <div style={{ fontSize: '0.58rem', fontWeight: 800, color: '#8A7A6E', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '4px' }}>{label}</div>
     </div>
+  );
+}
+
+// Decoración del collage (sobre el papel kraft): garland arriba, globos a los
+// costados, pastel abajo y destellos. Elementos en vivo (no imagen pegada).
+function CollageDecor() {
+  const Balloon = ({ cx, cy, col, rot }) => (
+    <g transform={`rotate(${rot} ${cx} ${cy})`}>
+      <ellipse cx={cx} cy={cy} rx="19" ry="24" fill={col} />
+      <ellipse cx={cx - 6} cy={cy - 8} rx="4.5" ry="7" fill="rgba(255,255,255,0.45)" />
+      <path d={`M${cx} ${cy + 24} l-2.5 5 l5 0 z`} fill={col} />
+      <path d={`M${cx} ${cy + 29} q6 16 -2 32`} stroke="rgba(120,90,60,0.45)" strokeWidth="1.3" fill="none" />
+    </g>
+  );
+  const Sparkle = ({ x, y, s, c }) => (
+    <path transform={`translate(${x} ${y}) scale(${s})`} d="M0,-6 L1.6,-1.6 L6,0 L1.6,1.6 L0,6 L-1.6,1.6 L-6,0 L-1.6,-1.6 Z" fill={c} />
+  );
+  return (
+    <>
+      <img src="/cumple/garland.png" alt="" aria-hidden="true" style={{ position: 'absolute', top: '3%', left: '50%', transform: 'translateX(-50%)', width: '84%', pointerEvents: 'none' }} />
+      <img src="/cumple/cake.png" alt="" aria-hidden="true" style={{ position: 'absolute', bottom: '2%', left: '50%', transform: 'translateX(-50%)', width: '26%', pointerEvents: 'none' }} />
+      <svg viewBox="0 0 360 360" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+        <Balloon cx={40} cy={152} col="#A8D0E6" rot={-8} />
+        <Balloon cx={322} cy={120} col="#F4C7C2" rot={7} />
+        <Balloon cx={330} cy={214} col="#F6D3A8" rot={-5} />
+        <Sparkle x={42} y={300} s={1.4} c="#D9B25A" />
+        <Sparkle x={314} y={296} s={1.05} c="#D9B25A" />
+      </svg>
+    </>
   );
 }
 
@@ -184,13 +213,13 @@ function Cumpleanos() {
     border: '1px solid var(--border-subtle)',
     boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
   };
-  // Card del collage de cumpleaños (papel kraft + recortes). Proporción del arte.
+  // Card del collage de cumpleaños (papel kraft + recortes), cuadrada.
   const collageCard = {
-    position: 'relative', maxWidth: '380px', margin: '0 auto', width: '100%',
-    aspectRatio: '940 / 1600', borderRadius: '28px', overflow: 'hidden',
-    backgroundColor: '#EDE6D8', boxShadow: '0 20px 44px rgba(80,55,30,0.16)',
+    position: 'relative', maxWidth: '360px', margin: '0 auto', width: '100%',
+    aspectRatio: '1 / 1', borderRadius: '28px', overflow: 'hidden',
+    backgroundImage: 'url(/cumple/kraft.jpg)', backgroundSize: 'cover', backgroundPosition: 'center',
+    boxShadow: '0 20px 44px rgba(80,55,30,0.16)',
   };
-  const collageImg = { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' };
 
   return (
     <div className="mobile-app-container" style={{ background: 'var(--app-bg)', minHeight: '100vh' }}>
@@ -224,7 +253,7 @@ function Cumpleanos() {
             </div>
           ) : countdown?.isToday ? (
             <div style={collageCard}>
-              <img src="/cumple/birthday-bg.jpg" alt="" aria-hidden="true" style={collageImg} />
+              <CollageDecor />
               <div style={{ position: 'absolute', left: 0, right: 0, top: '45%', transform: 'translateY(-50%)', textAlign: 'center', padding: '0 26px' }}>
                 <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.86)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', borderRadius: '20px', padding: '18px 22px', boxShadow: '0 10px 26px rgba(80,55,30,0.16)' }}>
                   <h2 style={{ margin: '0 0 4px', fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: '#2E2018' }}>¡Hoy es tu día! 🎉</h2>
@@ -234,7 +263,7 @@ function Cumpleanos() {
             </div>
           ) : (
             <div style={collageCard}>
-              <img src="/cumple/birthday-bg.jpg" alt="" aria-hidden="true" style={collageImg} />
+              <CollageDecor />
               <div style={{ position: 'absolute', left: 0, right: 0, top: '44%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '0 16px' }}>
                 <span style={{ fontSize: '0.78rem', fontWeight: 800, letterSpacing: '0.16em', color: '#C75D3A' }}>FALTAN</span>
                 <div style={{ display: 'flex', gap: '8px', width: '100%', justifyContent: 'center' }}>
