@@ -70,7 +70,7 @@ Tabla `body_measurements` (weight_kg, body_fat_pct, etc., `source='vesync'`). Bo
 manifest ya habilita `READ_WEIGHT` + `READ_BODY_FAT`.
 
 ## Otras features hechas
-- **Cafetería "Coffee Lab & Smoothies"** estilo Uber Eats: personalización, carrito, regalo, programar, pago Stripe/Apple Pay, tracking premium, historial, rol barista.
+- **Cafetería "Coffee Lab & Smoothies"** estilo Uber Eats: personalización, carrito, regalo, programar, pago Stripe/efectivo, tracking premium con animación de taza, historial con realtime, rol barista, upsell con imágenes recortadas.
 - **Eventos**: flyer, cupos (trigger race-safe), inscripción, pago opcional, galería compartida (solo admin sube), countdown estilo cumpleaños, push.
 - **Admin**: dashboard financiero con sub-pestañas y filtro por fechas, clientas/staff, nutrición (planes por persona, recetas, galería, calendario mensual), reportes, insignias dinámicas.
 - **Nutrición**, **Cumpleaños** (calendario mensual), **Insignias** (reglas: TOTAL_CLASSES, DIFFERENT_COACHES, WEEKLY_CLASSES, PROFILE_COMPLETE, MANUAL).
@@ -83,7 +83,13 @@ manifest ya habilita `READ_WEIGHT` + `READ_BODY_FAT`.
   - Se actualizó el `versionCode` a 5 y `versionName` a 2.1.2 en `build.gradle` para permitir el upload del App Bundle (.aab).
   - Se configuró la **Prueba Cerrada (Closed Testing)** y se redactó la declaración de privacidad de datos de Salud (para `READ_BODY_FAT` y `READ_WEIGHT` mediante Health Connect).
   - Se aclaró que los cobros en modo prueba (Test Mode de Stripe) y los enlaces profundos vacíos son correctos para esta fase de revisión.
-- ✅ **Commit y push hechos correctamente**: Últimos cambios en icono, AppTour y versión fueron pusheados a `main`. `npm run build` y `npx cap sync` para iOS y Android ejecutados exitosamente.
+- ✅ **Pago en efectivo funcional**: Se creó y desplegó la edge function `cash-cafe-checkout` que inserta pedidos directamente en `cafe_orders` con status `paid` y envía notificación push al admin/barista.
+- ✅ **Realtime en historial de pedidos**: Se habilitó `supabase_realtime` para la tabla `cafe_orders` y se añadió suscripción WebSocket en `CafeOrderHistory.jsx`. Cuando el barista cambia el estado de un pedido, el cliente lo ve reflejado al instante sin recargar.
+- ✅ **Rediseño de "Mis Pedidos"**: Tipografía premium con `var(--font-body)` y `var(--font-display)`, tarjetas con mejor espaciado, bordes suaves, sombras refinadas y animaciones al tocar. Al hacer clic en un pedido se abre el modal de tracking (taza animada con stepper de progreso).
+- ✅ **Upsell con imágenes**: Las tarjetas de "¿Algo más?" en el carrito ahora muestran la imagen del producto recortada a la mitad, con `mix-blend-mode: multiply` para eliminar fondos blancos sin necesidad de PNGs transparentes.
+- ✅ **Método de pago simplificado**: Se dejó únicamente "Pago con tarjeta" y "Efectivo al recoger" como opciones claras en el carrito.
+- ✅ **Deploy edge functions**: `cash-cafe-checkout` y `send-push` desplegadas exitosamente al proyecto `fifaowaiokauhuqklzwe` de Supabase.
+- ✅ **Commit, push y sync**: Todos los cambios pusheados a `main`. Build de producción + `npx cap sync` para iOS y Android completados.
 
 ## Pendientes / próximos pasos
 - [ ] **Probar en dispositivo real** el wizard de fotos (cámara en vivo + siluetas). En Simulador cae a galería.
@@ -92,8 +98,13 @@ manifest ya habilita `READ_WEIGHT` + `READ_BODY_FAT`.
 - [ ] Pasar Stripe a claves **LIVE** en Supabase y `.env` antes del pase a Producción final.
 - [ ] Rebuild **AAB de Android** con claves LIVE para Producción.
 - [ ] Confirmar modelo exacto de báscula para métricas extra y que la unidad de peso sea kg.
+- [ ] Probar dark mode en dispositivos reales (iOS + Android).
 
 ## Notas / gotchas
 - En web, abrir pago con `window.location.href` (no `window.open`, lo bloquea el popup blocker).
 - Cerrar sheets: permitir tap fuera + botón X; respetar safe-area (`env(safe-area-inset-*)`).
 - `getUserMedia` necesita permiso de cámara (ya configurado para avatares: NSCameraUsageDescription en iOS, CAMERA en Android).
+- **Realtime**: Para que funcione, la tabla debe estar en la publicación `supabase_realtime`. Script en `scripts/enable_realtime.sql`.
+- **mix-blend-mode: multiply**: Truco CSS para ocultar fondos blancos en imágenes JPG sin necesidad de convertirlas a PNG con transparencia.
+- **Token Supabase**: Para desplegar edge functions usar `$env:SUPABASE_ACCESS_TOKEN="sbp_..." ; npx supabase functions deploy <nombre>`.
+
