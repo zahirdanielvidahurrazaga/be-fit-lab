@@ -111,16 +111,22 @@ function Planes() {
         if (error) throw new Error(error.message);
         if (!data?.clientSecret) throw new Error('No se recibió el intent de pago');
 
-        // Presentar la hoja nativa (con Apple Pay si está configurado; si no, tarjeta)
+        // Presentar la hoja nativa (con Apple Pay en iOS y Google Pay en Android)
+        const isIOS = Capacitor.getPlatform() === 'ios';
+        const isAndroid = Capacitor.getPlatform() === 'android';
+
         try {
           await Stripe.createPaymentSheet({
             paymentIntentClientSecret: data.clientSecret,
             merchantDisplayName: 'Be Fit Lab',
-            enableApplePay: true,
-            applePayMerchantId: 'merchant.com.befitlab.app',
+            enableApplePay: isIOS,
+            applePayMerchantId: isIOS ? 'merchant.com.befitlab.app' : undefined,
+            enableGooglePay: isAndroid,
+            GooglePayIsTesting: true,
             countryCode: 'MX',
           });
         } catch (e) {
+          console.error('Error con Apple/Google Pay:', e);
           await Stripe.createPaymentSheet({
             paymentIntentClientSecret: data.clientSecret,
             merchantDisplayName: 'Be Fit Lab',

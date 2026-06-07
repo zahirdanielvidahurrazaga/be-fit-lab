@@ -50,6 +50,8 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    // Dependencia requerida por Stripe para Google Pay
+    implementation "com.google.android.gms:play-services-wallet:19.4.0"
 }
 
 apply from: 'capacitor.build.gradle'

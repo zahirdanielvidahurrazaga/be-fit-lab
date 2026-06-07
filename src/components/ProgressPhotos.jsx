@@ -469,7 +469,7 @@ export default function ProgressPhotos({ userId }) {
       </div>
 
       <div style={{ display: 'flex', gap: '10px' }}>
-        <button onClick={() => setShowWizard(true)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px', borderRadius: '16px', border: '1px solid var(--glass-border, rgba(255,255,255,0.7))', background: 'var(--glass-bg, rgba(255,255,255,0.55))', color: 'var(--on-surface)', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', boxShadow: '0 8px 28px rgba(0,0,0,0.07)' }}>
+        <button onClick={() => setShowWizard(true)} className="tour-progress-photos-btn" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px', borderRadius: '16px', border: '1px solid var(--glass-border, rgba(255,255,255,0.7))', background: 'var(--glass-bg, rgba(255,255,255,0.55))', color: 'var(--on-surface)', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', boxShadow: '0 8px 28px rgba(0,0,0,0.07)' }}>
           <Plus size={18} color="var(--primary)" /> Nueva sesión
         </button>
         {sessions && sessions.length > 1 && (

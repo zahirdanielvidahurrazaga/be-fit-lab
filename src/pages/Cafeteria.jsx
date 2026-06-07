@@ -193,9 +193,20 @@ function Cafeteria() {
         const { data, error } = await supabase.functions.invoke('stripe-cafe-intent', { body });
         if (error) throw new Error(error.message);
         if (!data?.clientSecret) throw new Error('No se recibió el intent de pago');
+        const isIOS = Capacitor.getPlatform() === 'ios';
+        const isAndroid = Capacitor.getPlatform() === 'android';
         try {
-          await Stripe.createPaymentSheet({ paymentIntentClientSecret: data.clientSecret, merchantDisplayName: 'Be Fit Lab', enableApplePay: true, applePayMerchantId: 'merchant.com.befitlab.app', countryCode: 'MX' });
+          await Stripe.createPaymentSheet({ 
+            paymentIntentClientSecret: data.clientSecret, 
+            merchantDisplayName: 'Be Fit Lab', 
+            enableApplePay: isIOS, 
+            applePayMerchantId: isIOS ? 'merchant.com.befitlab.app' : undefined, 
+            enableGooglePay: isAndroid,
+            GooglePayIsTesting: true,
+            countryCode: 'MX' 
+          });
         } catch (e) {
+          console.error('Error con Apple/Google Pay:', e);
           await Stripe.createPaymentSheet({ paymentIntentClientSecret: data.clientSecret, merchantDisplayName: 'Be Fit Lab' });
         }
         const res = await Stripe.presentPaymentSheet();

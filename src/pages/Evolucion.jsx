@@ -291,7 +291,7 @@ function Evolucion() {
         {[['resumen', 'Resumen'], ['fotos', 'Fotos'], ['insignias', 'Insignias']].map(([id, label]) => {
           const on = subtab === id;
           return (
-            <motion.button key={id} onClick={() => setSubtab(id)} whileTap={{ scale: 0.95 }}
+            <motion.button key={id} className={`tour-subtab-${id}`} onClick={() => setSubtab(id)} whileTap={{ scale: 0.95 }}
               style={{ padding: '9px 18px', borderRadius: '999px', cursor: 'pointer', fontWeight: 700, fontSize: '0.86rem', whiteSpace: 'nowrap',
                 border: on ? '1px solid rgba(255,255,255,0.5)' : '1px solid var(--glass-border, rgba(255,255,255,0.55))',
                 background: on ? 'linear-gradient(135deg, #FF914D, #E68245)' : 'var(--glass-bg, rgba(255,255,255,0.55))', color: on ? '#fff' : 'var(--on-surface-variant)',

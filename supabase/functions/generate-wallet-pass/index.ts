@@ -66,14 +66,9 @@ serve(async (req) => {
       const objectId = `${issuerId}.${serial}`;
       const now      = Math.floor(Date.now() / 1000);
 
-      // Hero: foto del estudio (horizontal) subida al bucket; fallback al hero anterior.
-      let heroUri = 'https://fifaowaiokauhuqklzwe.supabase.co/storage/v1/object/public/wallet-passes/befit-hero.png';
-      try {
-        await supabase.storage
-          .from('wallet-passes')
-          .upload('befit-hero-photo.png', heroPng, { contentType: 'image/png', upsert: true });
-        heroUri = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/wallet-passes/befit-hero-photo.png`;
-      } catch (_e) { /* fallback al hero anterior */ }
+      // Hero: foto original del estudio subida previamente al bucket.
+      let heroUri = 'https://fifaowaiokauhuqklzwe.supabase.co/storage/v1/object/public/wallet-passes/befit-hero-5377.jpg';
+
 
       // Logo: marca real en blanco subida al bucket (fallback al logo anterior).
       let logoUri = 'https://fifaowaiokauhuqklzwe.supabase.co/storage/v1/object/public/wallet-passes/befit-logo.png';
@@ -96,27 +91,33 @@ serve(async (req) => {
             classId,
             genericType: 'GENERIC_TYPE_UNSPECIFIED',
             state: 'ACTIVE',
-            hexBackgroundColor: '#28201C',
+            hexBackgroundColor: '#000000', // Elegante negro "Liquid Glass"
             logo: {
               sourceUri: { uri: logoUri },
               contentDescription: { defaultValue: { language: 'es', value: 'Be Fit Lab' } },
             },
-            cardTitle:  { defaultValue: { language: 'es', value: 'BE FIT LAB'  } },
-            subheader:  { defaultValue: { language: 'es', value: 'Membresía'   } },
-            header:     { defaultValue: { language: 'es', value: memberName    } },
+            cardTitle:  { defaultValue: { language: 'es', value: 'MEMBRESÍA'  } },
+            subheader:  { defaultValue: { language: 'es', value: 'SOCIA'   } },
+            header:     { defaultValue: { language: 'es', value: memberName.toUpperCase() } },
             textModulesData: [
               { id: 'status',  header: 'ESTADO', body: status },
-              { id: 'plan',    header: 'PLAN',   body: plan   },
+              { id: 'plan',    header: 'PLAN',   body: plan.toUpperCase() },
+              { id: 'classes', header: 'CLASES', body: `${classes} Disponibles` }
             ],
             barcode: {
               type: 'QR_CODE',
               value: userId,
               alternateText: serial,
             },
-            heroImage: {
-              sourceUri: { uri: heroUri },
-              contentDescription: { defaultValue: { language: 'es', value: 'Be Fit Lab' } },
-            },
+            imageModulesData: [
+              {
+                mainImage: {
+                  sourceUri: { uri: heroUri },
+                  contentDescription: { defaultValue: { language: 'es', value: 'Be Fit Lab' } }
+                },
+                id: 'main_image'
+              }
+            ],
           }],
         },
       };

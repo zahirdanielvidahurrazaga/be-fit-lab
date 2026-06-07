@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Camera, Mail, Phone, Shield, Clock, ChevronRight, ChevronLeft, Check, AlertCircle, Utensils, TrendingUp, CalendarDays, QrCode, X, Home, CreditCard, Compass } from 'lucide-react';
+import { User, Camera, Mail, Phone, Shield, Clock, ChevronRight, ChevronLeft, Check, AlertCircle, Utensils, TrendingUp, CalendarDays, QrCode, X, Home, CreditCard, Compass, Cake, Star, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { uploadAvatar, isLegacyDataUrl } from '../lib/avatar';
@@ -23,14 +23,13 @@ function MiCuenta() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
-  const [classHistory, setClassHistory] = useState([]);
   const [pendingAvatar, setPendingAvatar] = useState(null);
+  const [initialProfile, setInitialProfile] = useState({});
 
   // Load user data
   useEffect(() => {
     if (user) {
       loadProfile();
-      loadClassHistory();
     }
   }, [user]);
 
@@ -141,20 +140,20 @@ function MiCuenta() {
       setBio(data.bio || '');
       setExperience(data.experience || '');
       setBirthDate(data.birth_date || '');
+      
+      setInitialProfile({
+        fullName: data.full_name || '',
+        phone: data.phone || '',
+        emergencyName: data.emergency_contact_name || '',
+        emergencyPhone: data.emergency_contact_phone || '',
+        bio: data.bio || '',
+        experience: data.experience || '',
+        birthDate: data.birth_date || ''
+      });
     }
   };
 
-  const loadClassHistory = async () => {
-    const { data } = await supabase
-      .from('reservations')
-      .select('*, classes(title, instructor, time, day)')
-      .eq('user_id', user.id)
-      .eq('checked_in', true)
-      .order('created_at', { ascending: false })
-      .limit(10);
 
-    if (data) setClassHistory(data);
-  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -190,6 +189,11 @@ function MiCuenta() {
            await supabase.from('badges_config').insert({ rule_type: 'COACH_PROFILE', rule_value: 0, icon: avatarUrl || '', label: fullName });
         }
       }
+      
+      setInitialProfile({
+        fullName, phone, emergencyName, emergencyPhone, bio, experience, birthDate
+      });
+      
       setSaved(true);
       if (refreshUserData) await refreshUserData();
       setTimeout(() => setSaved(false), 3000);
@@ -197,48 +201,80 @@ function MiCuenta() {
     setSaving(false);
   };
 
+  const hasChanges = 
+    fullName !== (initialProfile.fullName || '') ||
+    phone !== (initialProfile.phone || '') ||
+    emergencyName !== (initialProfile.emergencyName || '') ||
+    emergencyPhone !== (initialProfile.emergencyPhone || '') ||
+    bio !== (initialProfile.bio || '') ||
+    experience !== (initialProfile.experience || '') ||
+    birthDate !== (initialProfile.birthDate || '');
+
   const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
   // Styles
   const cardStyle = {
-    background: 'var(--app-surface-solid)',
-    borderRadius: '24px',
-    padding: '20px',
+    background: 'var(--glass-bg, rgba(255,255,255,0.65))',
+    backdropFilter: 'blur(20px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+    borderRadius: '28px',
+    padding: '24px 20px',
     marginBottom: '16px',
-    boxShadow: 'var(--card-shadow)',
-    border: '1px solid var(--border-subtle)'
+    boxShadow: '0 8px 32px rgba(255,145,77,0.05), inset 0 1px 0 rgba(255,255,255,0.6)',
+    border: '1px solid var(--glass-border, rgba(255,255,255,0.5))'
   };
 
   const labelStyle = {
     fontSize: '0.75rem',
-    fontWeight: 700,
+    fontWeight: 800,
     color: 'var(--on-surface-variant)',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
-    marginBottom: '6px',
-    display: 'block'
+    marginBottom: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  };
+
+  const inputContainerStyle = {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    background: 'var(--surface, rgba(255,255,255,0.8))',
+    borderRadius: '18px',
+    border: '1px solid var(--border-subtle)',
+    transition: 'all 0.3s ease',
+    overflow: 'hidden',
+    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
   };
 
   const inputStyle = {
+    flex: 1,
     width: '100%',
-    padding: '14px 18px',
-    borderRadius: '9999px',
-    border: '1px solid var(--border-subtle)',
-    background: 'var(--surface-low)',
-    fontSize: '0.95rem',
+    padding: '16px 16px 16px 46px',
+    border: 'none',
+    background: 'transparent',
+    fontSize: '1rem',
+    fontWeight: 600,
     fontFamily: 'DM Sans, sans-serif',
     color: 'var(--on-surface)',
     outline: 'none',
-    transition: 'border-color 0.2s ease',
     boxSizing: 'border-box'
   };
 
   const inputReadOnlyStyle = {
     ...inputStyle,
-    background: 'var(--surface-low)',
     color: 'var(--on-surface-variant)',
-    opacity: 0.6,
+    opacity: 0.7,
     cursor: 'not-allowed'
+  };
+
+  const iconStyle = {
+    position: 'absolute',
+    left: '16px',
+    color: 'var(--on-surface-variant)',
+    pointerEvents: 'none',
+    transition: 'color 0.3s ease'
   };
 
   return (
@@ -341,124 +377,146 @@ function MiCuenta() {
         <div className="dashboard-sidebar" style={{ width: '100%' }}>
 
           {/* AVATAR */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '32px', marginTop: '10px' }}>
             <div style={{ position: 'relative' }}>
-              <div style={{
-                width: '100px', height: '100px', borderRadius: '50%',
-                background: 'linear-gradient(135deg, #FF8B42, #EEBA89)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 12px 30px rgba(255,139,66,0.3)',
-                overflow: 'hidden'
-              }}>
+              <motion.div
+                animate={{ boxShadow: ['0 0 0 0 rgba(255,139,66,0.4)', '0 0 0 15px rgba(255,139,66,0)'] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
+                style={{
+                  width: '110px', height: '110px', borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #FF8B42, #EEBA89)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 15px 35px rgba(255,139,66,0.35)',
+                  overflow: 'hidden',
+                  border: '3px solid var(--app-surface-solid)'
+                }}>
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Foto de perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
-                  <span style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white', fontFamily: 'DM Sans' }}>
+                  <span style={{ fontSize: '2.8rem', fontWeight: 800, color: 'white', fontFamily: 'DM Sans' }}>
                     {fullName ? fullName.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || '?'}
                   </span>
                 )}
-              </div>
-              <div
+              </motion.div>
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
                 onClick={handleCameraClick}
                 style={{
                   position: 'absolute', bottom: '0', right: '0',
-                  width: '32px', height: '32px', borderRadius: '50%',
+                  width: '36px', height: '36px', borderRadius: '50%',
                   background: 'var(--app-surface-solid)', border: '2px solid var(--app-bg)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: 'var(--card-shadow)', cursor: 'pointer'
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)', cursor: 'pointer',
+                  zIndex: 2
                 }}>
-                <Camera size={14} color="var(--primary)" />
-              </div>
+                <Camera size={16} color="var(--primary)" />
+              </motion.div>
             </div>
           </div>
 
           <div style={cardStyle}>
-            <h3 style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '0 0 16px' }}>
-              Datos Personales
+            <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface)', margin: '0 0 20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <User size={18} color="var(--primary)" /> Datos Personales
             </h3>
 
-            <div style={{ marginBottom: '14px' }}>
+            <div style={{ marginBottom: '16px' }}>
               <label style={labelStyle}>Nombre completo</label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Tu nombre"
-                style={inputStyle}
-                onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
-                onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
-              />
+              <div style={inputContainerStyle} className="input-glass">
+                <User size={18} style={iconStyle} className="input-icon" />
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Tu nombre"
+                  style={inputStyle}
+                  onFocus={(e) => { e.target.parentElement.style.borderColor = '#FF8B42'; e.target.parentElement.querySelector('.input-icon').style.color = '#FF8B42'; }}
+                  onBlur={(e) => { e.target.parentElement.style.borderColor = 'var(--border-subtle)'; e.target.parentElement.querySelector('.input-icon').style.color = 'var(--on-surface-variant)'; }}
+                />
+              </div>
             </div>
 
-            <div style={{ marginBottom: '14px' }}>
+            <div style={{ marginBottom: '16px' }}>
               <label style={labelStyle}>Teléfono</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+52 000 000 0000"
-                style={inputStyle}
-                onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
-                onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
-              />
+              <div style={inputContainerStyle} className="input-glass">
+                <Phone size={18} style={iconStyle} className="input-icon" />
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+52 000 000 0000"
+                  style={inputStyle}
+                  onFocus={(e) => { e.target.parentElement.style.borderColor = '#FF8B42'; e.target.parentElement.querySelector('.input-icon').style.color = '#FF8B42'; }}
+                  onBlur={(e) => { e.target.parentElement.style.borderColor = 'var(--border-subtle)'; e.target.parentElement.querySelector('.input-icon').style.color = 'var(--on-surface-variant)'; }}
+                />
+              </div>
             </div>
 
-            <div style={{ marginBottom: '14px' }}>
-              <label style={labelStyle}>Cumpleaños 🎂</label>
-              <input
-                type="date"
-                value={birthDate || ''}
-                onChange={(e) => setBirthDate(e.target.value)}
-                style={inputStyle}
-                onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
-                onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
-              />
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>Cumpleaños</label>
+              <div style={inputContainerStyle} className="input-glass">
+                <Cake size={18} style={iconStyle} className="input-icon" />
+                <input
+                  type="date"
+                  value={birthDate || ''}
+                  onChange={(e) => setBirthDate(e.target.value)}
+                  style={{ ...inputStyle, paddingLeft: '46px' }}
+                  onFocus={(e) => { e.target.parentElement.style.borderColor = '#FF8B42'; e.target.parentElement.querySelector('.input-icon').style.color = '#FF8B42'; }}
+                  onBlur={(e) => { e.target.parentElement.style.borderColor = 'var(--border-subtle)'; e.target.parentElement.querySelector('.input-icon').style.color = 'var(--on-surface-variant)'; }}
+                />
+              </div>
             </div>
 
             <div>
               <label style={labelStyle}>Email</label>
-              <div style={{ position: 'relative' }}>
+              <div style={{ ...inputContainerStyle, background: 'var(--surface-low)', opacity: 0.8 }}>
+                <Mail size={18} style={iconStyle} />
                 <input
                   type="email"
                   value={user?.email || ''}
                   readOnly
                   style={inputReadOnlyStyle}
                 />
-                <Mail size={16} color="var(--on-surface-muted)" style={{ position: 'absolute', right: '18px', top: '50%', transform: 'translateY(-50%)' }} />
               </div>
             </div>
           </div>
 
           {role === 'COACH' && (
           <div style={cardStyle}>
-            <h3 style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '0 0 16px' }}>
-              Perfil Público
+            <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface)', margin: '0 0 20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Star size={18} color="var(--primary)" /> Perfil Público
             </h3>
 
-            <div style={{ marginBottom: '14px' }}>
+            <div style={{ marginBottom: '16px' }}>
               <label style={labelStyle}>Acerca de mí (Biografía)</label>
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="¡Hola! Soy Coach... Me apasiona el Pilates porque..."
-                rows={4}
-                style={{ ...inputStyle, resize: 'none', fontFamily: 'inherit' }}
-                onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
-                onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
-              />
+              <div style={{ ...inputContainerStyle, alignItems: 'flex-start' }} className="input-glass">
+                <MessageSquare size={18} style={{ ...iconStyle, top: '16px' }} className="input-icon" />
+                <textarea
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="¡Hola! Soy Coach... Me apasiona el Pilates porque..."
+                  rows={4}
+                  style={{ ...inputStyle, resize: 'none', fontFamily: 'inherit' }}
+                  onFocus={(e) => { e.target.parentElement.style.borderColor = '#FF8B42'; e.target.parentElement.querySelector('.input-icon').style.color = '#FF8B42'; }}
+                  onBlur={(e) => { e.target.parentElement.style.borderColor = 'var(--border-subtle)'; e.target.parentElement.querySelector('.input-icon').style.color = 'var(--on-surface-variant)'; }}
+                />
+              </div>
             </div>
 
             <div>
               <label style={labelStyle}>Especialidad / Experiencia</label>
-              <input
-                type="text"
-                value={experience}
-                onChange={(e) => setExperience(e.target.value)}
-                placeholder="Ej. Reformer Pro, 5 años de exp."
-                style={inputStyle}
-                onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
-                onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
-              />
+              <div style={inputContainerStyle} className="input-glass">
+                <TrendingUp size={18} style={iconStyle} className="input-icon" />
+                <input
+                  type="text"
+                  value={experience}
+                  onChange={(e) => setExperience(e.target.value)}
+                  placeholder="Ej. Reformer Pro, 5 años de exp."
+                  style={inputStyle}
+                  onFocus={(e) => { e.target.parentElement.style.borderColor = '#FF8B42'; e.target.parentElement.querySelector('.input-icon').style.color = '#FF8B42'; }}
+                  onBlur={(e) => { e.target.parentElement.style.borderColor = 'var(--border-subtle)'; e.target.parentElement.querySelector('.input-icon').style.color = 'var(--on-surface-variant)'; }}
+                />
+              </div>
             </div>
           </div>
           )}
@@ -467,126 +525,104 @@ function MiCuenta() {
           {role !== 'COACH' && (
           <div style={{
             ...cardStyle,
-            background: 'linear-gradient(135deg, #2D2928 0%, #3d3532 100%)',
+            background: 'linear-gradient(135deg, rgba(45,41,40,0.85) 0%, rgba(61,53,50,0.85) 100%)',
             color: 'white',
             position: 'relative',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 15px 35px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1)'
           }}>
             {/* Decorative circle */}
             <div style={{
               position: 'absolute', top: '-30px', right: '-30px',
               width: '120px', height: '120px', borderRadius: '50%',
-              background: 'rgba(255,139,66,0.15)'
+              background: 'radial-gradient(circle, rgba(255,139,66,0.2) 0%, transparent 70%)',
+              filter: 'blur(10px)'
             }} />
 
-            <h3 style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.5)', margin: '0 0 12px', position: 'relative' }}>
-              Mi Membresía
+            <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.6)', margin: '0 0 12px', position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CreditCard size={18} color="rgba(255,255,255,0.8)" /> Mi Membresía
             </h3>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', position: 'relative' }}>
               <div>
-                <p style={{ fontSize: '1.3rem', fontWeight: 800, margin: '0 0 4px', fontFamily: 'DM Sans' }}>
+                <p style={{ fontSize: '1.4rem', fontWeight: 900, margin: '0 0 4px', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>
                   {plan || 'Sin Plan'}
                 </p>
-                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', margin: 0 }}>
-                  {membershipStatus === 'ACTIVE' ? '✓ Activa' : '○ Inactiva'}
-                </p>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: membershipStatus === 'ACTIVE' ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: '12px', border: '1px solid', borderColor: membershipStatus === 'ACTIVE' ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.2)' }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: membershipStatus === 'ACTIVE' ? '#4ade80' : 'rgba(255,255,255,0.5)' }} />
+                  <p style={{ fontSize: '0.75rem', color: membershipStatus === 'ACTIVE' ? '#4ade80' : 'rgba(255,255,255,0.7)', margin: 0, fontWeight: 700 }}>
+                    {membershipStatus === 'ACTIVE' ? 'Activa' : 'Inactiva'}
+                  </p>
+                </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <p style={{ fontSize: '2.8rem', fontWeight: 900, margin: 0, lineHeight: 1, color: '#FF8B42', fontFamily: 'DM Sans' }}>
+                <p style={{ fontSize: '3.2rem', fontWeight: 900, margin: 0, lineHeight: 0.9, color: '#FF8B42', fontFamily: 'var(--font-display)', letterSpacing: '-0.05em' }}>
                   {classesRemaining >= 9000 ? '∞' : classesRemaining}
                 </p>
-                <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', margin: 0, fontWeight: 600 }}>
+                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', margin: 0, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>
                   clases restantes
                 </p>
               </div>
             </div>
 
             {/* Botón Renovar */}
-            <div style={{ position: 'relative', marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '15px' }}>
-              <button 
+            <div style={{ position: 'relative', marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px' }}>
+              <motion.button 
+                whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,139,66,0.25)' }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/planes')}
                 style={{ 
-                  width: '100%', padding: '12px', borderRadius: '12px', border: 'none', 
-                  background: 'rgba(255,139,66,0.2)', color: '#FF8B42', 
-                  fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer',
+                  width: '100%', padding: '14px', borderRadius: '16px', border: '1px solid rgba(255,139,66,0.3)', 
+                  background: 'rgba(255,139,66,0.15)', color: '#FF8B42', 
+                  fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  transition: 'background 0.2s'
+                  transition: 'background 0.2s', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)'
                 }}>
                 <CreditCard size={18} />
                 Renovar o Cambiar Plan
-              </button>
+              </motion.button>
             </div>
           </div>
           )}
 
-          {role !== 'COACH' && (
-          <div style={cardStyle}>
-            <h3 style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '0 0 16px' }}>
-              Historial de Clases
-            </h3>
 
-            {classHistory.length === 0 ? (
-              <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-muted)', textAlign: 'center', padding: '20px 0' }}>
-                Aún no tienes clases completadas
-              </p>
-            ) : (
-              classHistory.map((item, i) => (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', gap: '14px',
-                  padding: '12px 0',
-                  borderBottom: i < classHistory.length - 1 ? '1px solid var(--divider)' : 'none'
-                }}>
-                  <div style={{
-                    width: '40px', height: '40px', borderRadius: '14px',
-                    background: 'var(--surface-low)', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                  }}>
-                    <Check size={18} color="var(--primary)" />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--on-surface)', margin: 0 }}>
-                      {item.classes?.title || 'Clase'}
-                    </p>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-muted)', margin: '2px 0 0' }}>
-                      {item.classes?.instructor || 'Coach'} · {item.classes?.time || ''} · {dayNames[item.classes?.day] || ''}
-                    </p>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          )}
 
           <div style={cardStyle}>
-            <h3 style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '0 0 16px' }}>
-              <Shield size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
-              Contacto de Emergencia
+            <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface)', margin: '0 0 20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Shield size={18} color="var(--primary)" /> Contacto de Emergencia
             </h3>
 
-            <div style={{ marginBottom: '14px' }}>
+            <div style={{ marginBottom: '16px' }}>
               <label style={labelStyle}>Nombre</label>
-              <input
-                type="text"
-                value={emergencyName}
-                onChange={(e) => setEmergencyName(e.target.value)}
-                placeholder="Nombre del contacto"
-                style={inputStyle}
-                onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
-                onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
-              />
+              <div style={inputContainerStyle} className="input-glass">
+                <User size={18} style={iconStyle} className="input-icon" />
+                <input
+                  type="text"
+                  value={emergencyName}
+                  onChange={(e) => setEmergencyName(e.target.value)}
+                  placeholder="Nombre del contacto"
+                  style={inputStyle}
+                  onFocus={(e) => { e.target.parentElement.style.borderColor = '#FF8B42'; e.target.parentElement.querySelector('.input-icon').style.color = '#FF8B42'; }}
+                  onBlur={(e) => { e.target.parentElement.style.borderColor = 'var(--border-subtle)'; e.target.parentElement.querySelector('.input-icon').style.color = 'var(--on-surface-variant)'; }}
+                />
+              </div>
             </div>
 
             <div>
               <label style={labelStyle}>Teléfono</label>
-              <input
-                type="tel"
-                value={emergencyPhone}
-                onChange={(e) => setEmergencyPhone(e.target.value)}
-                placeholder="+52 000 000 0000"
-                style={inputStyle}
-                onFocus={(e) => e.target.style.borderColor = '#FF8B42'}
-                onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
-              />
+              <div style={inputContainerStyle} className="input-glass">
+                <Phone size={18} style={iconStyle} className="input-icon" />
+                <input
+                  type="tel"
+                  value={emergencyPhone}
+                  onChange={(e) => setEmergencyPhone(e.target.value)}
+                  placeholder="+52 000 000 0000"
+                  style={inputStyle}
+                  onFocus={(e) => { e.target.parentElement.style.borderColor = '#FF8B42'; e.target.parentElement.querySelector('.input-icon').style.color = '#FF8B42'; }}
+                  onBlur={(e) => { e.target.parentElement.style.borderColor = 'var(--border-subtle)'; e.target.parentElement.querySelector('.input-icon').style.color = 'var(--on-surface-variant)'; }}
+                />
+              </div>
             </div>
           </div>
 
@@ -613,66 +649,95 @@ function MiCuenta() {
             </div>
           )}
 
-          {/* GUARDAR BUTTON */}
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            style={{
-              width: '100%', padding: '16px',
-              borderRadius: '9999px', border: 'none',
-              background: saving ? '#ddc1b3' : '#FF8B42',
-              color: 'white', fontSize: '1rem',
-              fontWeight: 700, fontFamily: 'DM Sans, sans-serif',
-              cursor: saving ? 'not-allowed' : 'pointer',
-              boxShadow: '0 8px 20px rgba(255,139,66,0.3)',
-              transition: 'all 0.3s ease',
-              marginBottom: '16px'
-            }}
-          >
-            {saving ? 'Guardando...' : 'Guardar Cambios'}
-          </button>
+          {/* GUARDAR BUTTON FLOATING */}
+          <AnimatePresence>
+            {hasChanges && (
+              <motion.div
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 100, opacity: 0 }}
+                style={{
+                  position: 'fixed',
+                  bottom: '90px', // About the height of BottomNav + some padding
+                  left: '20px',
+                  right: '20px',
+                  zIndex: 100
+                }}
+              >
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleSave}
+                  disabled={saving}
+                  style={{
+                    width: '100%', padding: '16px',
+                    borderRadius: '24px', border: '1px solid rgba(255,255,255,0.4)',
+                    background: saving ? 'var(--surface-variant)' : 'var(--primary)',
+                    color: 'white', fontSize: '1.05rem',
+                    fontWeight: 800, fontFamily: 'var(--font-display)',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    boxShadow: saving ? 'none' : '0 15px 35px rgba(255,145,77,0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
+                    backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                  }}
+                >
+                  {saving ? 'Guardando...' : 'Guardar Cambios'}
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* LINK TO SETTINGS */}
-          <div
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/ajustes')}
             style={{
               ...cardStyle,
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              cursor: 'pointer', marginBottom: '12px'
+              cursor: 'pointer', marginBottom: '16px', padding: '16px 20px'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
               <div style={{
-                width: '40px', height: '40px', borderRadius: '14px',
-                background: 'var(--surface-low)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                width: '42px', height: '42px', borderRadius: '16px',
+                background: 'var(--surface, rgba(255,255,255,0.8))', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 8px rgba(0,0,0,0.05)',
+                border: '1px solid var(--glass-border, rgba(255,255,255,0.4))'
               }}>
-                <Shield size={18} color="var(--on-surface-variant)" />
+                <Shield size={20} color="var(--on-surface)" />
               </div>
-              <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1c1c1a' }}>Ajustes</span>
+              <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--on-surface)', fontFamily: 'DM Sans' }}>Ajustes</span>
             </div>
-            <ChevronRight size={20} color="#8a7266" />
-          </div>
+            <ChevronRight size={22} color="var(--on-surface-variant)" />
+          </motion.div>
 
           {/* VER TOUR DE LA APP */}
-          <div
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => { setShowTour(true); navigate('/portal'); }}
             style={{
               ...cardStyle,
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              cursor: 'pointer', marginBottom: '100px'
+              cursor: 'pointer', marginBottom: '100px', padding: '16px 20px',
+              background: 'linear-gradient(135deg, rgba(255,145,77,0.1) 0%, rgba(255,145,77,0.05) 100%)',
+              border: '1px solid rgba(255,145,77,0.2)'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
               <div style={{
-                width: '40px', height: '40px', borderRadius: '14px',
-                background: 'rgba(255,145,77,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                width: '42px', height: '42px', borderRadius: '16px',
+                background: 'var(--surface, rgba(255,255,255,0.8))', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(255,145,77,0.15), inset 0 1px 0 rgba(255,255,255,0.6)',
+                border: '1px solid rgba(255,145,77,0.3)'
               }}>
-                <Compass size={18} color="var(--primary)" />
+                <Compass size={20} color="var(--primary)" />
               </div>
-              <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1c1c1a' }}>Ver Tour de la App</span>
+              <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--primary)', fontFamily: 'DM Sans' }}>Ver Tour de la App</span>
             </div>
-            <ChevronRight size={20} color="#8a7266" />
-          </div>
+            <ChevronRight size={22} color="var(--primary)" />
+          </motion.div>
 
         </div>
       </main>

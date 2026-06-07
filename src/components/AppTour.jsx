@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Preferences } from '@capacitor/preferences';
 import { useAuth } from '../context/AuthContext';
-import { User, Wallet, TrendingUp, Calendar, ChevronRight, ChevronLeft, Sparkles, Play, Utensils, Target, Award, Scale, Activity, QrCode, Coffee, Cake, Hand } from 'lucide-react';
+import { User, Wallet, TrendingUp, Calendar, ChevronRight, ChevronLeft, Sparkles, Play, Utensils, Target, Award, Scale, Activity, QrCode, Coffee, Cake, Hand, Camera } from 'lucide-react';
 
 // Marca el tour como visto en almacenamiento nativo (persiste entre lanzamientos)
 const markTourSeen = (userId) => {
@@ -18,9 +18,9 @@ const markTourSeen = (userId) => {
 // "Continuar" de rescate (ver `FALLBACK_MS`).
 const TOUR_STEPS = [
   {
-    icon: <Sparkles size={38} color="var(--primary)" />,
+    icon: <img src="/favicon_peach.png" style={{ width: '65px', height: '65px', objectFit: 'contain' }} alt="Be Fit Lab" />,
     title: '¡Te damos la bienvenida! 🎉',
-    description: 'Te llevamos de la mano por tu nueva app. Vas a tocar tú misma cada cosa para que te quede clarísimo. ¿List@s?',
+    description: 'Te llevamos de la mano por tu nueva app. Vas a tocar tú misma cada cosa para que te quede clarísimo. ¿Listas?',
     selector: null,
   },
   {
@@ -61,6 +61,7 @@ const TOUR_STEPS = [
     requireClick: true,
     targetSelector: '.tour-agendar-btn',
     advanceOnPath: '/agenda',
+    position: 'top',
   },
   {
     icon: <Calendar size={38} color="var(--primary)" />,
@@ -70,6 +71,7 @@ const TOUR_STEPS = [
     requireClick: true,
     advanceOnEvent: 'click',
     targetSelector: '.tour-calendar-day',
+    position: 'top',
   },
   {
     icon: <Play size={38} color="var(--primary)" />,
@@ -79,6 +81,7 @@ const TOUR_STEPS = [
     requireClick: true,
     advanceOnEvent: 'click',
     targetSelector: '.tour-class-card',
+    position: 'top',
   },
   {
     icon: <Sparkles size={38} color="var(--primary)" />,
@@ -133,37 +136,61 @@ const TOUR_STEPS = [
     targetSelector: '.goal-modal',
     advanceSelector: '.goal-modal button',
     advanceOnEvent: 'click',
+    position: 'top',
+  },
+  {
+    icon: <User size={38} color="var(--primary)" />,
+    title: 'Tus fotos',
+    description: 'Toca la pestaña "Fotos" para llevar el registro visual de tus cambios.',
+    selector: '.tour-subtab-fotos',
+    requireClick: true,
+    advanceOnEvent: 'click',
+    targetSelector: '.tour-subtab-fotos',
+  },
+  {
+    icon: <Camera size={38} color="var(--primary)" />,
+    title: 'Progreso visual',
+    description: 'Aquí podrás tomarte fotos cada 6 semanas con nuestra guía inteligente.',
+    selector: '.tour-progress-photos-btn',
+    position: 'bottom',
+  },
+  {
+    icon: <Award size={38} color="var(--primary)" />,
+    title: 'Ve a tus insignias',
+    description: 'Toca la pestaña "Insignias" aquí arriba para ver tus logros.',
+    selector: '.tour-subtab-insignias',
+    requireClick: true,
+    advanceOnEvent: 'click',
+    targetSelector: '.tour-subtab-insignias',
   },
   {
     icon: <Award size={38} color="var(--primary)" />,
     title: 'Tus insignias',
-    description: 'Gánalas con tu constancia. Toca una para descubrir qué significa.',
+    description: 'Gánalas con tu constancia. ¡Colecciónalas todas!',
     selector: '.tour-badges-section',
-    requireClick: true,
-    advanceOnEvent: 'click',
-    targetSelector: '.tour-badges-section > div > div',
   },
   {
-    icon: <Award size={38} color="var(--primary)" />,
-    title: 'Ciérrala',
-    description: 'Toca la zona oscura para cerrar la insignia y continuar.',
-    selector: '.badge-modal-overlay',
+    icon: <TrendingUp size={38} color="var(--primary)" />,
+    title: 'Volver a Resumen',
+    description: 'Toca la pestaña "Resumen" para ver tus métricas de salud.',
+    selector: '.tour-subtab-resumen',
     requireClick: true,
     advanceOnEvent: 'click',
-    targetSelector: '.badge-modal-overlay',
-    position: 'bottom',
+    targetSelector: '.tour-subtab-resumen',
   },
   {
     icon: <Scale size={38} color="var(--primary)" />,
     title: 'Tu composición',
     description: 'Con tu báscula inteligente verás aquí tu peso, % de grasa y músculo.',
     selector: '.tour-body-composition',
+    position: 'top',
   },
   {
     icon: <Activity size={38} color="var(--primary)" />,
-    title: 'Tu salud',
-    description: 'Conecta Salud para registrar pasos, calorías y tu actividad de la semana.',
+    title: 'Tu actividad',
+    description: 'Aquí podrás ver cuántas clases has tomado durante la semana.',
     selector: '.tour-weekly-activity',
+    position: 'top',
   },
   {
     icon: <QrCode size={38} color="var(--primary)" />,
@@ -288,11 +315,22 @@ export function AppTour() {
   };
 
   // "Continuar" de rescate: si el paso navegaba a otra pestaña, navega también.
+  // Si requería un clic para abrir un modal/pestaña, simulamos el clic para que la UI responda.
   const handleFallback = () => {
     if (stepData.advanceOnPath && location.pathname !== stepData.advanceOnPath) {
       navigate(stepData.advanceOnPath);
+    } else if (stepData.requireClick && stepData.targetSelector) {
+      const el = document.querySelector(stepData.targetSelector);
+      if (el) {
+        // Simulamos el clic para abrir el modal, bottom sheet o menú
+        el.click();
+      }
     }
-    advance();
+    
+    // Damos un pequeño respiro (250ms) para que el modal/animación empiece antes de avanzar el paso del tour
+    setTimeout(() => {
+      advance();
+    }, 250);
   };
 
   const handleBack = () => { if (currentStep > 0) setCurrentStep(prev => prev - 1); };
@@ -364,7 +402,7 @@ export function AppTour() {
               initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: [0, -5, 0] }}
               transition={{ y: { duration: 1.3, repeat: Infinity }, opacity: { duration: 0.3 } }}
               style={{
-                position: 'absolute', zIndex: 3, pointerEvents: 'none',
+                position: 'absolute', zIndex: 5, pointerEvents: 'none',
                 left: Math.min(Math.max(targetRect.left + targetRect.width / 2, 70), window.innerWidth - 70),
                 top: isBottomHalf ? targetRect.top - 44 : targetRect.bottom + 12,
                 transform: 'translateX(-50%)',

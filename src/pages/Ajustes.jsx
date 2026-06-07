@@ -4,6 +4,7 @@ import { Settings, Bell, Moon, Lock, FileText, ShieldAlert, Trash2, ChevronRight
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useScrollDetect } from '../hooks/useScrollDetect';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function Ajustes() {
   const navigate = useNavigate();
@@ -111,13 +112,15 @@ function Ajustes() {
 
   // Styles
   const cardStyle = {
-    background: 'var(--app-surface-solid)',
-    borderRadius: '24px',
+    background: 'var(--glass-bg, rgba(255,255,255,0.65))',
+    backdropFilter: 'blur(20px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+    borderRadius: '28px',
     padding: '6px 0',
-    marginBottom: '16px',
-    boxShadow: '0 8px 30px rgba(0,0,0,0.05)',
+    marginBottom: '24px',
+    boxShadow: '0 8px 32px rgba(255,145,77,0.05), inset 0 1px 0 rgba(255,255,255,0.6)',
     overflow: 'hidden',
-    border: '1px solid rgba(255,255,255,0.05)'
+    border: '1px solid var(--glass-border, rgba(255,255,255,0.5))'
   };
 
   const rowStyle = {
@@ -130,69 +133,86 @@ function Ajustes() {
   };
 
   const iconBoxStyle = {
-    width: '36px', height: '36px', borderRadius: '12px',
+    width: '40px', height: '40px', borderRadius: '14px',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0
+    flexShrink: 0,
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)'
   };
 
   const inputStyle = {
     width: '100%',
-    padding: '14px 18px',
-    borderRadius: '9999px',
-    border: '1px solid var(--accent)',
-    background: 'var(--surface)',
-    fontSize: '0.95rem',
+    padding: '16px 18px',
+    borderRadius: '16px',
+    border: '1px solid var(--border-subtle)',
+    background: 'var(--surface, rgba(255,255,255,0.8))',
+    fontSize: '1rem',
+    fontWeight: 600,
     fontFamily: 'DM Sans, sans-serif',
     color: 'var(--on-surface)',
     outline: 'none',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box',
+    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
   };
 
   const ToggleSwitch = ({ value, onToggle }) => (
     <div
       onClick={onToggle}
       style={{
-        width: '52px', height: '30px', borderRadius: '15px',
-        background: value ? 'var(--primary)' : 'rgba(140, 128, 121, 0.3)',
+        width: '56px', height: '32px', borderRadius: '16px',
+        background: value ? 'linear-gradient(135deg, #FF8B42, #EEBA89)' : 'var(--surface-variant)',
         padding: '3px', cursor: 'pointer',
         transition: 'background 0.3s ease',
-        display: 'flex', alignItems: 'center'
+        display: 'flex', alignItems: 'center',
+        boxShadow: value ? '0 4px 12px rgba(255,139,66,0.3), inset 0 1px 0 rgba(255,255,255,0.2)' : 'inset 0 2px 4px rgba(0,0,0,0.1)'
       }}
     >
       <div style={{
-        width: '24px', height: '24px', borderRadius: '50%',
+        width: '26px', height: '26px', borderRadius: '50%',
         background: 'white',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
-        transform: value ? 'translateX(22px)' : 'translateX(0)',
-        transition: 'transform 0.3s ease'
+        boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+        transform: value ? 'translateX(24px)' : 'translateX(0)',
+        transition: 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
       }} />
     </div>
   );
 
   // MODAL OVERLAY
   const ModalOverlay = ({ show, onClose, children }) => {
-    if (!show) return null;
     return (
-      <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        background: 'rgba(0,0,0,0.6)', zIndex: 9999,
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-        backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)'
-      }} onClick={onClose}>
-        <div
-          style={{
-            background: 'var(--surface)', borderRadius: '28px 28px 0 0',
-            width: '100%', maxWidth: '430px',
-            maxHeight: '85vh', overflow: 'auto',
-            padding: '24px 20px 40px',
-            animation: 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-            borderTop: '1px solid rgba(255,255,255,0.1)'
-          }}
-          onClick={e => e.stopPropagation()}
-        >
-          {children}
-        </div>
-      </div>
+      <AnimatePresence>
+        {show && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.5)', zIndex: 9999,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)',
+              padding: '20px'
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              style={{
+                background: 'var(--glass-bg, rgba(255,255,255,0.8))', borderRadius: '32px',
+                width: '100%', maxWidth: '380px',
+                padding: '32px 24px',
+                border: '1px solid var(--glass-border, rgba(255,255,255,0.5))',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.6)'
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              {children}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     );
   };
 
@@ -230,33 +250,33 @@ function Ajustes() {
         <div className="dashboard-sidebar" style={{ width: '100%' }}>
 
           {/* PREFERENCIAS */}
-          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '0 0 8px', paddingLeft: '8px' }}>
-            Preferencias
+          <p style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '0 0 12px', paddingLeft: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Settings size={16} /> Preferencias
           </p>
           <div style={cardStyle}>
             <div style={rowStyle}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ ...iconBoxStyle, background: 'rgba(255,139,66,0.1)' }}>
-                  <Bell size={18} color="var(--primary)" />
+                <div style={{ ...iconBoxStyle, background: 'rgba(255,139,66,0.15)', border: '1px solid rgba(255,139,66,0.2)' }}>
+                  <Bell size={20} color="var(--primary)" />
                 </div>
                 <div>
-                  <p style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--on-surface)', margin: 0 }}>Notificaciones</p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: '2px 0 0' }}>Recordatorio 1hr antes</p>
+                  <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--on-surface)', margin: 0, fontFamily: 'DM Sans' }}>Notificaciones</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '2px 0 0', fontWeight: 600 }}>Recordatorio 1hr antes</p>
                 </div>
               </div>
               <ToggleSwitch value={notifications} onToggle={toggleNotifications} />
             </div>
 
-            <div style={{ height: '1px', background: 'rgba(140, 128, 121, 0.15)', margin: '0 20px' }} />
+            <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '0 20px' }} />
 
             <div style={rowStyle}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ ...iconBoxStyle, background: 'rgba(140, 128, 121, 0.1)' }}>
-                  <Moon size={18} color="var(--on-surface)" />
+                <div style={{ ...iconBoxStyle, background: 'rgba(140, 128, 121, 0.15)', border: '1px solid rgba(140, 128, 121, 0.2)' }}>
+                  <Moon size={20} color="var(--on-surface)" />
                 </div>
                 <div>
-                  <p style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--on-surface)', margin: 0 }}>Modo Oscuro</p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: '2px 0 0' }}>Apariencia de la app</p>
+                  <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--on-surface)', margin: 0, fontFamily: 'DM Sans' }}>Modo Oscuro</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '2px 0 0', fontWeight: 600 }}>Apariencia de la app</p>
                 </div>
               </div>
               <ToggleSwitch value={darkMode} onToggle={toggleDarkMode} />
@@ -264,63 +284,63 @@ function Ajustes() {
           </div>
 
           {/* SEGURIDAD */}
-          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '8px 0 8px', paddingLeft: '8px' }}>
-            Seguridad
+          <p style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '8px 0 12px', paddingLeft: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Lock size={16} /> Seguridad
           </p>
           <div style={cardStyle}>
-            <div style={rowStyle} onClick={() => setShowChangePassword(true)}>
+            <motion.div whileHover={{ backgroundColor: 'var(--surface-low)' }} whileTap={{ scale: 0.98 }} style={rowStyle} onClick={() => setShowChangePassword(true)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ ...iconBoxStyle, background: 'rgba(0,103,126,0.1)' }}>
-                  <Lock size={18} color="#00A3C4" />
+                <div style={{ ...iconBoxStyle, background: 'rgba(0,103,126,0.15)', border: '1px solid rgba(0,103,126,0.2)' }}>
+                  <Lock size={20} color="#00A3C4" />
                 </div>
-                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--on-surface)', margin: 0 }}>Cambiar Contraseña</p>
+                <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--on-surface)', margin: 0, fontFamily: 'DM Sans' }}>Cambiar Contraseña</p>
               </div>
-              <ChevronRight size={20} color="var(--on-surface-variant)" />
-            </div>
+              <ChevronRight size={22} color="var(--on-surface-variant)" />
+            </motion.div>
           </div>
 
           {/* LEGAL */}
-          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '8px 0 8px', paddingLeft: '8px' }}>
-            Legal
+          <p style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', margin: '8px 0 12px', paddingLeft: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FileText size={16} /> Legal
           </p>
           <div style={cardStyle}>
-            <div style={rowStyle} onClick={() => navigate('/privacidad')}>
+            <motion.div whileHover={{ backgroundColor: 'var(--surface-low)' }} whileTap={{ scale: 0.98 }} style={rowStyle} onClick={() => navigate('/privacidad')}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ ...iconBoxStyle, background: 'rgba(126,86,46,0.1)' }}>
-                  <FileText size={18} color="#A19289" />
+                <div style={{ ...iconBoxStyle, background: 'rgba(126,86,46,0.15)', border: '1px solid rgba(126,86,46,0.2)' }}>
+                  <FileText size={20} color="#A19289" />
                 </div>
-                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--on-surface)', margin: 0 }}>Política de Privacidad</p>
+                <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--on-surface)', margin: 0, fontFamily: 'DM Sans' }}>Política de Privacidad</p>
               </div>
-              <ChevronRight size={20} color="var(--on-surface-variant)" />
-            </div>
+              <ChevronRight size={22} color="var(--on-surface-variant)" />
+            </motion.div>
 
-            <div style={{ height: '1px', background: 'rgba(140, 128, 121, 0.15)', margin: '0 20px' }} />
+            <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '0 20px' }} />
 
-            <div style={rowStyle} onClick={() => navigate('/terminos')}>
+            <motion.div whileHover={{ backgroundColor: 'var(--surface-low)' }} whileTap={{ scale: 0.98 }} style={rowStyle} onClick={() => navigate('/terminos')}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ ...iconBoxStyle, background: 'rgba(126,86,46,0.1)' }}>
-                  <ShieldAlert size={18} color="#A19289" />
+                <div style={{ ...iconBoxStyle, background: 'rgba(126,86,46,0.15)', border: '1px solid rgba(126,86,46,0.2)' }}>
+                  <ShieldAlert size={20} color="#A19289" />
                 </div>
-                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--on-surface)', margin: 0 }}>Términos y Condiciones</p>
+                <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--on-surface)', margin: 0, fontFamily: 'DM Sans' }}>Términos y Condiciones</p>
               </div>
-              <ChevronRight size={20} color="var(--on-surface-variant)" />
-            </div>
+              <ChevronRight size={22} color="var(--on-surface-variant)" />
+            </motion.div>
           </div>
 
           {/* DANGER ZONE */}
-          <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#ff4d4d', margin: '8px 0 8px', paddingLeft: '8px' }}>
-            Zona de Peligro
+          <p style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#ff4d4d', margin: '8px 0 12px', paddingLeft: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Trash2 size={16} /> Zona de Peligro
           </p>
           <div style={{ ...cardStyle, marginBottom: '24px' }}>
-            <div style={rowStyle} onClick={() => setShowDeleteConfirm(true)}>
+            <motion.div whileHover={{ backgroundColor: 'rgba(255,77,77,0.05)' }} whileTap={{ scale: 0.98 }} style={rowStyle} onClick={() => setShowDeleteConfirm(true)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ ...iconBoxStyle, background: 'rgba(255,77,77,0.1)' }}>
-                  <Trash2 size={18} color="#ff4d4d" />
+                <div style={{ ...iconBoxStyle, background: 'rgba(255,77,77,0.15)', border: '1px solid rgba(255,77,77,0.2)' }}>
+                  <Trash2 size={20} color="#ff4d4d" />
                 </div>
-                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#ff4d4d', margin: 0 }}>Eliminar Cuenta</p>
+                <p style={{ fontSize: '1rem', fontWeight: 800, color: '#ff4d4d', margin: 0, fontFamily: 'DM Sans' }}>Eliminar Cuenta</p>
               </div>
-              <ChevronRight size={20} color="#ff4d4d" />
-            </div>
+              <ChevronRight size={22} color="#ff4d4d" />
+            </motion.div>
           </div>
 
           {/* VERSION */}
@@ -336,19 +356,19 @@ function Ajustes() {
 
       {/* CHANGE PASSWORD MODAL */}
       <ModalOverlay show={showChangePassword} onClose={() => { setShowChangePassword(false); setPasswordMsg(''); }}>
-        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div style={{
-            width: '56px', height: '56px', borderRadius: '50%',
-            background: 'rgba(0,103,126,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 12px'
+            width: '64px', height: '64px', borderRadius: '50%',
+            background: 'rgba(0,103,126,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 12px', border: '1px solid rgba(0,103,126,0.3)', boxShadow: '0 8px 16px rgba(0,103,126,0.2)'
           }}>
-            <Lock size={24} color="#00677e" />
+            <Lock size={28} color="#00677e" />
           </div>
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, fontFamily: 'DM Sans', color: 'var(--on-surface)' }}>Cambiar Contraseña</h2>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, margin: 0, fontFamily: 'var(--font-display)', color: 'var(--on-surface)' }}>Cambiar Contraseña</h2>
         </div>
 
-        <div style={{ marginBottom: '14px' }}>
-          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', display: 'block' }}>
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', display: 'block' }}>
             Nueva contraseña
           </label>
           <input
@@ -360,8 +380,8 @@ function Ajustes() {
           />
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', display: 'block' }}>
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', display: 'block' }}>
             Confirmar contraseña
           </label>
           <input
@@ -376,30 +396,33 @@ function Ajustes() {
         {passwordMsg && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '12px 16px', borderRadius: '16px',
-            background: passwordError ? '#ffdad6' : 'rgba(255,139,66,0.1)',
-            color: passwordError ? '#93000a' : '#9b4500',
-            fontSize: '0.85rem', marginBottom: '16px', fontWeight: 600
+            padding: '14px 18px', borderRadius: '16px',
+            background: passwordError ? 'rgba(186,26,26,0.1)' : 'rgba(34,197,94,0.1)',
+            color: passwordError ? '#ba1a1a' : '#22c55e',
+            fontSize: '0.85rem', marginBottom: '20px', fontWeight: 700,
+            border: `1px solid ${passwordError ? 'rgba(186,26,26,0.3)' : 'rgba(34,197,94,0.3)'}`
           }}>
-            {passwordError ? <AlertCircle size={16} /> : <Check size={16} />} {passwordMsg}
+            {passwordError ? <AlertCircle size={18} /> : <Check size={18} />} {passwordMsg}
           </div>
         )}
 
-        <button
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={handleChangePassword}
           disabled={changingPassword}
           style={{
             width: '100%', padding: '16px',
-            borderRadius: '9999px', border: 'none',
-            background: changingPassword ? '#ddc1b3' : '#00677e',
-            color: 'white', fontSize: '1rem',
-            fontWeight: 700, fontFamily: 'DM Sans',
+            borderRadius: '20px', border: 'none',
+            background: changingPassword ? 'var(--surface-variant)' : '#00677e',
+            color: 'white', fontSize: '1.05rem',
+            fontWeight: 800, fontFamily: 'var(--font-display)',
             cursor: changingPassword ? 'not-allowed' : 'pointer',
-            boxShadow: '0 8px 20px rgba(0,103,126,0.2)'
+            boxShadow: '0 8px 25px rgba(0,103,126,0.4), inset 0 1px 0 rgba(255,255,255,0.2)'
           }}
         >
           {changingPassword ? 'Actualizando...' : 'Actualizar Contraseña'}
-        </button>
+        </motion.button>
       </ModalOverlay>
 
 
@@ -407,47 +430,51 @@ function Ajustes() {
       <ModalOverlay show={showDeleteConfirm} onClose={() => { setShowDeleteConfirm(false); setDeleteStep(1); }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{
-            width: '64px', height: '64px', borderRadius: '50%',
-            background: '#ffdad6', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 16px'
+            width: '72px', height: '72px', borderRadius: '50%',
+            background: 'rgba(186,26,26,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 20px', border: '1px solid rgba(186,26,26,0.3)', boxShadow: '0 8px 20px rgba(186,26,26,0.3)'
           }}>
-            <Trash2 size={28} color="#ba1a1a" />
+            <Trash2 size={32} color="#ba1a1a" />
           </div>
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '0 0 8px', fontFamily: 'DM Sans', color: 'var(--on-surface)' }}>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, margin: '0 0 12px', fontFamily: 'var(--font-display)', color: 'var(--on-surface)' }}>
             {deleteStep === 1 ? '¿Eliminar tu cuenta?' : '¿Estás segura?'}
           </h2>
-          <p style={{ fontSize: '0.9rem', color: 'var(--on-surface-variant)', marginBottom: '24px' }}>
+          <p style={{ fontSize: '0.95rem', color: 'var(--on-surface-variant)', marginBottom: '28px', lineHeight: 1.5, fontWeight: 500 }}>
             {deleteStep === 1
               ? 'Se eliminarán todos tus datos, reservaciones e historial. Esta acción no se puede deshacer.'
-              : 'Esta es tu última oportunidad. Al confirmar, tu cuenta será eliminada permanentemente.'}
+              : 'Esta es tu última oportunidad. Al confirmar, tu cuenta será eliminada permanentemente y perderás acceso a todo tu progreso.'}
           </p>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleDeleteAccount}
             style={{
               width: '100%', padding: '16px',
-              borderRadius: '9999px', border: 'none',
+              borderRadius: '20px', border: 'none',
               background: '#ba1a1a', color: 'white',
-              fontSize: '1rem', fontWeight: 700, fontFamily: 'DM Sans',
-              cursor: 'pointer', marginBottom: '12px',
-              boxShadow: '0 8px 20px rgba(186,26,26,0.2)'
+              fontSize: '1.05rem', fontWeight: 800, fontFamily: 'var(--font-display)',
+              cursor: 'pointer', marginBottom: '14px',
+              boxShadow: '0 8px 25px rgba(186,26,26,0.4), inset 0 1px 0 rgba(255,255,255,0.2)'
             }}
           >
             {deleteStep === 1 ? 'Sí, eliminar mi cuenta' : 'Confirmar eliminación definitiva'}
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => { setShowDeleteConfirm(false); setDeleteStep(1); }}
             style={{
               width: '100%', padding: '16px',
-              borderRadius: '9999px',
-              border: '1px solid var(--border-subtle)', background: 'transparent',
-              fontSize: '1rem', fontWeight: 600, fontFamily: 'DM Sans',
-              color: 'var(--on-surface-variant)', cursor: 'pointer'
+              borderRadius: '20px',
+              border: '2px solid var(--border-subtle)', background: 'var(--surface, rgba(255,255,255,0.8))',
+              fontSize: '1rem', fontWeight: 800, fontFamily: 'DM Sans',
+              color: 'var(--on-surface)', cursor: 'pointer'
             }}
           >
             Cancelar
-          </button>
+          </motion.button>
         </div>
       </ModalOverlay>
 
