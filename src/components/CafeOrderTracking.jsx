@@ -96,7 +96,7 @@ export default function CafeOrderTracking({ orderId, onClose }) {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      style={{ position: 'fixed', inset: 0, zIndex: 5000, background: 'linear-gradient(180deg, #FFF7F0 0%, #F4EFE9 100%)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      style={{ position: 'fixed', inset: 0, zIndex: 5000, background: 'linear-gradient(180deg, #FFF7F0 0%, #F4EFE9 100%)', display: 'flex', flexDirection: 'column', overflowY: 'auto', fontFamily: 'var(--font-body)' }}>
       {/* Cerrar */}
       <button onClick={onClose} aria-label="Cerrar" style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top,0px) + 16px)', right: '18px', width: '38px', height: '38px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }}>
         <X size={18} color="#2B211C" />

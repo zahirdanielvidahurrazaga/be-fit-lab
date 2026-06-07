@@ -76,21 +76,21 @@ manifest ya habilita `READ_WEIGHT` + `READ_BODY_FAT`.
 - **Nutrición**, **Cumpleaños** (calendario mensual), **Insignias** (reglas: TOTAL_CLASSES, DIFFERENT_COACHES, WEEKLY_CLASSES, PROFILE_COMPLETE, MANUAL).
 - Info estudio: Blvrd 22 Sur 5123, Villa Carmel, 72567 Puebla. Tel/WhatsApp +52 221 266 4253. IG @befit.lab. Mapa embebido (requiere `frame-src` de google/openstreetmap en el CSP de `index.html`).
 
-## Estado actual (última sesión: 2026-06-04)
-- **Modo oscuro reconstruido** (palette cálido de marca `#15110E` + 7 tokens semánticos en `src/index.css`). SOLO aplica al rol **CLIENT**, se activa en **Ajustes**; la cafetería se deja clara a propósito. Commit **`7927fb5`** *"feat(tema): reconstruir modo oscuro..."*.
-- ✅ **Commit y push hechos correctamente**: `origin/main = 7927fb5`, web ya desplegada en Cloudflare.
-- ✅ **`npx cap copy ios` ya aplicado** (se usó `copy`, NO `sync`, porque el `dist/` ya estaba construido y no cambiaron deps nativas). Verificado: `dist/index.html` == `ios/App/App/public/index.html` y los JS con hash coinciden. **No hace falta re-sincronizar.**
-- ⏳ **Pendiente del usuario:** probar el modo oscuro en **Xcode / iPhone real** (`open ios/App/App.xcworkspace`).
-- ⚠️ **Repo de trabajo = `~/Desktop/be-fit-lab`** (fuente de verdad, tiene este CLAUDE.md). La copia vieja `~/Projects/be-fit-lab` (19 may, historia divergente) fue **eliminada** el 2026-06-04 para evitar confusiones.
-- ⚠️ Gotcha de entorno: `npm run build` tarda ~14 min y el proceso `vite` queda colgado tras "✓ built" → matarlo con `pkill -f "vite build"`.
+## Estado actual (última sesión: 2026-06-07)
+- **Mudanza del proyecto**: Por problemas de sincronización con OneDrive, el proyecto se movió de manera definitiva a `C:\proyectos\be-fit-lab`.
+- **Icono de Android perfecto**: Se resolvió el problema del recorte del logo en Android Adaptive Icons. Usando un durazno aislado provisto por el usuario, se creó el script `pad_icon.cjs` para centrar el icono a 600x600 dentro de un lienzo de 1024x1024, evitando que la máscara circular/redondeada de Android corte los bordes.
+- **Preparación para Google Play Console**: 
+  - Se actualizó el `versionCode` a 5 y `versionName` a 2.1.2 en `build.gradle` para permitir el upload del App Bundle (.aab).
+  - Se configuró la **Prueba Cerrada (Closed Testing)** y se redactó la declaración de privacidad de datos de Salud (para `READ_BODY_FAT` y `READ_WEIGHT` mediante Health Connect).
+  - Se aclaró que los cobros en modo prueba (Test Mode de Stripe) y los enlaces profundos vacíos son correctos para esta fase de revisión.
+- ✅ **Commit y push hechos correctamente**: Últimos cambios en icono, AppTour y versión fueron pusheados a `main`. `npm run build` y `npx cap sync` para iOS y Android ejecutados exitosamente.
 
 ## Pendientes / próximos pasos
 - [ ] **Probar en dispositivo real** el wizard de fotos (cámara en vivo + siluetas). En Simulador cae a galería.
 - [ ] Vista coach/admin para revisar fotos de progreso de clientas (RLS ya lo permite).
-- [x] Comparador lado a lado de fotos entre sesiones (`CompareModal` en ProgressPhotos.jsx). ✅
 - [ ] Push recordatorio a las 6 semanas para nueva sesión de fotos.
-- [ ] Pasar Stripe a claves **LIVE**.
-- [ ] Rebuild **AAB de Android** (en la PC con el keystore).
+- [ ] Pasar Stripe a claves **LIVE** en Supabase y `.env` antes del pase a Producción final.
+- [ ] Rebuild **AAB de Android** con claves LIVE para Producción.
 - [ ] Confirmar modelo exacto de báscula para métricas extra y que la unidad de peso sea kg.
 
 ## Notas / gotchas

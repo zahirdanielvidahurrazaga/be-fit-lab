@@ -143,6 +143,8 @@ function Barista() {
           history.length === 0
             ? <Empty text="Sin historial todavía" />
             : <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '460px', margin: '0 auto' }}>{history.map(o => <OrderCard key={o.id} order={o} onAdvance={advance} />)}</div>
+        ) : tab === 'loyalty' ? (
+          <BaristaLoyaltySearch />
         ) : activeCount === 0 ? (
           <Empty text="Sin pedidos activos" sub="Los pedidos nuevos aparecen aquí al instante." />
         ) : (
@@ -179,6 +181,67 @@ function Empty({ text, sub }) {
       </div>
       <p style={{ margin: 0, fontWeight: 700, color: '#2B211C' }}>{text}</p>
       {sub && <p style={{ margin: '4px 0 0', fontSize: '0.85rem' }}>{sub}</p>}
+    </div>
+  );
+}
+
+function BaristaLoyaltySearch() {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const search = async () => {
+    if (!query.trim()) return;
+    setLoading(true);
+    const { data } = await supabase.from('users').select('id, full_name, email').ilike('full_name', `%${query}%`).limit(10);
+    if (data) {
+      const ids = data.map(u => u.id);
+      const { data: loy } = await supabase.from('cafe_loyalty').select('*').in('user_id', ids);
+      const map = new Map((loy || []).map(l => [l.user_id, l]));
+      setResults(data.map(u => ({ ...u, loyalty: map.get(u.id) || { stamps: 0, gifts_available: 0 } })));
+    }
+    setLoading(false);
+  };
+
+  const redeem = async (userId) => {
+    if (!window.confirm('¿Seguro que quieres canjear un regalo sorpresa para esta clienta?')) return;
+    const { error } = await supabase.rpc('redeem_cafe_gift', { p_user_id: userId });
+    if (!error) {
+      alert('¡Regalo canjeado con éxito!');
+      search();
+    } else {
+      // Fallback si no está la RPC (decrementar manualmente)
+      const userRes = results.find(u => u.id === userId);
+      if (userRes && userRes.loyalty.gifts_available > 0) {
+        await supabase.from('cafe_loyalty').update({ gifts_available: userRes.loyalty.gifts_available - 1 }).eq('user_id', userId);
+        alert('¡Regalo canjeado con éxito!');
+        search();
+      }
+    }
+  };
+
+  return (
+    <div style={{ maxWidth: '600px', margin: '0 auto', background: '#fff', borderRadius: '20px', padding: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.04)' }}>
+      <h2 style={{ fontFamily: 'var(--font-display)', margin: '0 0 16px', color: '#1A1C1E' }}>Buscar Clienta</h2>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
+        <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && search()} placeholder="Nombre de la clienta..." style={{ flex: 1, padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', fontSize: '1rem' }} />
+        <button onClick={search} disabled={loading} style={{ padding: '12px 24px', borderRadius: '12px', background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}>{loading ? '...' : 'Buscar'}</button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {results.map(u => (
+          <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '14px', border: '1px solid rgba(0,0,0,0.06)', background: u.loyalty.gifts_available > 0 ? 'rgba(255,145,77,0.05)' : '#FDFBF7' }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1A1C1E' }}>{u.full_name}</div>
+              <div style={{ fontSize: '0.85rem', color: '#6B7280' }}>Sellos: {u.loyalty.stamps}/12 | Regalos: {u.loyalty.gifts_available}</div>
+            </div>
+            {u.loyalty.gifts_available > 0 ? (
+              <button onClick={() => redeem(u.id)} style={{ padding: '10px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', color: '#fff', border: 'none', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(255,145,77,0.3)' }}><Gift size={16} /> Canjear Regalo</button>
+            ) : (
+              <span style={{ fontSize: '0.85rem', color: '#9CA3AF', fontWeight: 600 }}>Sin regalos</span>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

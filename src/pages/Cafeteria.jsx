@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { Stripe } from '@capacitor-community/stripe';
-import { ChevronLeft, ChevronRight, Coffee, Flame, Info, AlertCircle, ShoppingCart, ShoppingBag, CheckCircle2, X, Receipt } from 'lucide-react';
+import { ShoppingCart, ChevronLeft, ChevronRight, Info, Coffee, X, Receipt, Check, CreditCard, AlertCircle, Plus, Flame, Home, Gift, Star } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import CafeProductSheet from '../components/CafeProductSheet';
@@ -20,10 +20,32 @@ const imgBlend = (url) => /\.png(\?|$)/i.test(url || '') ? 'multiply' : 'normal'
 const gridStagger = { hidden: {}, visible: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } } };
 const cardItem = { hidden: { opacity: 0, y: 22, scale: 0.97 }, visible: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 130, damping: 18 } } };
 
+const CafeImage = ({ src, alt }) => {
+  const [error, setError] = useState(false);
+  if (!src || error) {
+    return (
+      <div style={{ width: '100%', height: '100%', background: '#F5F0E6', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '16px' }}>
+        <Coffee size={32} color="#DCD4C7" />
+      </div>
+    );
+  }
+  
+  const isMango = src.includes('mango_matcha');
+  return <img src={src} alt={alt} onError={() => setError(true)} style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'multiply', transform: isMango ? 'scale(1.4)' : 'scale(1.15)' }} />;
+};
+
 function Cafeteria() {
   const navigate = useNavigate();
   const { user, cafeProducts, cafeProductsLoaded } = useAuth();
   const isNative = Capacitor.isNativePlatform();
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Buenos días';
+    if (hour < 19) return 'Buenas tardes';
+    return 'Buenas noches';
+  };
+
   const [activeWidgetIndex, setActiveWidgetIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showThanks, setShowThanks] = useState(false);
@@ -40,12 +62,50 @@ function Cafeteria() {
   const [processing, setProcessing] = useState(false);
   const [trackingOrderId, setTrackingOrderId] = useState(null); // seguimiento del pedido
   const [activeOrders, setActiveOrders] = useState([]);          // pedidos en curso del usuario
-  const [showHistory, setShowHistory] = useState(false);         // historial de pedidos del usuario
+  const [activeTab, setActiveTab] = useState('home');            // home, order, rewards, history
+  const [isScrolled, setIsScrolled] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);   // pide registrarse/login para comprar
   const [returnedFromPay, setReturnedFromPay] = useState(false); // volvió del checkout web (Stripe)
+  const [loyalty, setLoyalty] = useState({ stamps: 0, gifts_available: 0 }); // Starbucks style rewards
+
+
+
+  // Cargar estado de lealtad
+  useEffect(() => {
+    if (!user?.id) return;
+    const fetchLoyalty = async () => {
+      const { data } = await supabase.from('cafe_loyalty').select('*').eq('user_id', user.id).single();
+      if (data) setLoyalty(data);
+      else setLoyalty({ stamps: 0, gifts_available: 0 });
+    };
+    fetchLoyalty();
+    const ch = supabase.channel(`loyalty-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cafe_loyalty', filter: `user_id=eq.${user.id}` }, fetchLoyalty)
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [user?.id]);
 
   // Catálogo desde la BD (precios server-side). Solo productos disponibles.
-  const available = (cafeProducts || []).filter(p => p.available !== false);
+  const available = (cafeProducts || []).filter(p => p.available !== false).map(p => {
+    if (!p.image_url) {
+      const imgMap = {
+        'Mango-Matcha': '/cafeteria/mango_matcha.png',
+        'Mango Proteín': '/cafeteria/mango_protein.png',
+        'Horchata Proteín': '/cafeteria/horchata_protein.png',
+        'Arroz con Leche': '/cafeteria/arroz_con_leche.png',
+        'Banana Maní': '/cafeteria/banana_mani.png',
+        'CHAI Frambuesa': '/cafeteria/chai_frambuesa.png',
+        'CHOCO BANANA': '/cafeteria/choco_banana.png',
+        'Dubai Proteín': '/cafeteria/dubai_protein.png',
+        'Mazapan': '/cafeteria/mazapan.png',
+        'Fit-colada': '/cafeteria/fit_colada.png'
+      };
+      if (imgMap[p.name]) {
+        return { ...p, image_url: imgMap[p.name] };
+      }
+    }
+    return p;
+  });
   const coffeeItems = available.filter(p => p.category === 'coffee');
   const smoothieItems = available.filter(p => p.category === 'smoothie');
   const temporadaItems = available.filter(p => p.category === 'temporada');
@@ -70,7 +130,9 @@ function Cafeteria() {
   useEffect(() => {
     window.scrollTo(0, 0);
     const handleResize = () => setIsMobile(window.innerWidth < 768);
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleScroll);
     if (new URLSearchParams(window.location.search).get('payment') === 'success') {
       setCart([]);
       window.history.replaceState?.({}, '', '/cafeteria'); // limpiar el ?payment para no repetir
@@ -85,6 +147,7 @@ function Cafeteria() {
     })();
     return () => {
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('cafe-payment-success', onPaid);
     };
   }, []);
@@ -154,10 +217,10 @@ function Cafeteria() {
 
   // Bloquear el scroll del fondo cuando hay una hoja/overlay abierto
   useEffect(() => {
-    const open = selectedProduct || showCart || confirming || processing || showThanks || trackingOrderId || showHistory || showAuthPrompt;
+    const open = selectedProduct || showCart || confirming || processing || showThanks || trackingOrderId || showAuthPrompt;
     document.body.style.overflow = open ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
-  }, [selectedProduct, showCart, confirming, processing, showThanks, trackingOrderId, showHistory, showAuthPrompt]);
+  }, [selectedProduct, showCart, confirming, processing, showThanks, trackingOrderId, showAuthPrompt]);
 
   const nextWidget = () => setActiveWidgetIndex((prev) => (prev + 1) % 3);
   const prevWidget = () => setActiveWidgetIndex((prev) => (prev - 1 + 3) % 3);
@@ -189,6 +252,22 @@ function Cafeteria() {
       const items = cart.map(i => ({ product_id: i.product_id, quantity: i.qty, option_ids: i.option_ids, notes: i.notes }));
       const body = { items, userEmail: user?.email, userId: user?.id, gift: meta.gift, pickupTime: meta.pickupTime, noStraw: meta.noStraw, returnUrl: window.location.origin };
 
+      if (meta.paymentMethod === 'cash') {
+        const { data, error } = await supabase.functions.invoke('cash-cafe-checkout', { body });
+        if (error) throw new Error(error.message);
+        if (data?.error) throw new Error(data.error);
+        
+        const resumen = cart.map(i => `${i.qty}× ${i.name}`).join(', ');
+        if (user?.id) supabase.functions.invoke('send-push', { body: { userId: user.id, title: 'Pedido confirmado', body: `${resumen}. ¡Paga en caja al recoger!`, type: 'payment', skipLog: true } });
+        if (meta.gift?.recipient_user_id) supabase.functions.invoke('send-push', { body: { userId: meta.gift.recipient_user_id, title: '¡Te enviaron un regalo!', body: meta.gift.message || `Te regalaron: ${resumen}`, type: 'payment', skipLog: true } });
+        
+        setCart([]);
+        setActiveTab('history');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setProcessing(false);
+        return;
+      }
+
       if (Capacitor.isNativePlatform()) {
         const { data, error } = await supabase.functions.invoke('stripe-cafe-intent', { body });
         if (error) throw new Error(error.message);
@@ -217,7 +296,8 @@ function Cafeteria() {
           if (user?.id) supabase.functions.invoke('send-push', { body: { userId: user.id, title: 'Pedido confirmado', body: `${resumen}. ¡Ya lo estamos preparando!`, type: 'payment', skipLog: true } });
           if (meta.gift?.recipient_user_id) supabase.functions.invoke('send-push', { body: { userId: meta.gift.recipient_user_id, title: '¡Te enviaron un regalo!', body: meta.gift.message || `Te regalaron: ${resumen}`, type: 'payment', skipLog: true } });
           setCart([]);
-          if (data.orderId) setTrackingOrderId(data.orderId); else setShowThanks(true);
+          setActiveTab('history');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       } else {
         // Web: checkout hospedado con personalización completa (mismo carrito que el nativo).
@@ -225,6 +305,7 @@ function Cafeteria() {
         // como popup (por eso "no salía el pago"). El success_url regresa a /cafeteria.
         const { data, error } = await supabase.functions.invoke('stripe-cafe-checkout', { body });
         if (error) throw new Error(error.message);
+        if (data?.error) throw new Error(data.error);
         if (data?.url) {
           // Marca para que al volver de Stripe NO se haga auto-signout (el sessionStorage
           // del tab puede perderse en el viaje cross-dominio). Sobrevive en localStorage.
@@ -235,7 +316,7 @@ function Cafeteria() {
       }
     } catch (err) {
       console.error('Error en el pago:', err);
-      alert('No se pudo procesar el pago. Intenta de nuevo.');
+      alert('Error procesando pago: ' + (err.message || 'Error desconocido'));
     } finally {
       setProcessing(false);
     }
@@ -252,329 +333,324 @@ function Cafeteria() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FDFBF7', color: '#1A1C1E', fontFamily: 'var(--font-body)', overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: '#FAF8F5', color: '#2B211C', fontFamily: 'var(--font-body)', overflowX: 'hidden', paddingBottom: '90px' }}>
       
-      {/* HERO SECTION */}
-      <div style={{ position: 'relative', width: '100%', height: isNative ? '300px' : '400px', backgroundColor: '#2b211c', backgroundImage: 'url("/fotos-hero/IMG_5410.JPG")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%)', backdropFilter: 'blur(3px)' }}></div>
+      {/* HEADER (solo en order y history) - ELIMINADO para mantener consistencia de Pestañas grandes sin botón de volver */}
+
+
+      <AnimatePresence mode="wait">
         
-        {/* NAV BUTTON */}
-        <div style={{ position: 'absolute', top: isNative ? 'calc(env(safe-area-inset-top, 44px) + 10px)' : '30px', left: isNative ? '15px' : '30px', zIndex: 10 }}>
-          <button
-            onClick={() => navigate(user ? '/portal' : '/')}
-            className="glass-button"
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontSize: '0.9rem', color: 'white', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.3)' }}
-          >
-            <ChevronLeft size={18} /> Volver
-          </button>
-        </div>
-
-        {/* MIS PEDIDOS (historial) */}
-        <div style={{ position: 'absolute', top: isNative ? 'calc(env(safe-area-inset-top, 44px) + 10px)' : '30px', right: isNative ? '15px' : '30px', zIndex: 10 }}>
-          <button
-            onClick={() => setShowHistory(true)}
-            className="glass-button"
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', fontSize: '0.9rem', color: 'white', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.3)' }}
-          >
-            <Receipt size={17} /> Mis pedidos
-          </button>
-        </div>
-
-        {/* TITLE / LOGO */}
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '100%', textAlign: 'center', zIndex: 1, pointerEvents: 'none', display: 'flex', justifyContent: 'center' }}>
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-            <img 
-              src="/cafeteria/logo.png" 
-              alt="Cafeteria Logo" 
-              style={{ width: '90%', maxWidth: '600px', height: 'auto', filter: 'brightness(0) invert(1)', objectFit: 'contain' }} 
-            />
-          </motion.div>
-        </div>
-      </div>
-
-      {/* MENU CONTAINER */}
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: isNative ? '30px 20px' : '60px 40px' }}>
-        
-        <motion.div variants={containerVariants} initial="hidden" animate="visible">
-
-          {/* Skeleton de carga (menú aún no llega del servidor) */}
-          {!cafeProductsLoaded && (cafeProducts || []).length === 0 && <CafeMenuSkeleton />}
-
-          {/* TABS por categoría (liquid glass) */}
-          <motion.div variants={itemVariants} style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '34px' }}>
-            {visibleTabs.map(t => {
-              const active = activeCat === t.key;
-              return (
-                <motion.button key={t.key} onClick={() => setActiveCat(t.key)} whileTap={{ scale: 0.94 }} animate={{ scale: active ? 1.04 : 1 }} transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                  style={{ border: '1px solid rgba(255,255,255,0.65)', borderRadius: '999px', padding: '11px 22px', cursor: 'pointer', fontWeight: 800, fontSize: '0.92rem', whiteSpace: 'nowrap',
-                    background: active ? 'linear-gradient(135deg, #FF914D, #E68245)' : 'rgba(255,255,255,0.5)', color: active ? '#fff' : '#6B7280',
-                    backdropFilter: 'blur(16px) saturate(180%)', WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-                    boxShadow: active ? '0 12px 26px rgba(255,145,77,0.42), inset 0 1px 0 rgba(255,255,255,0.4)' : '0 4px 14px rgba(80,50,30,0.07), inset 0 1px 0 rgba(255,255,255,0.7)' }}>
-                  {t.label}
-                </motion.button>
-              );
-            })}
-          </motion.div>
-
-          {/* CONTENIDO DE LA PESTAÑA ACTIVA (anima al cambiar) */}
-          <AnimatePresence mode="wait">
-          <motion.div key={activeCat} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.24 }}>
-
-          {/* CATEGORY: ICE COFFEE */}
-          {activeCat === 'coffee' && coffeeItems.length > 0 && (
-          <motion.div variants={gridStagger} initial="hidden" animate="visible" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-              {coffeeItems.map(item => (
-                <motion.div key={item.id} variants={cardItem} style={{ background: 'white', borderRadius: '20px', padding: '25px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  
-                  {/* IMAGE */}
-                  {item.image_url && (
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }}>
-                      <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', mixBlendMode: imgBlend(item.image_url) }} />
-                    </div>
-                  )}
-
-                  <div>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 8px 0' }}>{item.name}</h3>
-                    <p style={{ color: '#6B7280', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>{item.description}</p>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '25px' }}>
-                    <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>${item.price}</span>
-                    <button onClick={() => openProduct(item)} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '30px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
-                      <ShoppingCart size={16} /> Agregar
-                    </button>
-                  </div>
-                </motion.div>
-              ))}
-          </motion.div>
-          )}
-
-          {/* CATEGORY: SMOOTHIES */}
-          {activeCat === 'smoothie' && smoothieItems.length > 0 && (
-          <motion.div variants={gridStagger} initial="hidden" animate="visible" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' }}>
-              {smoothieItems.map(item => (
-                <motion.div key={item.id} variants={cardItem} style={{ background: 'linear-gradient(145deg, #ffffff, #fdfbf7)', borderRadius: '24px', padding: '25px', boxShadow: '0 15px 35px rgba(0,0,0,0.06)', border: '1px solid rgba(255,145,77,0.15)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
-                  
-                  {/* Decorative blob */}
-                  <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', background: 'rgba(255,145,77,0.05)', borderRadius: '50%', zIndex: 0 }}></div>
-                  
-                  <div style={{ zIndex: 1 }}>
-                    {item.image_url && (
-                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-                        <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" style={{ width: '160px', height: '160px', objectFit: 'cover', borderRadius: '50%', boxShadow: '0 12px 26px rgba(80,50,30,0.18)', mixBlendMode: imgBlend(item.image_url) }} />
-                      </div>
-                    )}
-                    <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '0 0 5px 0' }}>{item.name}</h3>
-                    <p style={{ color: '#6B7280', fontSize: '0.85rem', margin: '0 0 15px 0', lineHeight: 1.4 }}>{item.description}</p>
-                    
-                    {(item.cals || item.protein) && (
-                      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                        {item.cals && (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.04)', padding: '5px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>
-                            <Flame size={14} color="#EF4444" /> {item.cals} cals
-                          </span>
-                        )}
-                        {item.protein && (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,145,77,0.1)', padding: '5px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 700, color: '#D97706' }}>
-                            {item.protein}g Proteína
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', zIndex: 1 }}>
-                    <span style={{ fontSize: '1.5rem', fontWeight: 800 }}>${item.price}</span>
-                    <button onClick={() => openProduct(item)} style={{ background: 'black', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '30px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }} onMouseEnter={e => {e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.background = '#222'}} onMouseLeave={e => {e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'black'}}>
-                      Comprar
-                    </button>
-                  </div>
-                </motion.div>
-              ))}
-          </motion.div>
-          )}
-
-          {/* CATEGORY: TEMPORADA */}
-          {activeCat === 'temporada' && temporadaItems.length > 0 && (
-          <motion.div variants={gridStagger} initial="hidden" animate="visible" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
-              {temporadaItems.map(item => (
-                <motion.div key={item.id} variants={cardItem} style={{ background: 'linear-gradient(135deg, #FFD194 0%, #70E1F5 100%)', padding: '2px', borderRadius: '26px' }}>
-                  <div style={{ background: 'white', borderRadius: '24px', padding: '30px', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
-                    {item.image_url && (
-                      <div style={{ margin: '-10px -10px 18px', borderRadius: '18px', overflow: 'hidden', height: '180px', background: '#F6EDE3' }}>
-                        <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: imgBlend(item.image_url) === 'multiply' ? 'contain' : 'cover', mixBlendMode: imgBlend(item.image_url) }} />
-                      </div>
-                    )}
-                    <h3 style={{ fontSize: '1.5rem', fontWeight: 800, margin: '0 0 10px 0' }}>{item.name}</h3>
-                    <p style={{ color: '#4B5563', fontSize: '0.95rem', margin: '0 0 20px 0', lineHeight: 1.5 }}>{item.description}</p>
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '25px' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.04)', padding: '5px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600 }}>
-                        <Flame size={14} color="#EF4444" /> {item.cals} cals
-                      </span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,145,77,0.1)', padding: '5px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 700, color: '#D97706' }}>
-                        {item.protein}g Proteína
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-                      <span style={{ fontSize: '1.6rem', fontWeight: 800 }}>${item.price}</span>
-                      <button onClick={() => openProduct(item)} style={{ background: 'linear-gradient(to right, #f97316, #ea580c)', color: 'white', border: 'none', padding: '12px 28px', borderRadius: '30px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(234,88,12,0.3)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
-                        <ShoppingCart size={18} /> Pedir Ya
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-          </motion.div>
-          )}
-
-          </motion.div>
-          </AnimatePresence>
-
-          {/* INFORMACIÓN EXTRA WIDGETS CAROUSEL (Estilo Precios) */}
-          <motion.div variants={itemVariants} style={{ position: 'relative', width: '100%', maxWidth: '1000px', margin: '60px auto 40px', height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* --- PESTAÑA: HOME --- */}
+        {activeTab === 'home' && (
+          <motion.div key="home" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} style={{ padding: isNative ? 'calc(env(safe-area-inset-top, 44px) + 20px) 24px 40px' : '40px 24px' }}>
             
-            {/* Flechas de navegación */}
-            <button onClick={prevWidget} style={{ position: 'absolute', left: isMobile ? '5px' : '10px', zIndex: 20, background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.9)', borderRadius: '50%', width: isMobile ? '40px' : '56px', height: isMobile ? '40px' : '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(10px)', boxShadow: '0 10px 30px rgba(0,0,0,0.08)', transition: 'all 0.2s' }}>
-              <ChevronLeft size={isMobile ? 24 : 28} color="var(--primary)" />
-            </button>
-            
-            <button onClick={nextWidget} style={{ position: 'absolute', right: isMobile ? '5px' : '10px', zIndex: 20, background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.9)', borderRadius: '50%', width: isMobile ? '40px' : '56px', height: isMobile ? '40px' : '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(10px)', boxShadow: '0 10px 30px rgba(0,0,0,0.08)', transition: 'all 0.2s' }}>
-              <ChevronRight size={isMobile ? 24 : 28} color="var(--primary)" />
-            </button>
+            {/* Header del Home (Rediseñado - Saludo Arriba a la Derecha) */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
+              <div style={{ paddingTop: '6px' }}>
+                <button onClick={() => navigate(user ? '/portal' : '/')} style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#fff', border: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,0,0,0.04)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform='scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
+                  <ChevronLeft size={22} color="#2B211C" />
+                </button>
+              </div>
+              
+              <div style={{ textAlign: 'right' }}>
+                <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.3rem', fontWeight: 800, color: '#2B211C', margin: '0 0 4px', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                  {getGreeting()},<br/>
+                  <span style={{ color: '#FF914D' }}>{user?.user_metadata?.full_name ? user.user_metadata.full_name.split(' ')[0] : 'Cliente'}</span>.
+                </h1>
+                <p style={{ color: '#7D7068', fontSize: '1.05rem', margin: 0, fontWeight: 500 }}>¿Qué se te antoja hoy?</p>
+              </div>
+            </div>
 
-            <div style={{ position: 'relative', width: isMobile ? '320px' : '360px', height: '100%', perspective: isMobile ? 'none' : '1200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* Atajo Rewards */}
+            {user && (
+              <motion.div whileTap={{ scale: 0.98 }} onClick={() => setActiveTab('rewards')} style={{ background: '#fff', borderRadius: '24px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 12px 30px rgba(0,0,0,0.03)', marginBottom: '40px', cursor: 'pointer', border: '1px solid rgba(0,0,0,0.02)' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, #FAF8F5, #F5F0E6)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                  <motion.div animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.8, 0.4] }} transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }} style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,145,77,0.2) 0%, transparent 70%)' }} />
+                  <svg width="46" height="46" viewBox="0 0 36 36" style={{ position: 'absolute' }}>
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,145,77,0.15)" strokeWidth="3" />
+                    <motion.path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#FF914D" strokeWidth="3" strokeDasharray="100, 100" initial={{ strokeDashoffset: 100 }} animate={{ strokeDashoffset: 100 - Math.min(100, ((loyalty?.stamps || 0) / 12) * 100) }} transition={{ duration: 1.5, ease: "easeOut" }} />
+                  </svg>
+                  <Coffee size={20} color="#FF914D" style={{ position: 'relative', zIndex: 1 }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#2B211C', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Be Fit Rewards</div>
+                  <div style={{ color: '#7D7068', fontSize: '0.95rem' }}>{Math.min(100, Math.round(((loyalty?.stamps || 0) / 12) * 100))} de 100 puntos para tu regalo.</div>
+                </div>
+                <ChevronRight size={20} color="#CCC0B6" />
+              </motion.div>
+            )}
+
+            {/* Carrusel Featured */}
+            <div style={{ marginBottom: '20px' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, color: '#2B211C', margin: '0 0 16px' }}>Novedades</h2>
+              <div style={{ position: 'relative', width: '100%', aspectRatio: '4/5', borderRadius: '28px', overflow: 'hidden', background: '#DCD4C7', cursor: 'pointer' }} onClick={() => setActiveTab('order')}>
+                <img src="/cafeteria/Promocional.png" alt="Especial" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)' }} />
+                <div style={{ position: 'absolute', bottom: '24px', left: '24px', right: '24px' }}>
+                  <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Temporada</div>
+                  <div style={{ color: '#fff', fontSize: '1.8rem', fontWeight: 800, fontFamily: 'var(--font-display)', lineHeight: 1.1, marginBottom: '16px' }}>Recién hecho<br/>para ti</div>
+                  <button style={{ 
+                    width: '100%', padding: '16px', borderRadius: '100px', 
+                    background: 'rgba(255, 255, 255, 0.25)', 
+                    backdropFilter: 'blur(16px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+                    border: '1px solid rgba(255, 255, 255, 0.5)', 
+                    color: '#fff', 
+                    fontWeight: 800, fontSize: '1.05rem', cursor: 'pointer', 
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                    textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}>Pedir Ahora</button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* --- PESTAÑA: MENU --- */}
+        {activeTab === 'order' && (
+          <motion.div key="order" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} style={{ padding: isNative ? 'calc(env(safe-area-inset-top, 44px) + 20px) 24px 40px' : '40px 24px' }}>
+            
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2.4rem', fontWeight: 800, color: '#2B211C', margin: '0' }}>Menú</h2>
+            </div>
+
+            {!cafeProductsLoaded && (cafeProducts || []).length === 0 && <CafeMenuSkeleton />}
+            
+            {/* Filtros - Estilo Segmented Control iOS */}
+            <div style={{ margin: '0 0 24px', background: 'rgba(219, 210, 198, 0.4)', padding: '4px', borderRadius: '100px', display: 'flex', position: 'relative' }}>
               {[
-                {
-                  id: 'w1',
-                  content: (
-                    <div style={{ width: '100%', height: '100%', background: 'linear-gradient(145deg, #ffffff, #fcfaf8)', padding: '30px', borderRadius: '32px', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', border: '1px solid rgba(255,145,77,0.15)', boxShadow: 'inset 0 0 20px rgba(255,255,255,0.5)' }}>
-                      <div style={{ position: 'absolute', top: -30, right: -30, opacity: 0.03, color: 'var(--primary)' }}><Coffee size={150} /></div>
-                      <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.2rem', marginBottom: '20px', zIndex: 1, position: 'relative', color: '#1A1C1E' }}>
-                        <Info size={20} color="var(--primary)" /> ¿Cuánta proteína necesitas?
-                      </h3>
-                      <ul style={{ listStyle: 'none', padding: 0, margin: 0, zIndex: 1, position: 'relative', display: 'flex', flexDirection: 'column', gap: '12px', color: '#4B5563' }}>
-                        <li style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: '8px' }}>
-                          <span>Sedentario</span>
-                          <strong style={{ color: '#1A1C1E' }}>0.8 a 1.0 g/kg</strong>
-                        </li>
-                        <li style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: '8px' }}>
-                          <span>Activo / Deportista</span>
-                          <strong style={{ color: '#1A1C1E' }}>1.2 a 2.0 g/kg</strong>
-                        </li>
-                        <li style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px' }}>
-                          <span>Adulto mayor</span>
-                          <strong style={{ color: '#1A1C1E' }}>1.2 a 1.5 g/kg</strong>
-                        </li>
-                      </ul>
-                      <p style={{ fontSize: '0.8rem', color: '#9CA3AF', marginTop: '15px', fontStyle: 'italic', zIndex: 1, position: 'relative' }}>* Para evitar pérdida ósea</p>
-                    </div>
-                  )
-                },
-                {
-                  id: 'w2',
-                  content: (
-                    <div style={{ width: '100%', height: '100%', background: 'linear-gradient(145deg, #ffffff, #fcfaf8)', padding: '30px', borderRadius: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center', border: '1px solid rgba(255,145,77,0.15)', boxShadow: 'inset 0 0 20px rgba(255,255,255,0.5)' }}>
-                      <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.2rem', marginBottom: '20px', color: '#1A1C1E' }}>
-                        Beneficios
-                      </h3>
-                      <ul style={{ paddingLeft: '20px', margin: 0, display: 'flex', flexDirection: 'column', gap: '15px', color: '#4B5563', lineHeight: 1.5, fontWeight: 500 }}>
-                        <li>Snack inteligente</li>
-                        <li>Control de ansiedad</li>
-                        <li>Recuperación post-entrenamiento</li>
-                        <li>Mejora la composición corporal</li>
-                        <li>Boost de energía para tu entreno</li>
-                      </ul>
-                    </div>
-                  )
-                },
-                {
-                  id: 'w3',
-                  content: (
-                    <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #FFF3E5, #FFE4CC)', padding: '30px', borderRadius: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center', border: '1px solid rgba(255,145,77,0.3)', boxShadow: 'inset 0 0 20px rgba(255,255,255,0.5)' }}>
-                      <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.2rem', marginBottom: '15px', color: 'var(--primary)' }}>
-                        <AlertCircle size={22} /> Aviso Importante
-                      </h3>
-                      <p style={{ fontSize: '1.1rem', lineHeight: 1.6, margin: 0, fontWeight: 600, color: '#1A1C1E' }}>
-                        Ordena tu bebida <strong>antes de entrenar</strong> y evita filas al terminar. 
-                      </p>
-                      <div style={{ marginTop: '30px', padding: '15px', background: 'white', borderRadius: '16px', fontSize: '1rem', textAlign: 'center', fontWeight: 800, color: 'var(--primary)', boxShadow: '0 4px 15px rgba(255,145,77,0.15)' }}>
-                        ¡Tu bebida te estará esperando!
-                      </div>
-                    </div>
-                  )
-                }
-              ].map((widget, index) => {
-                let offset = (index - activeWidgetIndex) % 3;
-                if (offset < -1) offset += 3;
-                if (offset > 1) offset -= 3;
-                
-                if (Math.abs(offset) > 1) return null;
-
-                const isActive = offset === 0;
-                const x = offset * (isMobile ? 300 : 220); 
-                const scale = isActive ? 1 : (isMobile ? 0.95 : 0.85);
-                const zIndex = isActive ? 10 : 5;
-                const opacity = isActive ? 1 : (isMobile ? 0 : 0.7);
-                
+                { id: 'temporada', label: 'Especiales' },
+                { id: 'coffee', label: 'Ice Coffee' },
+                { id: 'smoothie', label: 'Coffee Lab' }
+              ].map(cat => {
+                const active = activeCat === cat.id;
                 return (
-                  <motion.div
-                    key={widget.id}
-                    animate={{ x, scale, zIndex, opacity }}
-                    transition={{ type: 'spring', stiffness: 250, damping: 25 }}
+                  <button key={cat.id} onClick={() => setActiveCat(cat.id)}
                     style={{
-                      position: 'absolute',
-                      width: '100%',
-                      height: '350px',
-                      borderRadius: '32px',
-                      boxShadow: isActive ? '0 20px 50px rgba(0,0,0,0.1)' : '0 10px 30px rgba(0,0,0,0.05)',
-                      display: 'flex',
-                      overflow: 'hidden',
-                      cursor: isActive ? 'default' : 'pointer',
-                      border: '1px solid rgba(255,255,255,0.8)',
-                      pointerEvents: 'auto',
-                      WebkitFontSmoothing: 'antialiased',
-                      transformStyle: 'preserve-3d'
-                    }}
-                    onClick={() => {
-                      if (!isActive) {
-                         if (offset === 1) nextWidget();
-                         if (offset === -1) prevWidget();
-                      }
-                    }}
-                  >
-                    {widget.content}
-                  </motion.div>
+                      flex: 1,
+                      padding: '12px 16px',
+                      borderRadius: '100px',
+                      border: 'none',
+                      fontWeight: active ? 800 : 600,
+                      fontSize: '0.9rem',
+                      whiteSpace: 'nowrap',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                      background: active ? '#FFFFFF' : 'transparent',
+                      color: active ? '#2B211C' : '#7D7068',
+                      boxShadow: active ? '0 4px 12px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.1)' : 'none'
+                    }}>
+                    {cat.label}
+                  </button>
                 );
               })}
             </div>
+
+            {/* CONTENIDO DE LA PESTAÑA ACTIVA */}
+            <AnimatePresence mode="wait">
+            <motion.div key={activeCat} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.24 }}>
+            {activeCat === 'coffee' && coffeeItems.length > 0 && (
+            <motion.div variants={gridStagger} initial="hidden" animate="visible" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {coffeeItems.map(item => (
+                  <motion.div variants={cardItem} key={item.id} onClick={() => openProduct(item)}
+                    style={{ background: '#fff', borderRadius: '24px', overflow: 'hidden', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', padding: '12px 16px', gap: '16px' }}>
+                    <div style={{ width: '90px', height: '90px', borderRadius: '16px', background: '#F5F0E6', flexShrink: 0, overflow: 'hidden', padding: '10px' }}>
+                      <CafeImage src={item.image_url} alt={item.name} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <h3 style={{ margin: '0 0 4px', fontSize: '1.05rem', fontWeight: 800, color: '#2B211C', lineHeight: 1.2 }}>{item.name}</h3>
+                      <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#7D7068', opacity: 0.9, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
+                      <span style={{ fontWeight: 800, color: '#2B211C', fontSize: '1rem' }}>${item.price}</span>
+                    </div>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(43, 33, 28, 0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 4px 12px rgba(43,33,28,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: 'auto' }}>
+                      <Plus size={20} color="#fff" strokeWidth={3} />
+                    </div>
+                  </motion.div>
+                ))}
+            </motion.div>
+            )}
+
+            {activeCat === 'smoothie' && smoothieItems.length > 0 && (
+            <motion.div variants={gridStagger} initial="hidden" animate="visible" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {smoothieItems.map(item => (
+                  <motion.div variants={cardItem} key={item.id} onClick={() => openProduct(item)}
+                    style={{ background: '#fff', borderRadius: '24px', overflow: 'hidden', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', padding: '12px 16px', gap: '16px' }}>
+                    <div style={{ width: '90px', height: '90px', borderRadius: '16px', background: '#F5F0E6', flexShrink: 0, overflow: 'hidden', padding: '10px' }}>
+                      <CafeImage src={item.image_url} alt={item.name} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <h3 style={{ margin: '0 0 4px', fontSize: '1.05rem', fontWeight: 800, color: '#2B211C', lineHeight: 1.2 }}>{item.name}</h3>
+                      <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#7D7068', opacity: 0.9, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
+                      <span style={{ fontWeight: 800, color: '#2B211C', fontSize: '1rem' }}>${item.price}</span>
+                    </div>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(43, 33, 28, 0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 4px 12px rgba(43,33,28,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: 'auto' }}>
+                      <Plus size={20} color="#fff" strokeWidth={3} />
+                    </div>
+                  </motion.div>
+                ))}
+            </motion.div>
+            )}
+
+            {activeCat === 'temporada' && temporadaItems.length > 0 && (
+            <motion.div variants={gridStagger} initial="hidden" animate="visible" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {temporadaItems.map(item => (
+                  <motion.div variants={cardItem} key={item.id} onClick={() => openProduct(item)}
+                    style={{ background: '#fff', borderRadius: '24px', overflow: 'hidden', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', padding: '12px 16px', gap: '16px', position: 'relative' }}>
+                    <div style={{ width: '90px', height: '90px', borderRadius: '16px', background: '#F5F0E6', flexShrink: 0, overflow: 'hidden', padding: '10px' }}>
+                      <CafeImage src={item.image_url} alt={item.name} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <div style={{ background: '#FF914D', color: '#fff', fontSize: '0.65rem', fontWeight: 800, padding: '2px 6px', borderRadius: '6px', width: 'fit-content', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Especial</div>
+                      <h3 style={{ margin: '0 0 4px', fontSize: '1.05rem', fontWeight: 800, color: '#2B211C', lineHeight: 1.2 }}>{item.name}</h3>
+                      <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#7D7068', opacity: 0.9, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
+                      <span style={{ fontWeight: 800, color: '#2B211C', fontSize: '1rem' }}>${item.price}</span>
+                    </div>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(43, 33, 28, 0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 4px 12px rgba(43,33,28,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: 'auto' }}>
+                      <Plus size={20} color="#fff" strokeWidth={3} />
+                    </div>
+                  </motion.div>
+                ))}
+            </motion.div>
+            )}
+            </motion.div>
+            </AnimatePresence>
+            <div style={{ height: '40px' }} />
           </motion.div>
+        )}
 
-        </motion.div>
-      </div>
+        {/* --- PESTAÑA: REWARDS --- */}
+        {activeTab === 'rewards' && (
+          <motion.div key="rewards" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} style={{ padding: '40px 24px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2.4rem', fontWeight: 800, color: '#2B211C', margin: '0 0 8px' }}>Mis Puntos</h2>
+              <p style={{ color: '#7D7068', fontSize: '1.05rem', margin: 0 }}>Acumula puntos con cada compra para ganar premios.</p>
+            </div>
+            
+            {user ? (
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ maxWidth: '600px', margin: '0 auto' }}>
+                {/* Dashboard Principal de Puntos - Light Premium */}
+                <div style={{ background: '#fff', borderRadius: '32px', padding: '40px 30px', boxShadow: '0 20px 40px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02)', position: 'relative', overflow: 'hidden', textAlign: 'center' }}>
+                  
+                  {/* Círculo Gigante de Puntos Animado */}
+                  <div style={{ position: 'relative', width: '200px', height: '200px', margin: '0 auto 30px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    {/* Aura de luz pulsante */}
+                    <motion.div animate={{ scale: [1, 1.08, 1], opacity: [0.5, 0.9, 0.5] }} transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }} style={{ position: 'absolute', top: '50%', left: '50%', width: '160px', height: '160px', background: 'radial-gradient(circle, rgba(255,145,77,0.15) 0%, transparent 70%)', borderRadius: '50%', marginLeft: '-80px', marginTop: '-80px' }} />
+                    <svg width="200" height="200" style={{ position: 'absolute', top: 0, left: 0, transform: 'rotate(-90deg)' }}>
+                      {/* Fondo */}
+                      <circle cx="100" cy="100" r="90" fill="none" stroke="#F5F0E6" strokeWidth="12" />
+                      {/* Progreso Animado */}
+                      <motion.circle cx="100" cy="100" r="90" fill="none" stroke="url(#orange-grad)" strokeWidth="12" strokeLinecap="round" strokeDasharray="565.48" initial={{ strokeDashoffset: 565.48 }} animate={{ strokeDashoffset: 565.48 - (565.48 * (Math.min(100, ((loyalty?.stamps || 0) / 12) * 100) / 100)) }} transition={{ duration: 1.5, ease: "easeOut" }} />
+                      <defs>
+                        <linearGradient id="orange-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#FFD194" />
+                          <stop offset="100%" stopColor="#FF914D" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <motion.div animate={{ rotate: [0, -10, 10, 0] }} transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }} style={{ position: 'relative', zIndex: 1, marginBottom: '4px' }}>
+                      <Star size={40} color="#FF914D" fill="#FF914D" />
+                    </motion.div>
+                    <div style={{ fontSize: '3.2rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: '#2B211C', lineHeight: 1, position: 'relative', zIndex: 1 }}>{Math.min(100, Math.round(((loyalty?.stamps || 0) / 12) * 100))}</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#7D7068', textTransform: 'uppercase', letterSpacing: '0.1em', position: 'relative', zIndex: 1 }}>Puntos</div>
+                  </div>
 
-      {/* BOTÓN FLOTANTE DEL CARRITO (glass) */}
-      {cartCount > 0 && !selectedProduct && !showCart && !confirming && (
-        <motion.button
-          initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-          onClick={() => setShowCart(true)}
-          style={{ position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom,0px) + 20px)', left: '20px', right: '20px', zIndex: 3500, border: '1px solid rgba(255,255,255,0.45)', cursor: 'pointer', background: 'rgba(255,145,77,0.88)', backdropFilter: 'blur(16px) saturate(160%)', WebkitBackdropFilter: 'blur(16px) saturate(160%)', color: '#fff', borderRadius: '20px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 12px 30px rgba(255,145,77,0.4)' }}>
-          <ShoppingCart size={20} color="#fff" />
-          <span style={{ background: 'rgba(255,255,255,0.28)', borderRadius: '10px', minWidth: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem' }}>{cartCount}</span>
-          <span style={{ flex: 1, textAlign: 'left', fontWeight: 800, fontSize: '1rem' }}>Ver carrito</span>
-          <span style={{ fontWeight: 900, fontSize: '1.05rem' }}>${cartTotal}</span>
-        </motion.button>
-      )}
+                  <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#2B211C', margin: '0 0 8px' }}>¡Te faltan {100 - Math.min(100, Math.round(((loyalty?.stamps || 0) / 12) * 100))} puntos!</h3>
+                  <p style={{ color: '#7D7068', fontSize: '0.95rem', margin: 0, lineHeight: 1.5 }}>Llega a 100 puntos (12 compras) para desbloquear un regalo sorpresa.</p>
+                </div>
+
+                <AnimatePresence>
+                  {(loyalty?.gifts_available || 0) > 0 && (
+                    <motion.div initial={{ opacity: 0, height: 0, marginTop: 0 }} animate={{ opacity: 1, height: 'auto', marginTop: 30 }} style={{ background: 'linear-gradient(135deg, #FF914D, #E07A9C)', borderRadius: '24px', padding: '24px', boxShadow: '0 15px 30px rgba(255,145,77,0.2)', display: 'flex', alignItems: 'center', gap: '20px' }}>
+                      <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Gift size={28} color="#FF914D" />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 800, color: '#fff', fontSize: '1.3rem', marginBottom: '4px' }}>Tienes {loyalty?.gifts_available || 0} Regalo{(loyalty?.gifts_available || 0) > 1 ? 's' : ''} Sorpresa</div>
+                        <div style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.9)' }}>Muéstrale esta pantalla a tu barista para canjear tu premio.</div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px 30px', maxWidth: '600px', margin: '0 auto', background: 'linear-gradient(135deg, #1A1C1E 0%, #0F1011 100%)', borderRadius: '32px', boxShadow: '0 30px 60px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.1)', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: '-50%', left: '-20%', width: '150%', height: '150%', background: 'radial-gradient(circle at top left, rgba(255,145,77,0.15) 0%, transparent 60%)', pointerEvents: 'none' }}></div>
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: '0 15px 30px rgba(255,145,77,0.3)' }}>
+                    <Coffee size={32} color="#fff" strokeWidth={2.5} />
+                  </div>
+                  <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', color: '#fff', marginBottom: '12px', letterSpacing: '-0.02em' }}>Be Fit Rewards</h1>
+                  <p style={{ color: 'rgba(255,255,255,0.6)', margin: '0 auto 30px', fontSize: '0.95rem', maxWidth: '300px', lineHeight: 1.5 }}>Únete y recibe un regalo sorpresa cada 12 compras.</p>
+                  <button onClick={() => { localStorage.setItem('befit_redirect_after_auth', '/cafeteria'); navigate('/registro'); }} style={{ padding: '16px 36px', borderRadius: '100px', background: '#FF914D', color: '#fff', fontWeight: 800, fontSize: '1rem', border: 'none', cursor: 'pointer', boxShadow: '0 10px 25px rgba(255,145,77,0.4)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform='scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
+                    Crear cuenta
+                  </button>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* --- PESTAÑA: HISTORY --- */}
+        {activeTab === 'history' && (
+          <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }}>
+            <CafeOrderHistory
+              userId={user?.id}
+              onClose={() => setActiveTab('home')}
+              onOpenOrder={() => {}} 
+            />
+          </motion.div>
+        )}
+
+        {/* --- PESTAÑA: CART --- */}
+        {activeTab === 'cart' && (
+          <motion.div key="cart" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} style={{ padding: isNative ? 'calc(env(safe-area-inset-top, 44px) + 20px) 24px 40px' : '40px 24px' }}>
+            <CafeCartSheet cart={cart} products={available} onUpdateQty={updateQty} onRemove={removeItem} onOpenProduct={(p) => { setActiveTab('order'); setSelectedProduct(p); }} onCheckout={startCheckout} />
+          </motion.div>
+        )}
+
+      </AnimatePresence>
+
+      {/* NAVEGACIÓN INFERIOR (Estilo App Nativa) */}
+      <nav className={`ios-bottom-nav ${isScrolled ? 'scrolled' : ''}`}>
+        <div className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+          <Home />
+          <span>Inicio</span>
+        </div>
+        <div className={`nav-item ${activeTab === 'order' ? 'active' : ''}`} onClick={() => { setActiveTab('order'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+          <Coffee />
+          <span>Menú</span>
+        </div>
+        
+        {/* Carrito en la barra de navegación */}
+        <div className={`nav-item ${activeTab === 'cart' ? 'active' : ''}`} onClick={() => { setActiveTab('cart'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ShoppingCart color={cartCount > 0 ? '#FF914D' : 'currentColor'} />
+            <AnimatePresence>
+              {cartCount > 0 && (
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} style={{ position: 'absolute', top: '-6px', right: '-12px', background: '#FF914D', color: '#fff', fontSize: '0.65rem', fontWeight: 900, width: '18px', height: '18px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
+                  {cartCount}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          <span style={{ color: cartCount > 0 ? '#FF914D' : 'inherit', fontWeight: cartCount > 0 ? 700 : 500 }}>Carrito</span>
+        </div>
+
+        <div className={`nav-item ${activeTab === 'rewards' ? 'active' : ''}`} onClick={() => { setActiveTab('rewards'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+          <Gift />
+          <span>Rewards</span>
+        </div>
+        <div className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => { setActiveTab('history'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+          <Receipt />
+          <span>Pedidos</span>
+        </div>
+      </nav>
+
 
       {/* FICHA / PERSONALIZACIÓN */}
       <AnimatePresence>
         {selectedProduct && (
           <CafeProductSheet product={selectedProduct} groups={optionGroups} onClose={() => setSelectedProduct(null)} onAdd={addToCart} />
-        )}
-      </AnimatePresence>
-
-      {/* CARRITO */}
-      <AnimatePresence>
-        {showCart && (
-          <CafeCartSheet cart={cart} products={available} onClose={() => setShowCart(false)} onUpdateQty={updateQty} onRemove={removeItem} onOpenProduct={(p) => { setShowCart(false); setSelectedProduct(p); }} onCheckout={startCheckout} />
         )}
       </AnimatePresence>
 
@@ -601,20 +677,8 @@ function Cafeteria() {
         )}
       </AnimatePresence>
 
-      {/* BOTÓN FLOTANTE "MI PEDIDO" (pedido en curso) */}
-      {activeOrders.length > 0 && !selectedProduct && !showCart && !confirming && !trackingOrderId && !processing && !showThanks && (
-        <motion.button
-          initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-          onClick={() => setTrackingOrderId(activeOrders[0].id)}
-          style={{ position: 'fixed', left: '20px', right: '20px', bottom: cartCount > 0 ? 'calc(env(safe-area-inset-bottom,0px) + 86px)' : 'calc(env(safe-area-inset-bottom,0px) + 20px)', zIndex: 3500, border: '1px solid rgba(255,255,255,0.28)', cursor: 'pointer', background: 'rgba(58,44,36,0.46)', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', color: '#fff', borderRadius: '20px', padding: '13px 18px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 12px 34px rgba(43,33,28,0.28), inset 0 1px 0 rgba(255,255,255,0.18)' }}>
-          <Coffee size={22} color="#FFC9BC" />
-          <span style={{ flex: 1, textAlign: 'left' }}>
-            <span style={{ display: 'block', fontSize: '0.7rem', opacity: 0.7, fontWeight: 600 }}>Tu pedido en curso</span>
-            <span style={{ fontWeight: 800, fontSize: '0.95rem' }}>{orderStatusLabel(activeOrders[0].status)}</span>
-          </span>
-          <span style={{ fontSize: '0.85rem', fontWeight: 700, opacity: 0.9 }}>Ver ›</span>
-        </motion.button>
-      )}
+      {/* SE REQUIERE ELIMINAR ESTO PORQUE AHORA ESTA EN EL TAB */}
+
 
       {/* PROMPT: crear cuenta para comprar (sin requerir membresía) */}
       <AnimatePresence>
@@ -642,23 +706,9 @@ function Cafeteria() {
         )}
       </AnimatePresence>
 
-      {/* HISTORIAL DE PEDIDOS */}
-      <AnimatePresence>
-        {showHistory && (
-          <CafeOrderHistory
-            userId={user?.id}
-            onClose={() => setShowHistory(false)}
-            onOpenOrder={(id) => { setShowHistory(false); setTrackingOrderId(id); }}
-          />
-        )}
-      </AnimatePresence>
+      {/* SE REQUIERE ELIMINAR ESTO PORQUE AHORA ESTA EN EL TAB */}
 
-      {/* SEGUIMIENTO DEL PEDIDO (estilo Uber Eats) */}
-      <AnimatePresence>
-        {trackingOrderId && (
-          <CafeOrderTracking orderId={trackingOrderId} onClose={() => setTrackingOrderId(null)} />
-        )}
-      </AnimatePresence>
+      {/* SE REQUIERE ELIMINAR ESTO PORQUE AHORA ESTA EN EL TAB */}
 
       {/* OVERLAY DE CARGA ANTES DEL PAGO */}
       <AnimatePresence>
