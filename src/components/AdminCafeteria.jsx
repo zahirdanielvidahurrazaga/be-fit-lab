@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, Check, Coffee, Sliders, ImagePlus, Loader2, ChevronDown, Camera } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import AdminCafeOptions from './AdminCafeOptions';
-import { uploadCafeImage } from '../lib/cafeImage';
+import { uploadCafeImage, resolveCafeImage } from '../lib/cafeImage';
 
 const CATEGORIES = [
   { value: 'coffee', label: 'Ice Coffee' },
@@ -66,7 +66,7 @@ function ProductCard({ p, onSave, onPatch, onToggle, onDelete }) {
   return (
     <div className="ios-glass-card" style={{ padding: '12px', background: 'white', opacity: p.available ? 1 : 0.6 }}>
       <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-        <PhotoButton imageUrl={p.image_url} onUploaded={(url) => onPatch(p.id, { image_url: url })} />
+        <PhotoButton imageUrl={resolveCafeImage(p)} onUploaded={(url) => onPatch(p.id, { image_url: url })} />
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <input value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} style={{ ...inputStyle, fontWeight: 700 }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

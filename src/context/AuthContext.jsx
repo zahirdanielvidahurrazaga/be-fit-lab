@@ -36,11 +36,13 @@ export const AuthProvider = ({ children }) => {
   const [globalClasses, setGlobalClasses] = useState([]);
   const [recipes, setRecipes] = useState([]);
   const [cafeProducts, setCafeProducts] = useState([]);
+  const [disciplines, setDisciplines] = useState([]);
   // Flags de "ya hizo la 1ª carga" → para distinguir "cargando" de "vacío real"
   // y mostrar skeletons hasta que el dataset trajo respuesta del servidor.
   const [classesLoaded, setClassesLoaded] = useState(false);
   const [recipesLoaded, setRecipesLoaded] = useState(false);
   const [cafeProductsLoaded, setCafeProductsLoaded] = useState(false);
+  const [disciplinesLoaded, setDisciplinesLoaded] = useState(false);
   const [myReservations, setMyReservations] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [coaches, setCoaches] = useState([]);
@@ -203,17 +205,18 @@ export const AuthProvider = ({ children }) => {
       if (now - lastRefresh < THROTTLE_MS) return;
       lastRefresh = now;
 
-      // 1. Leer la sesión vigente. autoRefreshToken renueva el token si expiró.
-      const { data: { session } } = await supabase.auth.getSession();
+      // 1. Re-cargar datos públicos (clases/recetas) SIEMPRE, incluso sin sesión.
+      // Así el calendario del sitio web se actualiza al volver a la pestaña aunque
+      // realtime se haya caído (antes esto solo pasaba con sesión iniciada).
+      fetchGlobalClasses();
+      fetchRecipes();
 
+      // 2. Leer la sesión vigente. autoRefreshToken renueva el token si expiró.
       // NO cerramos sesión aquí ante una sesión ausente/errores transitorios
       // (p.ej. reabrir la app sin red): eso provocaba logouts indebidos.
       // La expiración real la maneja onAuthStateChange (evento SIGNED_OUT).
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-
-      // 2. Re-cargar datos públicos que pueden estar desactualizados
-      fetchGlobalClasses();
-      fetchRecipes();
 
       // 3. Re-cargar datos del usuario si sigue logueado
       if (session.user) {
@@ -243,6 +246,16 @@ export const AuthProvider = ({ children }) => {
     return () => supabase.removeChannel(channel);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Respaldo anti "calendario vacío": si realtime se cae o un evento no llega,
+  // refrescamos las clases cada 60 s mientras la pestaña esté visible. Así el
+  // sitio se auto-sana sin que el usuario tenga que recargar la página.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchGlobalClasses();
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Menú de cafetería en tiempo real (el admin cambia precios → se refleja ya)
   useEffect(() => {
     const channel = supabase.channel('public:cafe_products:all')
@@ -251,6 +264,18 @@ export const AuthProvider = ({ children }) => {
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') fetchCafeProducts();
+      });
+    return () => supabase.removeChannel(channel);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Catálogo de disciplinas/clases en tiempo real (admin edita → web/app se refleja)
+  useEffect(() => {
+    const channel = supabase.channel('public:disciplines:all')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'disciplines' }, () => {
+        fetchDisciplines();
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') fetchDisciplines();
       });
     return () => supabase.removeChannel(channel);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -678,6 +703,53 @@ export const AuthProvider = ({ children }) => {
     try {
       const { error } = await supabase.from('cafe_products').delete().eq('id', id);
       if (!error) setCafeProducts(prev => prev.filter(p => p.id !== id));
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
+  // ============================================
+  // DISCIPLINAS / CLASES (catálogo en BD — web + admin)
+  // ============================================
+  const fetchDisciplines = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('disciplines')
+        .select('*')
+        .order('sort_order', { ascending: true });
+      if (!error && data) setDisciplines(data);
+    } catch (err) {
+      console.error('Error cargando disciplinas:', err);
+    } finally {
+      setDisciplinesLoaded(true);
+    }
+  };
+
+  const addDiscipline = async (discipline) => {
+    try {
+      const { data, error } = await supabase.from('disciplines').insert(discipline).select().single();
+      if (!error && data) setDisciplines(prev => [...prev, data]);
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
+  const updateDiscipline = async (id, updates) => {
+    try {
+      const { data, error } = await supabase.from('disciplines').update(updates).eq('id', id).select().single();
+      if (!error && data) setDisciplines(prev => prev.map(d => d.id === id ? data : d));
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
+  const deleteDiscipline = async (id) => {
+    try {
+      const { error } = await supabase.from('disciplines').delete().eq('id', id);
+      if (!error) setDisciplines(prev => prev.filter(d => d.id !== id));
       return { success: !error, error };
     } catch (err) {
       return { success: false, error: err };
@@ -1380,6 +1452,7 @@ export const AuthProvider = ({ children }) => {
       notifications, unreadCount, fetchNotifications, markNotificationsRead, sendNotification,
       notifOpen, setNotifOpen,
       cafeProducts, fetchCafeProducts, addCafeProduct, updateCafeProduct, deleteCafeProduct,
+      disciplines, disciplinesLoaded, fetchDisciplines, addDiscipline, updateDiscipline, deleteDiscipline,
       updateClass,
       categories, fetchCategories, addCategory, updateCategory, deleteCategory,
       classTemplates, fetchTemplates, saveTemplate, deleteTemplate, applyTemplate

@@ -1,5 +1,26 @@
 import { supabase } from './supabase';
 
+// Imágenes locales por defecto de los productos sembrados (sin image_url en BD).
+// Se usan tanto en la cafetería (cliente) como en el panel de Admin, para que la
+// foto que ve el cliente sea la misma que el admin puede ver y reemplazar.
+export const CAFE_IMG_MAP = {
+  'Mango-Matcha': '/cafeteria/mango_matcha.webp',
+  'Mango Proteín': '/cafeteria/mango_protein.webp',
+  'Horchata Proteín': '/cafeteria/horchata_protein.webp',
+  'Arroz con Leche': '/cafeteria/arroz_con_leche.webp',
+  'Banana Maní': '/cafeteria/banana_mani.webp',
+  'CHAI Frambuesa': '/cafeteria/chai_frambuesa.webp',
+  'CHOCO BANANA': '/cafeteria/choco_banana.webp',
+  'Dubai Proteín': '/cafeteria/dubai_protein.webp',
+  'Mazapan': '/cafeteria/mazapan.webp',
+  'Fit-colada': '/cafeteria/fit_colada.webp',
+};
+
+// URL efectiva de un producto: la subida por Admin (image_url) tiene prioridad;
+// si no hay, cae al asset local sembrado mapeado por nombre.
+export const resolveCafeImage = (product) =>
+  product?.image_url || CAFE_IMG_MAP[product?.name] || null;
+
 // Comprime una imagen (File/Blob/data URL) a JPEG ~max 900px, calidad 0.82.
 // Devuelve un Blob listo para subir (evita subir fotos de 5MB del teléfono).
 export function compressCafeImage(source, maxSize = 900, quality = 0.82) {

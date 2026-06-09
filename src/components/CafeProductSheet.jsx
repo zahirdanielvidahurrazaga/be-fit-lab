@@ -2,6 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Minus, Flame, ShoppingCart, Check } from 'lucide-react';
 
+// Los assets locales del catálogo (PNG/WebP con fondo blanco) usan multiply para
+// fundir el fondo; las fotos subidas por Admin (JPEG) van normales con sombra.
+const needsMultiply = (url) => /^\/cafeteria\//.test(url || '') || /\.png(\?|$)/i.test(url || '');
+
 // Total tipo "ticker": el número se desliza/funde al cambiar (sensación premium).
 function AnimatedTotal({ value, prefix = '$' }) {
   return (
@@ -93,7 +97,7 @@ export default function CafeProductSheet({ product, groups, onClose, onAdd }) {
               <motion.img src={product.image_url} alt={product.name}
                 initial={{ scale: 0.82, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: [0, -8, 0] }}
                 transition={{ scale: { type: 'spring', stiffness: 180, damping: 18 }, opacity: { duration: 0.4 }, y: { duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 } }}
-                style={{ maxHeight: '180px', maxWidth: '80%', objectFit: 'contain', mixBlendMode: /\.png(\?|$)/i.test(product.image_url) ? 'multiply' : 'normal', filter: /\.png(\?|$)/i.test(product.image_url) ? 'none' : 'drop-shadow(0 18px 24px rgba(80,50,30,0.22))' }} />
+                style={{ maxHeight: '180px', maxWidth: '80%', objectFit: 'contain', mixBlendMode: needsMultiply(product.image_url) ? 'multiply' : 'normal', filter: needsMultiply(product.image_url) ? 'none' : 'drop-shadow(0 18px 24px rgba(80,50,30,0.22))' }} />
             </div>
           ) : <div style={{ height: '64px' }} />}
           <button onClick={onClose} aria-label="Cerrar" style={{ position: 'absolute', top: '16px', right: '16px', width: '36px', height: '36px', borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>

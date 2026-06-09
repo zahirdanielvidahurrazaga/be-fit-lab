@@ -8,6 +8,7 @@ import { useScrollDetect } from '../hooks/useScrollDetect';
 import { PLANS, PLAN_BY_NAME } from '../lib/plans';
 import { supabase } from '../lib/supabase';
 import AdminCafeteria from '../components/AdminCafeteria';
+import AdminDisciplinas from '../components/AdminDisciplinas';
 import AdminReportes from '../components/AdminReportes';
 import AdminClientas from '../components/AdminClientas';
 import AdminNutricion from '../components/AdminNutricion';
@@ -16,7 +17,7 @@ import ScheduleStoryExport from '../components/ScheduleStoryExport';
 import AdminCategoryManager from '../components/AdminCategoryManager';
 import AdminWeekTemplates from '../components/AdminWeekTemplates';
 import { DEFAULT_CATEGORIES, PASTEL_PALETTE, resolveCatColor, categoryLabel } from '../lib/categories';
-import { Coffee, Bell, UserCog, Sparkles, Copy, Trash2, Tag, LayoutTemplate, MoreHorizontal } from 'lucide-react';
+import { Coffee, Bell, UserCog, Sparkles, Copy, Trash2, Tag, LayoutTemplate, MoreHorizontal, Dumbbell } from 'lucide-react';
 
 const daysOfWeek = [
   { num: 1, label: 'Lunes' },
@@ -31,7 +32,8 @@ const daysOfWeek = [
 function Admin() {
   const { user, logout, globalClasses, recipes, updateClassSpots, checkInClient, addClass, deleteClass, updateClass, addRecipe, deleteRecipe, allUsers, coaches, activatePlan, fetchAllUsers, fetchClassesByDayOfWeek, fetchGlobalClasses, assignCustomBadge, removeCustomBadge, badgeConfigs, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig, addMultipleClasses, setNotifOpen,
     categories, addCategory, updateCategory, deleteCategory,
-    classTemplates, saveTemplate, deleteTemplate, applyTemplate } = useAuth();
+    classTemplates, saveTemplate, deleteTemplate, applyTemplate,
+    disciplines } = useAuth();
   const isScrolled = useScrollDetect(30);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('mostrador');
@@ -537,6 +539,9 @@ function Admin() {
                   <div onClick={() => { setActiveTab('cafeteria'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Coffee size={18} color="var(--primary)" /> Cafetería
                   </div>
+                  <div onClick={() => { setActiveTab('disciplinas'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
+                    <Dumbbell size={18} color="var(--primary)" /> Disciplinas
+                  </div>
                   <div onClick={() => { setActiveTab('eventos'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Sparkles size={18} color="var(--primary)" /> Eventos
                   </div>
@@ -588,6 +593,10 @@ function Admin() {
           <div onClick={() => setActiveTab('cafeteria')} className={`sidebar-nav-item ${activeTab === 'cafeteria' ? 'active' : ''}`}>
             <Coffee size={20} />
             <span>Cafetería</span>
+          </div>
+          <div onClick={() => setActiveTab('disciplinas')} className={`sidebar-nav-item ${activeTab === 'disciplinas' ? 'active' : ''}`}>
+            <Dumbbell size={20} />
+            <span>Disciplinas</span>
           </div>
           <div onClick={() => setActiveTab('eventos')} className={`sidebar-nav-item ${activeTab === 'eventos' ? 'active' : ''}`}>
             <Sparkles size={20} />
@@ -1008,6 +1017,19 @@ function Admin() {
                           </div>
                         )}
 
+                        {(disciplines || []).length > 0 && (
+                          <select
+                            value=""
+                            onChange={e => {
+                              const d = (disciplines || []).find(x => x.id === e.target.value);
+                              if (d) setNewClass({ ...newClass, title: d.name, description: d.description || d.short_desc || '' });
+                            }}
+                            style={{...inputStyle, WebkitAppearance: 'none', marginBottom: '10px', fontWeight: 600, color: 'var(--primary)'}}
+                          >
+                            <option value="">📋 Elegir clase del catálogo…</option>
+                            {(disciplines || []).map(d => <option key={d.id} value={d.id} style={{ color: 'var(--on-surface)', fontWeight: 500 }}>{d.name}</option>)}
+                          </select>
+                        )}
                         <input placeholder="Título (ej. Full Body)" value={newClass.title} onChange={e => setNewClass({...newClass, title: e.target.value})} style={{...inputStyle, marginBottom: '10px'}} />
                         <textarea
                           placeholder="Descripción (ej. Clase de reformer para trabajar core y glúteos...)"
@@ -1220,6 +1242,13 @@ function Admin() {
             {activeTab === 'cafeteria' && (
               <motion.div key="cafeteria" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
                 <AdminCafeteria />
+              </motion.div>
+            )}
+
+            {/* ============ TAB: DISCIPLINAS ============ */}
+            {activeTab === 'disciplinas' && (
+              <motion.div key="disciplinas" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
+                <AdminDisciplinas />
               </motion.div>
             )}
 

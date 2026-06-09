@@ -9,7 +9,8 @@ const corsHeaders = {
 
 // Mismos planes que stripe-checkout (web). Mantener sincronizado.
 const PLANS: Record<string, { amount: number; classes: number; name: string; lookupKey: string }> = {
-  'Plan Inicial': { amount: 85000,  classes: 12,   name: 'Plan Inicial – Be Fit Lab',  lookupKey: 'befit_plan_inicial_monthly' },
+  'Plan Principiante': { amount: 75000, classes: 8, name: 'Plan Principiante – Be Fit Lab', lookupKey: 'befit_plan_principiante_monthly' },
+  'Plan Inicial': { amount: 85000,  classes: 10,   name: 'Plan Inicial – Be Fit Lab',  lookupKey: 'befit_plan_inicial_monthly' },
   'Plan Básico':  { amount: 105000, classes: 15,   name: 'Plan Básico – Be Fit Lab',   lookupKey: 'befit_plan_basico_monthly'  },
   'Plan Fit':     { amount: 130000, classes: 20,   name: 'Plan Fit – Be Fit Lab',      lookupKey: 'befit_plan_fit_monthly'     },
   'Plan Premium': { amount: 185000, classes: 9999, name: 'Plan Premium – Be Fit Lab',  lookupKey: 'befit_plan_premium_monthly' },

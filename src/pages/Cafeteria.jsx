@@ -11,10 +11,11 @@ import CafeCartSheet from '../components/CafeCartSheet';
 import CafeOrderTracking from '../components/CafeOrderTracking';
 import CafeOrderHistory from '../components/CafeOrderHistory';
 import { CafeMenuSkeleton } from '../components/Skeleton';
+import { resolveCafeImage } from '../lib/cafeImage';
 
-// Los cafés sembrados son PNG con fondo blanco (necesitan multiply para integrarse);
-// las fotos subidas desde Admin son JPEG y van con blend normal.
-const imgBlend = (url) => /\.png(\?|$)/i.test(url || '') ? 'multiply' : 'normal';
+// Los assets locales del catálogo (PNG/WebP con fondo blanco) necesitan multiply
+// para integrarse; las fotos subidas desde Admin son JPEG y van con blend normal.
+const needsMultiply = (url) => /^\/cafeteria\//.test(url || '') || /\.png(\?|$)/i.test(url || '');
 
 // Stagger de las tarjetas al entrar (se re-dispara al cambiar de pestaña).
 const gridStagger = { hidden: {}, visible: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } } };
@@ -31,7 +32,7 @@ const CafeImage = ({ src, alt }) => {
   }
   
   const isMango = src.includes('mango_matcha');
-  return <img src={src} alt={alt} onError={() => setError(true)} style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'multiply', transform: isMango ? 'scale(1.4)' : 'scale(1.15)' }} />;
+  return <img src={src} alt={alt} onError={() => setError(true)} loading="eager" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: needsMultiply(src) ? 'multiply' : 'normal', transform: isMango ? 'scale(1.4)' : 'scale(1.15)' }} />;
 };
 
 function Cafeteria() {
@@ -85,26 +86,19 @@ function Cafeteria() {
     return () => supabase.removeChannel(ch);
   }, [user?.id]);
 
+  // Precarga las imágenes del catálogo en cuanto llegan los productos, así ya
+  // están en caché al abrir la pestaña Menú y aparecen al instante.
+  useEffect(() => {
+    (cafeProducts || []).forEach(p => {
+      const url = resolveCafeImage(p);
+      if (url) { const img = new Image(); img.src = url; }
+    });
+  }, [cafeProducts]);
+
   // Catálogo desde la BD (precios server-side). Solo productos disponibles.
   const available = (cafeProducts || []).filter(p => p.available !== false).map(p => {
-    if (!p.image_url) {
-      const imgMap = {
-        'Mango-Matcha': '/cafeteria/mango_matcha.png',
-        'Mango Proteín': '/cafeteria/mango_protein.png',
-        'Horchata Proteín': '/cafeteria/horchata_protein.png',
-        'Arroz con Leche': '/cafeteria/arroz_con_leche.png',
-        'Banana Maní': '/cafeteria/banana_mani.png',
-        'CHAI Frambuesa': '/cafeteria/chai_frambuesa.png',
-        'CHOCO BANANA': '/cafeteria/choco_banana.png',
-        'Dubai Proteín': '/cafeteria/dubai_protein.png',
-        'Mazapan': '/cafeteria/mazapan.png',
-        'Fit-colada': '/cafeteria/fit_colada.png'
-      };
-      if (imgMap[p.name]) {
-        return { ...p, image_url: imgMap[p.name] };
-      }
-    }
-    return p;
+    const url = resolveCafeImage(p);
+    return url ? { ...p, image_url: url } : p;
   });
   const coffeeItems = available.filter(p => p.category === 'coffee');
   const smoothieItems = available.filter(p => p.category === 'smoothie');
@@ -384,7 +378,7 @@ function Cafeteria() {
             <div style={{ marginBottom: '20px' }}>
               <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, color: '#2B211C', margin: '0 0 16px' }}>Novedades</h2>
               <div style={{ position: 'relative', width: '100%', aspectRatio: '4/5', borderRadius: '28px', overflow: 'hidden', background: '#DCD4C7', cursor: 'pointer' }} onClick={() => setActiveTab('order')}>
-                <img src="/cafeteria/Promocional.png" alt="Especial" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src="/cafeteria/Promocional.webp" alt="Especial" decoding="async" fetchPriority="high" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)' }} />
                 <div style={{ position: 'absolute', bottom: '24px', left: '24px', right: '24px' }}>
                   <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Temporada</div>

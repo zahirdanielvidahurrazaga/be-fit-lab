@@ -86,7 +86,7 @@ const Blob = ({ style }) => (
 function CountUp({ to, suffix = '', prefix = '', duration = 1.8 }) {
   const ref  = useRef(null);
   const inView = useInView(ref, { once: true });
-  const raw   = useMotionSpring(0, { stiffness: 80, damping: 20 });
+  const raw   = useMotionSpring(0, { stiffness: 50, damping: 20 });
   const [display, setDisplay] = useState(0);
 
   useEffect(() => { if (inView) raw.set(to); }, [inView, to, raw]);
@@ -302,7 +302,7 @@ const ParallaxTestimonials = () => {
 export default function Landing() {
   const navigate  = useNavigate();
   const location  = useLocation();
-  const { user, role, membershipStatus, globalClasses, coaches, badgeConfigs, logout } = useAuth();
+  const { user, role, membershipStatus, globalClasses, coaches, badgeConfigs, logout, disciplines } = useAuth();
   const [menuOpen,   setMenuOpen]   = useState(false);
   const [showToast,  setShowToast]  = useState(false);
   const [scrolled,   setScrolled]   = useState(false);
@@ -462,7 +462,7 @@ export default function Landing() {
             {user ? `¡Hola de nuevo, ${user.email.split('@')[0]}!` : 'Fuerza • Crecimiento • Conciencia'}
           </div>
           <h1 style={{ fontSize:'clamp(3rem,8vw,6.5rem)', lineHeight:1.05, marginBottom:'2.5rem', color:'white' }}>
-            {user ? (<>Bienvenida a<br/><span style={{ color:'var(--primary)', fontStyle:'italic' }}>tu espacio VIP.</span></>) : (<>Rediseña tu<br/><span style={{ color:'var(--primary)', fontStyle:'italic' }}>potencial corporal.</span></>)}
+            {user ? (<>Bienvenida a<br/><span style={{ color:'var(--primary)', fontStyle:'italic' }}>tu espacio VIP.</span></>) : (<>Conviértete en<br/><span style={{ color:'var(--primary)', fontStyle:'italic' }}>tu mejor versión.</span></>)}
           </h1>
           <div className="hero-buttons">
             {user ? (
@@ -490,7 +490,7 @@ export default function Landing() {
             {[
               { to:1000, suffix:'+', label:'Mujeres transformadas' },
               { to:4,    suffix:'',  label:'Disciplinas de élite'  },
-              { to:10,   suffix:'',  label:'Máx. alumnas por clase'},
+              { to:12,   suffix:'',  label:'Máx. alumnas por clase'},
               { to:100,  suffix:'%', label:'Equipo premium'        },
             ].map(({ to, suffix, label }, i) => (
               <motion.div
@@ -573,15 +573,25 @@ export default function Landing() {
 
       {/* ── Clases ────────────────────────────────────────────────── */}
       {(() => {
-        const DISCIPLINES = [
-          { id: 'yoga', title: <>Yoga<br/>Flow</>, image: '/fotos-hero/IMG_5394.JPG', desc: 'Elasticidad, control respiratorio y recuperación activa. Encuentra tu balance perfecto.' },
-          { id: 'fuerza', title: 'Fuerza', image: '/fotos-hero/IMG_5397.JPG', desc: 'Hipertrofia guiada. Rompemos el músculo para que crezca más fuerte y tonificado.', bottomText: true },
+        // Catálogo curado desde el admin (disciplinas marcadas "featured"). Si la BD
+        // aún no responde o está vacía, caemos a este set para no romper la sección.
+        const FALLBACK = [
           { id: 'pilates', title: 'Pilates', image: '/fotos-hero/IMG_5395.JPG', desc: 'Aislamiento muscular con tensión controlada. El santo grial para glúteos y core.' },
           { id: 'barre', title: 'Barre', image: '/fotos-hero/_DSC3158.jpg', desc: 'Movimientos inspirados en el ballet clásico combinados con pilates. Esculpe tu cuerpo con elegancia.' },
-          { id: 'zumba', title: 'Zumba', image: '/fotos-hero/IMG_5388.JPG', desc: 'Fiesta, música y cardio. Quema calorías mientras te diviertes.' },
-          { id: 'cardio', title: 'Cardio', bottomTitle: 'Dance', image: '/fotos-hero/_DSC3454.jpg', desc: 'Agilidad dinámica y quema calórica con ritmos explosivos. ¡Baila y suda al máximo!' },
-          { id: 'heels', title: 'Heels', image: '/fotos-hero/IMG_5390.JPG', desc: 'Empodérate y baila en tacones. Mejora tu postura, sensualidad y confianza absoluta.' },
+          { id: 'yoga', title: 'Yoga y meditación', image: '/fotos-hero/IMG_5394.JPG', desc: 'Elasticidad, control respiratorio y recuperación activa. Encuentra tu balance perfecto.' },
+          { id: 'cardio', title: 'Cardio Dance', image: '/fotos-hero/_DSC3454.jpg', desc: 'Agilidad dinámica y quema calórica con ritmos explosivos. ¡Baila y suda al máximo!' },
+          { id: 'glute', title: 'Glute Power', image: '/fotos-hero/IMG_5397.JPG', desc: 'Lleva tus glúteos al límite con cargas y bombeo para potencia, firmeza y definición.' },
         ];
+        const featured = (disciplines || []).filter(d => d.featured);
+        // El texto va abajo (bottomText) para no tapar la cara de las coaches en las fotos.
+        const DISCIPLINES = (featured.length
+          ? featured.map(d => ({ id: d.id, title: d.name, image: d.image_url, desc: d.short_desc || d.description || '' }))
+          : FALLBACK
+        ).map(d => ({ ...d, bottomText: true }));
+        const NUM_WORD = { 1:'Un', 2:'Dos', 3:'Tres', 4:'Cuatro', 5:'Cinco', 6:'Seis', 7:'Siete', 8:'Ocho', 9:'Nueve', 10:'Diez', 11:'Once', 12:'Doce' };
+        const enfoquesTitle = DISCIPLINES.length === 1
+          ? 'Un enfoque.'
+          : `${NUM_WORD[DISCIPLINES.length] || 'Múltiples'} enfoques.`;
 
         return (
           <>
@@ -610,7 +620,7 @@ export default function Landing() {
                   <div style={{ maxWidth:'600px' }}>
                     <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Disciplinas</span>
                     <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0 0', color:'var(--black)', letterSpacing:'-0.04em' }}>
-                      Siete enfoques.<br/><span style={{ color:'var(--primary)' }}>Un solo objetivo.</span>
+                      {enfoquesTitle}<br/><span style={{ color:'var(--primary)' }}>Un solo objetivo.</span>
                     </h2>
                   </div>
                 </motion.div>
@@ -692,17 +702,18 @@ export default function Landing() {
 
                             {/* Bottom Text */}
                             {hasBottomText && (
-                              <div style={{ position: 'absolute', bottom: '15px', left: '10px', right: '10px', textAlign: 'center' }}>
-                                <h3 style={{ 
-                                  margin: 0, color: 'white', 
-                                  fontSize: '3rem', 
-                                  fontWeight: 900, 
-                                  textTransform: 'uppercase', 
-                                  letterSpacing: '-0.02em', 
+                              <div style={{ position: 'absolute', bottom: '18px', left: '14px', right: '14px', textAlign: 'center' }}>
+                                <h3 style={{
+                                  margin: 0, color: 'white',
+                                  fontSize: 'clamp(2rem, 7vw, 2.6rem)',
+                                  fontWeight: 900,
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '-0.02em',
                                   lineHeight: 0.95,
                                   textShadow: '0 10px 30px rgba(0,0,0,0.6)',
-                                  wordBreak: 'break-word',
-                                  hyphens: 'auto'
+                                  wordBreak: 'normal',
+                                  overflowWrap: 'normal',
+                                  hyphens: 'none'
                                 }}>
                                   {d.bottomTitle || d.title}
                                 </h3>

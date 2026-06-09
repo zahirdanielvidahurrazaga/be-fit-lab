@@ -8,9 +8,15 @@
 
 export const PLANS = [
   {
-    name: 'Plan Inicial', title: 'Inicial', price: '$850', amount: 850, classes: 12, unlimited: false,
+    name: 'Plan Principiante', title: 'Principiante', price: '$750', amount: 750, classes: 8, unlimited: false,
+    lookupKey: 'befit_plan_principiante_monthly', subtitle: 'Tu primer paso',
+    features: ['Acceso a 8 clases', '+100 ideas de recetas', 'Registro de métricas', 'Acceso a la app'],
+    paymentUrl: '#',
+  },
+  {
+    name: 'Plan Inicial', title: 'Inicial', price: '$850', amount: 850, classes: 10, unlimited: false,
     lookupKey: 'befit_plan_inicial_monthly', subtitle: 'Perfecto para probar',
-    features: ['Acceso a 12 clases', '+100 ideas de recetas', 'Registro de métricas', 'Acceso a la app'],
+    features: ['Acceso a 10 clases', '+100 ideas de recetas', 'Registro de métricas', 'Acceso a la app'],
     paymentUrl: '#',
   },
   {

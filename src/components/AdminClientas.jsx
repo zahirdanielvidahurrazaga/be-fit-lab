@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Search, Cake, Crown, UserX, UserCheck, Shield, Coffee, Dumbbell, ChevronDown, Phone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { PLANS } from '../lib/plans';
 
 const PRIMARY = '#FF914D';
 const INK = '#1A1C1E';
@@ -117,9 +118,14 @@ export default function AdminClientas() {
   const [busy, setBusy] = useState(false);
 
   const plans = useMemo(() => {
-    const s = new Set();
-    (users || []).forEach(u => { if (u.role === 'CLIENT' && u.membership_status === 'ACTIVE' && u.membership_plan) s.add(u.membership_plan); });
-    return [...s];
+    // Siempre mostramos todos los planes del catálogo (en su orden), aunque aún
+    // nadie los tenga, para poder filtrar por planes nuevos como "Principiante".
+    const canonical = PLANS.map(p => p.name);
+    const inUse = new Set();
+    (users || []).forEach(u => { if (u.role === 'CLIENT' && u.membership_status === 'ACTIVE' && u.membership_plan) inUse.add(u.membership_plan); });
+    // Añadimos al final cualquier plan en uso que no esté en el catálogo (legacy).
+    const extras = [...inUse].filter(p => !canonical.includes(p));
+    return [...canonical, ...extras];
   }, [users]);
 
   const load = async () => {
