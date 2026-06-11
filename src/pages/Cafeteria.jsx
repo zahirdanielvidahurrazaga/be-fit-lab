@@ -367,7 +367,7 @@ function Cafeteria() {
                   <Coffee size={20} color="#FF914D" style={{ position: 'relative', zIndex: 1 }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#2B211C', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Be Fit Rewards</div>
+                  <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#2B211C', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Coffee Lab Rewards</div>
                   <div style={{ color: '#7D7068', fontSize: '0.95rem' }}>{Math.min(100, Math.round(((loyalty?.stamps || 0) / 12) * 100))} de 100 puntos para tu regalo.</div>
                 </div>
                 <ChevronRight size={20} color="#CCC0B6" />
@@ -573,7 +573,7 @@ function Cafeteria() {
                   <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: '0 15px 30px rgba(255,145,77,0.3)' }}>
                     <Coffee size={32} color="#fff" strokeWidth={2.5} />
                   </div>
-                  <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', color: '#fff', marginBottom: '12px', letterSpacing: '-0.02em' }}>Be Fit Rewards</h1>
+                  <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', color: '#fff', marginBottom: '12px', letterSpacing: '-0.02em' }}>Coffee Lab Rewards</h1>
                   <p style={{ color: 'rgba(255,255,255,0.6)', margin: '0 auto 30px', fontSize: '0.95rem', maxWidth: '300px', lineHeight: 1.5 }}>Únete y recibe un regalo sorpresa cada 12 compras.</p>
                   <button onClick={() => { localStorage.setItem('befit_redirect_after_auth', '/cafeteria'); navigate('/registro'); }} style={{ padding: '16px 36px', borderRadius: '100px', background: '#FF914D', color: '#fff', fontWeight: 800, fontSize: '1rem', border: 'none', cursor: 'pointer', boxShadow: '0 10px 25px rgba(255,145,77,0.4)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform='scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
                     Crear cuenta

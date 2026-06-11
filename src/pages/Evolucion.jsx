@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Flame, User, Calendar, Utensils, TrendingUp, Award, Target, ChevronRight, QrCode, Zap, Droplets, Scale, RefreshCw, Heart, Clock, Wallet, X, Check, Lock } from 'lucide-react';
+import { Activity, Flame, User, Calendar, Utensils, TrendingUp, Award, Target, ChevronRight, QrCode, Zap, Droplets, Scale, RefreshCw, Heart, Clock, Wallet, X, Check, Lock, Bluetooth } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -12,6 +12,7 @@ import { Capacitor } from '@capacitor/core';
 import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
 import ProfileMenu from '../components/ProfileMenu';
 import ProgressPhotos from '../components/ProgressPhotos';
+import BasculaBLE from '../components/BasculaBLE';
 
 const isNative = Capacitor.isNativePlatform();
 
@@ -48,6 +49,7 @@ function Evolucion() {
   const [previousMeasurement, setPreviousMeasurement] = useState(null);
   const [loadingMeasurements, setLoadingMeasurements] = useState(true);
   const [syncingScale, setSyncingScale] = useState(false);
+  const [showBle, setShowBle] = useState(false);
   const [subtab, setSubtab] = useState('resumen'); // resumen | fotos | insignias
   const isScrolled = useScrollDetect(30);
   const [selectedBadge, setSelectedBadge] = useState(null);
@@ -360,7 +362,7 @@ function Evolucion() {
               }}
             >
               {/* Foto aspiracional del estudio + overlay cálido para legibilidad */}
-              <img src="/fotos-hero/IMG_5396.JPG" alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 22%' }} />
+              <img src="/fotos-hero/meta.webp" alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 28%', transform: 'scale(1.12)', transformOrigin: 'center bottom' }} />
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(40,26,18,0.42) 0%, rgba(40,26,18,0.58) 45%, rgba(26,17,12,0.88) 100%)' }} />
               <div style={{ position: 'relative', zIndex: 1, fontSize: '0.66rem', fontWeight: 800, color: 'rgba(255,255,255,0.78)', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: '14px' }}>Tu meta del mes</div>
               <div style={{ position: 'relative', zIndex: 1, width: '180px', height: '180px', margin: '0 auto 18px' }}>
@@ -427,13 +429,18 @@ function Evolucion() {
                 textAlign: 'center'
               }}>
                 <Scale size={36} color="var(--primary)" style={{ opacity: 0.6, marginBottom: '12px' }} />
-                <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--on-surface)', margin: '0 0 4px' }}>Conecta tu báscula</p>
+                <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--on-surface)', margin: '0 0 4px' }}>Pésate en el estudio</p>
                 <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 16px', lineHeight: 1.5 }}>
-                  Pésate con tu báscula inteligente y, con tu app (VeSync) sincronizada a Salud, trae aquí tu peso y composición.
+                  Conéctate a la báscula del estudio por Bluetooth y registra tu peso en segundos.
                 </p>
-                <button onClick={syncScale} disabled={syncingScale} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '14px', padding: '12px 22px', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 10px 24px rgba(255,145,77,0.35)' }}>
-                  <Scale size={16} /> {syncingScale ? 'Sincronizando…' : 'Sincronizar con mi báscula'}
+                <button onClick={() => setShowBle(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '14px', padding: '12px 22px', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 10px 24px rgba(255,145,77,0.35)' }}>
+                  <Bluetooth size={16} /> Pesarme con la báscula
                 </button>
+                <div style={{ marginTop: '12px' }}>
+                  <button onClick={syncScale} disabled={syncingScale} style={{ background: 'none', border: 'none', color: 'var(--on-surface-variant)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
+                    {syncingScale ? 'Sincronizando…' : 'o importar desde Apple Salud'}
+                  </button>
+                </div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -455,20 +462,30 @@ function Evolucion() {
                 />
                 <MetricRow
                   label="Masa muscular"
-                  value={latestMeasurement?.muscle_pct?.toFixed(1) ?? '—'}
+                  value={latestMeasurement?.skeletal_muscle_pct?.toFixed(1) ?? '—'}
                   unit="%"
-                  trend={calcTrend('muscle_pct')}
+                  trend={calcTrend('skeletal_muscle_pct')}
                   icon={<Zap size={18} />}
                   positive
                 />
                 <MetricRow
                   label="Agua"
-                  value={latestMeasurement?.water_pct?.toFixed(1) ?? '—'}
+                  value={latestMeasurement?.body_water_pct?.toFixed(1) ?? '—'}
                   unit="%"
-                  trend={calcTrend('water_pct')}
+                  trend={calcTrend('body_water_pct')}
                   icon={<Droplets size={18} />}
                   positive
                 />
+                {latestMeasurement?.visceral_fat != null && (
+                  <MetricRow
+                    label="Grasa visceral"
+                    value={String(latestMeasurement.visceral_fat)}
+                    unit=""
+                    trend={calcTrend('visceral_fat')}
+                    icon={<Activity size={18} />}
+                    positiveIsDown
+                  />
+                )}
                 <MetricRow
                   label="Masa ósea"
                   value={latestMeasurement?.bone_mass_kg?.toFixed(2) ?? '—'}
@@ -491,18 +508,24 @@ function Evolucion() {
             )}
           </motion.section>
 
-          {/* BOTÓN SINCRONIZAR BÁSCULA */}
+          {/* BOTÓN PESARME (Bluetooth) */}
           {hasData && (
             <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.25 }} style={{ marginTop: '16px' }}>
-              <button onClick={syncScale} disabled={syncingScale} style={{
+              <button onClick={() => setShowBle(true)} style={{
                 width: '100%', padding: '15px', borderRadius: '20px',
-                background: 'var(--app-surface-solid)', boxShadow: 'var(--card-shadow)',
-                border: '1px solid var(--border-subtle)',
+                background: 'var(--primary)', boxShadow: '0 10px 24px rgba(255,145,77,0.32)',
+                border: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                color: 'var(--primary)', fontWeight: 700, fontSize: '0.9rem',
+                color: '#fff', fontWeight: 800, fontSize: '0.92rem',
                 fontFamily: 'var(--font-body)', cursor: 'pointer'
               }}>
-                <Scale size={18} /> {syncingScale ? 'Sincronizando…' : 'Sincronizar nueva medición'}
+                <Bluetooth size={18} /> Pesarme con la báscula
+              </button>
+              <button onClick={syncScale} disabled={syncingScale} style={{
+                width: '100%', padding: '10px', marginTop: '8px', background: 'none', border: 'none',
+                color: 'var(--on-surface-variant)', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline'
+              }}>
+                {syncingScale ? 'Sincronizando…' : 'o importar desde Apple Salud'}
               </button>
             </motion.section>
           )}
@@ -859,6 +882,13 @@ function Evolucion() {
               </button>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Pesarme (báscula ESF24 por Bluetooth) */}
+      <AnimatePresence>
+        {showBle && (
+          <BasculaBLE user={user} onClose={() => setShowBle(false)} onSaved={fetchMeasurements} />
         )}
       </AnimatePresence>
     </div>

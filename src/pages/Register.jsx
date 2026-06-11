@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Lock, ArrowRight, ChevronLeft, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Lock, ArrowRight, ChevronLeft, CheckCircle2, Eye, EyeOff, Cake, Ruler } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { motion } from 'framer-motion';
 
@@ -11,6 +11,8 @@ function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [heightCm, setHeightCm] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
@@ -66,6 +68,16 @@ function Register() {
       setError(error.message);
       setLoading(false);
     } else {
+      // Guardar cumpleaños + estatura en el perfil (reintenta por si el trigger
+      // que crea la fila de users aún no termina).
+      if (data.user && (birthDate || heightCm)) {
+        const extras = { birth_date: birthDate || null, height_cm: heightCm ? parseFloat(heightCm) : null };
+        for (let i = 0; i < 4; i++) {
+          const { data: rows } = await supabase.from('users').update(extras).eq('id', data.user.id).select('id');
+          if (rows && rows.length) break;
+          await new Promise(r => setTimeout(r, 600));
+        }
+      }
       if (purchasedPlan && data.user) {
         // El usuario compró un plan antes de registrarse
         // Esperar a que el trigger cree el perfil, luego activar plan via contexto
@@ -221,6 +233,35 @@ function Register() {
               >
                 {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
+            </div>
+
+            {/* DATOS PARA TU SEGUIMIENTO (opcional) */}
+            <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--on-surface-variant)', margin: '0.5rem 0 0.25rem', letterSpacing: '0.02em' }}>Para tu seguimiento <span style={{ fontWeight: 500, opacity: 0.8 }}>(opcional, puedes ponerlo después)</span></p>
+
+            <div className="premium-input-group">
+              <label>Cumpleaños</label>
+              <Cake size={20} className="premium-input-icon" />
+              <input
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                className="premium-input"
+              />
+            </div>
+
+            <div className="premium-input-group">
+              <label>Estatura (cm)</label>
+              <Ruler size={20} className="premium-input-icon" />
+              <input
+                type="number"
+                inputMode="decimal"
+                min="120"
+                max="220"
+                value={heightCm}
+                onChange={(e) => setHeightCm(e.target.value)}
+                placeholder="Ej. 165"
+                className="premium-input"
+              />
             </div>
 
             {/* CONSENTIMIENTO LEGAL */}

@@ -37,7 +37,7 @@ function Welcome() {
       {/* ===== FONDO: Imagen Ultra-HD (siempre presente, opacity controlada) ===== */}
       <div style={{
         position: 'absolute', inset: 0,
-        backgroundImage: 'url(/fotos-hero/IMG_5402.JPG)',
+        backgroundImage: 'url(/fotos-hero/welcome.webp)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         opacity: 1,

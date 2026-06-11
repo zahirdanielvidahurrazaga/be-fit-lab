@@ -8,7 +8,6 @@ import { Stripe } from '@capacitor-community/stripe';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { uploadImage } from '../lib/cafeImage';
-import AutoVideo, { VIDEO_BASE } from '../components/AutoVideo';
 
 const PRIMARY = '#FF914D';
 // Liquid glass (theme-aware vía --glass-bg/--glass-border de index.css)
@@ -375,9 +374,9 @@ export default function Eventos() {
             <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {next && (
                 <div style={{ background: '#2D2928', borderRadius: '28px', color: '#fff', position: 'relative', overflow: 'hidden', aspectRatio: '1 / 1', boxShadow: '0 24px 50px rgba(0,0,0,0.22)' }}>
-                  {/* Video de eventos de fondo */}
-                  <AutoVideo src={`${VIDEO_BASE}eventos.mp4`} poster="/videos-posters/eventos.jpg" />
-                  {/* Overlay: oscuro arriba/abajo (texto + contador legibles), claro al centro (se ve el video) */}
+                  {/* Foto de eventos de fondo */}
+                  <img src="/galeria/evento-4.webp" alt="Eventos Be Fit Lab" loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {/* Overlay: oscuro arriba/abajo (texto + contador legibles), claro al centro (se ve la foto) */}
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(18,14,11,0.88) 0%, rgba(18,14,11,0.30) 36%, rgba(18,14,11,0.40) 60%, rgba(18,14,11,0.92) 100%)', pointerEvents: 'none' }} />
                   {/* Contenido: título arriba, cuenta regresiva abajo */}
                   <div style={{ position: 'absolute', inset: 0, zIndex: 1, padding: '28px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', pointerEvents: 'none' }}>

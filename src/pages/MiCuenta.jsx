@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Camera, Mail, Phone, Shield, Clock, ChevronRight, ChevronLeft, Check, AlertCircle, Utensils, TrendingUp, CalendarDays, QrCode, X, Home, CreditCard, Compass, Cake, Star, MessageSquare } from 'lucide-react';
+import { User, Camera, Mail, Phone, Shield, Clock, ChevronRight, ChevronLeft, Check, AlertCircle, Utensils, TrendingUp, CalendarDays, QrCode, X, Home, CreditCard, Compass, Cake, Star, MessageSquare, Ruler } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { uploadAvatar, isLegacyDataUrl } from '../lib/avatar';
@@ -19,6 +19,7 @@ function MiCuenta() {
   const [emergencyPhone, setEmergencyPhone] = useState('');
   const [bio, setBio] = useState('');
   const [birthDate, setBirthDate] = useState('');
+  const [heightCm, setHeightCm] = useState('');
   const [experience, setExperience] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -128,7 +129,7 @@ function MiCuenta() {
   const loadProfile = async () => {
     const { data, error } = await supabase
       .from('users')
-      .select('full_name, phone, emergency_contact_name, emergency_contact_phone, bio, experience, birth_date')
+      .select('full_name, phone, emergency_contact_name, emergency_contact_phone, bio, experience, birth_date, height_cm')
       .eq('id', user.id)
       .single();
 
@@ -140,7 +141,8 @@ function MiCuenta() {
       setBio(data.bio || '');
       setExperience(data.experience || '');
       setBirthDate(data.birth_date || '');
-      
+      setHeightCm(data.height_cm != null ? String(data.height_cm) : '');
+
       setInitialProfile({
         fullName: data.full_name || '',
         phone: data.phone || '',
@@ -148,7 +150,8 @@ function MiCuenta() {
         emergencyPhone: data.emergency_contact_phone || '',
         bio: data.bio || '',
         experience: data.experience || '',
-        birthDate: data.birth_date || ''
+        birthDate: data.birth_date || '',
+        heightCm: data.height_cm != null ? String(data.height_cm) : ''
       });
     }
   };
@@ -165,7 +168,8 @@ function MiCuenta() {
       phone: phone,
       emergency_contact_name: emergencyName,
       emergency_contact_phone: emergencyPhone,
-      birth_date: birthDate || null
+      birth_date: birthDate || null,
+      height_cm: heightCm ? parseFloat(heightCm) : null
     };
     
     if (role === 'COACH') {
@@ -191,7 +195,7 @@ function MiCuenta() {
       }
       
       setInitialProfile({
-        fullName, phone, emergencyName, emergencyPhone, bio, experience, birthDate
+        fullName, phone, emergencyName, emergencyPhone, bio, experience, birthDate, heightCm
       });
       
       setSaved(true);
@@ -208,7 +212,8 @@ function MiCuenta() {
     emergencyPhone !== (initialProfile.emergencyPhone || '') ||
     bio !== (initialProfile.bio || '') ||
     experience !== (initialProfile.experience || '') ||
-    birthDate !== (initialProfile.birthDate || '');
+    birthDate !== (initialProfile.birthDate || '') ||
+    heightCm !== (initialProfile.heightCm || '');
 
   const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -465,6 +470,26 @@ function MiCuenta() {
                   onBlur={(e) => { e.target.parentElement.style.borderColor = 'var(--border-subtle)'; e.target.parentElement.querySelector('.input-icon').style.color = 'var(--on-surface-variant)'; }}
                 />
               </div>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>Estatura (cm)</label>
+              <div style={inputContainerStyle} className="input-glass">
+                <Ruler size={18} style={iconStyle} className="input-icon" />
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="120"
+                  max="220"
+                  placeholder="Ej. 165"
+                  value={heightCm}
+                  onChange={(e) => setHeightCm(e.target.value)}
+                  style={{ ...inputStyle, paddingLeft: '46px' }}
+                  onFocus={(e) => { e.target.parentElement.style.borderColor = '#FF8B42'; e.target.parentElement.querySelector('.input-icon').style.color = '#FF8B42'; }}
+                  onBlur={(e) => { e.target.parentElement.style.borderColor = 'var(--border-subtle)'; e.target.parentElement.querySelector('.input-icon').style.color = 'var(--on-surface-variant)'; }}
+                />
+              </div>
+              <p style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', margin: '6px 4px 0' }}>La usamos para calcular tu composición corporal al pesarte con la báscula.</p>
             </div>
 
             <div>

@@ -10,7 +10,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence, useScroll, useTransform, useInView, useSpring as useMotionSpring } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
-import AutoVideo, { VIDEO_BASE } from '../components/AutoVideo';
+import PolaroidGallery from '../components/PolaroidGallery';
 
 // Link de react-router con animaciones de framer-motion (hover naranja + desplazamiento)
 const MotionLink = motion(Link);
@@ -224,7 +224,7 @@ const ParallaxTestimonials = () => {
   return (
     <section
       ref={sectionRef}
-      style={{ background: '#E8F2FA', position: 'relative', overflow: 'hidden', minHeight: '140vh', paddingBottom: '10vh' }}
+      style={{ background: '#E8F2FA', position: 'relative', overflow: 'clip', minHeight: '140vh', paddingBottom: '10vh' }}
     >
       {/* Blobs decorativos — animados solo en PC (en móvil estáticos y con menos blur) */}
       <motion.div
@@ -459,10 +459,10 @@ export default function Landing() {
         
         <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.8, ease:'easeOut' }} className="hero-text-container" style={{ position:'relative', zIndex:2, maxWidth:'850px', width:'100%' }}>
           <div className="badge-peach" style={{ background:'var(--surface-lowest)' }}>
-            {user ? `¡Hola de nuevo, ${user.email.split('@')[0]}!` : 'Fuerza • Crecimiento • Conciencia'}
+            {user ? `¡Hola de nuevo, ${user.email.split('@')[0]}!` : 'Fuerza • Comunidad • Crecimiento'}
           </div>
           <h1 style={{ fontSize:'clamp(3rem,8vw,6.5rem)', lineHeight:1.05, marginBottom:'2.5rem', color:'white' }}>
-            {user ? (<>Bienvenida a<br/><span style={{ color:'var(--primary)', fontStyle:'italic' }}>tu espacio VIP.</span></>) : (<>Conviértete en<br/><span style={{ color:'var(--primary)', fontStyle:'italic' }}>tu mejor versión.</span></>)}
+            {user ? (<>Bienvenida a<br/><span style={{ color:'var(--primary)', fontFamily:"'Playfair Display', serif", fontStyle:'italic', fontWeight:500 }}>tu espacio VIP.</span></>) : (<>Mujer, tu salud es<br/><span style={{ color:'var(--primary)', fontFamily:"'Playfair Display', serif", fontStyle:'italic', fontWeight:500 }}>tu mejor inversión.</span></>)}
           </h1>
           <div className="hero-buttons">
             {user ? (
@@ -489,7 +489,7 @@ export default function Landing() {
           >
             {[
               { to:1000, suffix:'+', label:'Mujeres transformadas' },
-              { to:4,    suffix:'',  label:'Disciplinas de élite'  },
+              { to:10,   suffix:'',  label:'Disciplinas de élite'  },
               { to:12,   suffix:'',  label:'Máx. alumnas por clase'},
               { to:100,  suffix:'%', label:'Equipo premium'        },
             ].map(({ to, suffix, label }, i) => (
@@ -535,10 +535,10 @@ export default function Landing() {
           <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ flex:'1 1 500px' }}>
             <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Nuestro método</span>
             <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', lineHeight:1.05, margin:'1.5rem 0 2rem', letterSpacing:'-0.04em', color:'var(--black)' }}>
-              Glúteos.<br/>Fuerza.<br/><span style={{ color:'var(--primary)' }}>Transformación real.</span>
+              Glúteos.<br/>Fuerza.<br/><span style={{ color:'var(--primary)', fontFamily:"'Playfair Display', serif", fontStyle:'italic', fontWeight:500 }}>Transformación real.</span>
             </h2>
             <p style={{ fontSize:'1.25rem', color:'var(--on-surface-variant)', lineHeight:1.6, marginBottom:'3rem', maxWidth:'480px', fontWeight:400 }}>
-              En Be Fit Lab fusionamos Reformer Pilates, Yoga Flow, Cardio Baile y Fuerza en un método enfocado en resultados. Grupos reducidos, técnica impecable.
+              Aquí, no solo entrenamos cuerpos; nutrimos intenciones y construimos comunidades para silenciar el ruido del mundo. Entrenar es la meditación en movimiento que te devuelve la calma y la claridad que necesitas para tomar las riendas de tu día. Bienvenida a tu mejor versión.
             </p>
             <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }} onClick={() => scrollTo('clases')} className="btn-primary" style={{ padding:'1.1rem 2.5rem', borderRadius:'40px', fontSize:'1rem' }}>
               Descubrir disciplinas <ArrowRight size={18}/>
@@ -620,7 +620,7 @@ export default function Landing() {
                   <div style={{ maxWidth:'600px' }}>
                     <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Disciplinas</span>
                     <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0 0', color:'var(--black)', letterSpacing:'-0.04em' }}>
-                      {enfoquesTitle}<br/><span style={{ color:'var(--primary)' }}>Un solo objetivo.</span>
+                      {enfoquesTitle}<br/><span style={{ color:'var(--primary)', fontFamily:"'Playfair Display', serif", fontStyle:'italic', fontWeight:500 }}>Un solo objetivo.</span>
                     </h2>
                   </div>
                 </motion.div>
@@ -813,32 +813,8 @@ export default function Landing() {
       })()}
 
 
-      {/* ── El Estudio ────────────────────────────────────────────── */}
-      <section id="estudio" style={{ padding:'12rem 5%', background:'var(--surface-lowest)', position:'relative', overflow:'hidden' }}>
-        <div style={{ maxWidth:'1200px', margin:'0 auto', position:'relative', zIndex:1 }}>
-          <motion.div variants={slideRight} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ marginBottom:'4rem', textAlign:'center' }}>
-            <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Instalaciones</span>
-            <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0 1rem', color:'var(--black)', letterSpacing:'-0.04em' }}>Un espacio diseñado<br/><span style={{ color:'var(--primary)' }}>para inspirarte.</span></h2>
-            <p style={{ fontSize:'1.05rem', color:'var(--on-surface-variant)', maxWidth:'520px', margin:'0 auto', lineHeight:1.6 }}>Cada detalle está pensado para que entrenar y celebrar se sienta como un ritual.</p>
-          </motion.div>
-          {/* Videos verticales (9:16) lado a lado — formato de celular */}
-          <motion.div variants={stagger(0.12)} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }}
-            style={{ display:'flex', gap:'24px', justifyContent:'center', flexWrap:'wrap', maxWidth:'1140px', margin:'0 auto' }}>
-            {/* Video del estudio */}
-            <motion.div variants={scaleIn} style={{ position:'relative', flex:'1 1 300px', maxWidth:'360px', aspectRatio:'9 / 16', borderRadius:'32px', overflow:'hidden', background:'var(--surface)', boxShadow:'0 30px 80px rgba(0,0,0,0.12)' }}>
-              <AutoVideo src={`${VIDEO_BASE}estudio.mp4`} poster="/videos-posters/estudio.jpg" label="El estudio" />
-            </motion.div>
-            {/* Video de cumpleaños */}
-            <motion.div variants={scaleIn} style={{ position:'relative', flex:'1 1 300px', maxWidth:'360px', aspectRatio:'9 / 16', borderRadius:'32px', overflow:'hidden', background:'var(--surface)', boxShadow:'0 30px 80px rgba(0,0,0,0.12)' }}>
-              <AutoVideo src={`${VIDEO_BASE}cumple.mp4`} poster="/videos-posters/cumple.jpg" label="Cumpleaños" />
-            </motion.div>
-            {/* Video de eventos */}
-            <motion.div variants={scaleIn} style={{ position:'relative', flex:'1 1 300px', maxWidth:'360px', aspectRatio:'9 / 16', borderRadius:'32px', overflow:'hidden', background:'var(--surface)', boxShadow:'0 30px 80px rgba(0,0,0,0.12)' }}>
-              <AutoVideo src={`${VIDEO_BASE}eventos.mp4`} poster="/videos-posters/eventos.jpg" label="Eventos" />
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
+      {/* ── El Estudio · Galería Polaroid ─────────────────────────── */}
+      <PolaroidGallery />
 
       {/* ── Horarios ──────────────────────────────────────────────── */}
       <section id="horarios" style={{ padding:'12rem 5%', background:'var(--surface)', position:'relative', overflow:'hidden' }}>
@@ -1003,7 +979,7 @@ export default function Landing() {
         <div style={{ maxWidth:'1200px', margin:'0 auto', display:'flex', flexWrap:'wrap', gap:'6rem', alignItems:'flex-start', position:'relative', zIndex:1 }}>
           <motion.div variants={slideRight} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ flex:'1 1 400px' }}>
             <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Encuéntranos</span>
-            <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0 2.5rem', lineHeight:1.05, color:'var(--black)', letterSpacing:'-0.04em' }}>Ven a<br/><span style={{ color:'var(--primary)' }}>conocernos.</span></h2>
+            <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0 2.5rem', lineHeight:1.05, color:'var(--black)', letterSpacing:'-0.04em' }}>Ven a<br/><span style={{ color:'var(--primary)', fontFamily:"'Playfair Display', serif", fontStyle:'italic', fontWeight:500 }}>conocernos.</span></h2>
             <div style={{ display:'flex', flexDirection:'column', gap:'24px', marginBottom:'3rem' }}>
               {[{icon:<MapPin size={24} color="var(--primary)"/>,label:'Dirección',val:<a href="https://maps.app.goo.gl/RFUhTHGG5cQuVoST8" target="_blank" rel="noopener noreferrer" style={{ color:'var(--on-surface-variant)', textDecoration:'none' }}>Blvrd 22 Sur 5123, Villa Carmel,<br/>72567 Heroica Puebla de Zaragoza, Pue.</a>},{icon:<Phone size={24} color="var(--primary)"/>,label:'Teléfono / WhatsApp',val:<a href="tel:+522212664253" style={{ color:'var(--on-surface-variant)', textDecoration:'none' }}>+52 221 266 4253</a>},{icon:<InstagramIcon size={24} color="var(--primary)"/>,label:'Instagram',val:<a href="https://instagram.com/befit.lab" target="_blank" rel="noopener noreferrer" style={{ color:'var(--primary)', fontWeight:700, textDecoration:'none' }}>@befit.lab</a>}].map(({icon,label,val}) => (
                 <motion.div key={label} whileHover={{ x:6 }} transition={SPRING} style={{ display:'flex', gap:'20px', alignItems:'flex-start' }}>
@@ -1184,7 +1160,7 @@ function AppShowcase() {
         {/* Texto + descarga */}
         <motion.div variants={slideRight} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ flex:'1 1 440px' }}>
           <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Be Fit Lab App</span>
-          <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0', lineHeight:1.05, color:'var(--black)', letterSpacing:'-0.04em' }}>Tu estudio,<br/><span style={{ color:'var(--primary)' }}>en tu bolsillo.</span></h2>
+          <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0', lineHeight:1.05, color:'var(--black)', letterSpacing:'-0.04em' }}>Tu estudio,<br/><span style={{ color:'var(--primary)', fontFamily:"'Playfair Display', serif", fontStyle:'italic', fontWeight:500 }}>en tu bolsillo.</span></h2>
           <p style={{ fontSize:'1.25rem', color:'var(--on-surface-variant)', lineHeight:1.6, marginBottom:'3rem', fontWeight:400, maxWidth:'480px' }}>Reserva clases, sigue tu progreso, recibe planes de nutrición personalizados y gestiona tu membresía — todo en una App diseñada exclusivamente para socias.</p>
           <div style={{ display:'flex', flexWrap:'wrap', gap:'16px' }}>
             <motion.a whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }} href="https://apps.apple.com/mx/app/be-fit-lab/id6772008660" target="_blank" rel="noopener noreferrer">
