@@ -238,6 +238,9 @@ h1, h2, h3, h4, h5 {
 
 .premium-input {
   width: 100%;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
   padding: 0.9rem 1rem 0.9rem 2.8rem;
   border-radius: 16px;
   border: 1px solid var(--border-subtle, rgba(55, 61, 59, 0.1));

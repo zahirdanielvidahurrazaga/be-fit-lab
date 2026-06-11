@@ -246,6 +246,7 @@ function Register() {
                 value={birthDate}
                 onChange={(e) => setBirthDate(e.target.value)}
                 className="premium-input"
+                style={{ WebkitAppearance: 'none', appearance: 'none', minHeight: '3.1rem' }}
               />
             </div>
 
