@@ -136,9 +136,7 @@ export default function PolaroidGallery() {
 }
 
 const GALLERY_CSS = `
-.bfl-gallery { display: flex; flex-direction: column; gap: 4px;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 7%, #000 93%, transparent 100%);
-          mask-image: linear-gradient(90deg, transparent 0, #000 7%, #000 93%, transparent 100%); }
+.bfl-gallery { display: flex; flex-direction: column; gap: 4px; }
 .bfl-grow { overflow: hidden; padding: 18px 0; }
 .bfl-gtrack { display: flex; gap: 22px; width: max-content; animation-timing-function: linear; animation-iteration-count: infinite; will-change: transform; }
 @keyframes bflScrollL { from { transform: translateX(0); }    to { transform: translateX(-50%); } }
