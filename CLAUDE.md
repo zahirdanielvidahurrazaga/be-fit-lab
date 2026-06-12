@@ -77,6 +77,9 @@ manifest ya habilita `READ_WEIGHT` + `READ_BODY_FAT`.
 - Info estudio: Blvrd 22 Sur 5123, Villa Carmel, 72567 Puebla. Tel/WhatsApp +52 221 266 4253. IG @befit.lab. Mapa embebido (requiere `frame-src` de google/openstreetmap en el CSP de `index.html`).
 
 ## Estado actual (última sesión: 2026-06-11)
+- ✅ **Hero del landing nuevo** (foto del equipo). Solo web: en nativo `App.jsx` redirige `/`→`/welcome`, así que el hero NO se ve en la app (es normal). Imagen extendida verticalmente (techo/piso generados con PIL, relación 0.39) en `public/fotos-hero/hero-equipo-v2.jpg` → un solo `cover` cubre cualquier pantalla sin cortar a nadie. Móvil anclado `center bottom` (encuadre consistente pese a alturas/barra del navegador), desktop `center 53%`.
+- ✅ **Báscula 100% por Bluetooth**: `BasculaBLE.jsx` auto-detecta y conecta sola (se quitó la lista de dispositivos; solo "Buscando… súbete a la báscula"). En `Evolucion.jsx` se quitaron los botones "o importar desde Apple Salud" y "Sincronizar" (Apple Health para composición). La actividad (pasos/cal/FC de Apple Health) se mantiene.
+- ✅ **iOS bump a 1.0.3 (build 2)** y `npx cap copy ios` hecho. Falta archivar en Xcode. Android pendiente (otra PC).
 - ✅ **Fix subida de fotos en Admin → Disciplinas (y cafetería)**: el bucket público dejaba LEER pero no SUBIR porque nunca se crearon las políticas de `storage.objects`. Nuevo script idempotente `supabase/storage_policies.sql` crea los buckets `disciplines` y `cafe-products` (públicos) + políticas RLS: lectura pública, escribir/actualizar/borrar solo `role='ADMIN'`. Corrido en Supabase, subida confirmada OK.
 - Los `alert` de subida en `AdminDisciplinas.jsx` y `AdminCafeteria.jsx` ahora muestran el motivo real del error (antes era mudo) + `console.error`.
 
