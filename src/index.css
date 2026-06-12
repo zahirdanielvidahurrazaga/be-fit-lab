@@ -1651,7 +1651,11 @@ h1, h2, h3, h4, h5 {
   .hero-bg-main {
     /* La imagen es más angosta (relación 0.39) que cualquier teléfono, así que
        cover siempre recorta arriba/abajo (techo/piso generados) y NUNCA los
-       lados: las chicas de las orillas se ven completas. */
-    background-position: center 50%;
+       lados: las chicas de las orillas se ven completas.
+       Anclado ABAJO (mismo marco que el texto, que va en flex-end): así las
+       caras quedan a distancia CONSTANTE del texto sin importar la altura del
+       teléfono ni que la barra del navegador aparezca/desaparezca. El alto
+       sobrante lo absorbe el techo generado, no el área de las caras. */
+    background-position: center bottom;
   }
 }
