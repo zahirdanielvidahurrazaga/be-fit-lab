@@ -46,3 +46,7 @@ check_error.js
 
 # Fotos fuente pesadas (no versionar; los assets servidos van en public/)
 Fotos/
+
+# Respaldos de base de datos (script scripts/backup_supabase.sh)
+backups/
+scripts/.backup.env
