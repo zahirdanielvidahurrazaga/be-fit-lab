@@ -15,7 +15,6 @@ const looksLikeScale = (name) => /etekcity|scale|esf|qn-?scale|vesync|fitness|bo
 
 export default function BasculaBLE({ user, onClose, onSaved }) {
   const [phase, setPhase] = useState('intro'); // intro | scanning | measuring | done | error
-  const [devices, setDevices] = useState([]);
   const [liveWeight, setLiveWeight] = useState(null);
   const [result, setResult] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
@@ -37,13 +36,13 @@ export default function BasculaBLE({ user, onClose, onSaved }) {
 
   const startScan = async () => {
     setPhase('scanning');
-    setDevices([]); setLog([]); setErrorMsg(''); setLiveWeight(null); setResult(null);
+    setLog([]); setErrorMsg(''); setLiveWeight(null); setResult(null);
     try {
-      const list = await scanDevices({ onDevice: (d) => setDevices((p) => (p.some((x) => x.id === d.id) ? p : [...p, d])), onLog: addLog });
+      const list = await scanDevices({ onDevice: (d) => addLog('· ' + (d.name || d.id)), onLog: addLog });
+      // Detección automática: nos conectamos a la primera báscula reconocida.
       const match = list.filter((d) => looksLikeScale(d.name));
-      if (match.length === 1) { addLog('🎯 Báscula probable: ' + match[0].name); connect(match[0].id); }
-      else if (list.length === 0) { setErrorMsg('No apareció ningún dispositivo. Súbete a la báscula para encenderla y reintenta con el Bluetooth activado.'); setPhase('error'); }
-      // si hay varios, el usuario elige de la lista
+      if (match.length >= 1) { addLog('🎯 Báscula detectada: ' + match[0].name); connect(match[0].id); }
+      else { setErrorMsg('No apareció ninguna báscula. Súbete a la báscula para encenderla y reintenta con el Bluetooth activado.'); setPhase('error'); }
     } catch (e) {
       setErrorMsg('Error de Bluetooth: ' + (e.message || e)); setPhase('error');
     }
@@ -111,17 +110,6 @@ export default function BasculaBLE({ user, onClose, onSaved }) {
                   <motion.div animate={{ scale: [1, 1.08, 1] }} transition={{ duration: 1.3, repeat: Infinity }} style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,145,77,0.12)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Bluetooth size={30} color="var(--primary)" /></motion.div>
                   <p style={{ fontSize: '0.9rem', color: 'var(--on-surface-variant)', marginTop: 10 }}>Buscando… súbete a la báscula para encenderla.</p>
                 </div>
-                {devices.length > 0 && (
-                  <div style={{ marginBottom: 12 }}>
-                    <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--on-surface-variant)', margin: '0 0 6px' }}>Toca tu báscula</p>
-                    {devices.map((d) => (
-                      <button key={d.id} onClick={() => connect(d.id)} style={{ width: '100%', textAlign: 'left', padding: '11px 14px', marginBottom: 6, borderRadius: 12, border: looksLikeScale(d.name) ? '1.5px solid var(--primary)' : '1px solid var(--border-subtle)', background: looksLikeScale(d.name) ? 'rgba(255,145,77,0.07)' : 'var(--surface-low)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Bluetooth size={16} color={looksLikeScale(d.name) ? 'var(--primary)' : 'var(--on-surface-variant)'} />
-                        <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--on-surface)' }}>{d.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
 

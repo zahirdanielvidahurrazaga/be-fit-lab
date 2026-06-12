@@ -48,7 +48,6 @@ function Evolucion() {
   const [latestMeasurement, setLatestMeasurement] = useState(null);
   const [previousMeasurement, setPreviousMeasurement] = useState(null);
   const [loadingMeasurements, setLoadingMeasurements] = useState(true);
-  const [syncingScale, setSyncingScale] = useState(false);
   const [showBle, setShowBle] = useState(false);
   const [subtab, setSubtab] = useState('resumen'); // resumen | fotos | insignias
   const isScrolled = useScrollDetect(30);
@@ -56,7 +55,7 @@ function Evolucion() {
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [goalInput, setGoalInput] = useState('');
 
-  const { healthData, healthPermission, healthLoading, requestPermissions, fetchTodayData, readBodyComposition } = useHealth();
+  const { healthData, healthPermission, healthLoading, requestPermissions, fetchTodayData } = useHealth();
 
   const [classHistory, setClassHistory] = useState([]);
   const [badges, setBadges] = useState([{ icon: '🔒', label: 'Cargando...' }]);
@@ -238,31 +237,6 @@ function Evolucion() {
     }
   };
 
-  // Sincroniza peso/grasa desde Apple Salud (lo pone ahí la báscula VeSync)
-  const syncScale = async () => {
-    if (syncingScale) return;
-    if (!Capacitor.isNativePlatform()) { alert('La sincronización con tu báscula está disponible en la app móvil.'); return; }
-    setSyncingScale(true);
-    try {
-      await requestPermissions(); // asegurar permiso para leer Peso
-      const m = await readBodyComposition();
-      if (!m) {
-        alert('No encontramos tu peso en Salud.\n\n1) Pésate con tu báscula.\n2) Abre la app VeSync y asegúrate de que sincronice con Salud (Apple Salud → Compartir → VeSync).\n3) Vuelve a intentar.');
-        return;
-      }
-      if (latestMeasurement && new Date(latestMeasurement.measured_at).getTime() === new Date(m.measured_at).getTime()) {
-        alert('Ya tienes registrada esta medición. ¡Pésate de nuevo para una nueva! 💪');
-        return;
-      }
-      const { error } = await supabase.from('body_measurements').insert({
-        user_id: user.id, weight_kg: m.weight_kg, body_fat_pct: m.body_fat_pct, measured_at: m.measured_at, source: 'vesync',
-      });
-      if (error) { alert('No se pudo guardar: ' + error.message); return; }
-      await fetchMeasurements();
-    } finally {
-      setSyncingScale(false);
-    }
-  };
 
   const calcTrend = (key, unit = '') => {
     if (!latestMeasurement || !previousMeasurement) return null;
@@ -410,11 +384,6 @@ function Evolucion() {
                     {new Date(latestMeasurement.measured_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
                   </span>
                 )}
-                {hasData && (
-                  <button onClick={syncScale} disabled={syncingScale} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(255,145,77,0.12)', color: 'var(--primary)', border: 'none', borderRadius: '10px', padding: '6px 11px', fontWeight: 700, fontSize: '0.74rem', cursor: 'pointer' }}>
-                    <Scale size={13} /> {syncingScale ? '…' : 'Sincronizar'}
-                  </button>
-                )}
                 <button onClick={fetchMeasurements} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', display: 'flex', alignItems: 'center' }}>
                   <RefreshCw size={15} />
                 </button>
@@ -436,11 +405,6 @@ function Evolucion() {
                 <button onClick={() => setShowBle(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '14px', padding: '12px 22px', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 10px 24px rgba(255,145,77,0.35)' }}>
                   <Bluetooth size={16} /> Pesarme con la báscula
                 </button>
-                <div style={{ marginTop: '12px' }}>
-                  <button onClick={syncScale} disabled={syncingScale} style={{ background: 'none', border: 'none', color: 'var(--on-surface-variant)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
-                    {syncingScale ? 'Sincronizando…' : 'o importar desde Apple Salud'}
-                  </button>
-                </div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -520,12 +484,6 @@ function Evolucion() {
                 fontFamily: 'var(--font-body)', cursor: 'pointer'
               }}>
                 <Bluetooth size={18} /> Pesarme con la báscula
-              </button>
-              <button onClick={syncScale} disabled={syncingScale} style={{
-                width: '100%', padding: '10px', marginTop: '8px', background: 'none', border: 'none',
-                color: 'var(--on-surface-variant)', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline'
-              }}>
-                {syncingScale ? 'Sincronizando…' : 'o importar desde Apple Salud'}
               </button>
             </motion.section>
           )}
