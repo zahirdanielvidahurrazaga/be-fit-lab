@@ -452,8 +452,9 @@ export default function Landing() {
       {/* HERO — ACTUALIZADO CON NUEVA FOTO                           */}
       {/* ════════════════════════════════════════════════════════════ */}
       <section style={{ minHeight:'100vh', display:'flex', alignItems:'flex-end', padding:'10rem 5% 6rem', position:'relative', overflow:'hidden' }}>
-        {/* Fondo a Color */}
-        <div style={{ position:'absolute', inset:0, zIndex:0, backgroundImage:'url("/fotos-hero/_DSC3309.jpg")', backgroundSize:'cover', backgroundPosition:'center 22%', pointerEvents:'none' }} />
+        {/* Fondo a Color — la foto del equipo está extendida (techo/piso generados) para
+            cubrir pantallas altas sin cortar a nadie ni dejar barras. */}
+        <div className="hero-bg-main" style={{ position:'absolute', inset:0, zIndex:0, backgroundImage:'url("/fotos-hero/hero-equipo-v2.jpg")', pointerEvents:'none' }} />
         {/* Gradiente sutil inferior para legibilidad del texto */}
         <div style={{ position:'absolute', inset:0, zIndex:1, background:'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%)', pointerEvents:'none' }} />
         

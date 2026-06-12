@@ -1636,3 +1636,22 @@ h1, h2, h3, h4, h5 {
     gap: 2.5rem 1rem;
   }
 }
+
+/* ===== HERO BACKGROUND (foto del equipo) ===== */
+/* La imagen viene extendida (techo/piso generados a partir de la propia foto), así
+   que un solo "cover" cubre cualquier pantalla sin cortar a las chicas ni dejar
+   barras. Solo cambia el encuadre vertical entre desktop y móvil. */
+.hero-bg-main {
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center 53%;   /* desktop */
+}
+
+@media (max-width: 768px) {
+  .hero-bg-main {
+    /* La imagen es más angosta (relación 0.39) que cualquier teléfono, así que
+       cover siempre recorta arriba/abajo (techo/piso generados) y NUNCA los
+       lados: las chicas de las orillas se ven completas. */
+    background-position: center 50%;
+  }
+}
