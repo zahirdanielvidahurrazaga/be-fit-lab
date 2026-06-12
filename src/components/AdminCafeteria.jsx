@@ -27,7 +27,12 @@ function PhotoButton({ imageUrl, onUploaded, size = 64, round = '14px' }) {
     setBusy(true);
     const { url, error } = await uploadCafeImage(file);
     setBusy(false);
-    if (error) { alert('No se pudo subir la imagen.'); return; }
+    if (error) {
+      console.error('[cafe] upload error:', error);
+      const msg = error?.message || error?.error || (typeof error === 'string' ? error : 'Error desconocido');
+      alert('No se pudo subir la imagen.\n\nMotivo: ' + msg);
+      return;
+    }
     onUploaded(url);
   };
   return (

@@ -76,7 +76,11 @@ manifest ya habilita `READ_WEIGHT` + `READ_BODY_FAT`.
 - **Nutrición**, **Cumpleaños** (calendario mensual), **Insignias** (reglas: TOTAL_CLASSES, DIFFERENT_COACHES, WEEKLY_CLASSES, PROFILE_COMPLETE, MANUAL).
 - Info estudio: Blvrd 22 Sur 5123, Villa Carmel, 72567 Puebla. Tel/WhatsApp +52 221 266 4253. IG @befit.lab. Mapa embebido (requiere `frame-src` de google/openstreetmap en el CSP de `index.html`).
 
-## Estado actual (última sesión: 2026-06-07)
+## Estado actual (última sesión: 2026-06-11)
+- ✅ **Fix subida de fotos en Admin → Disciplinas (y cafetería)**: el bucket público dejaba LEER pero no SUBIR porque nunca se crearon las políticas de `storage.objects`. Nuevo script idempotente `supabase/storage_policies.sql` crea los buckets `disciplines` y `cafe-products` (públicos) + políticas RLS: lectura pública, escribir/actualizar/borrar solo `role='ADMIN'`. Corrido en Supabase, subida confirmada OK.
+- Los `alert` de subida en `AdminDisciplinas.jsx` y `AdminCafeteria.jsx` ahora muestran el motivo real del error (antes era mudo) + `console.error`.
+
+## Estado anterior (sesión: 2026-06-07)
 - **Mudanza del proyecto**: Por problemas de sincronización con OneDrive, el proyecto se movió de manera definitiva a `C:\proyectos\be-fit-lab`.
 - **Icono de Android perfecto**: Se resolvió el problema del recorte del logo en Android Adaptive Icons. Usando un durazno aislado provisto por el usuario, se creó el script `pad_icon.cjs` para centrar el icono a 600x600 dentro de un lienzo de 1024x1024, evitando que la máscara circular/redondeada de Android corte los bordes.
 - **Preparación para Google Play Console**: 
