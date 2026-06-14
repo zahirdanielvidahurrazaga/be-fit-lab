@@ -6,6 +6,28 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
+## ⏭️ PRÓXIMA SESIÓN (retomar 2026-06-14): pasar Stripe a LIVE
+**Contexto:** la app se va a ENTREGAR. El **2026-06-13 se limpió toda la base para entrega** (ver abajo). Falta el último paso: **Stripe de TEST → LIVE**.
+
+**Estado de Stripe hoy:** claves en TEST. `VITE_STRIPE_PUBLISHABLE_KEY = pk_test_...` (en `.env`) se **hornea en el build** y se usa en `src/App.jsx:104` para `CapStripe.initialize`. Las funciones server usan secrets de Supabase. Webhook = edge function `stripe-webhook`.
+
+**Pasos para LIVE (en orden):**
+1. **Stripe dashboard (modo Live):** obtener `pk_live_...` y `sk_live_...`. Crear un **webhook nuevo en modo Live** → URL `https://fifaowaiokauhuqklzwe.supabase.co/functions/v1/stripe-webhook`, eventos de pago (checkout.session.completed, payment_intent.succeeded, etc.) → copiar el `whsec_...` de producción.
+2. **Verificar nombres exactos** de los secrets que leen las funciones (grep `Deno.env.get` en `supabase/functions/stripe-*` y `stripe-webhook`) — probablemente `STRIPE_SECRET_KEY` y `STRIPE_WEBHOOK_SECRET`.
+3. **Supabase secrets (server):** `supabase secrets set STRIPE_SECRET_KEY=sk_live_... STRIPE_WEBHOOK_SECRET=whsec_live...` (token: `$env:SUPABASE_ACCESS_TOKEN="sbp_..."`). Los secrets se leen en runtime; redeploy no es estrictamente necesario pero conviene `functions deploy` si hubo cambios.
+4. **`.env`:** `VITE_STRIPE_PUBLISHABLE_KEY = pk_live_...`.
+5. **Web (PWA):** `npm run build` → `git push` (Cloudflare despliega).
+6. **Nativo (obligatorio porque la pk va horneada):** `npm run build && npx cap sync` → **iOS** nuevo build + subir a App Store; **Android** (otra PC) nuevo AAB (bump `versionCode`/`versionName`) + subir a Play Store.
+7. **Probar un cobro real chico** end-to-end (cafetería o membresía) y confirmar que el webhook Live registra el `sale`/pedido.
+- 💡 Opción futura para no rebuildear nativo en cada cambio de clave: que la app lea la publishable key en runtime desde una edge function en vez de hornearla.
+
+## ✅ Limpieza de entrega (2026-06-13)
+Base de datos del proyecto `fifaowaiokauhuqklzwe` limpiada para entrega:
+- **0 cuentas** (se borraron las 35 de `auth.users` + perfiles). La **dueña creará su cuenta** y se le pone rol `ADMIN` a mano desde Supabase (tabla `users.role`).
+- Borrado: todo lo transaccional/agenda (cafe_orders, reservations, classes, sales, notification_logs, body_measurements, progress_photos, nutrition_plans/meal_plan_days, event_registrations, device_tokens, etc.).
+- **Conservado (catálogo/contenido):** `disciplines` (25), cafetería (`cafe_products`/`option_groups`/`options`), `badges_config` (8), `class_categories`/`class_templates`, `events` (4), `recipes`/`ingredients`.
+- **Storage:** `progress-photos` vacío (cascada al borrar usuarios) y el único `.pkpass` de prueba borrado; se conservaron las imágenes de marca de `wallet-passes` (`befit-hero*`, `befit-logo.png`, `befit-mark.png`) y los buckets `cafe-products`/`disciplines`/`Video`. ⚠️ NO usar "Empty bucket" en `wallet-passes`: esas imágenes las necesita la edge function `generate-wallet-pass` para el arte del pase.
+
 ## Stack
 - **Front:** React 18 + Vite + React Router. Animaciones con **framer-motion** (+ gsap en landing).
 - **Nativo:** Capacitor (iOS + Android). Plugins: camera, push-notifications, local-notifications, preferences, app, browser, calendar, `@capacitor-community/stripe`, `@capgo/capacitor-health`.
