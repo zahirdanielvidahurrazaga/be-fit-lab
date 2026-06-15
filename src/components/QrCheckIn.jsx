@@ -46,24 +46,49 @@ export default function QrCheckIn({ sideContent = null }) {
   // Mantener el input enfocado para que el lector siempre escriba ahí.
   useEffect(() => { qrInputRef.current?.focus(); }, []);
 
-  // Próxima clase de hoy (la que se está cobrando/checando). Misma lógica de
-  // filtrado que el panel admin: por fecha exacta o por día de semana recurrente.
-  const nextClass = useMemo(() => {
+  // Reloj en vivo (1s) para el contador de la ventana de check-in.
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Ventana de check-in por clase: abre 15 min ANTES y cierra 10 min DESPUÉS
+  // de la hora de inicio. Estados: 'open' (abierto, cuenta al cierre),
+  // 'standby' (en espera, cuenta a la apertura de la siguiente), 'closed'.
+  const checkin = useMemo(() => {
     const todayStr = todayLocalStr();
     const dow = new Date(todayStr + 'T12:00:00').getDay();
     const todays = (globalClasses || []).filter(c =>
       c.date === todayStr || (!c.date && (c.day === dow || c.day === String(dow)))
     );
     const withDt = todays
-      .map(c => ({ c, dt: classDateTime(todayStr, c.time) }))
-      .filter(x => x.dt)
-      .sort((a, b) => a.dt - b.dt);
+      .map(c => ({ c, start: classDateTime(todayStr, c.time)?.getTime() }))
+      .filter(x => x.start)
+      .sort((a, b) => a.start - b.start);
     if (!withDt.length) return null;
-    const now = Date.now();
-    // La próxima por empezar; con 1h de gracia para una clase en curso.
-    const upcoming = withDt.find(x => x.dt.getTime() + 60 * 60 * 1000 >= now);
-    return (upcoming || withDt[withDt.length - 1]).c;
-  }, [globalClasses]);
+
+    const OPEN_BEFORE = 15 * 60 * 1000;
+    const CLOSE_AFTER = 10 * 60 * 1000;
+
+    // ¿Hay una clase con la ventana abierta ahora? (la de cierre más próximo)
+    const active = withDt.find(x => now >= x.start - OPEN_BEFORE && now <= x.start + CLOSE_AFTER);
+    if (active) return { cls: active.c, mode: 'open', target: active.start + CLOSE_AFTER };
+
+    // En espera: la siguiente cuya ventana aún no abre.
+    const next = withDt.find(x => now < x.start - OPEN_BEFORE);
+    if (next) return { cls: next.c, mode: 'standby', target: next.start - OPEN_BEFORE };
+
+    // Todas las ventanas del día ya cerraron.
+    return { cls: withDt[withDt.length - 1].c, mode: 'closed', target: null };
+  }, [globalClasses, now]);
+
+  const remaining = checkin?.target ? Math.max(0, checkin.target - now) : 0;
+  const fmtRemaining = (ms) => {
+    const s = Math.floor(ms / 1000);
+    if (s >= 3600) return `${Math.floor(s / 3600)}h ${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}m`;
+    return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  };
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -74,6 +99,21 @@ export default function QrCheckIn({ sideContent = null }) {
     e.preventDefault();
     const code = scannedQR.trim();
     if (code === '') return;
+
+    // Solo se permite el check-in dentro de la ventana abierta de la clase
+    // (15 min antes → 10 min después). Si hay clases hoy pero la ventana no está
+    // abierta, se rechaza con aviso. Si no hay clases hoy, no se restringe.
+    if (checkin && checkin.mode !== 'open') {
+      showToast(
+        checkin.mode === 'standby'
+          ? `Check-in en espera. Abre en ${fmtRemaining(remaining)}.`
+          : 'El check-in de esta clase ya cerró.',
+        'error'
+      );
+      setScannedQR('');
+      qrInputRef.current?.focus();
+      return;
+    }
 
     // Cooldown de 1h por alumna para evitar doble escaneo accidental.
     const lastScanStr = localStorage.getItem(`last_checkin_${code}`);
@@ -109,23 +149,42 @@ export default function QrCheckIn({ sideContent = null }) {
 
   return (
     <div>
-      {/* PRÓXIMA CLASE — para cuál se está haciendo el check-in */}
-      {nextClass && (
+      {/* CLASE EN CHECK-IN + ventana (contador a la derecha) */}
+      {checkin && (
         <div style={{
-          display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '18px',
-          background: 'linear-gradient(135deg, var(--primary), var(--accent))', color: 'white',
-          borderRadius: '20px', padding: '16px 20px', boxShadow: '0 10px 26px rgba(255,145,77,0.28)'
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px', marginBottom: '18px',
+          background: checkin.mode === 'open' ? 'linear-gradient(135deg, var(--primary), var(--accent))' : '#564F49',
+          color: 'white', borderRadius: '20px', padding: '16px 20px',
+          boxShadow: checkin.mode === 'open' ? '0 10px 26px rgba(255,145,77,0.28)' : '0 10px 26px rgba(0,0,0,0.12)'
         }}>
-          <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Clock size={22} color="white" />
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700, opacity: 0.85 }}>Check-in para la clase</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 900, fontFamily: 'var(--font-display)', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {nextClass.title}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+            <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Clock size={22} color="white" />
             </div>
-            <div style={{ fontSize: '0.82rem', fontWeight: 600, opacity: 0.92, marginTop: '2px' }}>
-              {nextClass.time}{nextClass.instructor ? ` · ${nextClass.instructor}` : ''}
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700, opacity: 0.85 }}>
+                {checkin.mode === 'open' ? 'Check-in abierto' : checkin.mode === 'standby' ? 'Próxima clase' : 'Check-in cerrado'}
+              </div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 900, fontFamily: 'var(--font-display)', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {checkin.cls.title}
+              </div>
+              <div style={{ fontSize: '0.82rem', fontWeight: 600, opacity: 0.92, marginTop: '2px' }}>
+                {checkin.cls.time}{checkin.cls.instructor ? ` · ${checkin.cls.instructor}` : ''}
+              </div>
+            </div>
+          </div>
+
+          {/* CONTADOR */}
+          <div style={{
+            flexShrink: 0, textAlign: 'center', borderRadius: '14px', padding: '8px 14px', minWidth: '92px',
+            background: checkin.mode === 'open' ? 'white' : 'rgba(255,255,255,0.16)',
+            color: checkin.mode === 'open' ? 'var(--primary)' : 'white'
+          }}>
+            <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800, opacity: checkin.mode === 'open' ? 0.7 : 0.85 }}>
+              {checkin.mode === 'open' ? 'Cierra en' : checkin.mode === 'standby' ? 'Abre en' : 'En espera'}
+            </div>
+            <div style={{ fontSize: '1.35rem', fontWeight: 900, fontFamily: 'var(--font-display)', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
+              {checkin.mode === 'closed' ? '—' : fmtRemaining(remaining)}
             </div>
           </div>
         </div>
