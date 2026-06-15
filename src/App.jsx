@@ -26,6 +26,7 @@ const Cafeteria = lazy(() => import('./pages/Cafeteria'));
 const Cumpleanos = lazy(() => import('./pages/Cumpleanos'));
 const Eventos = lazy(() => import('./pages/Eventos'));
 const Barista = lazy(() => import('./pages/Barista'));
+const Recepcion = lazy(() => import('./pages/Recepcion'));
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useLocalNotifications } from './hooks/useLocalNotifications';
 import { usePushNotifications } from './hooks/usePushNotifications';
@@ -75,6 +76,7 @@ const ProtectedRoute = ({ children, requireRole }) => {
     if (role === 'ADMIN') return <Navigate to="/admin" replace />;
     if (role === 'COACH') return <Navigate to="/coach" replace />;
     if (role === 'BARISTA') return <Navigate to="/barista" replace />;
+    if (role === 'RECEPCION') return <Navigate to="/recepcion" replace />;
     return <Navigate to="/portal" replace />;
   }
 
@@ -158,6 +160,7 @@ function App() {
 
           {/* Barista / Recepción */}
           <Route path="/barista" element={<ProtectedRoute requireRole={['BARISTA', 'ADMIN']}><Barista /></ProtectedRoute>} />
+          <Route path="/recepcion" element={<ProtectedRoute requireRole={['RECEPCION', 'ADMIN']}><Recepcion /></ProtectedRoute>} />
         </Routes>
         </Suspense>
         <AppTour />

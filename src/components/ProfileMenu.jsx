@@ -15,6 +15,8 @@ function ProfileMenu() {
   const statusLabel =
     role === 'ADMIN' ? 'Administradora'
     : role === 'COACH' ? 'Coach'
+    : role === 'BARISTA' ? 'Barista'
+    : role === 'RECEPCION' ? 'Recepción'
     : membershipStatus === 'ACTIVE' ? 'Socia Activa'
     : 'Socia';
 

@@ -13,6 +13,7 @@ import AdminReportes from '../components/AdminReportes';
 import AdminClientas from '../components/AdminClientas';
 import AdminNutricion from '../components/AdminNutricion';
 import AdminEventos from '../components/AdminEventos';
+import QrCheckIn from '../components/QrCheckIn';
 import ScheduleStoryExport from '../components/ScheduleStoryExport';
 import AdminCategoryManager from '../components/AdminCategoryManager';
 import AdminWeekTemplates from '../components/AdminWeekTemplates';
@@ -43,13 +44,6 @@ function Admin() {
   const currentDay = new Date().getDay(); // 0 = Dom, 1 = Lun, ... 6 = Sab
   const [selectedDay, setSelectedDay] = useState(currentDay);
   
-  // QR Scanner
-  const qrInputRef = useRef(null);
-  const [scannedQR, setScannedQR] = useState('');
-  const [qrMessage, setQrMessage] = useState('');
-  const [scannedClient, setScannedClient] = useState(null);
-  const [scanLog, setScanLog] = useState([]);
-
   // Inscribir
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
@@ -171,50 +165,6 @@ function Admin() {
 
   const [selectedAlumnaId, setSelectedAlumnaId] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('Plan Fit');
-
-  useEffect(() => {
-    if (activeTab === 'mostrador' && qrInputRef.current) {
-      qrInputRef.current.focus();
-    }
-  }, [activeTab]);
-
-  const handleQRScan = async (e) => {
-    e.preventDefault();
-    if (scannedQR.trim() !== '') {
-      // Evitar doble escaneo accidental (cooldown de 1 hora por usuaria)
-      const lastScanStr = localStorage.getItem(`last_checkin_${scannedQR.trim()}`);
-      if (lastScanStr && (Date.now() - parseInt(lastScanStr)) < 1000 * 60 * 60) {
-        showToast("Esta alumna ya registró asistencia hace poco.", "error");
-        setQrMessage("Ya registrado recientemente");
-        setScannedQR('');
-        return;
-      }
-
-      const result = await checkInClient(scannedQR.trim());
-      if (result.success) {
-         localStorage.setItem(`last_checkin_${scannedQR.trim()}`, Date.now().toString());
-      }
-      setQrMessage(result.message);
-      setScannedClient(result.clientInfo);
-      setScannedQR('');
-
-      if (result.clientInfo) {
-        setScanLog(prev => [{
-          ...result.clientInfo,
-          message: result.message,
-          success: result.success,
-          scannedAt: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
-        }, ...prev]);
-      }
-
-      // Limpiar panel de último scan después de 8s, el log persiste
-      setTimeout(() => {
-        setScannedClient(null);
-        setQrMessage('');
-        if (activeTab === 'mostrador' && qrInputRef.current) qrInputRef.current.focus();
-      }, 8000);
-    }
-  };
 
   const handleInscribir = async () => {
     const nombre = newName.trim(), correo = newEmail.trim();
@@ -626,159 +576,20 @@ function Admin() {
             {/* ============ TAB: MOSTRADOR (QR + métricas + log) ============ */}
             {activeTab === 'mostrador' && (
               <motion.div key="mostrador" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
-                <div className="admin-double-column">
-
-                  {/* LECTOR QR — siempre muestra el escáner */}
-                  <section style={{ width: '100%' }}>
-                    <div className="wallet-card" style={{
-                      background: 'linear-gradient(135deg, #1A1C1E, #2C302E)',
-                      padding: '40px 20px', textAlign: 'center', position: 'relative', overflow: 'hidden',
-                      boxShadow: '0 20px 40px rgba(0,0,0,0.15)', border: '1px solid rgba(255,255,255,0.05)',
-                      borderRadius: '24px', cursor: 'pointer'
-                    }} onClick={() => qrInputRef.current?.focus()}>
-                      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '2px', background: 'var(--accent)', opacity: 0.5, boxShadow: '0 0 15px var(--accent)', animation: 'scanLine 3s infinite linear' }} />
-                      <div style={{ width: '80px', height: '80px', border: '2px dashed rgba(255,255,255,0.3)', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px', position: 'relative' }}>
-                        <div style={{ position: 'absolute', top: '-2px', left: '-2px', width: '20px', height: '20px', borderTop: '2px solid var(--accent)', borderLeft: '2px solid var(--accent)', borderTopLeftRadius: '24px' }} />
-                        <div style={{ position: 'absolute', top: '-2px', right: '-2px', width: '20px', height: '20px', borderTop: '2px solid var(--accent)', borderRight: '2px solid var(--accent)', borderTopRightRadius: '24px' }} />
-                        <div style={{ position: 'absolute', bottom: '-2px', left: '-2px', width: '20px', height: '20px', borderBottom: '2px solid var(--accent)', borderLeft: '2px solid var(--accent)', borderBottomLeftRadius: '24px' }} />
-                        <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '20px', height: '20px', borderBottom: '2px solid var(--accent)', borderRight: '2px solid var(--accent)', borderBottomRightRadius: '24px' }} />
-                        <QrCode size={35} color="white" opacity={0.8} />
-                      </div>
-                      <h2 style={{ fontSize: '1.4rem', color: 'white', fontFamily: 'var(--font-display)', margin: 0, letterSpacing: '0.05em' }}>Escanear QR</h2>
-                      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', margin: '8px 0 0', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Aproximar código de alumna</p>
-                      <form onSubmit={handleQRScan} style={{ position: 'absolute', top: '-1000px', left: '-1000px' }}>
-                        <input ref={qrInputRef} type="text" value={scannedQR} onChange={(e) => setScannedQR(e.target.value)} autoFocus autoComplete="off" />
-                      </form>
+                <QrCheckIn sideContent={
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <div style={{ padding: '20px', background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
+                      <div style={{ color: 'var(--primary)', marginBottom: '12px', background: 'rgba(255,145,77,0.1)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={20} /></div>
+                      <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{totalAlumnasHoy}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, marginTop: '5px' }}>Reservas ({daysOfWeek.find(d=>d.num===selectedDay)?.label})</div>
                     </div>
-                  </section>
-
-                  {/* COLUMNA DERECHA: último scan + métricas */}
-                  <section style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '100%' }}>
-
-                    {/* Panel del último scan */}
-                    <AnimatePresence>
-                      {scannedClient && (
-                        <motion.div
-                          key="client-panel"
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          style={{
-                            background: 'white', borderRadius: '24px',
-                            boxShadow: '0 10px 30px rgba(34,197,94,0.12)',
-                            border: '1px solid rgba(34,197,94,0.2)',
-                            padding: '20px', display: 'flex', alignItems: 'center', gap: '16px'
-                          }}
-                        >
-                          <div style={{
-                            width: '52px', height: '52px', borderRadius: '50%', flexShrink: 0,
-                            background: 'linear-gradient(135deg, var(--primary), var(--accent))',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '1.1rem', fontWeight: 900, color: 'white'
-                          }}>
-                            {scannedClient.name.substring(0, 2).toUpperCase()}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--black)', fontFamily: 'var(--font-display)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {scannedClient.name}
-                            </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginTop: '2px' }}>
-                              {scannedClient.plan} · {scannedClient.classesRemaining >= 9000 ? '∞' : scannedClient.classesRemaining} clases restantes
-                            </div>
-                            <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', color: '#16a34a', fontWeight: 700 }}>
-                              <CheckCircle2 size={13} />
-                              {qrMessage}
-                            </div>
-                          </div>
-                          <div style={{
-                            flexShrink: 0, padding: '5px 10px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 800,
-                            background: scannedClient.status === 'ACTIVE' ? 'rgba(34,197,94,0.1)' : 'rgba(255,77,77,0.1)',
-                            color: scannedClient.status === 'ACTIVE' ? '#16a34a' : '#dc2626',
-                            textTransform: 'uppercase', letterSpacing: '0.05em'
-                          }}>
-                            {scannedClient.status === 'ACTIVE' ? 'Activa' : 'Inactiva'}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    {/* Métricas */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                      <div style={{ padding: '20px', background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
-                        <div style={{ color: 'var(--primary)', marginBottom: '12px', background: 'rgba(255,145,77,0.1)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={20} /></div>
-                        <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{totalAlumnasHoy}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, marginTop: '5px' }}>Reservas ({daysOfWeek.find(d=>d.num===selectedDay)?.label})</div>
-                      </div>
-                      <div style={{ padding: '20px', background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
-                        <div style={{ color: 'var(--accent)', marginBottom: '12px', background: 'rgba(238,186,137,0.2)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Activity size={20} /></div>
-                        <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{avgOccupancy}<span style={{fontSize: '1.2rem', color: 'var(--on-surface-variant)'}}>%</span></div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, marginTop: '5px' }}>Ocupación Prom.</div>
-                      </div>
+                    <div style={{ padding: '20px', background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
+                      <div style={{ color: 'var(--accent)', marginBottom: '12px', background: 'rgba(238,186,137,0.2)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Activity size={20} /></div>
+                      <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{avgOccupancy}<span style={{fontSize: '1.2rem', color: 'var(--on-surface-variant)'}}>%</span></div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, marginTop: '5px' }}>Ocupación Prom.</div>
                     </div>
-                  </section>
-                </div>
-
-                {/* LOG DE ASISTENCIA DEL DÍA */}
-                {scanLog.length > 0 && (
-                  <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: '30px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                      <h2 style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)', margin: 0 }}>
-                        Asistencia de hoy
-                      </h2>
-                      <div style={{ background: 'rgba(255,145,77,0.1)', color: 'var(--primary)', borderRadius: '10px', padding: '4px 12px', fontSize: '0.75rem', fontWeight: 800 }}>
-                        {scanLog.length} {scanLog.length === 1 ? 'alumna' : 'alumnas'}
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {scanLog.map((entry, i) => (
-                        <div key={i} style={{
-                          background: 'white', borderRadius: '18px', padding: '14px 18px',
-                          display: 'flex', alignItems: 'center', gap: '14px',
-                          boxShadow: '0 4px 15px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.04)'
-                        }}>
-                          {/* Avatar */}
-                          <div style={{
-                            width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0,
-                            background: entry.success
-                              ? 'linear-gradient(135deg, var(--primary), var(--accent))'
-                              : 'rgba(255,77,77,0.15)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '0.85rem', fontWeight: 900,
-                            color: entry.success ? 'white' : '#dc2626'
-                          }}>
-                            {entry.name ? entry.name.substring(0, 2).toUpperCase() : '??'}
-                          </div>
-
-                          {/* Info */}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--black)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {entry.name || 'Desconocido'}
-                            </div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginTop: '2px' }}>
-                              {entry.plan || 'Sin plan'} · {entry.classesRemaining == null ? '—' : (entry.classesRemaining >= 9000 ? '∞' : entry.classesRemaining)} clases restantes
-                            </div>
-                          </div>
-
-                          {/* Tiempo + estado */}
-                          <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--on-surface-variant)' }}>
-                              {entry.scannedAt}
-                            </div>
-                            <div style={{
-                              marginTop: '4px', fontSize: '0.65rem', fontWeight: 800,
-                              padding: '3px 8px', borderRadius: '8px', textTransform: 'uppercase',
-                              background: entry.success ? 'rgba(34,197,94,0.1)' : 'rgba(255,77,77,0.1)',
-                              color: entry.success ? '#16a34a' : '#dc2626'
-                            }}>
-                              {entry.success ? 'Check-in ✓' : 'Sin reserva'}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </motion.section>
-                )}
+                  </div>
+                } />
               </motion.div>
             )}
   

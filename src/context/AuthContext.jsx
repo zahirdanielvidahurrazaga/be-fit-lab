@@ -1174,7 +1174,8 @@ export const AuthProvider = ({ children }) => {
           phone: userObj.phone || 'N/A',
           plan: userObj.membership_plan || 'Sin Plan',
           classesRemaining: userObj.classes_remaining || 0,
-          status: userObj.membership_status || 'INACTIVE'
+          status: userObj.membership_status || 'INACTIVE',
+          avatar: userObj.avatar_url || null
         };
       } else {
         // Buscar directo en BD
@@ -1192,7 +1193,8 @@ export const AuthProvider = ({ children }) => {
             phone: directUser.phone || 'N/A',
             plan: directUser.membership_plan || 'Sin Plan',
             classesRemaining: directUser.classes_remaining || 0,
-            status: directUser.membership_status || 'INACTIVE'
+            status: directUser.membership_status || 'INACTIVE',
+            avatar: directUser.avatar_url || null
           };
         }
       }

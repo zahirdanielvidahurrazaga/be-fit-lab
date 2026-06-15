@@ -275,7 +275,7 @@ function Cafeteria() {
             enableApplePay: isIOS, 
             applePayMerchantId: isIOS ? 'merchant.com.befitlab.app' : undefined, 
             enableGooglePay: isAndroid,
-            GooglePayIsTesting: true,
+            GooglePayIsTesting: false,
             countryCode: 'MX' 
           });
         } catch (e) {

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Cake, Crown, UserX, UserCheck, Shield, Coffee, Dumbbell, ChevronDown, Phone } from 'lucide-react';
+import { Search, Cake, Crown, UserX, UserCheck, Shield, Coffee, Dumbbell, ChevronDown, Phone, QrCode } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { PLANS } from '../lib/plans';
@@ -12,6 +12,7 @@ const ROLES = [
   { value: 'CLIENT', label: 'Clienta', Icon: Dumbbell },
   { value: 'COACH', label: 'Coach', Icon: Crown },
   { value: 'BARISTA', label: 'Barista', Icon: Coffee },
+  { value: 'RECEPCION', label: 'Recepción', Icon: QrCode },
   { value: 'ADMIN', label: 'Admin', Icon: Shield },
 ];
 const roleMeta = (r) => ROLES.find(x => x.value === r) || ROLES[0];
@@ -153,7 +154,7 @@ export default function AdminClientas() {
     let arr = users || [];
     if (filter === 'active') arr = arr.filter(u => u.membership_status === 'ACTIVE' && u.role === 'CLIENT');
     else if (filter === 'inactive') arr = arr.filter(u => u.membership_status !== 'ACTIVE' && u.role === 'CLIENT');
-    else if (filter === 'staff') arr = arr.filter(u => ['COACH', 'BARISTA', 'ADMIN'].includes(u.role));
+    else if (filter === 'staff') arr = arr.filter(u => ['COACH', 'BARISTA', 'RECEPCION', 'ADMIN'].includes(u.role));
     if (planFilter !== 'all') arr = arr.filter(u => (u.membership_plan || '') === planFilter && u.membership_status === 'ACTIVE');
     const s = q.trim().toLowerCase();
     if (s) arr = arr.filter(u => (u.full_name || '').toLowerCase().includes(s) || (u.email || '').toLowerCase().includes(s));
@@ -167,7 +168,7 @@ export default function AdminClientas() {
       total: all.length,
       active: clients.filter(u => u.membership_status === 'ACTIVE').length,
       clients: clients.length,
-      staff: all.filter(u => ['COACH', 'BARISTA', 'ADMIN'].includes(u.role)).length,
+      staff: all.filter(u => ['COACH', 'BARISTA', 'RECEPCION', 'ADMIN'].includes(u.role)).length,
     };
   }, [users]);
 
