@@ -10,14 +10,23 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 **iOS ✅ ya subido:** 1.1.0 (build 3) a App Store Connect el 2026-06-15.
 **Pendiente: AAB de Android** con todo lo del 2026-06-15 (Stripe LIVE, Recepción, deep links de auth, dominio befitlab.app). Ya dejé el bump en el repo → `versionCode 7` / `versionName 2.3.0` en `android/app/build.gradle`.
 
-**Runbook Android (en la otra PC):**
-1. `git pull origin main` (trae TODO el código nuevo + el versionCode 7).
-2. `npm install` (por si hay deps nuevas).
-3. `npm run build` → `npx cap sync android`.
-4. Abrir **Android Studio** (`npx cap open android`). El `versionCode` ya está en 7 (no hace falta tocarlo, salvo que 7 ya estuviera subido → entonces 8, 9…).
-5. **Build → Generate Signed Bundle / APK → Android App Bundle (.aab)** → usar el **keystore de release** de siempre.
-6. Subir el `.aab` a **Google Play Console**.
-- ⚠️ **CAUSA #1 de "no se subían las versiones": el `versionCode` debe ser MAYOR al último ya subido a Play.** Si Play rechaza con "version code N already used", solo súbele +1 al `versionCode` en `build.gradle` y regenera el AAB.
+**📋 REQUERIMIENTO PARA CLAUDE (cuando el usuario pida "subir Android" en la otra PC):**
+Ejecuta TÚ (Claude) automáticamente los pasos de CLI; el usuario solo hace los de GUI que tú no puedes. No pidas permiso paso a paso, hazlos y reporta.
+
+**→ Pasos que HACE CLAUDE (CLI):**
+1. `git pull origin main` (trae el código nuevo + el `versionCode` ya bumpeado).
+2. `npm install`.
+3. `npm run build` (⚠️ en este entorno tarda ~14 min y el proceso vite queda colgado tras "✓ built" → mátalo con `pkill -f "vite build"`).
+4. `npx cap sync android`.
+5. Verifica/sube el `versionCode` en `android/app/build.gradle` si hace falta (debe ser MAYOR al último subido a Play).
+6. (Si el keystore/firma están configurados en gradle) puedes generar el AAB por CLI: `cd android && ./gradlew bundleRelease` → sale en `android/app/build/outputs/bundle/release/app-release.aab`. Si la firma NO está en gradle, deja que el usuario lo genere en Android Studio.
+7. `npx cap open android` para que el usuario tenga Android Studio listo.
+
+**→ Pasos que HACE EL USUARIO (GUI, Claude no puede):**
+- En Android Studio: **Build → Generate Signed Bundle / APK → Android App Bundle (.aab)** con el **keystore de release** (si no se generó por CLI).
+- Subir el `.aab` a **Google Play Console** y enviar a revisión.
+
+- ⚠️ **CAUSA #1 de "no se subían las versiones": el `versionCode` debe ser MAYOR al último ya subido a Play.** Si Play rechaza con "version code N already used", Claude le sube +1 al `versionCode` en `build.gradle`, regenera el AAB y el usuario re-sube.
 - ⚠️ El **hero del landing NO aplica a nativo** (la app redirige `/`→`/welcome`).
 
 **Opcional (smoke test):** un cobro real chico. El flujo NO cambia entre test/live (mismo código), pero confirma que `sk_live` + webhook Live **registran** el sale/pedido. Reembolsable. (Ya se probó el 2026-06-15: pedido quedó `paid` ✅.)
