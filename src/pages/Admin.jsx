@@ -297,20 +297,22 @@ function Admin() {
     fetchGlobalClasses(); // Refresh
   };
 
-  // Prellenar el form con una clase existente (para editar o duplicar)
-  const prefillFromClass = (c) => {
+  // Prellenar el form con una clase existente (para editar o duplicar).
+  // Al DUPLICAR (resetSpots) los lugares arrancan en el máximo (10) — la copia
+  // nace vacía; copiar c.spots arrastraría reservas de la clase original.
+  const prefillFromClass = (c, { resetSpots = false } = {}) => {
     setClassMode('single');
     setAddingCategory(false); setAddingLevel(false);
     setNewClass({
       title: c.title || '', time: c.time || '', instructor: c.instructor || '', coach_id: c.coach_id || '',
-      spots: c.spots ?? 10, level: c.level || 'Todos los niveles',
+      spots: resetSpots ? 10 : (c.spots ?? 10), level: c.level || 'Todos los niveles',
       category: c.category || 'Fuerza', category_color: resolveCatColor(c.category, c.category_color),
       description: c.description || '',
       date: c.date || todayStr, startDate: c.date || todayStr, endDate: c.date || todayStr, daysOfWeek: []
     });
   };
   const openEditClass = (c) => { prefillFromClass(c); setEditingClassId(c.id); };
-  const duplicateClass = (c) => { prefillFromClass(c); setEditingClassId(null); showToast('Clase copiada — ajusta fecha/hora y guarda', 'success'); };
+  const duplicateClass = (c) => { prefillFromClass(c, { resetSpots: true }); setEditingClassId(null); showToast('Clase copiada — ajusta fecha/hora/cupo y guarda', 'success'); };
   const cancelEdit = () => { setEditingClassId(null); setAddingCategory(false); setAddingLevel(false);
     setNewClass({ title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1', description: '', date: todayStr, startDate: todayStr, endDate: todayStr, daysOfWeek: [] }); };
 
