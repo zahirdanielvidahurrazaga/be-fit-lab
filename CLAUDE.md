@@ -6,9 +6,21 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
-## ⏭️ PRÓXIMA SESIÓN (retomar)
-**Pendiente principal:** **reconstruir y resubir iOS + Android** — junta TODO lo del 2026-06-15 (Stripe LIVE, rol Recepción, deep links de auth, dominio befitlab.app). El `cap sync` ya está hecho local. iOS: Archive en Xcode (bump build). Android (otra PC): bump `versionCode`/`versionName` + AAB.
-**Opcional (smoke test):** un cobro real chico end-to-end. El flujo NO cambia entre test/live (mismo código; solo cambian las claves), pero confirma que `sk_live` + webhook Live **registran** el sale/pedido. Reembolsable. Lo más fácil: un café desde la **web** (ya en LIVE) con tarjeta real → verificar en `cafe_orders`.
+## ⏭️ PRÓXIMA SESIÓN (retomar) — SUBIR ANDROID (en la OTRA PC)
+**iOS ✅ ya subido:** 1.1.0 (build 3) a App Store Connect el 2026-06-15.
+**Pendiente: AAB de Android** con todo lo del 2026-06-15 (Stripe LIVE, Recepción, deep links de auth, dominio befitlab.app). Ya dejé el bump en el repo → `versionCode 7` / `versionName 2.3.0` en `android/app/build.gradle`.
+
+**Runbook Android (en la otra PC):**
+1. `git pull origin main` (trae TODO el código nuevo + el versionCode 7).
+2. `npm install` (por si hay deps nuevas).
+3. `npm run build` → `npx cap sync android`.
+4. Abrir **Android Studio** (`npx cap open android`). El `versionCode` ya está en 7 (no hace falta tocarlo, salvo que 7 ya estuviera subido → entonces 8, 9…).
+5. **Build → Generate Signed Bundle / APK → Android App Bundle (.aab)** → usar el **keystore de release** de siempre.
+6. Subir el `.aab` a **Google Play Console**.
+- ⚠️ **CAUSA #1 de "no se subían las versiones": el `versionCode` debe ser MAYOR al último ya subido a Play.** Si Play rechaza con "version code N already used", solo súbele +1 al `versionCode` en `build.gradle` y regenera el AAB.
+- ⚠️ El **hero del landing NO aplica a nativo** (la app redirige `/`→`/welcome`).
+
+**Opcional (smoke test):** un cobro real chico. El flujo NO cambia entre test/live (mismo código), pero confirma que `sk_live` + webhook Live **registran** el sale/pedido. Reembolsable. (Ya se probó el 2026-06-15: pedido quedó `paid` ✅.)
 
 ## ✅ Sesión 2026-06-15 (Stripe LIVE + Recepción + correo de marca + dominio)
 **Stripe LIVE — HECHO:**
@@ -33,7 +45,13 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 - **`befitlab.app`** comprado en Cloudflare Registrar; web conectada como custom domain de Pages (**https://befitlab.app**, SSL OK). `be-fit-lab.pages.dev` sigue activo.
 - Supabase `site_url=https://befitlab.app`; redirect allow-list con `befitlab://auth-callback` + dominios web.
 - **Resend** SMTP propio: `befitlab.app` verificado (DKIM/SPF/DMARC vía Cloudflare). Supabase SMTP = `smtp.resend.com:465`, user `resend`, remitente **`hola@befitlab.app`** ("Be Fit Lab"). Límite 2/h → **30/h**. Plantillas de confirmación/recuperación con la marca (header degradado naranja→rosa). Prueba llegó a **inbox**.
-- ⚠️ La config de **Supabase Auth** se cambia por **Management API**: `PATCH https://api.supabase.com/v1/projects/fifaowaiokauhuqklzwe/config/auth` (token `sbp_` guardado en el keychain del CLI de Supabase).
+- ⚠️ La config de **Supabase Auth** se cambia por **Management API**: `PATCH https://api.supabase.com/v1/projects/fifaowaiokauhuqklzwe/config/auth` (token `sbp_` guardado en el keychain del CLI de Supabase). Las **plantillas de correo** (confirmación, recuperación, cambio de correo) están personalizadas con la marca por ahí mismo (header degradado naranja→rosa). ⚠️ La de **cambio de correo está "dormida"**: la app NO expone cambiar correo (`updateUser` solo se usa para contraseña), así que esa plantilla no se dispara salvo que se agregue la función o se cambie un correo desde el dashboard.
+
+**Entrega — HECHO:**
+- **iOS 1.1.0 (build 3)** subida a App Store Connect (2026-06-15).
+- **Android pendiente** (otra PC) — ver "PRÓXIMA SESIÓN" arriba. Repo ya con `versionCode 7`/`versionName 2.3.0`.
+- **BD limpiada para entrega otra vez**: se borraron las 4 cuentas de prueba de hoy (admin/cliente/coach@prueba.com + gmail) y su transaccional (clases, reserva, pedido de café, notifs) → **0 cuentas**. Catálogo intacto (disciplines 25, cafe_products 14, badges 8, events 4, recipes 2). La dueña crea su cuenta y se le pone `ADMIN` a mano.
+- **Fix Duplicar clase**: la copia arranca con cupo 10 (no arrastra lugares descontados).
 
 ## ✅ Limpieza de entrega (2026-06-13)
 Base de datos del proyecto `fifaowaiokauhuqklzwe` limpiada para entrega:
