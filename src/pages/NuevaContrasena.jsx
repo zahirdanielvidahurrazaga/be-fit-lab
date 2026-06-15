@@ -1,0 +1,104 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { Lock, Eye, EyeOff, CheckCircle2, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+// Pantalla para fijar una nueva contraseña tras abrir el enlace de recuperación.
+// La sesión de recovery la establece: en web detectSessionInUrl; en nativo el
+// handler de deep link (AuthDeepLinkHandler) antes de navegar aquí.
+export default function NuevaContrasena() {
+  const navigate = useNavigate();
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [show, setShow] = useState(false);
+  const [error, setError] = useState(null);
+  const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [hasSession, setHasSession] = useState(null); // null = verificando
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => { if (active) setHasSession(!!data.session); });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (active && session) setHasSession(true);
+    });
+    return () => { active = false; subscription?.unsubscribe(); };
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    if (password.length < 8) { setError('La contraseña debe tener al menos 8 caracteres.'); return; }
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/.test(password)) {
+      setError('Debe incluir mayúscula, minúscula y número.'); return;
+    }
+    if (password !== confirm) { setError('Las contraseñas no coinciden.'); return; }
+
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+    if (error) { setError(error.message); return; }
+    setDone(true);
+    setTimeout(() => navigate('/portal'), 1600);
+  };
+
+  return (
+    <div style={{ position: 'relative', width: '100%', minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'url("/fotos-hero/_DSC0444.jpg")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0.85) 100%)', backdropFilter: 'blur(8px)', zIndex: 0 }} />
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 20px', zIndex: 1 }}>
+        <div style={{ width: '100%', maxWidth: '380px', background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)', padding: '2rem 1.6rem', borderRadius: '28px', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
+
+          {done ? (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+                <CheckCircle2 size={34} color="#16a34a" />
+              </div>
+              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.7rem', color: '#1A1C1E' }}>¡Contraseña actualizada!</h1>
+              <p style={{ color: '#4B5563', marginTop: '6px' }}>Entrando…</p>
+            </div>
+          ) : hasSession === false ? (
+            <div style={{ textAlign: 'center' }}>
+              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.7rem', color: '#1A1C1E', marginBottom: '0.5rem' }}>Enlace no válido</h1>
+              <p style={{ color: '#4B5563', lineHeight: 1.5 }}>El enlace de recuperación no es válido o ya expiró. Solicita uno nuevo desde "¿Olvidaste tu contraseña?".</p>
+              <button onClick={() => navigate('/login')} className="glass-button-dark" style={{ width: '100%', marginTop: '1.4rem' }}>Ir a iniciar sesión</button>
+            </div>
+          ) : (
+            <>
+              <div style={{ textAlign: 'center', marginBottom: '1.6rem' }}>
+                <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: '#1A1C1E', marginBottom: '0.4rem' }}>Nueva contraseña</h1>
+                <p style={{ color: '#4B5563', fontWeight: 500 }}>Crea una contraseña segura para tu cuenta.</p>
+              </div>
+
+              {error && (
+                <div style={{ background: '#FEE2E2', color: '#EF4444', padding: '0.9rem', borderRadius: '8px', marginBottom: '1.2rem', fontSize: '0.88rem', textAlign: 'center' }}>{error}</div>
+              )}
+
+              <form onSubmit={handleSubmit}>
+                <div className="premium-input-group">
+                  <label>Nueva contraseña</label>
+                  <Lock size={20} className="premium-input-icon" />
+                  <input type={show ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="premium-input" style={{ paddingRight: '3rem' }} autoComplete="new-password" required />
+                  <button type="button" onClick={() => setShow(v => !v)} style={{ position: 'absolute', right: '1rem', bottom: '13px', zIndex: 2, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--on-surface-variant)', opacity: 0.7, padding: 0, display: 'flex', alignItems: 'center' }} tabIndex={-1} aria-label="Mostrar contraseña">
+                    {show ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+
+                <div className="premium-input-group">
+                  <label>Confirmar contraseña</label>
+                  <Lock size={20} className="premium-input-icon" />
+                  <input type={show ? 'text' : 'password'} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" className="premium-input" autoComplete="new-password" required />
+                </div>
+
+                <button type="submit" className="glass-button-dark" style={{ width: '100%', marginTop: '1.4rem' }} disabled={loading}>
+                  {loading ? 'Guardando…' : 'Guardar contraseña'} <ArrowRight size={20} />
+                </button>
+              </form>
+            </>
+          )}
+
+        </div>
+      </motion.div>
+    </div>
+  );
+}

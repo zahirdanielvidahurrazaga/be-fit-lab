@@ -1,9 +1,10 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { Stripe as CapStripe } from '@capacitor-community/stripe';
+import { supabase } from './lib/supabase';
 
 // Code-splitting por ruta: cada página se descarga solo cuando se visita.
 // Esto reduce drásticamente el JS del primer load (antes todo iba en un bundle).
@@ -27,6 +28,7 @@ const Cumpleanos = lazy(() => import('./pages/Cumpleanos'));
 const Eventos = lazy(() => import('./pages/Eventos'));
 const Barista = lazy(() => import('./pages/Barista'));
 const Recepcion = lazy(() => import('./pages/Recepcion'));
+const NuevaContrasena = lazy(() => import('./pages/NuevaContrasena'));
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useLocalNotifications } from './hooks/useLocalNotifications';
 import { usePushNotifications } from './hooks/usePushNotifications';
@@ -49,6 +51,42 @@ const ScrollToTop = () => {
     window.scrollTo(0, 0);
   }, [pathname]);
 
+  return null;
+};
+
+// Procesa los deep links de Supabase Auth en nativo (confirmación de correo y
+// recuperación de contraseña): befitlab://auth-callback?flow=...&code=...
+// (o tokens en el hash). Establece la sesión y navega según el flujo.
+const AuthDeepLinkHandler = () => {
+  const navigate = useNavigate();
+  React.useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let listener;
+    const process = async (url) => {
+      if (!url || !url.includes('auth-callback')) return;
+      try { await Browser.close(); } catch (e) { /* noop */ }
+      try {
+        const u = new URL(url);
+        const hp = new URLSearchParams(u.hash?.startsWith('#') ? u.hash.slice(1) : '');
+        const code = u.searchParams.get('code');
+        const access_token = hp.get('access_token');
+        const refresh_token = hp.get('refresh_token');
+        const flow = u.searchParams.get('flow') || hp.get('type');
+        if (code) {
+          await supabase.auth.exchangeCodeForSession(code);
+        } else if (access_token && refresh_token) {
+          await supabase.auth.setSession({ access_token, refresh_token });
+        } else {
+          return;
+        }
+        navigate(flow === 'recovery' ? '/nueva-contrasena' : '/portal', { replace: true });
+      } catch (e) { console.error('Auth deep link:', e); }
+    };
+    CapApp.addListener('appUrlOpen', ({ url }) => process(url)).then(l => { listener = l; });
+    // Arranque en frío: la app pudo abrirse directamente desde el enlace.
+    CapApp.getLaunchUrl().then(res => { if (res?.url) process(res.url); }).catch(() => {});
+    return () => { if (listener) listener.remove(); };
+  }, [navigate]);
   return null;
 };
 
@@ -126,6 +164,7 @@ function App() {
     <AuthProvider>
       <Router>
         <ScrollToTop />
+        <AuthDeepLinkHandler />
         <Suspense fallback={
           <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FDFBF7' }}>
             <div className="loader">Cargando...</div>
@@ -137,6 +176,7 @@ function App() {
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<Register />} />
+          <Route path="/nueva-contrasena" element={<NuevaContrasena />} />
           <Route path="/planes" element={<Planes />} />
           <Route path="/privacidad" element={<Privacidad />} />
           <Route path="/terminos" element={<Terminos />} />

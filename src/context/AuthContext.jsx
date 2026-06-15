@@ -903,6 +903,32 @@ export const AuthProvider = ({ children }) => {
       if (sharedLoadedForRef.current !== currentUser.id) {
         sharedLoadedForRef.current = currentUser.id;
         loadSharedData();
+
+        // Backfill de datos del registro: con verificación de correo activa, el
+        // signUp no deja sesión, así que cumpleaños/estatura se guardaron en
+        // user_metadata y se copian al perfil aquí (primer login ya autenticado).
+        // También aplica un plan comprado antes de registrarse (aplazado).
+        (async () => {
+          try {
+            const md = currentUser.user_metadata || {};
+            if (md.birth_date || md.height_cm != null) {
+              const { data: cur } = await supabase.from('users').select('birth_date, height_cm').eq('id', currentUser.id).single();
+              const patch = {};
+              if (md.birth_date && !cur?.birth_date) patch.birth_date = md.birth_date;
+              if (md.height_cm != null && cur?.height_cm == null) patch.height_cm = parseFloat(md.height_cm);
+              if (Object.keys(patch).length) await supabase.from('users').update(patch).eq('id', currentUser.id);
+            }
+            const pending = localStorage.getItem('befit_pending_plan');
+            if (pending) {
+              if (userData?.membership_status !== 'ACTIVE') {
+                const p = JSON.parse(pending);
+                const classes = p.title.includes('FIT') ? 20 : (p.title.includes('Premium') ? 30 : 15);
+                await activatePlan(p.title, classes, currentUser.id);
+              }
+              localStorage.removeItem('befit_pending_plan');
+            }
+          } catch (e) { console.error('Backfill registro:', e); }
+        })();
       }
 
       // 2. Obtener mis reservas

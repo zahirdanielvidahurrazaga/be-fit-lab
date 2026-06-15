@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Lock, ArrowRight, ChevronLeft, CheckCircle2, Eye, EyeOff, Cake, Ruler } from 'lucide-react';
+import { User, Mail, Lock, ArrowRight, ChevronLeft, CheckCircle2, Eye, EyeOff, Cake, Ruler, MailCheck } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { motion } from 'framer-motion';
+import { signupRedirect } from '../lib/authRedirect';
 
 function Register() {
   const [name, setName] = useState('');
@@ -18,6 +19,8 @@ function Register() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [sentTo, setSentTo] = useState(null); // email al que se mandó confirmación
+  const [resendMsg, setResendMsg] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
   const { activatePlan } = useAuth();
@@ -54,12 +57,19 @@ function Register() {
       return;
     }
 
+    const cleanEmail = email.trim().toLowerCase();
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: cleanEmail,
       password,
       options: {
+        emailRedirectTo: signupRedirect(),
+        // Cumpleaños/estatura van en user_metadata: con verificación de correo
+        // el signUp NO deja sesión, así que no se puede escribir en `users` aún.
+        // AuthContext los copia al perfil en el primer login (backfill).
         data: {
           full_name: name,
+          birth_date: birthDate || null,
+          height_cm: heightCm ? parseFloat(heightCm) : null,
         }
       }
     });
@@ -67,7 +77,21 @@ function Register() {
     if (error) {
       setError(error.message);
       setLoading(false);
-    } else {
+      return;
+    }
+
+    // Si NO hay sesión, la cuenta requiere confirmación por correo. Guardamos el
+    // plan pendiente (si compró antes de registrarse) para activarlo al confirmar.
+    if (!data.session) {
+      if (purchasedPlan) {
+        try { localStorage.setItem('befit_pending_plan', JSON.stringify(purchasedPlan)); } catch (e) {}
+      }
+      setSentTo(cleanEmail);
+      setLoading(false);
+      return;
+    }
+
+    {
       // Guardar cumpleaños + estatura en el perfil (reintenta por si el trigger
       // que crea la fila de users aún no termina).
       if (data.user && (birthDate || heightCm)) {
@@ -98,6 +122,16 @@ function Register() {
         }
       }
     }
+  };
+
+  const handleResend = async () => {
+    setResendMsg('Enviando…');
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: sentTo,
+      options: { emailRedirectTo: signupRedirect() },
+    });
+    setResendMsg(error ? (error.message || 'No se pudo reenviar.') : 'Correo reenviado. Revisa tu bandeja.');
   };
 
   return (
@@ -136,6 +170,32 @@ function Register() {
           boxSizing: 'border-box'
         }}>
           
+          {sentTo ? (
+            /* PANTALLA: REVISA TU CORREO */
+            <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
+              <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'rgba(255,145,77,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
+                <MailCheck size={36} color="var(--primary)" />
+              </div>
+              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.9rem', color: '#1A1C1E', marginBottom: '0.6rem', lineHeight: 1.15 }}>Revisa tu correo</h1>
+              <p style={{ color: '#374151', fontWeight: 500, lineHeight: 1.5 }}>
+                Te enviamos un enlace de confirmación a<br />
+                <strong style={{ color: '#1A1C1E' }}>{sentTo}</strong>
+              </p>
+              <p style={{ color: '#4B5563', fontSize: '0.85rem', marginTop: '10px', lineHeight: 1.5 }}>
+                Ábrelo para activar tu cuenta y entrar. Revisa también la carpeta de spam.
+              </p>
+
+              <button onClick={handleResend} className="glass-button-dark" style={{ width: '100%', marginTop: '1.6rem' }}>
+                Reenviar correo
+              </button>
+              {resendMsg && <p style={{ color: '#374151', fontSize: '0.82rem', marginTop: '10px' }}>{resendMsg}</p>}
+
+              <div style={{ textAlign: 'center', marginTop: '1.4rem', color: '#4B5563', fontSize: '0.9rem' }}>
+                ¿Ya confirmaste? <span onClick={() => navigate('/login')} style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }}>Inicia Sesión</span>
+              </div>
+            </div>
+          ) : (
+          <>
           {/* FORMULARIO DE REGISTRO */}
           <div style={{ textAlign: 'center', marginBottom: '1.8rem' }}>
             {purchasedPlan ? (
@@ -286,6 +346,8 @@ function Register() {
           <div style={{ textAlign: 'center', marginTop: '1.5rem', color: '#4B5563', fontSize: '0.9rem' }}>
             ¿Ya tienes una cuenta? <span onClick={() => navigate('/login')} style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }}>Inicia Sesión</span>
           </div>
+          </>
+          )}
 
         </div>
       </motion.div>

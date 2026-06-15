@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { Lock, Mail, ArrowRight, ChevronLeft, CheckCircle2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { motion } from 'framer-motion';
+import { recoveryRedirect } from '../lib/authRedirect';
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutos
@@ -60,7 +61,7 @@ function Login() {
     setResetError(null);
 
     const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim().toLowerCase(), {
-      redirectTo: window.location.origin + '/login',
+      redirectTo: recoveryRedirect(),
     });
 
     if (error) {
