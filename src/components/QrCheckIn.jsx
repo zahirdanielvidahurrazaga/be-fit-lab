@@ -1,7 +1,9 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { QrCode, CheckCircle2, XCircle } from 'lucide-react';
+import { QrCode, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { classDateTime } from '../hooks/useLocalNotifications';
+import { todayLocalStr } from '../lib/dates';
 
 // Avatar redondo: foto si existe, si no las iniciales.
 const Avatar = ({ name, avatar, size = 52, success = true }) => {
@@ -24,16 +26,44 @@ const Avatar = ({ name, avatar, size = 52, success = true }) => {
 // el id en el input oculto y enfocado. La tarjeta de la última alumna y la lista
 // del día PERSISTEN (no se auto-borran) para control en recepción.
 export default function QrCheckIn({ sideContent = null }) {
-  const { checkInClient } = useAuth();
+  const { checkInClient, globalClasses } = useAuth();
   const qrInputRef = useRef(null);
   const [scannedQR, setScannedQR] = useState('');
-  const [qrMessage, setQrMessage] = useState('');
-  const [scannedClient, setScannedClient] = useState(null);
-  const [scanLog, setScanLog] = useState([]);
+
+  // El log del día PERSISTE en localStorage (sobrevive cambios de pestaña y
+  // recargas) con clave por fecha → se reinicia solo al día siguiente.
+  const logKey = `befit_scanlog_${todayLocalStr()}`;
+  const readLog = () => { try { return JSON.parse(localStorage.getItem(logKey)) || []; } catch { return []; } };
+  const [scanLog, setScanLog] = useState(readLog);
+  const [scannedClient, setScannedClient] = useState(() => readLog()[0] || null);
+  const [qrMessage, setQrMessage] = useState(() => readLog()[0]?.message || '');
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    try { localStorage.setItem(logKey, JSON.stringify(scanLog)); } catch { /* noop */ }
+  }, [scanLog, logKey]);
 
   // Mantener el input enfocado para que el lector siempre escriba ahí.
   useEffect(() => { qrInputRef.current?.focus(); }, []);
+
+  // Próxima clase de hoy (la que se está cobrando/checando). Misma lógica de
+  // filtrado que el panel admin: por fecha exacta o por día de semana recurrente.
+  const nextClass = useMemo(() => {
+    const todayStr = todayLocalStr();
+    const dow = new Date(todayStr + 'T12:00:00').getDay();
+    const todays = (globalClasses || []).filter(c =>
+      c.date === todayStr || (!c.date && (c.day === dow || c.day === String(dow)))
+    );
+    const withDt = todays
+      .map(c => ({ c, dt: classDateTime(todayStr, c.time) }))
+      .filter(x => x.dt)
+      .sort((a, b) => a.dt - b.dt);
+    if (!withDt.length) return null;
+    const now = Date.now();
+    // La próxima por empezar; con 1h de gracia para una clase en curso.
+    const upcoming = withDt.find(x => x.dt.getTime() + 60 * 60 * 1000 >= now);
+    return (upcoming || withDt[withDt.length - 1]).c;
+  }, [globalClasses]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -79,6 +109,28 @@ export default function QrCheckIn({ sideContent = null }) {
 
   return (
     <div>
+      {/* PRÓXIMA CLASE — para cuál se está haciendo el check-in */}
+      {nextClass && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '18px',
+          background: 'linear-gradient(135deg, var(--primary), var(--accent))', color: 'white',
+          borderRadius: '20px', padding: '16px 20px', boxShadow: '0 10px 26px rgba(255,145,77,0.28)'
+        }}>
+          <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Clock size={22} color="white" />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700, opacity: 0.85 }}>Check-in para la clase</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 900, fontFamily: 'var(--font-display)', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {nextClass.title}
+            </div>
+            <div style={{ fontSize: '0.82rem', fontWeight: 600, opacity: 0.92, marginTop: '2px' }}>
+              {nextClass.time}{nextClass.instructor ? ` · ${nextClass.instructor}` : ''}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="admin-double-column">
 
         {/* LECTOR QR — siempre visible */}

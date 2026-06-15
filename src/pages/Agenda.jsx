@@ -185,19 +185,20 @@ function Agenda() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="qr-sheet-overlay"
-              onClick={() => { if (!isSuccess) { setShowModal(false); setCalendarError(null); } }}
+              onClick={() => { setShowModal(false); setIsSuccess(false); setCalendarError(null); }}
             />
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              drag={isSuccess ? false : 'y'}
+              drag="y"
               dragConstraints={{ top: 0, bottom: 0 }}
               dragElastic={0.2}
               onDragEnd={(_, info) => {
                 if (info.offset.y > 80 || info.velocity.y > 500) {
                   setShowModal(false);
+                  setIsSuccess(false);
                   setCalendarError(null);
                 }
               }}
@@ -249,6 +250,19 @@ function Agenda() {
                         Ahora no
                       </button>
                     </div>
+                  )}
+                  {(!isNative || addedToCalendar) && (
+                    <button
+                      onClick={() => { setShowModal(false); setIsSuccess(false); setCalendarError(null); }}
+                      style={{
+                        width: '100%', padding: '14px', borderRadius: '9999px', border: 'none',
+                        background: 'var(--primary)', color: 'white',
+                        fontSize: '0.95rem', fontWeight: 700, fontFamily: 'var(--font-body)',
+                        cursor: 'pointer', boxShadow: '0 8px 20px rgba(255,139,66,0.3)'
+                      }}
+                    >
+                      Listo
+                    </button>
                   )}
                   {calendarError && (
                     <p style={{ color: '#EF4444', fontSize: '0.85rem', marginTop: '15px' }}>{calendarError}</p>
