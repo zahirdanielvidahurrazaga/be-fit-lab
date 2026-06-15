@@ -6,20 +6,34 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
-## ⏭️ PRÓXIMA SESIÓN (retomar 2026-06-14): pasar Stripe a LIVE
-**Contexto:** la app se va a ENTREGAR. El **2026-06-13 se limpió toda la base para entrega** (ver abajo). Falta el último paso: **Stripe de TEST → LIVE**.
+## ⏭️ PRÓXIMA SESIÓN (retomar)
+**Pendiente principal:** **reconstruir y resubir iOS + Android** — junta TODO lo del 2026-06-15 (Stripe LIVE, rol Recepción, deep links de auth, dominio befitlab.app). El `cap sync` ya está hecho local. iOS: Archive en Xcode (bump build). Android (otra PC): bump `versionCode`/`versionName` + AAB.
+**Opcional (smoke test):** un cobro real chico end-to-end. El flujo NO cambia entre test/live (mismo código; solo cambian las claves), pero confirma que `sk_live` + webhook Live **registran** el sale/pedido. Reembolsable. Lo más fácil: un café desde la **web** (ya en LIVE) con tarjeta real → verificar en `cafe_orders`.
 
-**Estado de Stripe hoy:** claves en TEST. `VITE_STRIPE_PUBLISHABLE_KEY = pk_test_...` (en `.env`) se **hornea en el build** y se usa en `src/App.jsx:104` para `CapStripe.initialize`. Las funciones server usan secrets de Supabase. Webhook = edge function `stripe-webhook`.
+## ✅ Sesión 2026-06-15 (Stripe LIVE + Recepción + correo de marca + dominio)
+**Stripe LIVE — HECHO:**
+- Supabase secrets: `STRIPE_SECRET_KEY=sk_live...`, `STRIPE_WEBHOOK_SECRET=whsec...` (se leen en runtime). El **webhook Live ya existía** (`we_1TcgypARaQ2rSJDtR2DkMvUa`, eventos `checkout.session.completed` + `invoice.payment_succeeded` + `customer.subscription.deleted` = exactamente los que maneja el handler; `payment_intent.succeeded` NO hace falta porque el pago nativo de cafetería/eventos se confirma con `stripe-cafe-verify`/`stripe-event-notify`).
+- `.env`: `VITE_STRIPE_PUBLISHABLE_KEY=pk_live...` (se hornea en build).
+- `GooglePayIsTesting:false` en `Cafeteria.jsx` y `Planes.jsx` (producción Android).
+- **Web ya cobra en LIVE sin tocar Cloudflare**: usa Checkout redirigido server-side → lo decide `STRIPE_SECRET_KEY`. La publishable NO se usa en web; solo en nativo (PaymentSheet) → por eso **el nativo SÍ exige rebuild**.
 
-**Pasos para LIVE (en orden):**
-1. **Stripe dashboard (modo Live):** obtener `pk_live_...` y `sk_live_...`. Crear un **webhook nuevo en modo Live** → URL `https://fifaowaiokauhuqklzwe.supabase.co/functions/v1/stripe-webhook`, eventos de pago (checkout.session.completed, payment_intent.succeeded, etc.) → copiar el `whsec_...` de producción.
-2. **Verificar nombres exactos** de los secrets que leen las funciones (grep `Deno.env.get` en `supabase/functions/stripe-*` y `stripe-webhook`) — probablemente `STRIPE_SECRET_KEY` y `STRIPE_WEBHOOK_SECRET`.
-3. **Supabase secrets (server):** `supabase secrets set STRIPE_SECRET_KEY=sk_live_... STRIPE_WEBHOOK_SECRET=whsec_live...` (token: `$env:SUPABASE_ACCESS_TOKEN="sbp_..."`). Los secrets se leen en runtime; redeploy no es estrictamente necesario pero conviene `functions deploy` si hubo cambios.
-4. **`.env`:** `VITE_STRIPE_PUBLISHABLE_KEY = pk_live_...`.
-5. **Web (PWA):** `npm run build` → `git push` (Cloudflare despliega).
-6. **Nativo (obligatorio porque la pk va horneada):** `npm run build && npx cap sync` → **iOS** nuevo build + subir a App Store; **Android** (otra PC) nuevo AAB (bump `versionCode`/`versionName`) + subir a Play Store.
-7. **Probar un cobro real chico** end-to-end (cafetería o membresía) y confirmar que el webhook Live registra el `sale`/pedido.
-- 💡 Opción futura para no rebuildear nativo en cada cambio de clave: que la app lea la publishable key en runtime desde una edge function en vez de hornearla.
+**Rol RECEPCIÓN — NUEVO:**
+- Rol `RECEPCION` con página `/recepcion` (solo lector QR), para teléfono fijo en recepción. Asignable desde `AdminClientas` (y redirect por rol en `App.jsx`).
+- Componente compartido **`src/components/QrCheckIn.jsx`** (lo usan Admin "Mostrador QR" y Recepcion): tarjeta de la alumna **persistente con foto de perfil**, y **lista de asistencia del día en localStorage por fecha** (no se borra al cambiar de pestaña/recargar). `checkInClient` ahora devuelve `avatar`.
+- **Ventana de check-in por clase**: banner con **contador a la derecha**. Abre 15 min antes y cierra 10 min después de la hora; fuera de la ventana el escáner **rechaza** el QR (standby). Calcula la "próxima clase" desde `globalClasses`.
+- **RLS**: función `is_reception_or_admin()` + políticas SELECT `users`, SELECT/UPDATE `reservations`. SQL en `supabase/sql/recepcion_rls.sql` (⚠️ `*.sql` está gitignored — **ya aplicado en la BD**).
+
+**Verificación de correo + recuperación de contraseña — HECHO (web y nativo):**
+- Verificación ACTIVADA (`mailer_autoconfirm=false`).
+- `signUp` con `emailRedirectTo`; pantalla **"Revisa tu correo"** + reenviar. Con verificación activa el signUp NO deja sesión → cumpleaños/estatura van en `user_metadata` y se copian al perfil en el **primer login** (backfill en `AuthContext.fetchUserData`). Plan comprado antes de registrarse: localStorage `befit_pending_plan`, se aplica al confirmar.
+- Reset → nueva pantalla **`/nueva-contrasena`** (`updateUser`).
+- Deep links nativos `befitlab://auth-callback?flow=signup|recovery` procesados por **`AuthDeepLinkHandler`** en `App.jsx`. Helper `src/lib/authRedirect.js`.
+
+**Dominio + correo profesional — HECHO:**
+- **`befitlab.app`** comprado en Cloudflare Registrar; web conectada como custom domain de Pages (**https://befitlab.app**, SSL OK). `be-fit-lab.pages.dev` sigue activo.
+- Supabase `site_url=https://befitlab.app`; redirect allow-list con `befitlab://auth-callback` + dominios web.
+- **Resend** SMTP propio: `befitlab.app` verificado (DKIM/SPF/DMARC vía Cloudflare). Supabase SMTP = `smtp.resend.com:465`, user `resend`, remitente **`hola@befitlab.app`** ("Be Fit Lab"). Límite 2/h → **30/h**. Plantillas de confirmación/recuperación con la marca (header degradado naranja→rosa). Prueba llegó a **inbox**.
+- ⚠️ La config de **Supabase Auth** se cambia por **Management API**: `PATCH https://api.supabase.com/v1/projects/fifaowaiokauhuqklzwe/config/auth` (token `sbp_` guardado en el keychain del CLI de Supabase).
 
 ## ✅ Limpieza de entrega (2026-06-13)
 Base de datos del proyecto `fifaowaiokauhuqklzwe` limpiada para entrega:
@@ -62,7 +76,7 @@ Mensajes de commit terminan con: `Co-Authored-By: Claude Opus 4.8 <noreply@anthr
 - `supabase/functions/` — edge functions (ver abajo).
 
 ## Roles
-`cliente` (default), `coach` (/coach), `barista` (/barista), `admin` (/admin). El admin asigna roles y da de baja clientas desde `AdminClientas`.
+`CLIENT` (default), `COACH` (/coach), `BARISTA` (/barista), `RECEPCION` (/recepcion · solo lector QR), `ADMIN` (/admin). El admin asigna roles y da de baja clientas desde `AdminClientas`. El redirect por rol está en el `ProtectedRoute` de `App.jsx`.
 
 ## Notificaciones push (arquitectura clave)
 **Para mandar un push: solo inserta una fila en `notification_logs`.** Un trigger de
@@ -73,7 +87,7 @@ DB (`pg_net`) llama a la edge function **`push-deliver`** que entrega vía APNs/
 - Notificaciones vivas: compra/regalo/pedido nuevo/pedido listo de cafetería, insignia, aviso admin, evento, recordatorios locales.
 
 ## Pagos Stripe
-Funciones por dominio: `stripe-cafe-*` (cafetería), `stripe-event-*` (eventos), `stripe-checkout` (membresías) + `stripe-webhook`. El webhook clasifica por `type` (cafeteria/membresia/event). `admin-analytics` clasifica cargos para el dashboard financiero. Web deriva `user_id` del JWT para tracking/historial. **Claves Stripe siguen en TEST** (pendiente pasar a LIVE).
+Funciones por dominio: `stripe-cafe-*` (cafetería), `stripe-event-*` (eventos), `stripe-checkout` (membresías) + `stripe-webhook`. El webhook clasifica por `type` (cafeteria/membresia/event). `admin-analytics` clasifica cargos para el dashboard financiero. Web deriva `user_id` del JWT para tracking/historial. **Claves Stripe en LIVE** (2026-06-15). Web cobra en LIVE vía Checkout server-side; nativo usa la `pk_live` horneada en el build (exige rebuild para producción).
 
 ## Evolución → Fotos de progreso (lo más reciente)
 `src/components/ProgressPhotos.jsx` + sub-pestañas en `src/pages/Evolucion.jsx`
@@ -125,8 +139,9 @@ manifest ya habilita `READ_WEIGHT` + `READ_BODY_FAT`.
 - [ ] **Probar en dispositivo real** el wizard de fotos (cámara en vivo + siluetas). En Simulador cae a galería.
 - [ ] Vista coach/admin para revisar fotos de progreso de clientas (RLS ya lo permite).
 - [ ] Push recordatorio a las 6 semanas para nueva sesión de fotos.
-- [ ] Pasar Stripe a claves **LIVE** en Supabase y `.env` antes del pase a Producción final.
-- [ ] Rebuild **AAB de Android** con claves LIVE para Producción.
+- [x] ~~Pasar Stripe a claves LIVE~~ — HECHO 2026-06-15 (ver sección de arriba).
+- [ ] **Rebuild + resubir iOS y AAB de Android** con todo lo del 2026-06-15 (Stripe LIVE, rol Recepción, deep links de auth, dominio befitlab.app).
+- [ ] (Opcional) Smoke test de un cobro real chico y confirmar registro en `cafe_orders`.
 - [ ] Confirmar modelo exacto de báscula para métricas extra y que la unidad de peso sea kg.
 - [ ] Probar dark mode en dispositivos reales (iOS + Android).
 
