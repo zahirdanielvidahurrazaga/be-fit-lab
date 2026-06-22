@@ -12,6 +12,7 @@ import { classDateTime } from '../hooks/useLocalNotifications';
 import { supabase } from '../lib/supabase';
 import { ScheduleCalendar } from '../components/ScheduleCalendar';
 import ProfileMenu from '../components/ProfileMenu';
+import { hasNutritionAccess } from '../lib/plans';
 import { NextClassTicket } from '../components/NextClassTicket';
 import { ClassListSkeleton } from '../components/Skeleton';
 
@@ -508,10 +509,12 @@ function Agenda() {
           <button className="nav-qr-button" onClick={() => setShowQR(true)}>
             <QrCode size={24} strokeWidth={2.5} />
           </button>
-          <Link to="/nutricion" className="nav-item">
-            <Utensils size={22} strokeWidth={2.5} />
-            <span>Comida</span>
-          </Link>
+          {hasNutritionAccess(plan) && (
+            <Link to="/nutricion" className="nav-item">
+              <Utensils size={22} strokeWidth={2.5} />
+              <span>Comida</span>
+            </Link>
+          )}
           <Link to="/agenda" className="nav-item active">
             <CalendarIcon size={22} strokeWidth={2.5} />
             <span>Clases</span>

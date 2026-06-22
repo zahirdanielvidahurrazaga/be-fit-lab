@@ -11,7 +11,7 @@ import { Stripe } from '@capacitor-community/stripe';
 function Planes() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, refreshUserData, plan, classesRemaining, membershipStatus } = useAuth();
+  const { user, logout, refreshUserData, plan, classesRemaining, membershipStatus } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState(1); // 1 = confirm, 2 = waiting, 3 = success
@@ -325,7 +325,20 @@ function Planes() {
       )}
       
       <div style={{ textAlign: 'center', marginTop: '4rem' }}>
-        <button onClick={() => navigate(-1)} style={{ padding: '0.8rem 2rem', border: '1px solid var(--on-surface-variant)', background: 'transparent', color: 'var(--on-surface)', borderRadius: '30px', cursor: 'pointer', fontWeight: 600 }}>Volver</button>
+        <button
+          onClick={async () => {
+            // Si está logueada (clienta sin plan que llegó aquí por el rebote/deep
+            // link), "Volver" no tiene historial atrás → cerramos sesión y la
+            // llevamos a Welcome para que no quede atrapada en el paywall.
+            if (user) {
+              try { await logout(); } catch (e) { /* logout limpia el estado igual */ }
+              navigate('/welcome', { replace: true });
+            } else {
+              navigate('/welcome', { replace: true });
+            }
+          }}
+          style={{ padding: '0.8rem 2rem', border: '1px solid var(--on-surface-variant)', background: 'transparent', color: 'var(--on-surface)', borderRadius: '30px', cursor: 'pointer', fontWeight: 600 }}
+        >Volver</button>
       </div>
 
       {/* STRIPE CHECKOUT MODAL */}

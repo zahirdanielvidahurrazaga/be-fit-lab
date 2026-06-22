@@ -40,7 +40,9 @@ export default function NuevaContrasena() {
     setLoading(false);
     if (error) { setError(error.message); return; }
     setDone(true);
-    setTimeout(() => navigate('/portal'), 1600);
+    // No auto-entramos: el reset puede venir del navegador (Chrome/Safari) y la
+    // clienta vuelve a la app a iniciar sesión. Mostramos un cierre claro con
+    // botón a /login en vez de empujar a /portal (que rebotaría sin plan).
   };
 
   return (
@@ -55,7 +57,8 @@ export default function NuevaContrasena() {
                 <CheckCircle2 size={34} color="#16a34a" />
               </div>
               <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.7rem', color: '#1A1C1E' }}>¡Contraseña actualizada!</h1>
-              <p style={{ color: '#4B5563', marginTop: '6px' }}>Entrando…</p>
+              <p style={{ color: '#4B5563', marginTop: '6px', lineHeight: 1.5 }}>Ya puedes iniciar sesión con tu nueva contraseña. Si lo hiciste desde el navegador, vuelve a la app Be Fit Lab.</p>
+              <button onClick={() => navigate('/login')} className="glass-button-dark" style={{ width: '100%', marginTop: '1.4rem' }}>Iniciar sesión</button>
             </div>
           ) : hasSession === false ? (
             <div style={{ textAlign: 'center' }}>

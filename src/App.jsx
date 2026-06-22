@@ -30,6 +30,7 @@ const Barista = lazy(() => import('./pages/Barista'));
 const Recepcion = lazy(() => import('./pages/Recepcion'));
 const NuevaContrasena = lazy(() => import('./pages/NuevaContrasena'));
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { hasNutritionAccess } from './lib/plans';
 import { useLocalNotifications } from './hooks/useLocalNotifications';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { AppTour } from './components/AppTour';
@@ -90,8 +91,8 @@ const AuthDeepLinkHandler = () => {
   return null;
 };
 
-const ProtectedRoute = ({ children, requireRole }) => {
-  const { user, role, membershipStatus, loading } = useAuth();
+const ProtectedRoute = ({ children, requireRole, requireNutrition }) => {
+  const { user, role, membershipStatus, plan, loading } = useAuth();
   
   // Si estamos cargando la sesión inicial o el rol, esperar
   if (loading || (user && role === null)) {
@@ -123,6 +124,12 @@ const ProtectedRoute = ({ children, requireRole }) => {
   if (allowedRoles.includes('CLIENT') && role === 'CLIENT' && membershipStatus !== 'ACTIVE') {
     const isNativeApp = Capacitor.isNativePlatform();
     return <Navigate to={isNativeApp ? "/planes" : "/"} replace />;
+  }
+
+  // El apartado de Nutrición no está en los dos planes más económicos
+  // (Principiante / Inicial). El admin/coach siempre puede entrar.
+  if (requireNutrition && role === 'CLIENT' && !hasNutritionAccess(plan)) {
+    return <Navigate to="/portal" replace />;
   }
 
   return children;
@@ -185,7 +192,7 @@ function App() {
           
           {/* Rutas Privadas Clienta */}
           <Route path="/portal" element={<ProtectedRoute requireRole="CLIENT"><Portal /></ProtectedRoute>} />
-          <Route path="/nutricion" element={<ProtectedRoute requireRole="CLIENT"><Nutricion /></ProtectedRoute>} />
+          <Route path="/nutricion" element={<ProtectedRoute requireRole="CLIENT" requireNutrition><Nutricion /></ProtectedRoute>} />
           <Route path="/evolucion" element={<ProtectedRoute requireRole="CLIENT"><Evolucion /></ProtectedRoute>} />
           <Route path="/mi-cuenta" element={<ProtectedRoute requireRole={['CLIENT', 'COACH']}><MiCuenta /></ProtectedRoute>} />
           <Route path="/cumpleanos" element={<ProtectedRoute requireRole={['CLIENT', 'COACH', 'ADMIN']}><Cumpleanos /></ProtectedRoute>} />

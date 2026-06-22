@@ -183,7 +183,22 @@ function Admin() {
       },
     });
     setInscribiendo(false);
-    if (error || data?.error) { alert(data?.error || error?.message || 'No se pudo inscribir.'); return; }
+    if (error || data?.error) {
+      // Cuando la edge function responde 4xx/5xx, supabase-js lanza un
+      // FunctionsHttpError con un mensaje genérico ("non-2xx status code") y
+      // deja data en null. El motivo real (ej. "Ya existe una cuenta con ese
+      // correo") viene en el cuerpo JSON de la respuesta → leerlo de error.context.
+      let motivo = data?.error;
+      if (!motivo && error?.context && typeof error.context.json === 'function') {
+        try { motivo = (await error.context.json())?.error; } catch (_) { /* cuerpo no-JSON */ }
+      }
+      // Mensaje claro y accionable para el caso más común: correo ya usado.
+      if (motivo && /ya existe|already|registrad|exists/i.test(motivo)) {
+        motivo = `El correo "${correo}" ya está registrado. Usa uno diferente o búscala en la lista de clientas.`;
+      }
+      alert(motivo || error?.message || 'No se pudo inscribir.');
+      return;
+    }
     setInscDone({ email: correo, password: tempPass });
     fetchAllUsers?.();
     // Limpiar el formulario y preparar una nueva contraseña

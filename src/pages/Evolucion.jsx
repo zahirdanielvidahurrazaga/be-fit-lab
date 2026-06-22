@@ -6,7 +6,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { useHealth } from '../hooks/useHealth';
 import { supabase } from '../lib/supabase';
-import { monthlyGoalCap, PLAN_BY_NAME } from '../lib/plans';
+import { monthlyGoalCap, PLAN_BY_NAME, hasNutritionAccess } from '../lib/plans';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
@@ -688,7 +688,7 @@ function Evolucion() {
         </Link>
         <Link to="/evolucion" className="nav-item active"><TrendingUp size={22} strokeWidth={2.5} /><span>Metas</span></Link>
         <button className="nav-qr-button" onClick={() => setShowQR(true)}><QrCode size={24} strokeWidth={2.5} /></button>
-        <Link to="/nutricion" className="nav-item"><Utensils size={22} strokeWidth={2.5} /><span>Comida</span></Link>
+        {hasNutritionAccess(plan) && <Link to="/nutricion" className="nav-item"><Utensils size={22} strokeWidth={2.5} /><span>Comida</span></Link>}
         <Link to="/agenda" className="nav-item"><Calendar size={22} strokeWidth={2.5} /><span>Clases</span></Link>
       </nav>
 

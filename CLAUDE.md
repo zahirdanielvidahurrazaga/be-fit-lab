@@ -6,9 +6,9 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
-## ⏭️ PRÓXIMA SESIÓN (retomar) — SUBIR ANDROID (en la OTRA PC)
-**iOS ✅ ya subido:** 1.1.0 (build 3) a App Store Connect el 2026-06-15.
-**Pendiente: AAB de Android** con todo lo del 2026-06-15 (Stripe LIVE, Recepción, deep links de auth, dominio befitlab.app). Ya dejé el bump en el repo → `versionCode 7` / `versionName 2.3.0` en `android/app/build.gradle`.
+## ⏭️ PRÓXIMA SESIÓN (retomar) — SUBIR ANDROID
+**iOS ✅ 1.2.0 (build 4)** generado y listo para archivar/subir el 2026-06-22 (incluye lo de abajo). La 1.1.0(3) del 2026-06-15 ya estaba en App Store Connect.
+**Pendiente (mañana 2026-06-23): AAB de Android** con TODO (lo del 2026-06-15 + sesión 2026-06-22). Repo ya bumpeado → `versionCode 8` / `versionName 2.4.0` en `android/app/build.gradle`. El `dist` ya está construido y sincronizado (`npx cap sync` hecho el 22-jun); si pasó tiempo, reconstruir.
 
 **📋 REQUERIMIENTO PARA CLAUDE (cuando el usuario pida "subir Android" en la otra PC):**
 Ejecuta TÚ (Claude) automáticamente los pasos de CLI; el usuario solo hace los de GUI que tú no puedes. No pidas permiso paso a paso, hazlos y reporta.
@@ -30,6 +30,17 @@ Ejecuta TÚ (Claude) automáticamente los pasos de CLI; el usuario solo hace los
 - ⚠️ El **hero del landing NO aplica a nativo** (la app redirige `/`→`/welcome`).
 
 **Opcional (smoke test):** un cobro real chico. El flujo NO cambia entre test/live (mismo código), pero confirma que `sk_live` + webhook Live **registran** el sale/pedido. Reembolsable. (Ya se probó el 2026-06-15: pedido quedó `paid` ✅.)
+
+## ✅ Sesión 2026-06-22 (mantenimiento post-entrega + 2 features) — en iOS 1.2.0(4) / Android 2.4.0(8)
+**Bugs corregidos:**
+- **Inscribir clienta mostraba "Edge Function returned a non-2xx status code":** el front no leía el motivo real del 400. Ahora `Admin.jsx` (`handleInscribir`) lee `error.context.json()` y muestra el motivo ("El correo ya está registrado…", etc.). La causa del reporte original era **correo duplicado**; la función `admin-create-client` desplegada funciona bien (crea cuenta confirmada que SÍ entra). NOTA: un cliente sin plan se autentica pero el `ProtectedRoute` lo rebota de `/portal` (eso NO se cambió, decisión del dueño).
+- **Parpadeo al abrir por deep link (cuenta nueva → confirmar correo → pantalla de pago "actualizándose"):** `AuthContext` rehacía todo en cada evento de auth. Ahora `applySessionUser()` mantiene la referencia de `user` estable por id y solo recarga datos pesados en un inicio de sesión real (no en TOKEN_REFRESHED/re-emisiones). Refs nuevos: `loadedAuthUserIdRef`.
+- **Botón "Volver" muerto en la pantalla de membresía (`Planes.jsx`):** hacía `navigate(-1)` sin historial. Ahora si hay sesión **cierra sesión y va a `/welcome`** (decisión del dueño); si no, va a `/welcome`.
+- **Reset de contraseña → pantalla en blanco en Chrome (no Safari):** el correo llevaba el deep link `befitlab://` que solo Safari abre. Ahora `recoveryRedirect()` (`src/lib/authRedirect.js`) SIEMPRE manda a `https://befitlab.app/nueva-contrasena` (web, funciona en cualquier navegador). `NuevaContrasena.jsx` ya no auto-entra: muestra cierre claro + botón "Iniciar sesión". El **registro sí sigue usando `befitlab://`** (queremos que la confirmación abra la app). OJO: el reset desde la app vieja seguirá mandando `befitlab://` hasta que el usuario actualice a 1.2.0.
+
+**Features nuevas:**
+- **Eliminar clienta/usuaria:** nueva edge function **`admin-delete-client`** (DEPLOYADA + verificada): valida ADMIN, **bloquea auto-borrado**, borra perfil (cascada a reservas/fotos/métricas/notifs/eventos/device_tokens/meal_plan; **SET NULL** en ventas/pedidos → conserva historial) y la cuenta Auth + storage. UI: botón 🗑️ "Eliminar" con doble confirmación en cada tarjeta de `AdminClientas.jsx` (no aparece sobre tu propia cuenta).
+- **Los 2 planes más económicos sin Nutrición** (Principiante $750 e Inicial $850). `src/lib/plans.js`: flag `nutrition` (Básico/Fit/Premium) + helper `hasNutritionAccess()`; se quitó "+100 ideas de recetas" de los 2 económicos (las tarjetas del sitio salen de aquí vía `PricingCarousel`). Gate de ruta en `App.jsx` (`requireNutrition` → redirige a `/portal`), nav "Comida" oculto en `Portal`/`Evolucion`/`Agenda`, y pasos de recetario filtrados en `AppTour`. (La sección general "Beneficios de tu Membresía" del landing aún menciona recetas — es general, se dejó.)
 
 ## ✅ Sesión 2026-06-15 (Stripe LIVE + Recepción + correo de marca + dominio)
 **Stripe LIVE — HECHO:**

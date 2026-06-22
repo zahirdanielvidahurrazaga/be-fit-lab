@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Preferences } from '@capacitor/preferences';
 import { useAuth } from '../context/AuthContext';
+import { hasNutritionAccess } from '../lib/plans';
 import { User, Wallet, TrendingUp, Calendar, ChevronRight, ChevronLeft, Sparkles, Play, Utensils, Target, Award, Scale, Activity, QrCode, Coffee, Cake, Hand, Camera } from 'lucide-react';
 
 // Marca el tour como visto en almacenamiento nativo (persiste entre lanzamientos)
@@ -95,6 +96,7 @@ const TOUR_STEPS = [
     position: 'top',
   },
   {
+    nutrition: true,
     icon: <Utensils size={38} color="var(--primary)" />,
     title: 'Comida 🥗',
     description: 'Toca la pestaña "Comida" para ver tu recetario saludable.',
@@ -104,6 +106,7 @@ const TOUR_STEPS = [
     advanceOnPath: '/nutricion',
   },
   {
+    nutrition: true,
     icon: <Utensils size={38} color="var(--primary)" />,
     title: 'Tu recetario',
     description: 'Recetas seleccionadas para complementar tu entrenamiento. ¡Cocinar sano nunca fue tan fácil!',
@@ -225,7 +228,7 @@ const TOUR_STEPS = [
 const FALLBACK_MS = 3500; // tras esto, en pasos de clic aparece "Continuar" (anti-atasco)
 
 export function AppTour() {
-  const { showTour, setShowTour, user } = useAuth();
+  const { showTour, setShowTour, user, plan } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState(null);
   const [showFallback, setShowFallback] = useState(false);
@@ -233,14 +236,17 @@ export function AppTour() {
   const navigate = useNavigate();
   const fallbackTimer = useRef(null);
 
+  // Los planes sin acceso a Nutrición no ven los pasos del recetario.
+  const steps = hasNutritionAccess(plan) ? TOUR_STEPS : TOUR_STEPS.filter(s => !s.nutrition);
+
   const isInternalRoute = ['/portal', '/evolucion', '/agenda', '/nutricion', '/mi-cuenta'].includes(location.pathname);
 
-  const stepData = TOUR_STEPS[currentStep];
+  const stepData = steps[currentStep];
 
   // Posiciona el spotlight sobre el elemento del paso
   useEffect(() => {
     if (!showTour || !isInternalRoute) return;
-    const step = TOUR_STEPS[currentStep];
+    const step = steps[currentStep];
     if (!step || !step.selector) { setTargetRect(null); return; }
 
     const updateRect = () => {
@@ -265,7 +271,7 @@ export function AppTour() {
   useEffect(() => {
     setShowFallback(false);
     if (!showTour) return;
-    const step = TOUR_STEPS[currentStep];
+    const step = steps[currentStep];
     if (!step?.requireClick) return;
     clearTimeout(fallbackTimer.current);
     fallbackTimer.current = setTimeout(() => setShowFallback(true), FALLBACK_MS);
@@ -275,7 +281,7 @@ export function AppTour() {
   // Avance por cambio de ruta (pasos de navegación)
   useEffect(() => {
     if (!showTour) return;
-    const step = TOUR_STEPS[currentStep];
+    const step = steps[currentStep];
     if (step?.advanceOnPath && location.pathname === step.advanceOnPath) {
       setCurrentStep(prev => prev + 1);
     }
@@ -284,7 +290,7 @@ export function AppTour() {
   // Avance por clic en el elemento objetivo (y bloqueo de clics fuera)
   useEffect(() => {
     if (!showTour || !isInternalRoute) return;
-    const step = TOUR_STEPS[currentStep];
+    const step = steps[currentStep];
     if (!step) return;
 
     const handleClick = (e) => {
@@ -310,7 +316,7 @@ export function AppTour() {
   if (!showTour || !isInternalRoute || !stepData) return null;
 
   const advance = () => {
-    if (currentStep < TOUR_STEPS.length - 1) setCurrentStep(prev => prev + 1);
+    if (currentStep < steps.length - 1) setCurrentStep(prev => prev + 1);
     else handleClose();
   };
 
@@ -443,14 +449,14 @@ export function AppTour() {
                 onClick={stepData.requireClick ? handleFallback : advance}
                 style={{ width: '100%', padding: '15px', borderRadius: '18px', border: 'none', background: 'var(--primary)', color: 'white', fontWeight: 800, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 10px 20px rgba(255,139,66,0.3)' }}
               >
-                {stepData.requireClick ? 'Continuar sin hacerlo' : (currentStep === TOUR_STEPS.length - 1 ? '¡Comenzar!' : 'Siguiente')}
-                {(!stepData.requireClick && currentStep < TOUR_STEPS.length - 1) && <ChevronRight size={20} />}
+                {stepData.requireClick ? 'Continuar sin hacerlo' : (currentStep === steps.length - 1 ? '¡Comenzar!' : 'Siguiente')}
+                {(!stepData.requireClick && currentStep < steps.length - 1) && <ChevronRight size={20} />}
               </button>
             )}
 
             {/* Progreso */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '5px', marginTop: '18px' }}>
-              {TOUR_STEPS.map((_, i) => (
+              {steps.map((_, i) => (
                 <div key={i} style={{ width: i === currentStep ? '18px' : '6px', height: '6px', borderRadius: '3px', background: i === currentStep ? 'var(--primary)' : 'rgba(0,0,0,0.1)', transition: 'all 0.3s ease' }} />
               ))}
             </div>

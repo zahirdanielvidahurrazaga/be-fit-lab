@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Cake, Crown, UserX, UserCheck, Shield, Coffee, Dumbbell, ChevronDown, Phone, QrCode } from 'lucide-react';
+import { Search, Cake, Crown, UserX, UserCheck, Shield, Coffee, Dumbbell, ChevronDown, Phone, QrCode, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { PLANS } from '../lib/plans';
@@ -41,11 +41,12 @@ function Pill({ active, onClick, children }) {
   );
 }
 
-function ClientCard({ u, onRole, onBaja, onReactivar, busy }) {
+function ClientCard({ u, onRole, onBaja, onReactivar, onDelete, busy, currentUserId }) {
   const [openRole, setOpenRole] = useState(false);
   const rm = roleMeta(u.role);
   const active = u.membership_status === 'ACTIVE';
   const isClient = u.role === 'CLIENT';
+  const canDelete = u.id !== currentUserId; // no permitir auto-eliminarse
   return (
     <div style={{ background: '#fff', borderRadius: '18px', border: '1px solid rgba(0,0,0,0.05)', padding: '14px' }}>
       <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -93,15 +94,20 @@ function ClientCard({ u, onRole, onBaja, onReactivar, busy }) {
         )}
       </div>
 
-      {isClient && (
-        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-          {active ? (
+      {(isClient || canDelete) && (
+        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+          {isClient && (active ? (
             <button disabled={busy} onClick={() => onBaja(u)} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(186,26,26,0.08)', color: '#ba1a1a', border: 'none', borderRadius: '10px', padding: '8px 12px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
               <UserX size={14} /> Dar de baja
             </button>
           ) : (
             <button disabled={busy} onClick={() => onReactivar(u)} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(34,197,94,0.1)', color: '#16A34A', border: 'none', borderRadius: '10px', padding: '8px 12px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
               <UserCheck size={14} /> Reactivar plan
+            </button>
+          ))}
+          {canDelete && (
+            <button disabled={busy} onClick={() => onDelete(u)} title="Eliminar definitivamente" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(186,26,26,0.08)', color: '#ba1a1a', border: 'none', borderRadius: '10px', padding: '8px 12px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', marginLeft: 'auto' }}>
+              <Trash2 size={14} /> Eliminar
             </button>
           )}
         </div>
@@ -111,7 +117,7 @@ function ClientCard({ u, onRole, onBaja, onReactivar, busy }) {
 }
 
 export default function AdminClientas() {
-  const { fetchAllUsers } = useAuth();
+  const { user, fetchAllUsers } = useAuth();
   const [users, setUsers] = useState(null); // TODOS los usuarios (no solo clientas)
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
@@ -149,6 +155,28 @@ export default function AdminClientas() {
   const onRole = (u, role) => { if (confirm(`¿Cambiar a "${u.full_name || u.email}" al rol de ${roleMeta(role).label}?`)) patch(u.id, { role }); };
   const onBaja = (u) => { if (confirm(`¿Dar de baja la membresía de "${u.full_name || u.email}"?`)) patch(u.id, { membership_status: 'INACTIVE', classes_remaining: 0 }); };
   const onReactivar = (u) => { if (confirm(`¿Reactivar la membresía de "${u.full_name || u.email}"?`)) patch(u.id, { membership_status: 'ACTIVE' }); };
+
+  // Eliminación DEFINITIVA (cuenta + datos). Doble confirmación por ser destructivo.
+  const onDelete = async (u) => {
+    const quien = u.full_name || u.email;
+    if (u.id === user?.id) { alert('No puedes eliminar tu propia cuenta.'); return; }
+    if (!confirm(`¿ELIMINAR para siempre a "${quien}"?\n\nSe borrará su cuenta, reservas, fotos, métricas y datos. Esta acción NO se puede deshacer.`)) return;
+    if (!confirm(`Última confirmación: eliminar definitivamente a ${quien}.`)) return;
+    setBusy(true);
+    const { data, error } = await supabase.functions.invoke('admin-delete-client', { body: { userId: u.id } });
+    setBusy(false);
+    if (error || data?.error) {
+      let motivo = data?.error;
+      if (!motivo && error?.context && typeof error.context.json === 'function') {
+        try { motivo = (await error.context.json())?.error; } catch (_) { /* cuerpo no-JSON */ }
+      }
+      alert(motivo || error?.message || 'No se pudo eliminar.');
+      return;
+    }
+    setUsers(prev => (prev || []).filter(x => x.id !== u.id)); // quitar de la lista
+    fetchAllUsers?.();
+    if (data?.warning) alert(data.warning);
+  };
 
   const list = useMemo(() => {
     let arr = users || [];
@@ -208,7 +236,7 @@ export default function AdminClientas() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' }}>
           {list.map(u => (
-            <ClientCard key={u.id} u={u} onRole={onRole} onBaja={onBaja} onReactivar={onReactivar} busy={busy} />
+            <ClientCard key={u.id} u={u} onRole={onRole} onBaja={onBaja} onReactivar={onReactivar} onDelete={onDelete} busy={busy} currentUserId={user?.id} />
           ))}
         </div>
       )}

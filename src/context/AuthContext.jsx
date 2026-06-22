@@ -68,6 +68,10 @@ export const AuthProvider = ({ children }) => {
   // Garantiza que la recarga de datos compartidos (clases, recetas, cafetería, etc.)
   // corra UNA vez por login, ya con la auth lista (evita el "no cargó hasta reabrir").
   const sharedLoadedForRef = useRef(null);
+  // Id del usuario para el que ya se cargó la sesión. Evita que cada evento de auth
+  // (INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED…) rehaga todo el trabajo y haga
+  // "parpadear" la app al abrir por deep link en nativo.
+  const loadedAuthUserIdRef = useRef(null);
 
   // Función para limpiar sesión fantasma por completo
   const forceCleanSession = async () => {
@@ -293,6 +297,23 @@ export const AuthProvider = ({ children }) => {
 
   // fetchCoaches moved to run after auth
 
+  // Aplica el usuario de una sesión SIN trabajo redundante. Mantiene la referencia
+  // de `user` estable cuando es el mismo id (así los efectos realtime con dep [user]
+  // NO se resuscriben en cada evento) y solo recarga datos pesados en un inicio de
+  // sesión real (cambio de usuario), no en TOKEN_REFRESHED ni re-emisiones.
+  const applySessionUser = (sessionUser, { force = false } = {}) => {
+    setUser(prev => (prev && prev.id === sessionUser.id ? prev : sessionUser));
+    if (loadedAuthUserIdRef.current === sessionUser.id && !force) return;
+    loadedAuthUserIdRef.current = sessionUser.id;
+    registerPushToken(sessionUser.id);
+    if (!planJustActivatedRef.current) fetchUserData(sessionUser);
+    fetchAllUsers();
+    fetchCoaches();
+    if (Capacitor.isNativePlatform()) {
+      hasSeenTour(sessionUser.id).then(seen => { if (!seen) setTimeout(() => setShowTour(true), 1500); });
+    }
+  };
+
   useEffect(() => {
     // Verificar sesión activa inicial
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -317,14 +338,7 @@ export const AuthProvider = ({ children }) => {
         return;
       }
       if (session?.user) {
-        setUser(session.user);
-        await fetchUserData(session.user); // carga también el avatar (DB → estado)
-        registerPushToken(session.user.id);
-
-        // Disparar tour solo en app nativa y solo si no se ha visto
-        if (Capacitor.isNativePlatform()) {
-          hasSeenTour(session.user.id).then(seen => { if (!seen) setTimeout(() => setShowTour(true), 1500); });
-        }
+        applySessionUser(session.user);
       } else {
         setLoading(false);
       }
@@ -333,24 +347,16 @@ export const AuthProvider = ({ children }) => {
     // Escuchar cambios (login, logout) reales
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setUser(session.user);
-        registerPushToken(session.user.id);
-        // NO re-fetch si acabamos de activar un plan (evita sobreescribir con datos viejos de la BD)
-        if (!planJustActivatedRef.current) {
-          fetchUserData(session.user);
-        }
-        fetchAllUsers();
-        fetchCoaches();
-
-        if (Capacitor.isNativePlatform()) {
-          hasSeenTour(session.user.id).then(seen => { if (!seen) setTimeout(() => setShowTour(true), 1500); });
-        }
+        // applySessionUser ya evita el trabajo redundante: solo recarga cuando el
+        // usuario cambia de verdad, no en cada TOKEN_REFRESHED / re-emisión.
+        applySessionUser(session.user);
       } else {
         setRole(null);
         setPlan(null);
         setMembershipStatus('INACTIVE');
         setUser(null);
         sharedLoadedForRef.current = null;
+        loadedAuthUserIdRef.current = null;
         setGlobalClasses([]);
         setRecipes([]);
         setMyReservations([]);

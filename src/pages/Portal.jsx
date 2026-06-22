@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { Capacitor } from '@capacitor/core';
 import ProfileMenu from '../components/ProfileMenu';
+import { hasNutritionAccess } from '../lib/plans';
 
 function Portal() {
   const isNative = Capacitor.isNativePlatform();
@@ -523,10 +524,12 @@ function Portal() {
         <button className="nav-qr-button" onClick={() => setShowQR(true)}>
           <QrCode size={24} strokeWidth={2.5} />
         </button>
-        <Link to="/nutricion" className="nav-item">
-          <Utensils size={22} strokeWidth={2.5} />
-          <span>Comida</span>
-        </Link>
+        {hasNutritionAccess(plan) && (
+          <Link to="/nutricion" className="nav-item">
+            <Utensils size={22} strokeWidth={2.5} />
+            <span>Comida</span>
+          </Link>
+        )}
         <Link to="/agenda" className="nav-item">
           <Calendar size={22} strokeWidth={2.5} />
           <span>Clases</span>
