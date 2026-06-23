@@ -31,6 +31,32 @@ Ejecuta TÚ (Claude) automáticamente los pasos de CLI; el usuario solo hace los
 
 **Opcional (smoke test):** un cobro real chico. El flujo NO cambia entre test/live (mismo código), pero confirma que `sk_live` + webhook Live **registran** el sale/pedido. Reembolsable. (Ya se probó el 2026-06-15: pedido quedó `paid` ✅.)
 
+## ✅ Sesión 2026-06-23 (Recepción: pestañas Clases + Ventas) — pendiente rebuild/redeploy
+**Recepción ahora hace mostrador completo, no solo el lector QR.** El rol `RECEPCION`
+ya puede **agregar/editar/borrar clases** e **inscribir clientas + cobrar membresía**,
+exactamente con la misma UI que ADMIN.
+- **Front (sin duplicar código):** `Admin.jsx` acepta un prop **`recepcion`**. En ese
+  modo rebranda el header a "Be Fit Lab · RECEPCIÓN" y **oculta** todo lo que no es
+  mostrador (Reportes, Clientas, Insignias, Comida, Cafetería, Disciplinas, Eventos,
+  Enviar aviso, y el menú ⋯ de categorías/plantillas en Clases). Quedan visibles las 3
+  pestañas del mostrador: **Mostrador (QR) · Clases · Ventas** (la bottom-nav móvil ya
+  era justo esas 3). `Recepcion.jsx` ahora solo hace `return <Admin recepcion />`.
+- **Backend desplegado y verificado:**
+  - Edge function **`admin-create-client`** ahora acepta **ADMIN o RECEPCION** (antes solo ADMIN). Re-deployada.
+  - **RLS aditivo** (`supabase/sql/recepcion_ventas_clases_rls.sql`, ya aplicado vía Management API): `classes` INSERT/UPDATE/DELETE, `users` UPDATE (con guard `role <> 'ADMIN'` para que recepción NO pueda crear admins) y `sales` INSERT — todo con `is_reception_or_admin()`. El cobro (`activatePlan`) hace UPDATE en `users` y el registro de venta INSERT en `sales`; por eso ambos permisos.
+- **Por qué funciona:** `applySessionUser()` ya llama `fetchAllUsers()`/`fetchCoaches()` para cualquier sesión (incl. RECEPCION) y recepción ya tenía SELECT en `users` → los selectores de "Alumna" y "Coach" se llenan.
+- ⚠️ **PENDIENTE:** es cambio de **front** → exige **push a main** (auto-deploy web Cloudflare) y, para nativo, **rebuild + resubir iOS/Android**. El backend ya está en producción (es aditivo, no afecta a ADMIN).
+
+### Fase A — Membresías editables desde admin (planes data-driven + Stripe) — backend YA en prod
+**La dueña ya puede editar planes desde admin y se refleja en sitio + app + cobro, sin rebuild** (excepto este último rebuild para que el front nuevo llegue a nativo).
+- **Tabla nueva `membership_plans`** (`supabase/sql/membership_plans.sql`, aplicada + verificada): fuente de verdad de las membresías. RLS: **SELECT público** (lo lee el landing anónimo — probado), **write solo ADMIN** (probado que anon NO puede). Sembrada con los 5 planes idénticos a los de antes. `name` = clave canónica (== `users.membership_plan` == metadata de Stripe), **no editable** tras crear. `price_mxn` en pesos; centavos se derivan.
+- **`src/lib/plans.js` = REGISTRO VIVO:** `DEFAULT_PLANS` (fallback = valores actuales) + `export let PLANS/PLAN_BY_NAME` (live bindings) + `setPlans()`/`dbRowToPlan()`. `AuthContext.fetchPlans()` (corre al arrancar, público) hidrata el registro y expone estado `plans` (activos, orden) + `allPlans` (incl. archivados) + `createPlan/updatePlan/deletePlan`. **Si la BD falla, quedan los defaults → el sitio nunca queda vacío.** Por eso los call sites de los helpers de gating (`hasNutritionAccess`, etc.) **no cambiaron**.
+- **Consumidores de listas** apuntan a `useAuth().plans` (re-render al cargar): `PricingCarousel`, dropdowns de `Admin` (inscribir/cobro), `AdminClientas`.
+- **Stripe (cobro correcto):** `stripe-checkout` (web) y `stripe-membership-intent` (nativo) **leen el plan de la BD** (service role) en vez del map hardcodeado. **Re-deployadas + smoke-test** (plan inexistente → 400 sin tocar Stripe). Como los Prices de Stripe son inmutables, `resolvePrice()` usa **lookup_key versionada por monto** (`base_<centavos>`): precio sin cambios → reusa el Price existente (no duplica en LIVE); **precio nuevo → Price nuevo → cobra correcto a clientas nuevas; las ya suscritas conservan su precio** (no se migran). El **webhook/notify NO se tocaron** (leen `plan_title`/`class_count` de la metadata de la suscripción → renovaciones mantienen precio y clases originales).
+- **UI admin:** nuevo componente **`AdminPlanes.jsx`** = pestaña **"Membresías"** (CRUD completo: precio, clases, ilimitado, nutrición, plan alimenticio, beneficios, subtítulo, orden, visible/oculto). "Eliminar" = **archiva** (active=false) si alguna clienta lo tiene, o borra real si nadie. Aviso visible de impacto en cobro/sitio. **No aparece en modo recepción.**
+- ⏭️ **PENDIENTE de probar (smoke test real):** un cobro chico de membresía en LIVE (web o app) para confirmar que el flujo DB→Stripe cobra el monto correcto. No lo hice para no ensuciar Stripe LIVE con un cliente de prueba.
+- ⏭️ **Fase B (no hecha):** textos del landing editables (mini-CMS `site_content`). Quedó fuera de esta sesión.
+
 ## ✅ Sesión 2026-06-22 (mantenimiento post-entrega + 2 features) — en iOS 1.2.0(4) / Android 2.4.0(8)
 **Bugs corregidos:**
 - **Inscribir clienta mostraba "Edge Function returned a non-2xx status code":** el front no leía el motivo real del 400. Ahora `Admin.jsx` (`handleInscribir`) lee `error.context.json()` y muestra el motivo ("El correo ya está registrado…", etc.). La causa del reporte original era **correo duplicado**; la función `admin-create-client` desplegada funciona bien (crea cuenta confirmada que SÍ entra). NOTA: un cliente sin plan se autentica pero el `ProtectedRoute` lo rebota de `/portal` (eso NO se cambió, decisión del dueño).

@@ -8,7 +8,7 @@ const corsHeaders = {
 
 // Alta de una clienta desde recepción (panel admin). Crea la cuenta de Auth con
 // el service_role (sin tocar la sesión de la admin) + el perfil en public.users,
-// y opcionalmente le activa un plan. Solo lo puede llamar una ADMIN.
+// y opcionalmente le activa un plan. Lo pueden llamar ADMIN o RECEPCION.
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
@@ -17,14 +17,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // 1. Verificar que quien llama sea ADMIN
+    // 1. Verificar que quien llama sea ADMIN o RECEPCION (mostrador)
     const token = (req.headers.get('Authorization') || '').replace('Bearer ', '');
     if (!token) return Response.json({ error: 'No autenticado' }, { status: 401, headers: corsHeaders });
     const { data: { user: caller } } = await admin.auth.getUser(token);
     if (!caller) return Response.json({ error: 'No autenticado' }, { status: 401, headers: corsHeaders });
     const { data: callerRow } = await admin.from('users').select('role').eq('id', caller.id).single();
-    if ((callerRow?.role || '').toUpperCase() !== 'ADMIN') {
-      return Response.json({ error: 'Solo las administradoras pueden inscribir clientas.' }, { status: 403, headers: corsHeaders });
+    if (!['ADMIN', 'RECEPCION'].includes((callerRow?.role || '').toUpperCase())) {
+      return Response.json({ error: 'Solo el personal del mostrador puede inscribir clientas.' }, { status: 403, headers: corsHeaders });
     }
 
     // 2. Datos de la nueva clienta

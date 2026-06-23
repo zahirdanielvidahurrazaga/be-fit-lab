@@ -5,6 +5,7 @@ import { scheduleClassReminder, cancelClassReminder, notifyReservationConfirmed,
 import { removeClassFromCalendar } from '../hooks/useCalendar';
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
+import { DEFAULT_PLANS, dbRowToPlan, setPlans as hydratePlansRegistry } from '../lib/plans';
 
 // El flag del tour se guarda en almacenamiento NATIVO (Preferences) porque el
 // localStorage del WebView lo purga iOS entre lanzamientos → el tour reaparecía.
@@ -48,6 +49,11 @@ export const AuthProvider = ({ children }) => {
   const [coaches, setCoaches] = useState([]);
   const [categories, setCategories] = useState([]);
   const [classTemplates, setClassTemplates] = useState([]);
+  // Membresías (tabla membership_plans). `plans` = lista para mostrar (activos,
+  // ordenados); `allPlans` = todo (incl. archivados) para resolver por nombre.
+  // Arranca con los defaults para que el sitio nunca quede vacío antes de la BD.
+  const [plans, setPlansState] = useState(() => DEFAULT_PLANS.filter(p => p.active !== false));
+  const [allPlans, setAllPlans] = useState(DEFAULT_PLANS);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [monthlyGoal, setMonthlyGoal] = useState(0); // meta de clases/mes (users.target_monthly_classes)
 
@@ -373,6 +379,7 @@ export const AuthProvider = ({ children }) => {
     fetchCoaches();
     fetchCategories();
     fetchTemplates();
+    fetchPlans();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -418,6 +425,76 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Membresías: lee la tabla, hidrata el registro vivo (lib/plans) y el estado.
+  // Resiliente: si la BD falla, conserva lo que haya (defaults) y no rompe el sitio.
+  const fetchPlans = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('membership_plans')
+        .select('*')
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      if (Array.isArray(data) && data.length) {
+        const mapped = data.map(dbRowToPlan);
+        hydratePlansRegistry(mapped);          // PLANS/PLAN_BY_NAME vivos (todos)
+        setAllPlans(mapped);
+        setPlansState(mapped.filter(p => p.active !== false));
+      }
+    } catch (err) {
+      console.error('fetchPlans error (se conservan los planes por defecto):', err);
+    }
+  };
+
+  const createPlan = async (payload) => {
+    try {
+      const { error } = await supabase.from('membership_plans').insert(payload);
+      if (error) throw error;
+      await fetchPlans();
+      return { success: true };
+    } catch (err) {
+      console.error('createPlan error:', err);
+      return { success: false, error: err };
+    }
+  };
+
+  // `name` y `stripe_lookup_base` NO se actualizan (claves estables de Stripe/usuarios).
+  const updatePlan = async (id, fields) => {
+    try {
+      const { name, stripe_lookup_base, id: _omit, created_at, updated_at, ...safe } = fields || {};
+      const { error } = await supabase.from('membership_plans').update(safe).eq('id', id);
+      if (error) throw error;
+      await fetchPlans();
+      return { success: true };
+    } catch (err) {
+      console.error('updatePlan error:', err);
+      return { success: false, error: err };
+    }
+  };
+
+  // Borrado real solo si ninguna clienta lo tiene asignado; si no, se archiva
+  // (active=false) para conservar la resolución por nombre del historial.
+  const deletePlan = async (plan) => {
+    try {
+      const { count } = await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('membership_plan', plan.name);
+      if (count && count > 0) {
+        const { error } = await supabase.from('membership_plans').update({ active: false }).eq('id', plan.id);
+        if (error) throw error;
+        await fetchPlans();
+        return { success: true, archived: true, count };
+      }
+      const { error } = await supabase.from('membership_plans').delete().eq('id', plan.id);
+      if (error) throw error;
+      await fetchPlans();
+      return { success: true, archived: false };
+    } catch (err) {
+      console.error('deletePlan error:', err);
+      return { success: false, error: err };
     }
   };
 
@@ -1489,7 +1566,8 @@ export const AuthProvider = ({ children }) => {
       disciplines, disciplinesLoaded, fetchDisciplines, addDiscipline, updateDiscipline, deleteDiscipline,
       updateClass,
       categories, fetchCategories, addCategory, updateCategory, deleteCategory,
-      classTemplates, fetchTemplates, saveTemplate, deleteTemplate, applyTemplate
+      classTemplates, fetchTemplates, saveTemplate, deleteTemplate, applyTemplate,
+      plans, allPlans, fetchPlans, createPlan, updatePlan, deletePlan
     }}>
       {children}
     </AuthContext.Provider>

@@ -7,13 +7,43 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const PLANS: Record<string, { amount: number; classes: number; name: string; lookupKey: string }> = {
-  'Plan Principiante': { amount: 75000, classes: 8, name: 'Plan Principiante – Be Fit Lab', lookupKey: 'befit_plan_principiante_monthly' },
-  'Plan Inicial': { amount: 85000,  classes: 10,   name: 'Plan Inicial – Be Fit Lab',  lookupKey: 'befit_plan_inicial_monthly' },
-  'Plan Básico':  { amount: 105000, classes: 15,   name: 'Plan Básico – Be Fit Lab',   lookupKey: 'befit_plan_basico_monthly'  },
-  'Plan Fit':     { amount: 130000, classes: 20,   name: 'Plan Fit – Be Fit Lab',      lookupKey: 'befit_plan_fit_monthly'     },
-  'Plan Premium': { amount: 185000, classes: 9999, name: 'Plan Premium – Be Fit Lab',  lookupKey: 'befit_plan_premium_monthly' },
-};
+// Resuelve el Stripe Price para un plan, leyendo el monto de la BD.
+// Estrategia para que un CAMBIO de precio cobre correcto sin afectar a las
+// suscripciones vivas (los Prices de Stripe son inmutables):
+//   1. Si ya existe un Price con la lookup_key base y su monto COINCIDE → se
+//      reutiliza (precio sin cambios → no duplica nada en Stripe LIVE).
+//   2. Si existe uno con la key versionada por monto (`base_<centavos>`) → se reutiliza.
+//   3. Si no, se crea un Price nuevo con la key versionada. Así un precio nuevo
+//      genera un Price nuevo (cobro correcto a clientas NUEVAS); las que ya están
+//      suscritas siguen en su Price anterior (no se migran).
+async function resolvePrice(
+  stripe: Stripe,
+  lookupBase: string,
+  amountCents: number,
+  productName: string,
+) {
+  const versionedKey = `${lookupBase}_${amountCents}`;
+
+  // (1) Price con la key base — reusar solo si el monto sigue igual.
+  const baseList = await stripe.prices.list({ lookup_keys: [lookupBase], active: true, limit: 1 });
+  if (baseList.data[0] && baseList.data[0].unit_amount === amountCents) {
+    return baseList.data[0];
+  }
+
+  // (2) Price con la key versionada por monto.
+  const versionedList = await stripe.prices.list({ lookup_keys: [versionedKey], active: true, limit: 1 });
+  if (versionedList.data[0]) return versionedList.data[0];
+
+  // (3) Crear uno nuevo con la key versionada (no transferimos la key base para
+  //     que las suscripciones vivas conserven su Price).
+  return await stripe.prices.create({
+    currency: 'mxn',
+    unit_amount: amountCents,
+    recurring: { interval: 'month' },
+    lookup_key: versionedKey,
+    product_data: { name: productName },
+  });
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -25,16 +55,24 @@ serve(async (req) => {
       return Response.json({ error: 'planTitle, userId y userEmail son requeridos' }, { status: 400, headers: corsHeaders });
     }
 
-    const plan = PLANS[planTitle];
-    if (!plan) {
-      return Response.json({ error: `Plan desconocido: ${planTitle}` }, { status: 400, headers: corsHeaders });
-    }
-
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-06-20' });
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
+
+    // Plan desde la BD (fuente de verdad, editable desde admin).
+    const { data: planRow, error: planErr } = await supabase
+      .from('membership_plans')
+      .select('name, title, price_mxn, classes, stripe_lookup_base')
+      .eq('name', planTitle)
+      .maybeSingle();
+    if (planErr || !planRow) {
+      return Response.json({ error: `Plan desconocido: ${planTitle}` }, { status: 400, headers: corsHeaders });
+    }
+    const amountCents = Math.round(Number(planRow.price_mxn) * 100);
+    const classCount = Number(planRow.classes) || 0;
+    const productName = `${planRow.name} – Be Fit Lab`;
 
     // Buscar o crear cliente en Stripe
     const existingCustomers = await stripe.customers.list({ email: userEmail, limit: 1 });
@@ -53,19 +91,7 @@ serve(async (req) => {
     // Guardar stripe_customer_id en Supabase
     await supabase.from('users').update({ stripe_customer_id: customer.id }).eq('id', userId);
 
-    // Buscar o crear el Price (lookup_key para idempotencia — no crea duplicados)
-    const existingPrices = await stripe.prices.list({ lookup_keys: [plan.lookupKey] });
-    let price = existingPrices.data[0];
-    if (!price) {
-      price = await stripe.prices.create({
-        currency: 'mxn',
-        unit_amount: plan.amount,
-        recurring: { interval: 'month' },
-        lookup_key: plan.lookupKey,
-        transfer_lookup_key: true,
-        product_data: { name: plan.name },
-      });
-    }
+    const price = await resolvePrice(stripe, planRow.stripe_lookup_base, amountCents, productName);
 
     // Web manda returnUrl (window.location.origin) → redirige al MISMO dominio
     // (producción o localhost en dev). Nativo no lo manda → fallback a la web real.
@@ -85,13 +111,13 @@ serve(async (req) => {
       metadata: {
         supabase_user_id: userId,
         plan_title: planTitle,
-        class_count: plan.classes.toString(),
+        class_count: classCount.toString(),
       },
       subscription_data: {
         metadata: {
           supabase_user_id: userId,
           plan_title: planTitle,
-          class_count: plan.classes.toString(),
+          class_count: classCount.toString(),
         },
       },
     });

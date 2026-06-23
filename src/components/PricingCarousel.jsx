@@ -2,12 +2,16 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { PLANS } from '../lib/plans';
+import { DEFAULT_PLANS } from '../lib/plans';
+import { useAuth } from '../context/AuthContext';
 
 export function PricingCarousel({ onSelectPlan }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const navigate = useNavigate();
+  // Planes editables desde admin (BD). Fallback a los defaults para no quedar vacío.
+  const { plans: ctxPlans } = useAuth();
+  const PLANS = (ctxPlans && ctxPlans.length) ? ctxPlans : DEFAULT_PLANS;
 
   React.useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);

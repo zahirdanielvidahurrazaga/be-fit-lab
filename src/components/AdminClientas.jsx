@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { Search, Cake, Crown, UserX, UserCheck, Shield, Coffee, Dumbbell, ChevronDown, Phone, QrCode, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { PLANS } from '../lib/plans';
 
 const PRIMARY = '#FF914D';
 const INK = '#1A1C1E';
@@ -117,7 +116,7 @@ function ClientCard({ u, onRole, onBaja, onReactivar, onDelete, busy, currentUse
 }
 
 export default function AdminClientas() {
-  const { user, fetchAllUsers } = useAuth();
+  const { user, fetchAllUsers, allPlans } = useAuth();
   const [users, setUsers] = useState(null); // TODOS los usuarios (no solo clientas)
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
@@ -127,13 +126,13 @@ export default function AdminClientas() {
   const plans = useMemo(() => {
     // Siempre mostramos todos los planes del catálogo (en su orden), aunque aún
     // nadie los tenga, para poder filtrar por planes nuevos como "Principiante".
-    const canonical = PLANS.map(p => p.name);
+    const canonical = (allPlans || []).map(p => p.name);
     const inUse = new Set();
     (users || []).forEach(u => { if (u.role === 'CLIENT' && u.membership_status === 'ACTIVE' && u.membership_plan) inUse.add(u.membership_plan); });
     // Añadimos al final cualquier plan en uso que no esté en el catálogo (legacy).
     const extras = [...inUse].filter(p => !canonical.includes(p));
     return [...canonical, ...extras];
-  }, [users]);
+  }, [users, allPlans]);
 
   const load = async () => {
     const { data } = await supabase.from('users')

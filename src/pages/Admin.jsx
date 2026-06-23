@@ -5,12 +5,12 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
-import { PLANS, PLAN_BY_NAME } from '../lib/plans';
 import { supabase } from '../lib/supabase';
 import AdminCafeteria from '../components/AdminCafeteria';
 import AdminDisciplinas from '../components/AdminDisciplinas';
 import AdminReportes from '../components/AdminReportes';
 import AdminClientas from '../components/AdminClientas';
+import AdminPlanes from '../components/AdminPlanes';
 import AdminNutricion from '../components/AdminNutricion';
 import AdminEventos from '../components/AdminEventos';
 import QrCheckIn from '../components/QrCheckIn';
@@ -18,7 +18,7 @@ import ScheduleStoryExport from '../components/ScheduleStoryExport';
 import AdminCategoryManager from '../components/AdminCategoryManager';
 import AdminWeekTemplates from '../components/AdminWeekTemplates';
 import { DEFAULT_CATEGORIES, PASTEL_PALETTE, resolveCatColor, categoryLabel } from '../lib/categories';
-import { Coffee, Bell, UserCog, Sparkles, Copy, Trash2, Tag, LayoutTemplate, MoreHorizontal, Dumbbell } from 'lucide-react';
+import { Coffee, Bell, UserCog, Sparkles, Copy, Trash2, Tag, LayoutTemplate, MoreHorizontal, Dumbbell, CreditCard } from 'lucide-react';
 
 const daysOfWeek = [
   { num: 1, label: 'Lunes' },
@@ -30,13 +30,20 @@ const daysOfWeek = [
   { num: 0, label: 'Domingo' }
 ];
 
-function Admin() {
+// `recepcion` = modo mostrador: reutiliza esta misma pantalla pero limitada a
+// las pestañas que el personal de recepción necesita (QR, Clases y Ventas).
+// Oculta el resto de la navegación y rebranda el header. Ver /recepcion.
+function Admin({ recepcion = false }) {
   const { user, logout, globalClasses, recipes, updateClassSpots, checkInClient, addClass, deleteClass, updateClass, addRecipe, deleteRecipe, allUsers, coaches, activatePlan, fetchAllUsers, fetchClassesByDayOfWeek, fetchGlobalClasses, assignCustomBadge, removeCustomBadge, badgeConfigs, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig, addMultipleClasses, setNotifOpen,
     categories, addCategory, updateCategory, deleteCategory,
     classTemplates, saveTemplate, deleteTemplate, applyTemplate,
-    disciplines } = useAuth();
+    disciplines, plans, allPlans, createPlan, updatePlan, deletePlan } = useAuth();
   const isScrolled = useScrollDetect(30);
   const navigate = useNavigate();
+  // Membresías editables (BD). PLAN_BY_NAME resuelve también planes archivados
+  // (para cobrar a una clienta cuyo plan se ocultó). Listas usan `plans` (activos).
+  const PLANS = plans || [];
+  const PLAN_BY_NAME = Object.fromEntries((allPlans || []).map(p => [p.name, p]));
   const [activeTab, setActiveTab] = useState('mostrador');
   const [showTopMenu, setShowTopMenu] = useState(false);
   
@@ -473,8 +480,8 @@ function Admin() {
       <header className="ios-header mobile-only-header" style={{ background: 'var(--surface-lowest)', paddingBottom: '10px', borderBottom: '1px solid rgba(0,0,0,0.05)', position: 'relative', zIndex: 50 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <div>
-            <h1 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Gestión Lab</h1>
-            <p style={{ fontSize: '0.8rem', color: 'var(--primary)', margin: '4px 0 0', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>CONTROL CENTER</p>
+            <h1 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>{recepcion ? 'Be Fit Lab' : 'Gestión Lab'}</h1>
+            <p style={{ fontSize: '0.8rem', color: 'var(--primary)', margin: '4px 0 0', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{recepcion ? 'RECEPCIÓN' : 'CONTROL CENTER'}</p>
           </div>
           
           <div style={{ position: 'relative' }}>
@@ -491,6 +498,7 @@ function Admin() {
                   transition={{ duration: 0.2 }}
                   style={{ position: 'absolute', top: '50px', right: 0, background: 'white', borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.15)', padding: '8px', width: '200px', border: '1px solid rgba(0,0,0,0.05)', zIndex: 100 }}
                 >
+                  {!recepcion && (<>
                   <div onClick={() => { setActiveTab('reportes'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <BarChart3 size={18} color="var(--primary)" /> Reportes
                   </div>
@@ -512,10 +520,14 @@ function Admin() {
                   <div onClick={() => { setActiveTab('eventos'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Sparkles size={18} color="var(--primary)" /> Eventos
                   </div>
+                  <div onClick={() => { setActiveTab('membresias'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
+                    <CreditCard size={18} color="var(--primary)" /> Membresías
+                  </div>
                   <div onClick={() => { setNotifOpen(true); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Bell size={18} color="var(--primary)" /> Enviar aviso
                   </div>
                   <div style={{ height: '1px', background: 'rgba(0,0,0,0.05)', margin: '8px' }} />
+                  </>)}
                   <div onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: '#ff3b30', fontWeight: 600 }}>
                     <LogOut size={18} /> Cerrar Sesión
                   </div>
@@ -529,8 +541,8 @@ function Admin() {
       {/* DESKTOP SIDEBAR PANEL */}
       <aside className="admin-desktop-sidebar">
         <div className="sidebar-brand">
-          <h1 className="sidebar-title">Gestión Lab</h1>
-          <p className="sidebar-subtitle">CONTROL CENTER</p>
+          <h1 className="sidebar-title">{recepcion ? 'Be Fit Lab' : 'Gestión Lab'}</h1>
+          <p className="sidebar-subtitle">{recepcion ? 'RECEPCIÓN' : 'CONTROL CENTER'}</p>
         </div>
         <nav className="sidebar-nav">
           <div onClick={() => setActiveTab('mostrador')} className={`sidebar-nav-item ${activeTab === 'mostrador' ? 'active' : ''}`}>
@@ -545,6 +557,7 @@ function Admin() {
             <DollarSign size={20} />
             <span>Ventas</span>
           </div>
+          {!recepcion && (<>
           <div onClick={() => setActiveTab('reportes')} className={`sidebar-nav-item ${activeTab === 'reportes' ? 'active' : ''}`}>
             <BarChart3 size={20} />
             <span>Reportes</span>
@@ -569,6 +582,10 @@ function Admin() {
             <Sparkles size={20} />
             <span>Eventos</span>
           </div>
+          <div onClick={() => setActiveTab('membresias')} className={`sidebar-nav-item ${activeTab === 'membresias' ? 'active' : ''}`}>
+            <CreditCard size={20} />
+            <span>Membresías</span>
+          </div>
           <div onClick={() => setNotifOpen(true)} className="sidebar-nav-item">
             <Bell size={20} />
             <span>Enviar aviso</span>
@@ -577,6 +594,7 @@ function Admin() {
             <Award size={20} />
             <span>Insignias</span>
           </div>
+          </>)}
         </nav>
         
         <div className="sidebar-footer" onClick={handleLogout}>
@@ -637,6 +655,7 @@ function Admin() {
                           >
                             <CalendarPlus size={18} /> Carga Masiva
                           </button>
+                          {!recepcion && (
                           <div style={{ position: 'relative' }}>
                             <button onClick={() => setShowClassMenu(v => !v)} style={{ background: 'rgba(0,0,0,0.05)', border: 'none', padding: '8px 11px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                               <MoreHorizontal size={18} color="var(--black)" />
@@ -652,6 +671,7 @@ function Admin() {
                               </>
                             )}
                           </div>
+                          )}
                         </div>
                       </div>
       
@@ -1232,6 +1252,12 @@ function Admin() {
             {activeTab === 'clientas' && (
               <motion.div key="clientas" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
                 <AdminClientas />
+              </motion.div>
+            )}
+
+            {activeTab === 'membresias' && (
+              <motion.div key="membresias" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
+                <AdminPlanes />
               </motion.div>
             )}
           </AnimatePresence>

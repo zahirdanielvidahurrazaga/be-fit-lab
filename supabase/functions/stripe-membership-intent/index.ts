@@ -7,14 +7,36 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Mismos planes que stripe-checkout (web). Mantener sincronizado.
-const PLANS: Record<string, { amount: number; classes: number; name: string; lookupKey: string }> = {
-  'Plan Principiante': { amount: 75000, classes: 8, name: 'Plan Principiante – Be Fit Lab', lookupKey: 'befit_plan_principiante_monthly' },
-  'Plan Inicial': { amount: 85000,  classes: 10,   name: 'Plan Inicial – Be Fit Lab',  lookupKey: 'befit_plan_inicial_monthly' },
-  'Plan Básico':  { amount: 105000, classes: 15,   name: 'Plan Básico – Be Fit Lab',   lookupKey: 'befit_plan_basico_monthly'  },
-  'Plan Fit':     { amount: 130000, classes: 20,   name: 'Plan Fit – Be Fit Lab',      lookupKey: 'befit_plan_fit_monthly'     },
-  'Plan Premium': { amount: 185000, classes: 9999, name: 'Plan Premium – Be Fit Lab',  lookupKey: 'befit_plan_premium_monthly' },
-};
+// Resuelve el Stripe Price leyendo el monto de la BD (misma lógica que
+// stripe-checkout). Los Prices de Stripe son inmutables, así que:
+//   1. key base con monto igual → reusar (sin cambios, no duplica en LIVE).
+//   2. key versionada `base_<centavos>` existente → reusar.
+//   3. si no, crear Price nuevo con la key versionada → un precio nuevo cobra
+//      correcto a clientas nuevas; las ya suscritas conservan su Price.
+async function resolvePrice(
+  stripe: Stripe,
+  lookupBase: string,
+  amountCents: number,
+  productName: string,
+) {
+  const versionedKey = `${lookupBase}_${amountCents}`;
+
+  const baseList = await stripe.prices.list({ lookup_keys: [lookupBase], active: true, limit: 1 });
+  if (baseList.data[0] && baseList.data[0].unit_amount === amountCents) {
+    return baseList.data[0];
+  }
+
+  const versionedList = await stripe.prices.list({ lookup_keys: [versionedKey], active: true, limit: 1 });
+  if (versionedList.data[0]) return versionedList.data[0];
+
+  return await stripe.prices.create({
+    currency: 'mxn',
+    unit_amount: amountCents,
+    recurring: { interval: 'month' },
+    lookup_key: versionedKey,
+    product_data: { name: productName },
+  });
+}
 
 // Hoja de pago NATIVA para MEMBRESÍAS (suscripción). Crea la suscripción en estado
 // `default_incomplete` y devuelve el client_secret del PaymentIntent de la primera
@@ -28,16 +50,25 @@ serve(async (req) => {
     if (!planTitle || !userId || !userEmail) {
       return Response.json({ error: 'planTitle, userId y userEmail son requeridos' }, { status: 400, headers: corsHeaders });
     }
-    const plan = PLANS[planTitle];
-    if (!plan) {
-      return Response.json({ error: `Plan desconocido: ${planTitle}` }, { status: 400, headers: corsHeaders });
-    }
 
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-06-20' });
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
+
+    // Plan desde la BD (fuente de verdad, editable desde admin).
+    const { data: planRow, error: planErr } = await supabase
+      .from('membership_plans')
+      .select('name, title, price_mxn, classes, stripe_lookup_base')
+      .eq('name', planTitle)
+      .maybeSingle();
+    if (planErr || !planRow) {
+      return Response.json({ error: `Plan desconocido: ${planTitle}` }, { status: 400, headers: corsHeaders });
+    }
+    const amountCents = Math.round(Number(planRow.price_mxn) * 100);
+    const classCount = Number(planRow.classes) || 0;
+    const productName = `${planRow.name} – Be Fit Lab`;
 
     // Buscar o crear cliente en Stripe
     const existingCustomers = await stripe.customers.list({ email: userEmail, limit: 1 });
@@ -49,19 +80,7 @@ serve(async (req) => {
     }
     await supabase.from('users').update({ stripe_customer_id: customer.id }).eq('id', userId);
 
-    // Buscar o crear el Price (lookup_key para no duplicar)
-    const existingPrices = await stripe.prices.list({ lookup_keys: [plan.lookupKey] });
-    let price = existingPrices.data[0];
-    if (!price) {
-      price = await stripe.prices.create({
-        currency: 'mxn',
-        unit_amount: plan.amount,
-        recurring: { interval: 'month' },
-        lookup_key: plan.lookupKey,
-        transfer_lookup_key: true,
-        product_data: { name: plan.name },
-      });
-    }
+    const price = await resolvePrice(stripe, planRow.stripe_lookup_base, amountCents, productName);
 
     // Crear la suscripción incompleta → PaymentIntent de la primera factura
     const subscription = await stripe.subscriptions.create({
@@ -73,7 +92,7 @@ serve(async (req) => {
       metadata: {
         supabase_user_id: userId,
         plan_title: planTitle,
-        class_count: plan.classes.toString(),
+        class_count: classCount.toString(),
       },
     });
 
