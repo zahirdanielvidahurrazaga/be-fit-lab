@@ -35,6 +35,11 @@ export default defineConfig({
         // precachean en el primer load — se cachean bajo demanda (runtime).
         globPatterns: ['**/*.{js,css,html,woff,woff2}'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        // La página de recuperación de contraseña NUNCA se sirve desde el caché
+        // del service worker (siempre red): así el enlace del correo carga el
+        // código más reciente y no la versión vieja precacheada, que mostraba
+        // "enlace no válido". Solo afecta a navegaciones a esta ruta.
+        navigateFallbackDenylist: [/^\/nueva-contrasena/],
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.destination === 'image',

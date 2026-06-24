@@ -35,9 +35,13 @@ export default function NuevaContrasena() {
       // GET y no ejecuta JS) ya NO consume el token de un solo uso.
       if (tokenHash) {
         const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
-        if (active) setHasSession(!error);
         // Limpia el token de la barra de direcciones (no dejarlo expuesto/recargable).
         try { window.history.replaceState({}, '', url.pathname); } catch (e) { /* sin soporte de history: no pasa nada */ }
+        if (!error) { if (active) setHasSession(true); return; }
+        // verifyOtp falló: puede que el enlace ya se haya canjeado en una carga
+        // previa (mismo navegador) y exista sesión → úsala en vez de marcar error.
+        const { data } = await supabase.auth.getSession();
+        if (active) setHasSession(!!data.session);
         return;
       }
 
