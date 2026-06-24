@@ -19,7 +19,34 @@ export default function NuevaContrasena() {
 
   useEffect(() => {
     let active = true;
-    supabase.auth.getSession().then(({ data }) => { if (active) setHasSession(!!data.session); });
+    const url = new URL(window.location.href);
+    const qp = url.searchParams;
+    const hp = new URLSearchParams(url.hash.replace(/^#/, ''));
+    const tokenHash = qp.get('token_hash');
+    const type = qp.get('type') || hp.get('type') || 'recovery';
+    const errCode = qp.get('error_code') || hp.get('error_code') || qp.get('error') || hp.get('error');
+
+    async function init() {
+      // Si Supabase mandó un error en la URL (token ya usado/expirado), enlace inválido.
+      if (errCode) { if (active) setHasSession(false); return; }
+
+      // Flujo NUEVO (a prueba de Gmail): el correo trae ?token_hash=...&type=recovery.
+      // La verificación es un POST por JS → el pre-escaneo de Gmail (que solo hace
+      // GET y no ejecuta JS) ya NO consume el token de un solo uso.
+      if (tokenHash) {
+        const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
+        if (active) setHasSession(!error);
+        // Limpia el token de la barra de direcciones (no dejarlo expuesto/recargable).
+        try { window.history.replaceState({}, '', url.pathname); } catch (e) { /* sin soporte de history: no pasa nada */ }
+        return;
+      }
+
+      // Fallback: sesión ya establecida (flujo viejo con #access_token o deep link nativo).
+      const { data } = await supabase.auth.getSession();
+      if (active) setHasSession(!!data.session);
+    }
+    init();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       if (active && session) setHasSession(true);
     });

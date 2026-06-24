@@ -25,6 +25,7 @@ function MiCuenta() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [pendingAvatar, setPendingAvatar] = useState(null);
+  const [savingAvatar, setSavingAvatar] = useState(false);
   const [initialProfile, setInitialProfile] = useState({});
 
   // Load user data
@@ -89,41 +90,51 @@ function MiCuenta() {
   };
 
   const confirmAvatar = async () => {
-    if (!pendingAvatar) return;
+    if (!pendingAvatar || savingAvatar) return;
+    setSavingAvatar(true);
+    setError('');
     const compressed = await compressAvatar(pendingAvatar);
 
-    // Subir a Supabase Storage y guardar la URL pública (modelo nuevo). Si la
-    // subida falla, caemos al base64 para no dejar a la usuaria sin foto.
+    // Subir a Supabase Storage y guardar la URL pública. Si la subida falla NO
+    // fingimos que guardó (antes caía a base64 silencioso y la foto no persistía
+    // → la usuaria creía que sí). Avisamos y dejamos la foto pendiente para reintentar.
     const { url, error: upErr } = await uploadAvatar(user.id, compressed);
-    if (upErr) console.error('Error subiendo avatar a Storage:', upErr);
-    const finalUrl = url || compressed;
+    if (upErr || !url) {
+      console.error('Error subiendo avatar a Storage:', upErr);
+      setError('No se pudo subir la foto. Revisa tu conexión e inténtalo de nuevo.');
+      setSavingAvatar(false);
+      return; // mantiene pendingAvatar para que pueda reintentar
+    }
 
-    setAvatarUrl(finalUrl);
+    setAvatarUrl(url);
     // El caché local es secundario; si revienta NO debe impedir el guardado en BD.
-    try { localStorage.setItem(`avatar_${user.id}`, finalUrl); } catch (e) {
+    try { localStorage.setItem(`avatar_${user.id}`, url); } catch (e) {
       console.warn('No se pudo cachear el avatar en localStorage:', e);
     }
 
     const { error: avatarError } = await supabase
       .from('users')
-      .update({ avatar_url: finalUrl })
+      .update({ avatar_url: url })
       .eq('id', user.id);
 
     if (avatarError) {
       console.error('Error guardando avatar en DB:', avatarError);
-      setError('Foto guardada, pero no se pudo sincronizar. Verifica la columna avatar_url en Supabase.');
+      setError('Foto subida, pero no se pudo sincronizar. Inténtalo de nuevo.');
+      setSavingAvatar(false);
+      return;
     }
 
     if (role === 'COACH' || role === 'ADMIN') {
-      const { data: existing } = await supabase.from('badges_config').select('*').eq('rule_type', 'COACH_PROFILE').single();
+      const { data: existing } = await supabase.from('badges_config').select('id').eq('rule_type', 'COACH_PROFILE').single();
       if (existing) {
-        await supabase.from('badges_config').update({ icon: finalUrl }).eq('id', existing.id);
+        await supabase.from('badges_config').update({ icon: url }).eq('id', existing.id);
       } else {
-        await supabase.from('badges_config').insert({ rule_type: 'COACH_PROFILE', rule_value: 0, icon: finalUrl, label: fullName || 'Coach' });
+        await supabase.from('badges_config').insert({ rule_type: 'COACH_PROFILE', rule_value: 0, icon: url, label: fullName || 'Coach' });
       }
     }
 
     setPendingAvatar(null);
+    setSavingAvatar(false);
   };
 
   const loadProfile = async () => {
@@ -329,14 +340,15 @@ function MiCuenta() {
               </button>
               <button
                 onClick={confirmAvatar}
+                disabled={savingAvatar}
                 style={{
                   padding: '14px 28px', borderRadius: '99px', border: 'none',
-                  background: '#FF8B42', color: 'white', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer',
-                  boxShadow: '0 8px 20px rgba(255,139,66,0.4)',
+                  background: '#FF8B42', color: 'white', fontWeight: 800, fontSize: '0.95rem', cursor: savingAvatar ? 'default' : 'pointer',
+                  boxShadow: '0 8px 20px rgba(255,139,66,0.4)', opacity: savingAvatar ? 0.7 : 1,
                   display: 'flex', alignItems: 'center', gap: '8px'
                 }}
               >
-                <Check size={16} /> Usar foto
+                <Check size={16} /> {savingAvatar ? 'Guardando…' : 'Usar foto'}
               </button>
             </div>
 
