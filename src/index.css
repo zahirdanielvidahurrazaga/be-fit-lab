@@ -1362,7 +1362,7 @@ h1, h2, h3, h4, h5 {
     width: 280px;
     background: #1A1C1E; /* Fondo oscuro premium satinado */
     color: white;
-    padding: 40px 24px;
+    padding: 32px 24px 24px;
     position: fixed;
     top: 0;
     bottom: 0;
@@ -1370,11 +1370,13 @@ h1, h2, h3, h4, h5 {
     z-index: 1000;
     box-shadow: 10px 0 30px rgba(0, 0, 0, 0.05);
     border-right: 1px solid rgba(255, 255, 255, 0.05);
+    overflow: hidden; /* el scroll vive dentro de .sidebar-nav */
   }
 
   .sidebar-brand {
-    margin-bottom: 40px;
+    margin-bottom: 28px;
     padding-left: 8px;
+    flex-shrink: 0;
   }
 
   .sidebar-title {
@@ -1401,7 +1403,19 @@ h1, h2, h3, h4, h5 {
     flex-direction: column;
     gap: 8px;
     flex: 1;
+    min-height: 0;          /* permite que el flex-child encoja y aparezca scroll */
+    overflow-y: auto;        /* la lista de secciones hace scroll por dentro */
+    overflow-x: hidden;
+    padding-right: 6px;      /* aire para la barra de scroll */
+    margin-right: -6px;
+    margin-bottom: 12px;     /* separa el último item del botón de cerrar sesión */
+    scrollbar-width: thin;   /* Firefox */
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
   }
+  .sidebar-nav::-webkit-scrollbar { width: 6px; }
+  .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.16); border-radius: 999px; }
+  .sidebar-nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+  .sidebar-nav-item { flex-shrink: 0; }
 
   .sidebar-nav-item {
     display: flex;
@@ -1439,7 +1453,8 @@ h1, h2, h3, h4, h5 {
     color: #FF4D4D;
     background: rgba(255, 77, 77, 0.06);
     transition: all 0.25s ease;
-    margin-top: auto;
+    margin-top: 0;       /* el espacio lo da .sidebar-nav (flex:1) */
+    flex-shrink: 0;      /* siempre visible abajo, no se corta */
   }
 
   .sidebar-footer:hover {

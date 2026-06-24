@@ -308,12 +308,16 @@ function Admin({ recepcion = false }) {
     setEditingClassId(null);
     setAddingCategory(false); setAddingLevel(false);
     setShowAddClass(false);
+    // Conserva el día que está editando (vista de calendario) para que al agregar
+    // varias clases seguidas TODAS caigan en ese día. Si no, el reset volvía la
+    // fecha a HOY (invisible en el form) y la 2ª, 3ª… clase saltaban a la fecha de hoy.
+    const keepDate = (selectedCalendarDay && selectedCalendarDay !== 'bulk') ? selectedCalendarDay : todayLocalStr();
     setNewClass({
       title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1',
       description: '',
-      date: todayLocalStr(),
-      startDate: todayLocalStr(),
-      endDate: todayLocalStr(),
+      date: keepDate,
+      startDate: keepDate,
+      endDate: keepDate,
       daysOfWeek: []
     });
     fetchGlobalClasses(); // Refresh

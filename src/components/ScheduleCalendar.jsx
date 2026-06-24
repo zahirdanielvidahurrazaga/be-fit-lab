@@ -193,7 +193,7 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
                   <ClassItem
                     key={c.id}
                     classData={c}
-                    full={c.spots === 0}
+                    full={(c.spots ?? 0) <= 0}
                     isPast={isPast}
                     isReserved={reservedIds.has(c.id)}
                     onReserve={() => onReserve(c, selectedDateStr)}
@@ -277,8 +277,8 @@ export function ClassItem({ classData, full, isPast, isReserved, onReserve, coac
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isPast ? '#8a7266' : isReserved ? '#16A34A' : full ? '#FF4D4D' : '#22C55E' }}></div>
-             <span style={{ fontSize: '0.75rem', color: isReserved ? '#16A34A' : '#8a7266', fontWeight: 700 }}>
-                {isPast ? 'Ya terminó' : isReserved ? 'Ya reservada' : full ? 'Clase llena' : `${spots} lugares disponibles`}
+             <span style={{ fontSize: '0.75rem', color: isReserved ? '#16A34A' : full && !isPast ? '#FF4D4D' : '#8a7266', fontWeight: 700 }}>
+                {isPast ? 'Ya terminó' : isReserved ? 'Ya reservada' : full ? 'Sin cupos' : `${Math.max(0, spots)} ${spots === 1 ? 'lugar disponible' : 'lugares disponibles'}`}
              </span>
           </div>
         </div>

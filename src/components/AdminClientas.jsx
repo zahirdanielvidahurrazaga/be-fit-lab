@@ -1,8 +1,49 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Search, Cake, Crown, UserX, UserCheck, Shield, Coffee, Dumbbell, ChevronDown, Phone, QrCode, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Cake, Crown, UserX, UserCheck, Shield, Coffee, Dumbbell, ChevronDown, ChevronLeft, ChevronRight, Phone, QrCode, Trash2, CalendarPlus, Plus, Minus, X, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { todayLocalStr } from '../lib/dates';
+
+const DAYS_FULL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const DAYS_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const MESES_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+const isUnlimitedClient = (u) => (u.classes_remaining ?? 0) >= 9000 || ['Plan Premium', 'Premium'].includes(u.membership_plan);
+
+// "7:00 AM" → minutos desde medianoche (para ordenar bien; el orden alfabético rompe con AM/PM).
+const timeToMin = (t = '') => {
+  const m = String(t).match(/(\d{1,2}):(\d{2})\s*(a|p)\.?\s*m/i);
+  if (!m) return 0;
+  let h = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  const pm = m[3].toLowerCase() === 'p';
+  if (pm && h !== 12) h += 12;
+  if (!pm && h === 12) h = 0;
+  return h * 60 + min;
+};
+
+// Etiqueta legible de una clase del horario (fechada o recurrente semanal).
+const classLabel = (c) => {
+  if (c.date) {
+    const dow = new Date(c.date + 'T12:00:00').getDay();
+    const [, mo, d] = c.date.split('-');
+    return `${DAYS_SHORT[dow]} ${parseInt(d, 10)} ${MESES_SHORT[parseInt(mo, 10) - 1]}`;
+  }
+  return `Cada ${DAYS_FULL[c.day] ?? '—'}`;
+};
+
+// Traduce los errores que lanza admin_book_class a algo entendible para la dueña.
+const bookErrMsg = (raw = '') => {
+  const m = String(raw).toUpperCase();
+  if (m.includes('SIN_CLASES')) return 'La clienta no tiene clases disponibles. Súmale clases arriba y vuelve a intentar.';
+  if (m.includes('SIN_CUPO')) return 'Esa clase ya no tiene cupo.';
+  if (m.includes('YA_RESERVADA')) return 'La clienta ya estaba reservada en esa clase.';
+  if (m.includes('NO_AUTORIZADO')) return 'No tienes permiso para reservar clases.';
+  if (m.includes('CLASE_NO_EXISTE')) return 'Esa clase ya no existe.';
+  if (m.includes('CLIENTA_NO_EXISTE')) return 'No se encontró a la clienta.';
+  return 'No se pudo reservar: ' + raw;
+};
 
 const PRIMARY = '#FF914D';
 const INK = '#1A1C1E';
@@ -40,7 +81,7 @@ function Pill({ active, onClick, children }) {
   );
 }
 
-function ClientCard({ u, onRole, onBaja, onReactivar, onDelete, busy, currentUserId }) {
+function ClientCard({ u, onRole, onBaja, onReactivar, onDelete, onManage, busy, currentUserId }) {
   const [openRole, setOpenRole] = useState(false);
   const rm = roleMeta(u.role);
   const active = u.membership_status === 'ACTIVE';
@@ -95,6 +136,11 @@ function ClientCard({ u, onRole, onBaja, onReactivar, onDelete, busy, currentUse
 
       {(isClient || canDelete) && (
         <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+          {isClient && (
+            <button disabled={busy} onClick={() => onManage(u)} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,145,77,0.12)', color: PRIMARY, border: 'none', borderRadius: '10px', padding: '8px 12px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
+              <CalendarPlus size={14} /> Clases
+            </button>
+          )}
           {isClient && (active ? (
             <button disabled={busy} onClick={() => onBaja(u)} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(186,26,26,0.08)', color: '#ba1a1a', border: 'none', borderRadius: '10px', padding: '8px 12px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
               <UserX size={14} /> Dar de baja
@@ -115,6 +161,208 @@ function ClientCard({ u, onRole, onBaja, onReactivar, onDelete, busy, currentUse
   );
 }
 
+// Modal para gestionar las clases de UNA clienta:
+//  1) ajustar sus clases disponibles (classes_remaining) y
+//  2) reservarla / quitarla en clases del horario.
+function ManageClassesModal({ client, onClose, patch, applyLocal }) {
+  const { globalClasses, fetchGlobalClasses, fetchAllUsers } = useAuth();
+  const unlimited = isUnlimitedClient(client);
+  const [credits, setCredits] = useState(client.classes_remaining ?? 0);
+  const [savingCredits, setSavingCredits] = useState(false);
+  const [reserved, setReserved] = useState(null); // Set de class_id (null = cargando)
+  const [busyId, setBusyId] = useState(null);
+
+  // Reservas actuales de la clienta (para marcar "Reservada" y permitir quitar).
+  useEffect(() => {
+    let alive = true;
+    supabase.from('reservations').select('class_id').eq('user_id', client.id)
+      .then(({ data }) => { if (alive) setReserved(new Set((data || []).map(r => r.class_id))); });
+    return () => { alive = false; };
+  }, [client.id]);
+
+  const today = todayLocalStr();
+  const [selectedDate, setSelectedDate] = useState(null); // día visible en "Reservar"
+
+  // Días futuros que tienen al menos una clase (para navegar con ◀ ▶, sin scrollear todo el mes).
+  const datesWithClasses = useMemo(() => {
+    const set = new Set((globalClasses || []).filter(c => c.date && c.date >= today).map(c => c.date));
+    return [...set].sort();
+  }, [globalClasses, today]);
+
+  const effectiveDate = selectedDate || datesWithClasses[0] || today;
+  const dateIdx = datesWithClasses.indexOf(effectiveDate);
+
+  // Clases SOLO del día visible (fechadas en ese día + recurrentes que caen ese día de la semana).
+  const dayClasses = useMemo(() => {
+    const dow = new Date(effectiveDate + 'T12:00:00').getDay();
+    return (globalClasses || [])
+      .filter(c => c.date === effectiveDate || (!c.date && c.day === dow))
+      .sort((a, b) => timeToMin(a.time) - timeToMin(b.time));
+  }, [globalClasses, effectiveDate]);
+
+  const goPrevDate = () => { if (dateIdx > 0) setSelectedDate(datesWithClasses[dateIdx - 1]); };
+  const goNextDate = () => { if (dateIdx >= 0 && dateIdx < datesWithClasses.length - 1) setSelectedDate(datesWithClasses[dateIdx + 1]); };
+  const dateTitle = new Date(effectiveDate + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  // Fija el saldo de clases (escribe a DB y refleja en la lista de fondo).
+  const applyCredits = async (newVal) => {
+    const val = Math.max(0, parseInt(newVal, 10) || 0);
+    setCredits(val);
+    setSavingCredits(true);
+    await patch(client.id, { classes_remaining: val });
+    setSavingCredits(false);
+  };
+
+  const book = async (c) => {
+    setBusyId(c.id);
+    const { error } = await supabase.rpc('admin_book_class', { p_user_id: client.id, p_class_id: c.id });
+    if (error) {
+      alert(bookErrMsg(error.message));
+    } else {
+      setReserved(prev => new Set(prev).add(c.id));
+      if (!unlimited) {
+        const nv = Math.max(0, (parseInt(credits, 10) || 0) - 1);
+        setCredits(nv);
+        applyLocal(client.id, { classes_remaining: nv }); // refleja en la tarjeta de fondo (sin re-escribir DB)
+      }
+      fetchGlobalClasses?.();
+      fetchAllUsers?.();
+    }
+    setBusyId(null);
+  };
+
+  const unbook = async (c) => {
+    setBusyId(c.id);
+    const { error } = await supabase.rpc('admin_cancel_class', { p_user_id: client.id, p_class_id: c.id });
+    if (error) {
+      alert('No se pudo quitar la reserva: ' + error.message);
+    } else {
+      setReserved(prev => { const n = new Set(prev); n.delete(c.id); return n; });
+      if (!unlimited) {
+        const nv = (parseInt(credits, 10) || 0) + 1;
+        setCredits(nv);
+        applyLocal(client.id, { classes_remaining: nv });
+      }
+      fetchGlobalClasses?.();
+      fetchAllUsers?.();
+    }
+    setBusyId(null);
+  };
+
+  const noClasses = !unlimited && (parseInt(credits, 10) || 0) <= 0;
+  const quickBtn = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', border: 'none', borderRadius: '10px', padding: '8px 12px', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', background: 'rgba(255,145,77,0.12)', color: PRIMARY };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: 'env(safe-area-inset-top) 0 0' }}
+    >
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        onClick={e => e.stopPropagation()}
+        style={{ background: 'var(--app-surface-solid, #fff)', width: '100%', maxWidth: '560px', maxHeight: '90vh', borderRadius: '24px 24px 0 0', display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '18px 18px 14px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+          {client.avatar_url
+            ? <img src={client.avatar_url} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+            : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,145,77,0.14)', color: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{(client.full_name || client.email || '?').charAt(0).toUpperCase()}</div>}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, color: INK, fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{client.full_name || 'Sin nombre'}</div>
+            <div style={{ fontSize: '0.76rem', color: 'var(--on-surface-variant)' }}>{client.membership_plan || 'Sin plan'}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={18} color={INK} /></button>
+        </div>
+
+        <div style={{ overflowY: 'auto', padding: '18px' }}>
+          {/* SECCIÓN 1 — Clases disponibles */}
+          <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)', margin: '0 0 10px' }}>Clases disponibles</h3>
+          {unlimited ? (
+            <div style={{ background: 'rgba(255,145,77,0.08)', borderRadius: '14px', padding: '16px', textAlign: 'center', marginBottom: '24px' }}>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: PRIMARY }}>∞</div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>Plan ilimitado — no necesita clases sueltas</div>
+            </div>
+          ) : (
+            <div style={{ background: 'rgba(0,0,0,0.025)', borderRadius: '14px', padding: '14px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '12px' }}>
+                <button disabled={savingCredits || credits <= 0} onClick={() => applyCredits(credits - 1)} style={{ ...quickBtn, width: '40px', height: '40px', opacity: credits <= 0 ? 0.4 : 1 }}><Minus size={18} /></button>
+                <div style={{ minWidth: '64px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '2rem', fontWeight: 900, color: INK, lineHeight: 1 }}>{credits}</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>clases</div>
+                </div>
+                <button disabled={savingCredits} onClick={() => applyCredits(credits + 1)} style={{ ...quickBtn, width: '40px', height: '40px' }}><Plus size={18} /></button>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                {[4, 8, 12].map(n => (
+                  <button key={n} disabled={savingCredits} onClick={() => applyCredits(credits + n)} style={quickBtn}>+{n}</button>
+                ))}
+              </div>
+              <div style={{ fontSize: '0.74rem', color: 'var(--on-surface-variant)', textAlign: 'center', marginTop: '10px' }}>Se guarda al instante.</div>
+            </div>
+          )}
+
+          {/* SECCIÓN 2 — Reservar en una clase */}
+          <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)', margin: '0 0 10px' }}>Reservar en una clase</h3>
+          {noClasses && (
+            <div style={{ background: 'rgba(186,26,26,0.07)', color: '#ba1a1a', borderRadius: '12px', padding: '10px 12px', fontSize: '0.8rem', fontWeight: 600, marginBottom: '12px' }}>
+              La clienta no tiene clases disponibles. Súmale clases arriba para poder reservarla.
+            </div>
+          )}
+          {reserved === null ? (
+            <div style={{ textAlign: 'center', padding: '24px', color: 'var(--on-surface-variant)' }}>Cargando horario…</div>
+          ) : datesWithClasses.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '24px', color: 'var(--on-surface-variant)', fontSize: '0.88rem' }}>No hay clases próximas en el horario.</div>
+          ) : (
+            <>
+              {/* Navegador de día: ◀ [viernes 27 de junio] ▶ — solo entre días con clases */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <button onClick={goPrevDate} disabled={dateIdx <= 0} style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: dateIdx <= 0 ? 'default' : 'pointer', opacity: dateIdx <= 0 ? 0.35 : 1, flexShrink: 0 }}><ChevronLeft size={18} color={INK} /></button>
+                <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, color: INK, fontSize: '0.92rem', textTransform: 'capitalize', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dateTitle}</div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>{dayClasses.length} {dayClasses.length === 1 ? 'clase' : 'clases'}</div>
+                </div>
+                <button onClick={goNextDate} disabled={dateIdx < 0 || dateIdx >= datesWithClasses.length - 1} style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: (dateIdx < 0 || dateIdx >= datesWithClasses.length - 1) ? 'default' : 'pointer', opacity: (dateIdx < 0 || dateIdx >= datesWithClasses.length - 1) ? 0.35 : 1, flexShrink: 0 }}><ChevronRight size={18} color={INK} /></button>
+              </div>
+
+              {dayClasses.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px', color: 'var(--on-surface-variant)', fontSize: '0.86rem' }}>Sin clases este día.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {dayClasses.map(c => {
+                    const isReserved = reserved.has(c.id);
+                    const full = (c.spots ?? 0) <= 0;
+                    const busyThis = busyId === c.id;
+                    return (
+                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#fff', border: '1px solid rgba(0,0,0,0.06)', borderLeft: `4px solid ${c.category_color || PRIMARY}`, borderRadius: '14px', padding: '10px 12px', opacity: full && !isReserved ? 0.7 : 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 800, color: INK, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title}</div>
+                          <div style={{ fontSize: '0.74rem', color: full ? '#ba1a1a' : 'var(--on-surface-variant)', fontWeight: 600 }}>
+                            {c.time}{c.instructor ? ` · ${c.instructor}` : ''} · {full ? 'Sin cupos' : `${c.spots} cupos`}
+                          </div>
+                        </div>
+                        {isReserved ? (
+                          <button disabled={busyThis} onClick={() => unbook(c)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(34,197,94,0.12)', color: '#16A34A', border: 'none', borderRadius: '10px', padding: '8px 11px', fontWeight: 800, fontSize: '0.76rem', cursor: 'pointer', flexShrink: 0 }}>
+                            <Check size={14} /> {busyThis ? '…' : 'Reservada'}
+                          </button>
+                        ) : (
+                          <button disabled={busyThis || full || noClasses} onClick={() => book(c)} title={full ? 'Sin cupos' : (noClasses ? 'Sin clases disponibles' : 'Reservar')} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: full ? 'rgba(186,26,26,0.1)' : PRIMARY, color: full ? '#ba1a1a' : '#fff', border: 'none', borderRadius: '10px', padding: '8px 11px', fontWeight: 800, fontSize: '0.76rem', cursor: (full || noClasses) ? 'not-allowed' : 'pointer', opacity: (full || noClasses) && !full ? 0.45 : 1, flexShrink: 0 }}>
+                            {busyThis ? '…' : (full ? 'Lleno' : 'Reservar')}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function AdminClientas() {
   const { user, fetchAllUsers, allPlans } = useAuth();
   const [users, setUsers] = useState(null); // TODOS los usuarios (no solo clientas)
@@ -122,6 +370,11 @@ export default function AdminClientas() {
   const [filter, setFilter] = useState('all');
   const [planFilter, setPlanFilter] = useState('all');
   const [busy, setBusy] = useState(false);
+  const [managing, setManaging] = useState(null); // clienta cuyo modal de clases está abierto
+
+  // Actualiza SOLO la lista de fondo (sin escribir a DB). Lo usa el modal tras
+  // reservar/cancelar, donde la RPC ya tocó la DB y solo falta reflejarlo aquí.
+  const applyLocal = (id, updates) => setUsers(prev => (prev || []).map(u => u.id === id ? { ...u, ...updates } : u));
 
   const plans = useMemo(() => {
     // Siempre mostramos todos los planes del catálogo (en su orden), aunque aún
@@ -235,10 +488,22 @@ export default function AdminClientas() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' }}>
           {list.map(u => (
-            <ClientCard key={u.id} u={u} onRole={onRole} onBaja={onBaja} onReactivar={onReactivar} onDelete={onDelete} busy={busy} currentUserId={user?.id} />
+            <ClientCard key={u.id} u={u} onRole={onRole} onBaja={onBaja} onReactivar={onReactivar} onDelete={onDelete} onManage={setManaging} busy={busy} currentUserId={user?.id} />
           ))}
         </div>
       )}
+
+      <AnimatePresence>
+        {managing && (
+          <ManageClassesModal
+            key={managing.id}
+            client={(users || []).find(u => u.id === managing.id) || managing}
+            onClose={() => setManaging(null)}
+            patch={patch}
+            applyLocal={applyLocal}
+          />
+        )}
+      </AnimatePresence>
     </section>
   );
 }

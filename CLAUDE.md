@@ -31,6 +31,15 @@ Ejecuta TÚ (Claude) automáticamente los pasos de CLI; el usuario solo hace los
 
 **Opcional (smoke test):** un cobro real chico. El flujo NO cambia entre test/live (mismo código), pero confirma que `sk_live` + webhook Live **registran** el sale/pedido. Reembolsable. (Ya se probó el 2026-06-15: pedido quedó `paid` ✅.)
 
+## ✅ Sesión 2026-06-24 (mejoras/bugs de la dueña) — iOS 1.4.0(6)
+Cambios de **front** (web auto-deploy con push; iOS bumpeado a **1.4.0 / build 6** para resubir). Backend ya en prod (aditivo).
+- **BUG GRAVE arreglado — clases caían en el día equivocado:** al agregar varias clases seguidas a un día (p. ej. viernes) desde Admin → Clases, de la 2ª en adelante saltaban a **HOY**. Causa: tras guardar (modo single), el reset del form ponía `date: todayLocalStr()` y como en single la fecha es invisible (se hereda del día del calendario), las siguientes se guardaban en hoy. Fix en `Admin.jsx` (`handleCreateClass`): el reset ahora **conserva `selectedCalendarDay`**.
+- **Feature — gestionar clases de una clienta desde Admin → Clientas:** botón **"Clases"** en cada tarjeta abre modal (`ManageClassesModal` en `AdminClientas.jsx`) con: (1) **ajustar clases disponibles** (`classes_remaining`) con −/+ y +4/+8/+12, guarda al instante (UPDATE directo, admin ya tiene RLS); ilimitado = ∞. (2) **Reservar/quitar en una clase** del horario, navegando **por día** con ◀▶ (NO lista las 285; solo días con clases). Backend: RPCs **`admin_book_class` / `admin_cancel_class`** (SECURITY DEFINER, guard `is_reception_or_admin()`, espejo de `book_class_secure`; descuentan cupo+clase, respetan ilimitado). SQL en `supabase/sql/admin_book_class.sql` (gitignored), **ya aplicado en la BD**.
+- **"Sin cupos" en perfil de la clienta:** `ScheduleCalendar.jsx` ahora marca lleno con `spots <= 0` (no `=== 0`), texto **rojo "Sin cupos"**, tarjeta no clickeable; `Agenda.jsx` blinda `handleReserveClick` (cupo agotado) y `confirmReservation` avisa si la reserva falla (se llenó justo). El servidor (`book_class_secure`) sigue siendo el guard real.
+- **Sidebar de admin en PC con scroll:** `.sidebar-nav` ahora hace scroll interno (`overflow-y:auto; min-height:0`) y **"Cerrar sesión" queda fijo abajo** (`flex-shrink:0`). Antes se cortaban las últimas secciones. Aplica también al sidebar de coach (estilo compartido).
+- ⚠️ **Bug PREVIO detectado (no tocado):** `Agenda.jsx` `handleAddToCalendar` usa `addClassToCalendar(modalData, d)` con `d` sin definir → "Agregar a mi calendario" (nativo) crashea. Pendiente aparte.
+- BD: cuentas de prueba `admin.test@befitlab.app` / `clienta.test@befitlab.app` (usadas para probar en local) **borradas** al cerrar la sesión.
+
 ## ✅ Sesión 2026-06-23 (Recepción: pestañas Clases + Ventas) — pendiente rebuild/redeploy
 **Recepción ahora hace mostrador completo, no solo el lector QR.** El rol `RECEPCION`
 ya puede **agregar/editar/borrar clases** e **inscribir clientas + cobrar membresía**,

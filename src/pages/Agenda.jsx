@@ -61,6 +61,10 @@ function Agenda() {
       alert("Esta clase ya terminó.");
       return;
     }
+    if ((classObj?.spots ?? 0) <= 0) {
+      alert("Esta clase ya no tiene cupos disponibles.");
+      return;
+    }
     if (classesRemaining <= 0) {
       alert("No te quedan clases disponibles. Renueva tu paquete.");
       return;
@@ -77,6 +81,10 @@ function Agenda() {
     if (success) {
       setIsSuccess(true);
       setAddedToCalendar(false);
+    } else {
+      // Reserva no realizada (se agotó el cupo justo ahora, sin clases, o error de red).
+      setShowModal(false);
+      alert("No se pudo reservar. Es posible que la clase se haya llenado. Actualiza e inténtalo de nuevo.");
     }
   };
 
