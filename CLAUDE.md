@@ -7,8 +7,8 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
 ## ⏭️ PRÓXIMA SESIÓN (retomar) — SUBIR ANDROID
-**iOS ✅ 1.2.0 (build 4)** generado y listo para archivar/subir el 2026-06-22 (incluye lo de abajo). La 1.1.0(3) del 2026-06-15 ya estaba en App Store Connect.
-**Pendiente (mañana 2026-06-23): AAB de Android** con TODO (lo del 2026-06-15 + sesión 2026-06-22). Repo ya bumpeado → `versionCode 8` / `versionName 2.4.0` en `android/app/build.gradle`. El `dist` ya está construido y sincronizado (`npx cap sync` hecho el 22-jun); si pasó tiempo, reconstruir.
+**iOS ✅ 1.4.0 (build 7)** SUBIDO a App Store Connect el 2026-06-24 — esperando aprobación de Apple. Incluye TODO lo acumulado (15-jun → 24-jun): Stripe LIVE, Recepción, deep links de auth, dominio befitlab.app, fixes del 22/23-jun, gestionar clases por clienta, "sin cupos", sidebar scroll, fix de subida de fotos de coaches. (Lo de recuperar contraseña es web, no requiere build.)
+**⏳ ÚNICO PENDIENTE DE DESPLIEGUE: AAB de Android** (otra PC) con TODO lo acumulado hasta el 24-jun. Android sigue en `versionCode 8` / `versionName 2.4.0` y NO se ha subido a Play con nada de esto; al reconstruir, `main` ya trae todos los cambios (solo bumpear `versionCode` si Play lo pide). El `dist` está construido para iOS; para Android **reconstruir** (`npm run build && npx cap sync android`).
 
 **📋 REQUERIMIENTO PARA CLAUDE (cuando el usuario pida "subir Android" en la otra PC):**
 Ejecuta TÚ (Claude) automáticamente los pasos de CLI; el usuario solo hace los de GUI que tú no puedes. No pidas permiso paso a paso, hazlos y reporta.
@@ -58,7 +58,7 @@ exactamente con la misma UI que ADMIN.
   - Edge function **`admin-create-client`** ahora acepta **ADMIN o RECEPCION** (antes solo ADMIN). Re-deployada.
   - **RLS aditivo** (`supabase/sql/recepcion_ventas_clases_rls.sql`, ya aplicado vía Management API): `classes` INSERT/UPDATE/DELETE, `users` UPDATE (con guard `role <> 'ADMIN'` para que recepción NO pueda crear admins) y `sales` INSERT — todo con `is_reception_or_admin()`. El cobro (`activatePlan`) hace UPDATE en `users` y el registro de venta INSERT en `sales`; por eso ambos permisos.
 - **Por qué funciona:** `applySessionUser()` ya llama `fetchAllUsers()`/`fetchCoaches()` para cualquier sesión (incl. RECEPCION) y recepción ya tenía SELECT en `users` → los selectores de "Alumna" y "Coach" se llenan.
-- ⚠️ **PENDIENTE:** es cambio de **front** → exige **push a main** (auto-deploy web Cloudflare) y, para nativo, **rebuild + resubir iOS/Android**. El backend ya está en producción (es aditivo, no afecta a ADMIN).
+- ✅ **RESUELTO (2026-06-24):** push a main hecho (web desplegada) e **iOS 1.4.0(7) subido**. ⏳ Falta solo el **AAB de Android**. El backend ya estaba en producción (aditivo, no afecta a ADMIN).
 
 ### Fase A — Membresías editables desde admin (planes data-driven + Stripe) — backend YA en prod
 **La dueña ya puede editar planes desde admin y se refleja en sitio + app + cobro, sin rebuild** (excepto este último rebuild para que el front nuevo llegue a nativo).
@@ -217,7 +217,7 @@ manifest ya habilita `READ_WEIGHT` + `READ_BODY_FAT`.
 - [ ] Vista coach/admin para revisar fotos de progreso de clientas (RLS ya lo permite).
 - [ ] Push recordatorio a las 6 semanas para nueva sesión de fotos.
 - [x] ~~Pasar Stripe a claves LIVE~~ — HECHO 2026-06-15 (ver sección de arriba).
-- [ ] **Rebuild + resubir iOS y AAB de Android** con todo lo del 2026-06-15 (Stripe LIVE, rol Recepción, deep links de auth, dominio befitlab.app).
+- [x] ~~Rebuild + resubir **iOS**~~ — HECHO: **iOS 1.4.0 (build 7)** subido a App Store Connect el 2026-06-24 (incluye todo del 15→24-jun). ⏳ Falta solo el **AAB de Android** (otra PC) con todo lo acumulado.
 - [ ] (Opcional) Smoke test de un cobro real chico y confirmar registro en `cafe_orders`.
 - [ ] Confirmar modelo exacto de báscula para métricas extra y que la unidad de peso sea kg.
 - [ ] Probar dark mode en dispositivos reales (iOS + Android).
