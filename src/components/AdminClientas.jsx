@@ -4,6 +4,7 @@ import { Search, Cake, Crown, UserX, UserCheck, Shield, Coffee, Dumbbell, Chevro
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { todayLocalStr } from '../lib/dates';
+import { isPlanExpired, formatPlanDate } from '../lib/membership';
 
 const DAYS_FULL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const DAYS_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -125,6 +126,11 @@ function ClientCard({ u, onRole, onBaja, onReactivar, onDelete, onManage, busy, 
         )}
         {isClient && active && u.classes_remaining != null && (
           <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '4px 9px', borderRadius: '8px', background: 'rgba(255,145,77,0.12)', color: PRIMARY }}>{u.classes_remaining} clases</span>
+        )}
+        {isClient && active && u.plan_expires_at && (
+          isPlanExpired(u.plan_expires_at)
+            ? <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 9px', borderRadius: '8px', background: 'rgba(239,68,68,0.12)', color: '#EF4444' }}>Vencido {formatPlanDate(u.plan_expires_at, true)}</span>
+            : <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '4px 9px', borderRadius: '8px', background: 'rgba(59,130,246,0.10)', color: '#2563EB' }}>Vence {formatPlanDate(u.plan_expires_at, true)}</span>
         )}
         {u.birth_date && (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, padding: '4px 9px', borderRadius: '8px', background: 'rgba(224,122,156,0.12)', color: '#E07A9C' }}><Cake size={12} /> {fmtBday(u.birth_date)}</span>
@@ -271,6 +277,13 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 800, color: INK, fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{client.full_name || 'Sin nombre'}</div>
             <div style={{ fontSize: '0.76rem', color: 'var(--on-surface-variant)' }}>{client.membership_plan || 'Sin plan'}</div>
+            {client.plan_expires_at && (
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, marginTop: '2px', color: isPlanExpired(client.plan_expires_at) ? '#EF4444' : 'var(--on-surface-variant)' }}>
+                {isPlanExpired(client.plan_expires_at)
+                  ? `Venció el ${formatPlanDate(client.plan_expires_at, true)}`
+                  : `${client.plan_started_at ? `Pagó ${formatPlanDate(client.plan_started_at, true)} · ` : ''}Vence ${formatPlanDate(client.plan_expires_at, true)}`}
+              </div>
+            )}
           </div>
           <button onClick={onClose} style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={18} color={INK} /></button>
         </div>
@@ -389,7 +402,7 @@ export default function AdminClientas() {
 
   const load = async () => {
     const { data } = await supabase.from('users')
-      .select('id, full_name, email, role, membership_status, membership_plan, classes_remaining, birth_date, phone, avatar_url, created_at')
+      .select('id, full_name, email, role, membership_status, membership_plan, classes_remaining, plan_started_at, plan_expires_at, birth_date, phone, avatar_url, created_at')
       .order('full_name', { ascending: true });
     setUsers(data || []);
   };
@@ -405,8 +418,14 @@ export default function AdminClientas() {
   };
 
   const onRole = (u, role) => { if (confirm(`¿Cambiar a "${u.full_name || u.email}" al rol de ${roleMeta(role).label}?`)) patch(u.id, { role }); };
-  const onBaja = (u) => { if (confirm(`¿Dar de baja la membresía de "${u.full_name || u.email}"?`)) patch(u.id, { membership_status: 'INACTIVE', classes_remaining: 0 }); };
-  const onReactivar = (u) => { if (confirm(`¿Reactivar la membresía de "${u.full_name || u.email}"?`)) patch(u.id, { membership_status: 'ACTIVE' }); };
+  const onBaja = (u) => { if (confirm(`¿Dar de baja la membresía de "${u.full_name || u.email}"?`)) patch(u.id, { membership_status: 'INACTIVE', classes_remaining: 0, plan_expires_at: null }); };
+  const onReactivar = (u) => {
+    if (!confirm(`¿Reactivar la membresía de "${u.full_name || u.email}"? Vencerá en un mes.`)) return;
+    // Reactivar = nuevo periodo: pago = hoy, vence = +1 mes (regla automática).
+    const started = new Date();
+    const expires = new Date(started); expires.setMonth(expires.getMonth() + 1);
+    patch(u.id, { membership_status: 'ACTIVE', plan_started_at: started.toISOString(), plan_expires_at: expires.toISOString() });
+  };
 
   // Eliminación DEFINITIVA (cuenta + datos). Doble confirmación por ser destructivo.
   const onDelete = async (u) => {

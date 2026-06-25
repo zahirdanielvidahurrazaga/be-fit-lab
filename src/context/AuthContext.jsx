@@ -25,6 +25,8 @@ export const AuthProvider = ({ children }) => {
   const [role, setRole] = useState(null);
   const [plan, setPlan] = useState(null);
   const [membershipStatus, setMembershipStatus] = useState('INACTIVE');
+  const [planStartedAt, setPlanStartedAt] = useState(null);   // fecha de pago
+  const [planExpiresAt, setPlanExpiresAt] = useState(null);   // vence (pago + 1 mes)
   const [loading, setLoading] = useState(true);
   const [customBadges, setCustomBadges] = useState([]);
   const [badgeQueue, setBadgeQueue] = useState([]); // cola de insignias por animar
@@ -90,6 +92,8 @@ export const AuthProvider = ({ children }) => {
     setRole(null);
     setPlan(null);
     setMembershipStatus('INACTIVE');
+    setPlanStartedAt(null);
+    setPlanExpiresAt(null);
     setClassesRemaining(0);
     setMonthlyGoal(0);
     setMyReservations([]);
@@ -360,6 +364,8 @@ export const AuthProvider = ({ children }) => {
         setRole(null);
         setPlan(null);
         setMembershipStatus('INACTIVE');
+        setPlanStartedAt(null);
+        setPlanExpiresAt(null);
         setUser(null);
         sharedLoadedForRef.current = null;
         loadedAuthUserIdRef.current = null;
@@ -926,7 +932,7 @@ export const AuthProvider = ({ children }) => {
       // 1. Obtener rol y clases restantes
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('role, classes_remaining, membership_plan, membership_status, full_name, custom_badges, avatar_url, target_monthly_classes, calorie_goal')
+        .select('role, classes_remaining, membership_plan, membership_status, plan_started_at, plan_expires_at, full_name, custom_badges, avatar_url, target_monthly_classes, calorie_goal')
         .eq('id', currentUser.id)
         .single();
         
@@ -950,6 +956,8 @@ export const AuthProvider = ({ children }) => {
         setRole((userData.role || 'CLIENT').toUpperCase());
         setPlan(userData.membership_plan);
         setMembershipStatus(userData.membership_status || 'INACTIVE');
+        setPlanStartedAt(userData.plan_started_at || null);
+        setPlanExpiresAt(userData.plan_expires_at || null);
         setClassesRemaining(userData.classes_remaining || 0);
         setMonthlyGoal(userData.target_monthly_classes || 0);
         setSelfCalorieGoal(userData.calorie_goal ?? null);
@@ -1473,20 +1481,32 @@ export const AuthProvider = ({ children }) => {
     planJustActivatedRef.current = true;
     setTimeout(() => { planJustActivatedRef.current = false; }, 10000);
 
+    // Fechas: pago = ahora, vence = +1 mes (regla del negocio, automática).
+    const startedAt = new Date();
+    const expiresAt = new Date(startedAt);
+    expiresAt.setMonth(expiresAt.getMonth() + 1);
+
     // 1. Actualizar estado local de inmediato (la UI cambia al instante)
     setPlan(planTitle);
     setMembershipStatus('ACTIVE');
     setClassesRemaining(classCount);
+    // Solo refleja localmente las fechas si el plan es para el usuario en sesión.
+    if (!specificUserId || specificUserId === user?.id) {
+      setPlanStartedAt(startedAt.toISOString());
+      setPlanExpiresAt(expiresAt.toISOString());
+    }
 
     // 2. Intentar persistir en la BD de forma segura
     const { data: { session } } = await supabase.auth.getSession();
     const targetId = specificUserId || session?.user?.id || user?.id;
-    
+
     if (targetId) {
-      const { error } = await supabase.from('users').update({ 
-        membership_plan: planTitle, 
+      const { error } = await supabase.from('users').update({
+        membership_plan: planTitle,
         membership_status: 'ACTIVE',
-        classes_remaining: classCount 
+        classes_remaining: classCount,
+        plan_started_at: startedAt.toISOString(),
+        plan_expires_at: expiresAt.toISOString()
       }).eq('id', targetId);
       
       if (error) {
@@ -1521,6 +1541,8 @@ export const AuthProvider = ({ children }) => {
     setRole(null);
     setPlan(null);
     setMembershipStatus('INACTIVE');
+    setPlanStartedAt(null);
+    setPlanExpiresAt(null);
     setClassesRemaining(0);
     setGlobalClasses([]);
     setMyReservations([]);
@@ -1545,7 +1567,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{
-      user, role, plan, membershipStatus, loading, profileName,
+      user, role, plan, membershipStatus, planStartedAt, planExpiresAt, loading, profileName,
       classesRemaining, myReservations, globalClasses, recipes, allUsers,
       classesLoaded, recipesLoaded, cafeProductsLoaded,
       avatarUrl, setAvatarUrl, customBadges, badgeConfigs,

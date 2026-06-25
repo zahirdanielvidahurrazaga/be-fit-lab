@@ -2,6 +2,15 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'npm:stripe@14';
 
+// Fechas de membresía: pago = ahora, vence = +1 mes (regla del negocio).
+// Se sella en cada activación y renovación para el bloqueo automático.
+function planDates() {
+  const started = new Date();
+  const expires = new Date(started);
+  expires.setMonth(expires.getMonth() + 1);
+  return { plan_started_at: started.toISOString(), plan_expires_at: expires.toISOString() };
+}
+
 // Avisa por push + in-app a todas las baristas que entró un pedido nuevo.
 async function notifyBaristas(supabase: any, summary: string, orderId: string) {
   const { data: baristas } = await supabase.from('users').select('id').eq('role', 'BARISTA');
@@ -132,6 +141,7 @@ serve(async (req) => {
         membership_status: 'ACTIVE',
         classes_remaining: parseInt(class_count ?? '0'),
         stripe_subscription_id: session.subscription as string,
+        ...planDates(),
       }).eq('id', supabase_user_id);
 
       if (error) console.error('Error activando plan:', error);
@@ -162,6 +172,7 @@ serve(async (req) => {
             membership_status: 'ACTIVE',
             classes_remaining: parseInt(class_count ?? '0'),
             stripe_subscription_id: subscriptionId,
+            ...planDates(),
           }).eq('id', supabase_user_id);
           console.log(`✅ Plan activado (nativo): ${plan_title} para ${supabase_user_id}`);
         }
@@ -176,6 +187,7 @@ serve(async (req) => {
           await supabase.from('users').update({
             membership_status: 'ACTIVE',
             classes_remaining: parseInt(class_count ?? '0'),
+            ...planDates(),
           }).eq('id', users[0].id);
           console.log(`🔄 Clases renovadas: ${class_count} para usuario ${users[0].id}`);
         }
@@ -197,6 +209,7 @@ serve(async (req) => {
           membership_status: 'INACTIVE',
           classes_remaining: 0,
           stripe_subscription_id: null,
+          plan_expires_at: null,
         }).eq('id', users[0].id);
 
         console.log(`❌ Suscripción cancelada para usuario ${users[0].id}`);

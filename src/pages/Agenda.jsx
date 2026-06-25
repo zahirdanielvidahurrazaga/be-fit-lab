@@ -19,7 +19,7 @@ import { ClassListSkeleton } from '../components/Skeleton';
 function Agenda() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, classesRemaining, bookClass, globalClasses, updateReservationCalendarId, avatarUrl, coaches, badgeConfigs, myReservations, classesLoaded } = useAuth();
+  const { user, plan, classesRemaining, bookClass, globalClasses, updateReservationCalendarId, avatarUrl, coaches, badgeConfigs, myReservations, classesLoaded, planExpiresAt } = useAuth();
   
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
@@ -67,6 +67,12 @@ function Agenda() {
     }
     if (classesRemaining <= 0) {
       alert("No te quedan clases disponibles. Renueva tu paquete.");
+      return;
+    }
+    // Bloqueo por membresía vencida (el servidor también lo rechaza).
+    if (planExpiresAt && new Date(planExpiresAt) < new Date()) {
+      alert("Tu membresía venció. Renueva tu plan para reservar clases.");
+      navigate('/planes');
       return;
     }
     setModalData(classObj);

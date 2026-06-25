@@ -1078,73 +1078,14 @@ export default function Landing() {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-// Pantalla simulada del Portal (PLACEHOLDER).
-// 👉 Para usar tu captura/video real: reemplaza todo el contenido de <PhoneScreen/>
-//    por <img src="/app-screen.png" .../> o un <video src="/app-screen.mp4" autoPlay muted loop playsInline .../>
-//    con style={{ width:'100%', height:'100%', objectFit:'cover' }}.
-function PhoneScreen() {
-  return (
-    <div style={{ width:'100%', height:'100%', background:'linear-gradient(180deg, #FFF7F1 0%, #FFFFFF 60%)', display:'flex', flexDirection:'column', padding:'14px 14px 0', fontFamily:'var(--font-body)', position:'relative' }}>
-      {/* Status bar */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:'0.62rem', fontWeight:700, color:'#0F172A', padding:'2px 6px 10px' }}>
-        <span>19:35</span>
-        <span style={{ letterSpacing:'1px' }}>📶 🔋</span>
-      </div>
-      {/* Saludo */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
-        <div>
-          <div style={{ fontSize:'0.6rem', color:'#94A3B8', fontWeight:600 }}>Buenas noches</div>
-          <div style={{ fontSize:'1.05rem', fontWeight:800, color:'#0F172A', fontFamily:'var(--font-display)', lineHeight:1 }}>Cliente</div>
-        </div>
-        <div style={{ width:'30px', height:'30px', borderRadius:'50%', background:'linear-gradient(135deg, #FF914D, #E07A9C)' }} />
-      </div>
-      {/* Tarjeta de membresía */}
-      <div style={{ background:'linear-gradient(155deg, #2D2928 0%, #4A4544 100%)', borderRadius:'16px', padding:'12px', marginBottom:'14px', position:'relative', overflow:'hidden' }}>
-        <div style={{ fontSize:'0.5rem', fontWeight:800, color:'rgba(255,255,255,0.6)', textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:'4px' }}>Membresía actual</div>
-        <div style={{ fontSize:'1.1rem', fontWeight:800, color:'#fff', fontFamily:'var(--font-display)', marginBottom:'10px' }}>Premium <span style={{ color:'#FF914D' }}>Pass</span></div>
-        <div style={{ display:'flex', gap:'6px' }}>
-          {[['27','Clases'],['4','Racha'],['ON','Estatus']].map(([n,l]) => (
-            <div key={l} style={{ flex:1, background:'rgba(255,255,255,0.08)', borderRadius:'10px', padding:'8px 4px', textAlign:'center' }}>
-              <div style={{ fontSize:'0.85rem', fontWeight:800, color:'#fff' }}>{n}</div>
-              <div style={{ fontSize:'0.45rem', fontWeight:700, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', letterSpacing:'0.08em' }}>{l}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-      {/* Explora */}
-      <div style={{ fontSize:'0.8rem', fontWeight:800, color:'#0F172A', fontFamily:'var(--font-display)', marginBottom:'8px' }}>Explora</div>
-      <div style={{ display:'flex', gap:'8px', marginBottom:'14px' }}>
-        {[{bg:'linear-gradient(155deg, #FF914D, #E68245)', icon:<Utensils size={14} color="#fff"/>, t:'Nutrición', s:'Tu recetario', c:'#fff', sc:'rgba(255,255,255,0.8)'},
-          {bg:'#F4F4F5', icon:<TrendingUp size={14} color="#FF914D"/>, t:'Evolución', s:'Tu progreso', c:'#0F172A', sc:'#94A3B8'},
-          {bg:'#F4F4F5', icon:<Calendar size={14} color="#FF914D"/>, t:'Reservas', s:'Agenda', c:'#0F172A', sc:'#94A3B8'}].map((tile) => (
-          <div key={tile.t} style={{ flex:1, background:tile.bg, borderRadius:'12px', padding:'10px 8px', minHeight:'76px', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
-            {tile.icon}
-            <div>
-              <div style={{ fontSize:'0.58rem', fontWeight:800, color:tile.c }}>{tile.t}</div>
-              <div style={{ fontSize:'0.46rem', color:tile.sc, fontWeight:600 }}>{tile.s}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-      {/* Próximas clases */}
-      <div style={{ fontSize:'0.8rem', fontWeight:800, color:'#0F172A', fontFamily:'var(--font-display)', marginBottom:'8px' }}>Próximas clases</div>
-      <div style={{ background:'#fff', border:'1px solid #F1F1F1', borderRadius:'12px', padding:'10px', display:'flex', alignItems:'center', gap:'8px', boxShadow:'0 4px 16px rgba(0,0,0,0.04)' }}>
-        <div style={{ width:'28px', height:'28px', borderRadius:'8px', background:'linear-gradient(135deg, #FF914D, #E07A9C)' }} />
-        <div style={{ flex:1 }}>
-          <div style={{ fontSize:'0.62rem', fontWeight:800, color:'#0F172A' }}>Fuerza y Control</div>
-          <div style={{ fontSize:'0.48rem', color:'#94A3B8', fontWeight:600, letterSpacing:'0.05em' }}>ELENA R.</div>
-        </div>
-        <ChevronRight size={12} color="#CBD5E1" />
-      </div>
-      {/* Tab bar */}
-      <div style={{ marginTop:'auto', display:'flex', justifyContent:'space-around', alignItems:'center', padding:'10px 0 14px', borderTop:'1px solid #F1F1F1' }}>
-        {[{i:<Star size={13} color="#FF914D"/>, on:true},{i:<TrendingUp size={13} color="#CBD5E1"/>},{i:<Calendar size={13} color="#CBD5E1"/>},{i:<Utensils size={13} color="#CBD5E1"/>}].map((t,idx) => (
-          <div key={idx} style={{ width:'26px', height:'26px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', background:t.on?'rgba(255,145,77,0.12)':'transparent' }}>{t.i}</div>
-        ))}
-      </div>
-    </div>
-  );
-}
+// Pantallas reales de clienta que rotan dentro del teléfono del showcase.
+// (Capturas en /public/screenshots; las mismas del portafolio.)
+const APP_SCREENS = [
+  { src: '/screenshots/befit-home.png',      Icon: Star,       title: 'Tu membresía, siempre contigo', desc: 'Clases restantes, racha y estatus al abrir la App.' },
+  { src: '/screenshots/befit-reservas.png',  Icon: Calendar,   title: 'Reserva en segundos',           desc: 'Aparta tu lugar y recibe recordatorios de cada clase.' },
+  { src: '/screenshots/befit-evolucion.png', Icon: TrendingUp, title: 'Mira tu progreso',              desc: 'Metas, evolución y fotos de tu transformación.' },
+  { src: '/screenshots/befit-nutricion.png', Icon: Utensils,   title: 'Nutrición a tu medida',         desc: 'Tu plan y recetario personalizados, en un toque.' },
+];
 
 function AppShowcase() {
   const sectionRef = useRef(null);
@@ -1155,15 +1096,45 @@ function AppShowcase() {
   const scale = useMotionSpring(scaleRaw, { stiffness: 120, damping: 28, mass: 0.4 });
   const y     = useMotionSpring(yRaw,     { stiffness: 120, damping: 28, mass: 0.4 });
 
+  // Carrusel automático de capturas reales de clienta (se pausa al interactuar).
+  const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    if (paused) return undefined;
+    const t = setInterval(() => setActive(a => (a + 1) % APP_SCREENS.length), 3200);
+    return () => clearInterval(t);
+  }, [paused]);
+  const select = (i) => setActive(i);
+
   return (
     <section ref={sectionRef} id="agenda-info" style={{ padding:'14rem 5%', background:'var(--surface-lowest)', position:'relative', overflow:'hidden' }}>
-      <div style={{ maxWidth:'1200px', margin:'0 auto', display:'flex', flexWrap:'wrap', gap:'5rem', alignItems:'center', justifyContent:'center' }}>
-        {/* Texto + descarga */}
-        <motion.div variants={slideRight} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ flex:'1 1 440px' }}>
+      <div onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}
+        style={{ maxWidth:'1200px', margin:'0 auto', display:'flex', flexWrap:'wrap', gap:'5rem', alignItems:'center', justifyContent:'center' }}>
+        {/* Texto + features que cambian con la pantalla activa */}
+        <motion.div variants={slideRight} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ flex:'1 1 460px' }}>
           <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Be Fit Lab App</span>
-          <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0', lineHeight:1.05, color:'var(--black)', letterSpacing:'-0.04em' }}>Tu estudio,<br/><span style={{ color:'var(--primary)', fontFamily:"'Playfair Display', serif", fontStyle:'italic', fontWeight:500 }}>en tu bolsillo.</span></h2>
-          <p style={{ fontSize:'1.25rem', color:'var(--on-surface-variant)', lineHeight:1.6, marginBottom:'3rem', fontWeight:400, maxWidth:'480px' }}>Reserva clases, sigue tu progreso, recibe planes de nutrición personalizados y gestiona tu membresía — todo en una App diseñada exclusivamente para socias.</p>
-          <div style={{ display:'flex', flexWrap:'wrap', gap:'16px' }}>
+          <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0', lineHeight:1.05, color:'var(--black)', letterSpacing:'-0.04em' }}>Todo tu estudio,<br/><span style={{ color:'var(--primary)', fontFamily:"'Playfair Display', serif", fontStyle:'italic', fontWeight:500 }}>en la palma de tu mano.</span></h2>
+          <p style={{ fontSize:'1.2rem', color:'var(--on-surface-variant)', lineHeight:1.6, marginBottom:'2.5rem', fontWeight:400, maxWidth:'480px' }}>Reserva, entrena y sigue tu evolución desde una sola App, diseñada exclusivamente para nuestras socias.</p>
+
+          {/* Lista de features sincronizada con el carrusel del teléfono */}
+          <div style={{ display:'flex', flexDirection:'column', gap:'10px', marginBottom:'2.5rem' }}>
+            {APP_SCREENS.map((s, i) => {
+              const on = i === active;
+              return (
+                <button key={s.src} onClick={() => select(i)} style={{ display:'flex', alignItems:'center', gap:'14px', textAlign:'left', border:'none', cursor:'pointer', borderRadius:'16px', padding:'12px 14px', background: on ? 'var(--app-surface-solid)' : 'transparent', boxShadow: on ? '0 10px 30px rgba(0,0,0,0.06)' : 'none', transition:'background 0.3s, box-shadow 0.3s' }}>
+                  <div style={{ flexShrink:0, width:'42px', height:'42px', borderRadius:'12px', display:'flex', alignItems:'center', justifyContent:'center', background: on ? 'var(--primary)' : 'rgba(255,145,77,0.12)', transition:'background 0.3s' }}>
+                    <s.Icon size={20} color={on ? '#fff' : 'var(--primary)'} />
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:'1rem', fontWeight:800, color:'var(--black)' }}>{s.title}</div>
+                    <div style={{ fontSize:'0.85rem', color:'var(--on-surface-variant)', fontWeight:500, opacity: on ? 1 : 0.7 }}>{s.desc}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ display:'flex', flexWrap:'wrap', gap:'16px', alignItems:'center' }}>
             <motion.a whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }} href="https://apps.apple.com/mx/app/be-fit-lab/id6772008660" target="_blank" rel="noopener noreferrer">
               <img src="/assets/appstore.svg" alt="App Store" style={{ height:'54px', width:'auto', display:'block' }}/>
             </motion.a>
@@ -1171,20 +1142,31 @@ function AppShowcase() {
           </div>
         </motion.div>
 
-        {/* Teléfono */}
-        <div style={{ flex:'1 1 360px', display:'flex', justifyContent:'center', alignItems:'center', position:'relative' }}>
+        {/* Teléfono con carrusel de capturas reales */}
+        <div style={{ flex:'1 1 360px', display:'flex', flexDirection:'column', alignItems:'center', gap:'1.5rem', position:'relative' }}>
           {/* Resplandor de marca detrás del teléfono */}
-          <div style={{ position:'absolute', width:'70%', height:'70%', background:'radial-gradient(circle, rgba(255,145,77,0.22) 0%, transparent 70%)', filter:'blur(50px)', pointerEvents:'none' }} />
+          <div style={{ position:'absolute', top:'45%', width:'70%', height:'70%', background:'radial-gradient(circle, rgba(255,145,77,0.22) 0%, transparent 70%)', filter:'blur(50px)', pointerEvents:'none', transform:'translateY(-50%)' }} />
           <motion.div style={{ scale, y, willChange:'transform' }}>
             {/* Marco del iPhone */}
             <div style={{ width:'300px', maxWidth:'78vw', aspectRatio:'9 / 19.5', background:'#0D0D0C', borderRadius:'52px', padding:'11px', boxShadow:'0 50px 100px rgba(0,0,0,0.28), 0 0 0 2.5px #232323, inset 0 0 0 2px rgba(255,255,255,0.04)', position:'relative' }}>
               <div style={{ width:'100%', height:'100%', borderRadius:'42px', overflow:'hidden', background:'#fff', position:'relative' }}>
                 {/* Dynamic island */}
                 <div style={{ position:'absolute', top:'11px', left:'50%', transform:'translateX(-50%)', width:'88px', height:'25px', background:'#000', borderRadius:'20px', zIndex:20 }} />
-                <PhoneScreen />
+                <AnimatePresence initial={false}>
+                  <motion.img key={APP_SCREENS[active].src} src={APP_SCREENS[active].src} alt={APP_SCREENS[active].title}
+                    initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} transition={{ duration:0.7, ease:'easeInOut' }}
+                    style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} />
+                </AnimatePresence>
               </div>
             </div>
           </motion.div>
+          {/* Puntos de paginación */}
+          <div style={{ display:'flex', gap:'8px', zIndex:1 }}>
+            {APP_SCREENS.map((s, i) => (
+              <button key={s.src} aria-label={s.title} onClick={() => select(i)}
+                style={{ width: i === active ? '24px' : '8px', height:'8px', borderRadius:'4px', border:'none', cursor:'pointer', padding:0, background: i === active ? 'var(--primary)' : 'rgba(0,0,0,0.15)', transition:'all 0.3s' }} />
+            ))}
+          </div>
         </div>
       </div>
     </section>

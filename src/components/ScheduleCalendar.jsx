@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ChevronRight, Lock, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { resolveCatColor, categoryLabel } from '../lib/categories';
-import { classDateTime } from '../hooks/useLocalNotifications';
+import { classDateTime, parseTimeStr } from '../hooks/useLocalNotifications';
 import { toLocalDateStr } from '../lib/dates';
 
 // Leyenda de categorías presentes (barra glass bajo el calendario)
@@ -65,10 +65,20 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
     return new Date(dateStr + "T12:00:00").getDay();
   };
 
+  // Minutos desde medianoche para ordenar por horario real. El campo `time` se
+  // guarda en AM/PM ("7:00 AM" / "6:30 PM"), así que un sort de texto saldría mal;
+  // parseTimeStr lo normaliza a 24h.
+  const timeToMinutes = (t) => {
+    const { hour, min } = parseTimeStr(t);
+    return hour * 60 + min;
+  };
+
   const getClassesForDate = (dateStr) => {
     if (!dateStr || !globalClasses) return [];
     const dayOfWeek = getDayOfWeekFromDateStr(dateStr);
-    return globalClasses.filter(c => c.date === dateStr || (c.date === null && c.day === dayOfWeek));
+    return globalClasses
+      .filter(c => c.date === dateStr || (c.date === null && c.day === dayOfWeek))
+      .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
   };
 
   return (

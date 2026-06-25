@@ -45,11 +45,18 @@ serve(async (req) => {
       return Response.json({ error: 'Metadata de suscripción incompleta' }, { status: 400, headers: corsHeaders });
     }
 
+    // Fechas: pago = ahora, vence = +1 mes (regla del negocio, para el bloqueo).
+    const _started = new Date();
+    const _expires = new Date(_started);
+    _expires.setMonth(_expires.getMonth() + 1);
+
     const { error } = await supabase.from('users').update({
       membership_plan: plan_title,
       membership_status: 'ACTIVE',
       classes_remaining: parseInt(class_count ?? '0'),
       stripe_subscription_id: subId,
+      plan_started_at: _started.toISOString(),
+      plan_expires_at: _expires.toISOString(),
     }).eq('id', supabase_user_id);
     if (error) throw error;
 

@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { PricingCarousel } from '../components/PricingCarousel';
+import { isPlanExpired, formatPlanDate, daysUntilExpiry } from '../lib/membership';
 import { motion } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { Stripe } from '@capacitor-community/stripe';
@@ -11,7 +12,9 @@ import { Stripe } from '@capacitor-community/stripe';
 function Planes() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, refreshUserData, plan, classesRemaining, membershipStatus } = useAuth();
+  const { user, logout, refreshUserData, plan, classesRemaining, membershipStatus, planStartedAt, planExpiresAt } = useAuth();
+  const expired = isPlanExpired(planExpiresAt);
+  const daysLeft = daysUntilExpiry(planExpiresAt);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState(1); // 1 = confirm, 2 = waiting, 3 = success
@@ -273,8 +276,10 @@ function Planes() {
                     {plan ? plan.replace('Plan ', '') : 'Sin Plan'}
                   </h2>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '6px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: plan ? '#22C55E' : '#EF4444' }}></div>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{plan ? 'Suscripción Activa' : 'Inactiva'}</span>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: !plan ? '#EF4444' : (expired ? '#EF4444' : '#22C55E') }}></div>
+                    <span style={{ fontSize: '0.8rem', color: expired ? '#EF4444' : 'var(--on-surface-variant)', fontWeight: expired ? 800 : 600 }}>
+                      {!plan ? 'Inactiva' : (expired ? 'Membresía vencida' : 'Suscripción Activa')}
+                    </span>
                   </div>
                 </div>
                 
@@ -294,8 +299,21 @@ function Planes() {
                     <Calendar size={18} color="var(--primary)" />
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--black)' }}>Pago Recurrente Stripe</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 500 }}>Tu plan se renueva automáticamente cada mes.</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--black)' }}>
+                      {expired ? 'Renueva tu membresía' : 'Vigencia de tu plan'}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: expired ? '#EF4444' : 'var(--on-surface-variant)', fontWeight: expired ? 700 : 500 }}>
+                      {planExpiresAt
+                        ? (expired
+                            ? `Venció el ${formatPlanDate(planExpiresAt)}. No podrás reservar hasta renovar.`
+                            : `Vence el ${formatPlanDate(planExpiresAt)}${daysLeft != null && daysLeft <= 7 ? ` · faltan ${daysLeft} día${daysLeft === 1 ? '' : 's'}` : ''}`)
+                        : 'Tu plan se renueva automáticamente cada mes.'}
+                    </div>
+                    {planStartedAt && !expired && (
+                      <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', fontWeight: 500, marginTop: '2px' }}>
+                        Último pago: {formatPlanDate(planStartedAt)}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

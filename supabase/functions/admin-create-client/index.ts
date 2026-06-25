@@ -62,6 +62,13 @@ serve(async (req) => {
       classes_remaining: planName ? (Number.isFinite(classCount) ? classCount : 0) : 0,
     };
     if (birthDate) patch.birth_date = birthDate;
+    // Si se inscribe con plan: sella fechas (pago = ahora, vence = +1 mes).
+    if (planName) {
+      const _started = new Date();
+      const _expires = new Date(_started); _expires.setMonth(_expires.getMonth() + 1);
+      patch.plan_started_at = _started.toISOString();
+      patch.plan_expires_at = _expires.toISOString();
+    }
 
     const { error: uErr } = await admin.from('users').upsert(patch, { onConflict: 'id' });
     if (uErr) {
