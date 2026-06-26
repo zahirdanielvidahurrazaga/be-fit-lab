@@ -7,9 +7,10 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
 ## ⏭️ PRÓXIMA SESIÓN (retomar) — SUBIR ANDROID
-**iOS 🆕 1.4.2 (build 8)** PREPARADO el 2026-06-25 (`npm run build` + `npx cap sync` hechos; Xcode abierto) — **falta que el usuario haga Archive + Upload** en Xcode. Incluye lo del 24→25-jun: vencimiento de membresía (fechas + bloqueo) y orden de clases por horario. **OJO:** el 1.4.0 (build 7) sigue esperando aprobación de Apple; el usuario eligió numerar este como **1.4.2** (versión aparte, no reemplaza al 7). Si Apple aprueba el 7 primero, luego se envía el 1.4.2 encima.
+**iOS 🆕 1.5.0 (build 9)** PREPARADO el 2026-06-26 (build + `npx cap sync ios` hechos; código **pusheado a `main`** → web ya desplegada). **Falta que el usuario haga Archive + Upload** en Xcode (verificar que el target muestre 1.5.0(9); cerrar/reabrir Xcode para que tome el `project.pbxproj` nuevo). Incluye lo del 26-jun (ver sesión abajo): cancelar/pausar membresía, pase de lista, editar vencimiento desde admin, "Studio" en el nav, y el **fix raíz del deep link** (RR7 `useNavigate`). **OJO:** el 1.4.0 (build 7) sigue esperando aprobación de Apple; el 1.5.0 va como versión nueva por encima.
+**iOS (previo) 1.4.2 (build 8)** quedó preparado el 25-jun pero **NUNCA se subió** (solo se usó para probar en local); lo reemplaza el 1.5.0(9).
 **iOS (previo) 1.4.0 (build 7)** subido el 2026-06-24, esperando aprobación. Incluía 15→24-jun: Stripe LIVE, Recepción, deep links de auth, dominio befitlab.app, fixes 22/23-jun, gestionar clases por clienta, "sin cupos", sidebar scroll, fix de fotos de coaches.
-**⏳ ÚNICO PENDIENTE DE DESPLIEGUE: AAB de Android** (otra PC) con TODO lo acumulado hasta el 24-jun. Android sigue en `versionCode 8` / `versionName 2.4.0` y NO se ha subido a Play con nada de esto; al reconstruir, `main` ya trae todos los cambios (solo bumpear `versionCode` si Play lo pide). El `dist` está construido para iOS; para Android **reconstruir** (`npm run build && npx cap sync android`).
+**⏳ ÚNICO PENDIENTE DE DESPLIEGUE: AAB de Android** (otra PC) con TODO lo acumulado hasta el 26-jun. Android sigue en `versionCode 8` / `versionName 2.4.0` y NO se ha subido a Play con nada de esto; al reconstruir, `main` ya trae todos los cambios (solo bumpear `versionCode` si Play lo pide). El `dist` está construido para iOS; para Android **reconstruir** (`npm run build && npx cap sync android`).
 
 **📋 REQUERIMIENTO PARA CLAUDE (cuando el usuario pida "subir Android" en la otra PC):**
 Ejecuta TÚ (Claude) automáticamente los pasos de CLI; el usuario solo hace los de GUI que tú no puedes. No pidas permiso paso a paso, hazlos y reporta.
@@ -17,7 +18,7 @@ Ejecuta TÚ (Claude) automáticamente los pasos de CLI; el usuario solo hace los
 **→ Pasos que HACE CLAUDE (CLI):**
 1. `git pull origin main` (trae el código nuevo + el `versionCode` ya bumpeado).
 2. `npm install`.
-3. `npm run build` (⚠️ en este entorno tarda ~14 min y el proceso vite queda colgado tras "✓ built" → mátalo con `pkill -f "vite build"`).
+3. `npm run build` (ahora con **Vite v8/rolldown** es **rápido ~1s y ya NO se cuelga**; la nota vieja de "~14 min + pkill" quedó obsoleta).
 4. `npx cap sync android`.
 5. Verifica/sube el `versionCode` en `android/app/build.gradle` si hace falta (debe ser MAYOR al último subido a Play).
 6. (Si el keystore/firma están configurados en gradle) puedes generar el AAB por CLI: `cd android && ./gradlew bundleRelease` → sale en `android/app/build/outputs/bundle/release/app-release.aab`. Si la firma NO está en gradle, deja que el usuario lo genere en Android Studio.
@@ -31,6 +32,22 @@ Ejecuta TÚ (Claude) automáticamente los pasos de CLI; el usuario solo hace los
 - ⚠️ El **hero del landing NO aplica a nativo** (la app redirige `/`→`/welcome`).
 
 **Opcional (smoke test):** un cobro real chico. El flujo NO cambia entre test/live (mismo código), pero confirma que `sk_live` + webhook Live **registran** el sale/pedido. Reembolsable. (Ya se probó el 2026-06-15: pedido quedó `paid` ✅.)
+
+## ✅ Sesión 2026-06-26 (cancelar/pausar membresía + pase de lista + editar vencimiento + "Studio" + FIX deep link) — iOS 1.5.0(9)
+**Todo pusheado a `main`** (commit `d02ec54`, web desplegando). Backend (BD + edge functions) **ya en producción**. iOS bumpeado a **1.5.0 (build 9)**, falta Archive/Upload del usuario. Android (otra PC) pendiente.
+
+- **🐞 FIX RAÍZ del "temblor/rebote" al confirmar el correo (deep link):** era la **causa de TODO** (el temblor original Y el rebote `/planes`↔`/welcome`). `AuthDeepLinkHandler` (en `App.jsx`) tenía el efecto con dep `[navigate]`, y **`useNavigate()` de React Router 7 cambia de identidad en cada cambio de ruta** → el efecto se re-ejecutaba en cada navegación y volvía a llamar `CapApp.getLaunchUrl()`, que **sigue devolviendo el link del correo** → re-navegaba en bucle. Por eso cerrar/reabrir lo curaba (ahí getLaunchUrl ya no devuelve ese link). **Fix:** efecto con deps `[]` + `navRef` (ref viva de navigate) + `launchHandledRef` (procesar la launch URL UNA sola vez). ⚠️ LECCIÓN: nunca poner `navigate` como dep de un efecto que lee `getLaunchUrl()`. (El flujo es **implicit flow**: el correo trae tokens en el hash → `setSession`, NO `exchangeCodeForSession`/PKCE.)
+- **Flujo post-registro nuevo:** tras confirmar el correo se aterriza en **`/welcome`** (no `/portal`, que rebotaba a `/planes`). `Welcome.jsx` ahora es consciente de sesión: sin sesión → crear cuenta/login; con plan ACTIVO → entra directo al portal; **con sesión sin plan → pantalla "¡Tu cuenta está lista!" + chip "✓ Correo confirmado" + botón "Entrar a mi perfil"** (no auto-rebota). Bandera `sessionStorage 'befit_just_confirmed'` la pone el handler. (Una 1ª versión con dedupe de token rompía el `setSession` → se quitó; la lógica de confirmación quedó como estaba probada.)
+- **(1) Cancelar / Pausar membresía (clienta, `Planes.jsx` "Mi Membresía"):**
+  - **Pausar (vacaciones):** Stripe `pause_collection:{behavior:'void'}` — no cobra la próxima renovación, conserva acceso hasta el vencimiento, **reactivable sin re-meter tarjeta**.
+  - **Cancelar:** `cancel_at_period_end:true` — no se renueva, conserva acceso hasta el vencimiento, luego termina (re-suscribirse para volver).
+  - **Reactivar:** limpia pausa y cancelación.
+  - Las clientas **sin** `stripe_subscription_id` (efectivo/alta manual; ~22 de 29) ven un **aviso** "tu plan no tiene renovación automática" en vez de botones (no hay cobro que parar).
+  - **BD:** columna nueva `users.membership_renewal` (`active|paused|canceling`, default `active`, YA APLICADA). **Edge function nueva `manage-membership`** (JWT → userId del token; pause/resume/cancel; maneja "sin suscripción" y "sub inexistente en Stripe"). `stripe-webhook` + `stripe-membership-notify` resetean `membership_renewal:'active'` en cada activación/renovación/cancelación. **3 functions desplegadas.** `AuthContext` expone `membershipRenewal` + `hasSubscription`.
+- **(2) Pase de lista / Asistencias (admin):** nuevo `src/components/AdminAsistencias.jsx` (pestaña "Pase de lista", admin-only — sidebar + menú ⋯). Navegador por día (`<input type=date>` + ◀▶) → cada clase con su roster de alumnas: badge **"Asistió ✓"** (check-in QR, `reservations.checked_in`) o **"Reservó"**, + resumen del día (clases/reservas/asistieron) + filtro "solo asistió". Lee `reservations` con join a `users` (admin ya tiene RLS, mismo patrón que `fetchClassReservations`). ⚠️ Hay 56 reservas pero **0 check-ins** en la BD → la columna "Asistieron" sale en 0 hasta que **escaneen el QR** en recepción.
+- **(3) Editar vencimiento desde admin:** en `AdminClientas.jsx` modal "Clases" → sección "Vencimiento de la membresía" con `<input type=date>` + Guardar (UPDATE directo a `users.plan_expires_at` vía `patch`, admin ya tiene RLS). Se sella a las 23:59 local del día elegido. `onBaja`/`onReactivar` también resetean `membership_renewal`.
+- **(4) Sitio:** nav "Estudio" → **"Studio"** (desktop + móvil, `Landing.jsx`).
+- ✅ **Entorno actualizado:** el build ahora es **Vite v8 (rolldown), rápido (~1s) y ya NO se cuelga** (la nota vieja de "14 min + pkill" quedó obsoleta).
 
 ## ✅ Sesión 2026-06-25 (vencimiento de membresía + orden de clases + sección App del sitio) — iOS 1.4.2(8)
 Tres cambios pedidos por el usuario. **Web ya pusheada a `main`** (commits `e04028b` + `9e5c4db`, Cloudflare desplegando). **Backend del vencimiento ya en producción.** iOS 1.4.2(8) preparado (build + sync), falta Archive/Upload del usuario. Android (otra PC) sigue pendiente.
