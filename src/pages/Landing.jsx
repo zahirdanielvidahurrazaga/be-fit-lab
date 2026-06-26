@@ -370,7 +370,7 @@ export default function Landing() {
         </motion.button>
 
         <div className="desktop-links" style={{ display:'flex', gap:'2rem', alignItems:'center' }}>
-          {[['Clases','clases'],['Horarios','horarios'],['Precios','precios'],['Estudio','estudio'],['Cafetería','cafeteria']].map(([label,id]) => (
+          {[['Clases','clases'],['Horarios','horarios'],['Precios','precios'],['Studio','estudio'],['Cafetería','cafeteria']].map(([label,id]) => (
             <motion.button key={id} whileHover={{ scale:1.05, color:'var(--primary)' }} whileTap={{ scale:0.95 }} onClick={() => scrollTo(id)}
               style={{ background:'none', border:'none', cursor:'pointer', fontSize:'0.88rem', fontWeight:500, color:'var(--black)', fontFamily:'var(--font-body)', transition:'color 0.2s' }}>
               {label}
@@ -404,7 +404,7 @@ export default function Landing() {
         {menuOpen && (
           <motion.div initial={{ opacity:0, x:'100%' }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:'100%' }} transition={{ ...SPRING }}
             style={{ position:'fixed', inset:0, zIndex:999, ...glass, backdropFilter:'blur(40px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'2.2rem' }}>
-            {[['Clases','clases'],['Horarios','horarios'],['Precios','precios'],['El Estudio','estudio'],['Cafetería','cafeteria'],['FAQ','faq'],['Contacto','ubicacion']].map(([label,id],i) => (
+            {[['Clases','clases'],['Horarios','horarios'],['Precios','precios'],['Studio','estudio'],['Cafetería','cafeteria'],['FAQ','faq'],['Contacto','ubicacion']].map(([label,id],i) => (
               <motion.button key={id} initial={{ opacity:0, x:30 }} animate={{ opacity:1, x:0 }} transition={{ ...SPRING, delay: i*0.05 }}
                 whileHover={{ scale:1.05 }} whileTap={{ scale:0.96 }} onClick={() => scrollTo(id)}
                 style={{ background:'none', border:'none', cursor:'pointer', fontSize:'1.3rem', fontWeight:700, color:'var(--black)', fontFamily:'var(--font-body)' }}>

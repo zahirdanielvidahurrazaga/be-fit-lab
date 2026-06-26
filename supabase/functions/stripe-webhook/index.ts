@@ -141,6 +141,7 @@ serve(async (req) => {
         membership_status: 'ACTIVE',
         classes_remaining: parseInt(class_count ?? '0'),
         stripe_subscription_id: session.subscription as string,
+        membership_renewal: 'active',
         ...planDates(),
       }).eq('id', supabase_user_id);
 
@@ -172,6 +173,7 @@ serve(async (req) => {
             membership_status: 'ACTIVE',
             classes_remaining: parseInt(class_count ?? '0'),
             stripe_subscription_id: subscriptionId,
+            membership_renewal: 'active',
             ...planDates(),
           }).eq('id', supabase_user_id);
           console.log(`✅ Plan activado (nativo): ${plan_title} para ${supabase_user_id}`);
@@ -187,6 +189,7 @@ serve(async (req) => {
           await supabase.from('users').update({
             membership_status: 'ACTIVE',
             classes_remaining: parseInt(class_count ?? '0'),
+            membership_renewal: 'active',
             ...planDates(),
           }).eq('id', users[0].id);
           console.log(`🔄 Clases renovadas: ${class_count} para usuario ${users[0].id}`);
@@ -210,6 +213,7 @@ serve(async (req) => {
           classes_remaining: 0,
           stripe_subscription_id: null,
           plan_expires_at: null,
+          membership_renewal: 'active',
         }).eq('id', users[0].id);
 
         console.log(`❌ Suscripción cancelada para usuario ${users[0].id}`);

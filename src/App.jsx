@@ -60,6 +60,14 @@ const ScrollToTop = () => {
 // (o tokens en el hash). Establece la sesión y navega según el flujo.
 const AuthDeepLinkHandler = () => {
   const navigate = useNavigate();
+  // useNavigate() cambia de identidad en cada cambio de ruta. Guardamos la
+  // referencia viva en un ref para que el efecto NO dependa de `navigate` (deps
+  // vacías) y así NO se re-ejecute en cada navegación. Si se re-ejecutara,
+  // getLaunchUrl() volvería a devolver el link del correo y re-navegaría en
+  // bucle a /welcome (ese era el "temblor"/rebote tras confirmar el correo).
+  const navRef = React.useRef(navigate);
+  navRef.current = navigate;
+  const launchHandledRef = React.useRef(false);
   React.useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     let listener;
@@ -80,14 +88,26 @@ const AuthDeepLinkHandler = () => {
         } else {
           return;
         }
-        navigate(flow === 'recovery' ? '/nueva-contrasena' : '/portal', { replace: true });
+        if (flow !== 'recovery') {
+          // Bandera para que /welcome muestre "correo confirmado" y la pantalla
+          // "lista" aunque la sesión tarde un instante en asentarse en nativo.
+          try { sessionStorage.setItem('befit_just_confirmed', '1'); } catch (e) { /* noop */ }
+        }
+        // Tras confirmar el correo aterrizamos en /welcome (pantalla estable que
+        // ya reconoce la sesión), NO en /portal: ir directo rebotaba a /planes
+        // mientras la sesión aún se asentaba y hacía "temblar" esa pantalla.
+        navRef.current(flow === 'recovery' ? '/nueva-contrasena' : '/welcome', { replace: true });
       } catch (e) { console.error('Auth deep link:', e); }
     };
     CapApp.addListener('appUrlOpen', ({ url }) => process(url)).then(l => { listener = l; });
-    // Arranque en frío: la app pudo abrirse directamente desde el enlace.
-    CapApp.getLaunchUrl().then(res => { if (res?.url) process(res.url); }).catch(() => {});
+    // Arranque en frío: procesar la URL de lanzamiento UNA sola vez (aunque algo
+    // re-monte el efecto). getLaunchUrl() sigue devolviendo el mismo link.
+    if (!launchHandledRef.current) {
+      launchHandledRef.current = true;
+      CapApp.getLaunchUrl().then(res => { if (res?.url) process(res.url); }).catch(() => {});
+    }
     return () => { if (listener) listener.remove(); };
-  }, [navigate]);
+  }, []);
   return null;
 };
 

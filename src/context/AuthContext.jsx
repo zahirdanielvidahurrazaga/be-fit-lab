@@ -27,6 +27,8 @@ export const AuthProvider = ({ children }) => {
   const [membershipStatus, setMembershipStatus] = useState('INACTIVE');
   const [planStartedAt, setPlanStartedAt] = useState(null);   // fecha de pago
   const [planExpiresAt, setPlanExpiresAt] = useState(null);   // vence (pago + 1 mes)
+  const [membershipRenewal, setMembershipRenewal] = useState('active'); // active | paused | canceling
+  const [hasSubscription, setHasSubscription] = useState(false);        // tiene suscripción Stripe (cobro automático)
   const [loading, setLoading] = useState(true);
   const [customBadges, setCustomBadges] = useState([]);
   const [badgeQueue, setBadgeQueue] = useState([]); // cola de insignias por animar
@@ -932,7 +934,7 @@ export const AuthProvider = ({ children }) => {
       // 1. Obtener rol y clases restantes
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('role, classes_remaining, membership_plan, membership_status, plan_started_at, plan_expires_at, full_name, custom_badges, avatar_url, target_monthly_classes, calorie_goal')
+        .select('role, classes_remaining, membership_plan, membership_status, plan_started_at, plan_expires_at, membership_renewal, stripe_subscription_id, full_name, custom_badges, avatar_url, target_monthly_classes, calorie_goal')
         .eq('id', currentUser.id)
         .single();
         
@@ -958,6 +960,8 @@ export const AuthProvider = ({ children }) => {
         setMembershipStatus(userData.membership_status || 'INACTIVE');
         setPlanStartedAt(userData.plan_started_at || null);
         setPlanExpiresAt(userData.plan_expires_at || null);
+        setMembershipRenewal(userData.membership_renewal || 'active');
+        setHasSubscription(!!userData.stripe_subscription_id);
         setClassesRemaining(userData.classes_remaining || 0);
         setMonthlyGoal(userData.target_monthly_classes || 0);
         setSelfCalorieGoal(userData.calorie_goal ?? null);
@@ -1494,6 +1498,7 @@ export const AuthProvider = ({ children }) => {
     if (!specificUserId || specificUserId === user?.id) {
       setPlanStartedAt(startedAt.toISOString());
       setPlanExpiresAt(expiresAt.toISOString());
+      setMembershipRenewal('active');
     }
 
     // 2. Intentar persistir en la BD de forma segura
@@ -1506,7 +1511,8 @@ export const AuthProvider = ({ children }) => {
         membership_status: 'ACTIVE',
         classes_remaining: classCount,
         plan_started_at: startedAt.toISOString(),
-        plan_expires_at: expiresAt.toISOString()
+        plan_expires_at: expiresAt.toISOString(),
+        membership_renewal: 'active'
       }).eq('id', targetId);
       
       if (error) {
@@ -1568,6 +1574,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider value={{
       user, role, plan, membershipStatus, planStartedAt, planExpiresAt, loading, profileName,
+      membershipRenewal, hasSubscription,
       classesRemaining, myReservations, globalClasses, recipes, allUsers,
       classesLoaded, recipesLoaded, cafeProductsLoaded,
       avatarUrl, setAvatarUrl, customBadges, badgeConfigs,

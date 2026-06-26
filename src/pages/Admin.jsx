@@ -10,6 +10,7 @@ import AdminCafeteria from '../components/AdminCafeteria';
 import AdminDisciplinas from '../components/AdminDisciplinas';
 import AdminReportes from '../components/AdminReportes';
 import AdminClientas from '../components/AdminClientas';
+import AdminAsistencias from '../components/AdminAsistencias';
 import AdminPlanes from '../components/AdminPlanes';
 import AdminNutricion from '../components/AdminNutricion';
 import AdminEventos from '../components/AdminEventos';
@@ -18,7 +19,7 @@ import ScheduleStoryExport from '../components/ScheduleStoryExport';
 import AdminCategoryManager from '../components/AdminCategoryManager';
 import AdminWeekTemplates from '../components/AdminWeekTemplates';
 import { DEFAULT_CATEGORIES, PASTEL_PALETTE, resolveCatColor, categoryLabel } from '../lib/categories';
-import { Coffee, Bell, UserCog, Sparkles, Copy, Trash2, Tag, LayoutTemplate, MoreHorizontal, Dumbbell, CreditCard } from 'lucide-react';
+import { Coffee, Bell, UserCog, Sparkles, Copy, Trash2, Tag, LayoutTemplate, MoreHorizontal, Dumbbell, CreditCard, ClipboardCheck } from 'lucide-react';
 
 const daysOfWeek = [
   { num: 1, label: 'Lunes' },
@@ -509,6 +510,9 @@ function Admin({ recepcion = false }) {
                   <div onClick={() => { setActiveTab('clientas'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <UserCog size={18} color="var(--primary)" /> Clientas
                   </div>
+                  <div onClick={() => { setActiveTab('asistencias'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
+                    <ClipboardCheck size={18} color="var(--primary)" /> Pase de lista
+                  </div>
                   <div onClick={() => { setActiveTab('insignias'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Award size={18} color="var(--primary)" /> Insignias
                   </div>
@@ -569,6 +573,10 @@ function Admin({ recepcion = false }) {
           <div onClick={() => setActiveTab('clientas')} className={`sidebar-nav-item ${activeTab === 'clientas' ? 'active' : ''}`}>
             <UserCog size={20} />
             <span>Clientas</span>
+          </div>
+          <div onClick={() => setActiveTab('asistencias')} className={`sidebar-nav-item ${activeTab === 'asistencias' ? 'active' : ''}`}>
+            <ClipboardCheck size={20} />
+            <span>Pase de lista</span>
           </div>
           <div onClick={() => setActiveTab('nutricion')} className={`sidebar-nav-item ${activeTab === 'nutricion' ? 'active' : ''}`}>
             <Utensils size={20} />
@@ -1256,6 +1264,12 @@ function Admin({ recepcion = false }) {
             {activeTab === 'clientas' && (
               <motion.div key="clientas" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
                 <AdminClientas />
+              </motion.div>
+            )}
+
+            {activeTab === 'asistencias' && (
+              <motion.div key="asistencias" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
+                <AdminAsistencias />
               </motion.div>
             )}
 

@@ -55,6 +55,7 @@ serve(async (req) => {
       membership_status: 'ACTIVE',
       classes_remaining: parseInt(class_count ?? '0'),
       stripe_subscription_id: subId,
+      membership_renewal: 'active',
       plan_started_at: _started.toISOString(),
       plan_expires_at: _expires.toISOString(),
     }).eq('id', supabase_user_id);

@@ -178,6 +178,29 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
   const [reserved, setReserved] = useState(null); // Set de class_id (null = cargando)
   const [busyId, setBusyId] = useState(null);
 
+  // Edición de la fecha de vencimiento de la membresía (admin).
+  const toDateInput = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const [expiryInput, setExpiryInput] = useState(toDateInput(client.plan_expires_at));
+  const [savedExpiry, setSavedExpiry] = useState(toDateInput(client.plan_expires_at));
+  const [savingExpiry, setSavingExpiry] = useState(false);
+  const [expirySaved, setExpirySaved] = useState(false);
+
+  const saveExpiry = async () => {
+    setSavingExpiry(true); setExpirySaved(false);
+    // Guardamos al final del día (23:59 local) para que "vence el X" abarque todo ese día.
+    const iso = expiryInput ? new Date(expiryInput + 'T23:59:59').toISOString() : null;
+    await patch(client.id, { plan_expires_at: iso });
+    applyLocal?.(client.id, { plan_expires_at: iso });
+    setSavedExpiry(expiryInput);
+    setSavingExpiry(false); setExpirySaved(true);
+    setTimeout(() => setExpirySaved(false), 2500);
+  };
+
   // Reservas actuales de la clienta (para marcar "Reservada" y permitir quitar).
   useEffect(() => {
     let alive = true;
@@ -315,6 +338,27 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
             </div>
           )}
 
+          {/* SECCIÓN — Vencimiento de la membresía (editable por admin) */}
+          <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)', margin: '0 0 10px' }}>Vencimiento de la membresía</h3>
+          <div style={{ background: 'rgba(0,0,0,0.025)', borderRadius: '14px', padding: '14px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="date"
+                value={expiryInput}
+                onChange={(e) => setExpiryInput(e.target.value)}
+                style={{ flex: 1, padding: '11px 12px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '0.9rem', color: INK, background: '#fff', fontFamily: 'inherit', WebkitAppearance: 'none', appearance: 'none' }}
+              />
+              <button onClick={saveExpiry} disabled={savingExpiry || expiryInput === savedExpiry} style={{ ...quickBtn, padding: '11px 16px', opacity: (savingExpiry || expiryInput === savedExpiry) ? 0.45 : 1 }}>
+                {savingExpiry ? '…' : 'Guardar'}
+              </button>
+            </div>
+            <div style={{ fontSize: '0.74rem', color: expirySaved ? '#16A34A' : 'var(--on-surface-variant)', marginTop: '10px', fontWeight: expirySaved ? 700 : 400, lineHeight: 1.45 }}>
+              {expirySaved
+                ? '✓ Fecha de vencimiento actualizada'
+                : 'Cambia la fecha en que se le vence la membresía a la clienta. Vacío = sin vencimiento.'}
+            </div>
+          </div>
+
           {/* SECCIÓN 2 — Reservar en una clase */}
           <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)', margin: '0 0 10px' }}>Reservar en una clase</h3>
           {noClasses && (
@@ -418,13 +462,13 @@ export default function AdminClientas() {
   };
 
   const onRole = (u, role) => { if (confirm(`¿Cambiar a "${u.full_name || u.email}" al rol de ${roleMeta(role).label}?`)) patch(u.id, { role }); };
-  const onBaja = (u) => { if (confirm(`¿Dar de baja la membresía de "${u.full_name || u.email}"?`)) patch(u.id, { membership_status: 'INACTIVE', classes_remaining: 0, plan_expires_at: null }); };
+  const onBaja = (u) => { if (confirm(`¿Dar de baja la membresía de "${u.full_name || u.email}"?`)) patch(u.id, { membership_status: 'INACTIVE', classes_remaining: 0, plan_expires_at: null, membership_renewal: 'active' }); };
   const onReactivar = (u) => {
     if (!confirm(`¿Reactivar la membresía de "${u.full_name || u.email}"? Vencerá en un mes.`)) return;
     // Reactivar = nuevo periodo: pago = hoy, vence = +1 mes (regla automática).
     const started = new Date();
     const expires = new Date(started); expires.setMonth(expires.getMonth() + 1);
-    patch(u.id, { membership_status: 'ACTIVE', plan_started_at: started.toISOString(), plan_expires_at: expires.toISOString() });
+    patch(u.id, { membership_status: 'ACTIVE', plan_started_at: started.toISOString(), plan_expires_at: expires.toISOString(), membership_renewal: 'active' });
   };
 
   // Eliminación DEFINITIVA (cuenta + datos). Doble confirmación por ser destructivo.

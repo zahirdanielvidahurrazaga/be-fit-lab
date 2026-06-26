@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Check, X, Calendar, Wallet, AlertCircle, Loader2 } from 'lucide-react';
+import { Check, X, Calendar, Wallet, AlertCircle, Loader2, PauseCircle, PlayCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -12,7 +12,7 @@ import { Stripe } from '@capacitor-community/stripe';
 function Planes() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, refreshUserData, plan, classesRemaining, membershipStatus, planStartedAt, planExpiresAt } = useAuth();
+  const { user, logout, refreshUserData, plan, classesRemaining, membershipStatus, planStartedAt, planExpiresAt, membershipRenewal, hasSubscription } = useAuth();
   const expired = isPlanExpired(planExpiresAt);
   const daysLeft = daysUntilExpiry(planExpiresAt);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -21,6 +21,31 @@ function Planes() {
   const [paymentError, setPaymentError] = useState(null);
   const [showCarousel, setShowCarousel] = useState(false);
   const [returningFromPayment, setReturningFromPayment] = useState(false);
+  // Gestión de membresía (pausar / cancelar / reactivar)
+  const [mgmtAction, setMgmtAction] = useState(null); // 'pause' | 'cancel' | null → modal de confirmación
+  const [mgmtBusy, setMgmtBusy] = useState(false);
+  const [mgmtMsg, setMgmtMsg] = useState(null);
+
+  // Llama a la edge function que pausa/cancela/reactiva la suscripción en Stripe.
+  const manageMembership = async (action) => {
+    setMgmtBusy(true); setMgmtMsg(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-membership', { body: { action } });
+      if (error) throw error;
+      if (data?.noSubscription) {
+        setMgmtMsg({ ok: false, text: 'Tu plan no tiene una suscripción automática que gestionar.' });
+      } else {
+        await refreshUserData?.();
+        setMgmtMsg({ ok: true, text: action === 'pause' ? 'Listo, tu membresía quedó en pausa.' : action === 'cancel' ? 'Listo, tu renovación quedó cancelada.' : '¡Membresía reactivada!' });
+      }
+    } catch (e) {
+      console.error('manage-membership:', e);
+      setMgmtMsg({ ok: false, text: 'No se pudo procesar. Intenta de nuevo en un momento.' });
+    } finally {
+      setMgmtBusy(false);
+      setMgmtAction(null);
+    }
+  };
 
   // Si no tiene plan activo, mostrar el carrusel directamente
   const showingCarousel = showCarousel || !membershipStatus || membershipStatus !== 'ACTIVE';
@@ -331,6 +356,49 @@ function Planes() {
               >
                 <Wallet size={18} color="var(--primary)" /> Renovar o Cambiar Plan
               </button>
+
+              {/* GESTIONAR MEMBRESÍA — pausar / cancelar / reactivar */}
+              {plan && membershipStatus === 'ACTIVE' && (
+                <div style={{ marginTop: '14px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
+                  {!hasSubscription ? (
+                    <p style={{ fontSize: '0.76rem', color: 'var(--on-surface-variant)', textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
+                      Tu plan no tiene renovación automática: no se te hará ningún cobro recurrente{planExpiresAt ? ` (vence el ${formatPlanDate(planExpiresAt)})` : ''}.
+                    </p>
+                  ) : membershipRenewal === 'paused' ? (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.18)', borderRadius: '12px', padding: '10px 12px', marginBottom: '10px' }}>
+                        <PauseCircle size={18} color="#2563EB" style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '0.78rem', color: '#1D4ED8', fontWeight: 600, lineHeight: 1.4 }}>Membresía en pausa — no se te cobrará la renovación.</span>
+                      </div>
+                      <button onClick={() => manageMembership('resume')} disabled={mgmtBusy} style={{ width: '100%', padding: '13px', borderRadius: '14px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: mgmtBusy ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', opacity: mgmtBusy ? 0.7 : 1 }}>
+                        <PlayCircle size={17} /> Reactivar membresía
+                      </button>
+                    </>
+                  ) : membershipRenewal === 'canceling' ? (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: '12px', padding: '10px 12px', marginBottom: '10px' }}>
+                        <AlertCircle size={18} color="#EF4444" style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '0.78rem', color: '#DC2626', fontWeight: 600, lineHeight: 1.4 }}>Tu membresía terminará el {formatPlanDate(planExpiresAt)} y no se renovará.</span>
+                      </div>
+                      <button onClick={() => manageMembership('resume')} disabled={mgmtBusy} style={{ width: '100%', padding: '13px', borderRadius: '14px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: mgmtBusy ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', opacity: mgmtBusy ? 0.7 : 1 }}>
+                        <PlayCircle size={17} /> Reactivar membresía
+                      </button>
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button onClick={() => { setMgmtMsg(null); setMgmtAction('pause'); }} disabled={mgmtBusy} style={{ flex: 1, padding: '12px', borderRadius: '14px', border: '1px solid var(--border-subtle)', background: 'var(--surface-low)', color: 'var(--on-surface)', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                        <PauseCircle size={16} color="var(--primary)" /> Pausar
+                      </button>
+                      <button onClick={() => { setMgmtMsg(null); setMgmtAction('cancel'); }} disabled={mgmtBusy} style={{ flex: 1, padding: '12px', borderRadius: '14px', border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.05)', color: '#DC2626', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
+                        Cancelar
+                      </button>
+                    </div>
+                  )}
+                  {mgmtMsg && (
+                    <p style={{ fontSize: '0.74rem', color: mgmtMsg.ok ? '#16A34A' : '#EF4444', textAlign: 'center', margin: '10px 0 0', fontWeight: 600 }}>{mgmtMsg.text}</p>
+                  )}
+                </div>
+              )}
             </div>
           </motion.div>
         </div>
@@ -487,6 +555,38 @@ function Planes() {
                 </div>
               </div>
             )}
+          </motion.div>
+        </div>
+      )}
+
+      {/* CONFIRMAR PAUSA / CANCELACIÓN */}
+      {mgmtAction && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+          onClick={() => { if (!mgmtBusy) setMgmtAction(null); }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ duration: 0.2 }}
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: 'var(--app-surface-solid)', borderRadius: '24px', width: '100%', maxWidth: '400px', padding: '26px 24px', boxShadow: '0 25px 60px rgba(0,0,0,0.25)' }}
+          >
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: mgmtAction === 'pause' ? 'rgba(59,130,246,0.1)' : 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              {mgmtAction === 'pause' ? <PauseCircle size={28} color="#2563EB" /> : <AlertCircle size={28} color="#EF4444" />}
+            </div>
+            <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', color: 'var(--on-surface)', textAlign: 'center', margin: '0 0 10px' }}>
+              {mgmtAction === 'pause' ? 'Pausar mi membresía' : 'Cancelar mi membresía'}
+            </h2>
+            <p style={{ fontSize: '0.9rem', color: 'var(--on-surface-variant)', textAlign: 'center', lineHeight: 1.55, margin: '0 0 22px' }}>
+              {mgmtAction === 'pause'
+                ? <>No se te cobrará la próxima renovación. Conservas tu acceso hasta {planExpiresAt ? `el ${formatPlanDate(planExpiresAt)}` : 'que termine tu mes actual'} y puedes <strong>reactivar cuando regreses</strong>, sin volver a registrar tu tarjeta.</>
+                : <>Tu membresía <strong>no se renovará</strong>. Conservas el acceso hasta {planExpiresAt ? `el ${formatPlanDate(planExpiresAt)}` : 'que termine tu mes actual'} y después se cancela. Para volver tendrás que suscribirte de nuevo.</>}
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setMgmtAction(null)} disabled={mgmtBusy} style={{ flex: 1, padding: '13px', borderRadius: '14px', border: '1px solid var(--border-subtle)', background: 'var(--app-surface-solid)', color: 'var(--on-surface)', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>Volver</button>
+              <button onClick={() => manageMembership(mgmtAction)} disabled={mgmtBusy} style={{ flex: 1, padding: '13px', borderRadius: '14px', border: 'none', background: mgmtAction === 'pause' ? '#2563EB' : '#EF4444', color: '#fff', fontWeight: 800, fontSize: '0.9rem', cursor: mgmtBusy ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', opacity: mgmtBusy ? 0.7 : 1 }}>
+                {mgmtBusy ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> …</> : (mgmtAction === 'pause' ? 'Sí, pausar' : 'Sí, cancelar')}
+              </button>
+            </div>
           </motion.div>
         </div>
       )}
