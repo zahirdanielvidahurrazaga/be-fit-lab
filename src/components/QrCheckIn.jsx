@@ -28,7 +28,9 @@ const Avatar = ({ name, avatar, size = 52, success = true }) => {
 export default function QrCheckIn({ sideContent = null }) {
   const { checkInClient, globalClasses } = useAuth();
   const qrInputRef = useRef(null);
-  const [scannedQR, setScannedQR] = useState('');
+  // Input NO controlado: el lector teclea el código y lo leemos de una sola vez
+  // al Enter. Así NO hay un re-render por carácter (eso ralentizaba/perdía lecturas).
+  const clearQR = () => { if (qrInputRef.current) qrInputRef.current.value = ''; };
 
   // El log del día PERSISTE en localStorage (sobrevive cambios de pestaña y
   // recargas) con clave por fecha → se reinicia solo al día siguiente.
@@ -97,7 +99,7 @@ export default function QrCheckIn({ sideContent = null }) {
 
   const handleQRScan = async (e) => {
     e.preventDefault();
-    const code = scannedQR.trim();
+    const code = (qrInputRef.current?.value || '').trim();
     if (code === '') return;
 
     // Solo se permite el check-in dentro de la ventana abierta de la clase
@@ -110,7 +112,7 @@ export default function QrCheckIn({ sideContent = null }) {
           : 'El check-in de esta clase ya cerró.',
         'error'
       );
-      setScannedQR('');
+      clearQR();
       qrInputRef.current?.focus();
       return;
     }
@@ -119,7 +121,7 @@ export default function QrCheckIn({ sideContent = null }) {
     const lastScanStr = localStorage.getItem(`last_checkin_${code}`);
     if (lastScanStr && (Date.now() - parseInt(lastScanStr)) < 1000 * 60 * 60) {
       showToast('Esta alumna ya registró asistencia hace poco.', 'error');
-      setScannedQR('');
+      clearQR();
       qrInputRef.current?.focus();
       return;
     }
@@ -130,7 +132,7 @@ export default function QrCheckIn({ sideContent = null }) {
     }
     setQrMessage(result.message);
     setScannedClient(result.clientInfo);
-    setScannedQR('');
+    clearQR();
 
     if (result.clientInfo) {
       setScanLog(prev => [{
@@ -211,7 +213,17 @@ export default function QrCheckIn({ sideContent = null }) {
             <h2 style={{ fontSize: '1.4rem', color: 'white', fontFamily: 'var(--font-display)', margin: 0, letterSpacing: '0.05em' }}>Escanear QR</h2>
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', margin: '8px 0 0', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Aproximar código de alumna</p>
             <form onSubmit={handleQRScan} style={{ position: 'absolute', top: '-1000px', left: '-1000px' }}>
-              <input ref={qrInputRef} type="text" value={scannedQR} onChange={(e) => setScannedQR(e.target.value)} autoFocus autoComplete="off" />
+              {/* No controlado (sin onChange) → cero re-renders por carácter; el lector
+                  teclea el código completo y se procesa al Enter. onBlur re-enfoca para
+                  no perder lecturas, salvo que se toque otro control a propósito. */}
+              <input
+                ref={qrInputRef} type="text" autoFocus autoComplete="off"
+                inputMode="none" enterKeyHint="done"
+                onBlur={() => setTimeout(() => {
+                  const a = document.activeElement;
+                  if (!a || !['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT', 'A'].includes(a.tagName)) qrInputRef.current?.focus();
+                }, 0)}
+              />
             </form>
           </div>
         </section>
