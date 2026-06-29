@@ -1,10 +1,9 @@
-import React, { useRef, useState, useMemo, useEffect } from 'react';
+import React, { useRef, useState, useMemo, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Share2, X, CalendarRange, CalendarDays, Moon, Sun } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { Capacitor } from '@capacitor/core';
-import { resolveCatColor, categoryLabel } from '../lib/categories';
 import { todayLocalStr } from '../lib/dates';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -25,13 +24,15 @@ const hexToRgba = (hex, a) => {
 // Tokens de tema (oscuro / claro). Glass "falso" (sin backdrop-filter, para que se capture en el PNG).
 const THEMES = {
   dark: {
-    bg: 'linear-gradient(165deg, #16181A 0%, #2D2928 100%)', text: '#fff', dim: 'rgba(255,255,255,0.6)', accent: '#FF914D', logoInvert: true, glow: 0.22,
+    bg: 'linear-gradient(165deg, #16181A 0%, #2D2928 100%)', text: '#fff', dim: 'rgba(255,255,255,0.55)', accent: '#FF914D', logoInvert: true, glow: 0.22,
     glassBg: 'rgba(255,255,255,0.06)', glassBorder: 'rgba(255,255,255,0.16)', glassHi: 'inset 0 1.5px 0 rgba(255,255,255,0.14)',
+    divider: 'rgba(255,255,255,0.16)', rowLine: 'rgba(255,255,255,0.08)',
     tintHi: 0.30, tintLo: 0.12, chipTitle: 'rgba(255,255,255,0.72)',
   },
   light: {
-    bg: 'linear-gradient(165deg, #FFF7F1 0%, #FDF1EA 100%)', text: '#1A1C1E', dim: 'rgba(0,0,0,0.5)', accent: '#E07A2B', logoInvert: false, glow: 0.16,
+    bg: 'linear-gradient(165deg, #FFF7F1 0%, #FDF1EA 100%)', text: '#1A1C1E', dim: 'rgba(0,0,0,0.45)', accent: '#E07A2B', logoInvert: false, glow: 0.16,
     glassBg: 'rgba(255,255,255,0.45)', glassBorder: 'rgba(255,255,255,0.9)', glassHi: 'inset 0 1.5px 0 rgba(255,255,255,0.8)',
+    divider: 'rgba(0,0,0,0.13)', rowLine: 'rgba(0,0,0,0.06)',
     tintHi: 0.6, tintLo: 0.32, chipTitle: '#9A5B3E',
   },
 };
@@ -71,43 +72,18 @@ function buildWeek(classes, refDateStr) {
   return { monday, sunday, days };
 }
 
-// Celda de una clase: color sólido de la categoría (vivo) + brillo glass encima
-const GLASS_CHIP = {
-  border: '1.5px solid rgba(255,255,255,0.75)',
-  boxShadow: 'inset 0 1.5px 0 rgba(255,255,255,0.75), 0 6px 18px rgba(0,0,0,0.16)',
-};
-const glassOver = (color) => `linear-gradient(160deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 48%), ${color}`;
+// Acota un texto a N líneas (evita que una celda crezca de más cuando la fila
+// es corta). Compatible con la captura PNG (html-to-image respeta line-clamp).
+const clampLines = (n) => ({ display: '-webkit-box', WebkitLineClamp: n, WebkitBoxOrient: 'vertical', overflow: 'hidden', overflowWrap: 'anywhere', wordBreak: 'break-word' });
 
-const ClassCell = ({ c, T, avatarFor }) => {
-  if (!c) return <span style={{ color: T?.dim || 'rgba(128,128,128,0.4)', fontSize: 30, fontWeight: 700 }}>–</span>;
+// Estilo limpio (sin recuadro): puro texto sobre el fondo. La clase es la
+// protagonista (grande, color de texto); la coach va pequeña en color de marca.
+const ClassCell = ({ c, T }) => {
+  if (!c) return <span style={{ color: T?.dim || 'rgba(128,128,128,0.4)', fontSize: 34, fontWeight: 700 }}>–</span>;
   return (
-    <div style={{
-      width: '100%', borderRadius: 18, padding: '12px 8px 14px',
-      background: glassOver(resolveCatColor(c.category, c.category_color)), ...GLASS_CHIP,
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, lineHeight: 1.1
-    }}>
-      <Avatar url={avatarFor?.(c)} name={c.instructor} size={48} ring="rgba(255,255,255,0.85)" />
-      <div>
-        <div style={{ fontSize: 25, fontWeight: 800, color: '#2D2928', fontFamily: 'var(--font-display)' }}>{c.instructor}</div>
-        <div style={{ fontSize: 18, fontWeight: 800, color: '#9A5B3E', textTransform: 'uppercase', letterSpacing: '0.03em', marginTop: 2 }}>{c.title}</div>
-      </div>
-    </div>
-  );
-};
-
-// Leyenda — una sola barra glass con las categorías presentes
-const CategoryLegend = ({ T, cats }) => {
-  if (!cats?.length) return null;
-  return (
-    <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', marginTop: 30 }}>
-      <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '12px 30px', padding: '18px 34px', borderRadius: 28, background: T.glassBg, border: `1.5px solid ${T.glassBorder}`, boxShadow: T.glassHi }}>
-        {cats.map(cat => (
-          <div key={cat.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ width: 26, height: 26, borderRadius: 8, background: cat.color, border: '1px solid rgba(0,0,0,0.1)' }} />
-            <span style={{ fontSize: 24, fontWeight: 800, color: T.text }}>{cat.label}</span>
-          </div>
-        ))}
-      </div>
+    <div style={{ width: '100%', minWidth: 0, padding: '2px 6px', textAlign: 'center', lineHeight: 1.0 }}>
+      <div style={{ fontSize: 27, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)', ...clampLines(3) }}>{c.title}</div>
+      <div style={{ fontSize: 17, fontWeight: 800, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.03em', marginTop: 4, ...clampLines(2) }}>{c.instructor}</div>
     </div>
   );
 };
@@ -115,23 +91,40 @@ const CategoryLegend = ({ T, cats }) => {
 // ── La tarjeta (1080×1920) que se captura ──────────────────────────────────
 const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = 'dark', avatarFor }, ref) => {
   const T = THEMES[theme] || THEMES.dark;
-  const weekdays = week.days.slice(0, 5);
-  const weekend = week.days.slice(5, 7);
-  const weekdayTimes = [...new Set(weekdays.flatMap(d => d.classes.map(c => c.time)))]
-    .sort((a, b) => parseTime(a) - parseTime(b));
-  const weekendTimes = [...new Set(weekend.flatMap(d => d.classes.map(c => c.time)))]
+
+  // Ajuste a alto: si el horario es muy largo, se escala para que SIEMPRE quepa
+  // completo en la "zona segura" de la historia (sin recortes arriba/abajo).
+  const fitBoxRef = useRef(null);
+  const fitWrapRef = useRef(null);
+  const [fitScale, setFitScale] = useState(1);
+  useLayoutEffect(() => {
+    let cancelled = false;
+    const measure = () => {
+      const box = fitBoxRef.current, wrap = fitWrapRef.current;
+      if (cancelled || !box || !wrap) return;
+      // scrollHeight/clientHeight NO se ven afectados por el transform → medida estable
+      const natural = wrap.scrollHeight;
+      const avail = box.clientHeight;
+      setFitScale(avail && natural > avail ? avail / natural : 1);
+    };
+    measure();
+    // re-medir cuando las fuentes terminen de cargar (afectan el alto del texto)
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      document.fonts.ready.then(() => { requestAnimationFrame(measure); });
+    }
+    return () => { cancelled = true; };
+  }, [mode, week, dayData, theme]);
+  // Una sola grilla con todos los días: Lun-Vie siempre; Sáb/Dom solo si tienen
+  // clases (así el sábado va junto al viernes y no como bloque aparte).
+  const shownDays = week.days.filter((d, i) => i < 5 || d.classes.length > 0);
+  const allTimes = [...new Set(shownDays.flatMap(d => d.classes.map(c => c.time)))]
     .sort((a, b) => parseTime(a) - parseTime(b));
 
-  // Categorías presentes (para la leyenda dinámica)
-  const presentCats = (() => {
-    const src = mode === 'day' ? (dayData?.classes || []) : week.days.flatMap(d => d.classes);
-    const map = new Map();
-    src.forEach(c => { if (c.category && !map.has(c.category)) map.set(c.category, { name: c.category, label: categoryLabel(c.category), color: resolveCatColor(c.category, c.category_color) }); });
-    return [...map.values()];
-  })();
-
-  const DayHeader = (d) => (
-    <div key={d.dateStr} style={{ textAlign: 'center', paddingBottom: 14 }}>
+  const DayHeader = (d, i) => (
+    <div key={d.dateStr} style={{
+      textAlign: 'center', paddingBottom: 16, alignSelf: 'center',
+      borderLeft: i > 0 ? `2px solid ${T.divider}` : 'none'
+    }}>
       <div style={{ fontSize: 32, fontWeight: 900, color: T.accent, letterSpacing: '0.06em' }}>{d.label}</div>
       <div style={{ fontSize: 30, fontWeight: 700, color: T.dim }}>{d.dayNum}</div>
     </div>
@@ -141,7 +134,7 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = '
     <div ref={ref} style={{
       width: 1080, height: 1920, background: T.bg,
       // Padding superior/inferior amplio = "zona segura" de Instagram (no tapa logo ni título)
-      padding: '150px 70px 240px', boxSizing: 'border-box', position: 'relative', overflow: 'hidden',
+      padding: '78px 40px 94px', boxSizing: 'border-box', position: 'relative', overflow: 'hidden',
       fontFamily: 'var(--font-body)', display: 'flex', flexDirection: 'column'
     }}>
       {/* Glow de marca */}
@@ -149,25 +142,26 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = '
       <div style={{ position: 'absolute', bottom: -250, left: -150, width: 650, height: 650, background: `radial-gradient(circle, rgba(224,122,156,${T.glow * 0.7}) 0%, transparent 70%)`, filter: 'blur(40px)', pointerEvents: 'none' }} />
 
       {/* Header */}
-      <div style={{ position: 'relative', textAlign: 'center', marginBottom: 44 }}>
-        <div style={{ fontSize: 122, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', lineHeight: 0.9 }}>HORARIOS</div>
-        <div style={{ fontSize: 36, fontWeight: 800, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 18 }}>{rangeLabel}</div>
+      <div style={{ position: 'relative', textAlign: 'center', marginBottom: 16 }}>
+        <div style={{ fontSize: 88, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', lineHeight: 0.9 }}>HORARIOS</div>
+        <div style={{ fontSize: 31, fontWeight: 800, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 9 }}>{rangeLabel}</div>
       </div>
 
       {/* Contenido */}
-      <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+      <div ref={fitBoxRef} style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+        <div ref={fitWrapRef} style={{ width: '100%', transform: `scale(${fitScale})`, transformOrigin: 'top center' }}>
         {mode === 'day' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 22, marginTop: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', marginTop: 6 }}>
             {dayData.classes.length > 0 ? dayData.classes.map((c, i) => (
               <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: 26, borderRadius: 28, padding: '24px 30px',
-                background: glassOver(resolveCatColor(c.category, c.category_color)), ...GLASS_CHIP
+                display: 'flex', alignItems: 'center', gap: 28, padding: '20px 6px',
+                borderTop: i > 0 ? `1.5px solid ${T.rowLine}` : 'none'
               }}>
-                <div style={{ minWidth: 165, fontSize: 46, fontWeight: 900, color: '#2D2928', fontFamily: 'var(--font-display)' }}>{c.time}</div>
-                <Avatar url={avatarFor?.(c)} name={c.instructor} size={80} ring="rgba(255,255,255,0.85)" />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 40, fontWeight: 900, color: '#1A1C1E', fontFamily: 'var(--font-display)' }}>{c.title}</div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: '#9A5B3E', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 4 }}>{c.instructor}</div>
+                <div style={{ minWidth: 170, fontSize: 46, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)' }}>{c.time}</div>
+                <Avatar url={avatarFor?.(c)} name={c.instructor} size={84} ring={T.accent} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 44, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)', ...clampLines(2) }}>{c.title}</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 4, ...clampLines(1) }}>{c.instructor}</div>
                 </div>
               </div>
             )) : (
@@ -175,54 +169,35 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = '
             )}
           </div>
         ) : (
-          <>
-            {/* Grid entre semana */}
-            <div style={{ display: 'grid', gridTemplateColumns: '140px repeat(5, 1fr)', gap: '12px 10px', alignItems: 'stretch' }}>
-              <div />
-              {weekdays.map(DayHeader)}
-              {weekdayTimes.map((time) => (
-                <React.Fragment key={time}>
-                  <div style={{ display: 'flex', alignItems: 'center', fontSize: 28, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)' }}>{time}</div>
-                  {weekdays.map(d => (
-                    <div key={d.dateStr + time} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                      <ClassCell c={d.classes.find(c => c.time === time)} T={T} avatarFor={avatarFor} />
-                    </div>
-                  ))}
-                </React.Fragment>
-              ))}
-            </div>
-
-            {/* Fin de semana */}
-            {weekendTimes.length > 0 && (
-              <div style={{ marginTop: 44 }}>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 160, marginBottom: 14 }}>
-                  {weekend.map(DayHeader)}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 1fr', gap: '12px 10px' }}>
-                  {weekendTimes.map(time => (
-                    <React.Fragment key={'we' + time}>
-                      <div style={{ display: 'flex', alignItems: 'center', fontSize: 28, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)' }}>{time}</div>
-                      {weekend.map(d => (
-                        <div key={d.dateStr + time} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                          <ClassCell c={d.classes.find(c => c.time === time)} T={T} avatarFor={avatarFor} />
-                        </div>
-                      ))}
-                    </React.Fragment>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
+          // UNA sola grilla con todos los días (Sáb junto al Vie). Filas de alto
+          // natural (no se encinan los textos); el ajuste-a-alto encoge solo si
+          // se pasa del marco.
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: `132px repeat(${shownDays.length}, minmax(0, 1fr))`,
+            columnGap: 8, rowGap: 8, alignItems: 'center'
+          }}>
+            <div />
+            {shownDays.map(DayHeader)}
+            {allTimes.map((time) => (
+              <React.Fragment key={time}>
+                <div style={{ display: 'flex', alignItems: 'center', fontSize: 24, fontWeight: 900, color: T.text, fontFamily: 'var(--font-display)' }}>{time}</div>
+                {shownDays.map(d => (
+                  <div key={d.dateStr + time} style={{ display: 'flex', minWidth: 0, alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                    <ClassCell c={d.classes.find(c => c.time === time)} T={T} />
+                  </div>
+                ))}
+              </React.Fragment>
+            ))}
+          </div>
         )}
+        </div>
       </div>
 
-      {/* Leyenda de categorías */}
-      <CategoryLegend T={T} cats={presentCats} />
-
       {/* Footer con logo grande */}
-      <div style={{ position: 'relative', textAlign: 'center', marginTop: 36 }}>
-        <img src="/logo2.png" alt="" crossOrigin="anonymous" style={{ height: 150, objectFit: 'contain', filter: T.logoInvert ? 'brightness(0) invert(1)' : 'none' }} />
-        <div style={{ fontSize: 28, fontWeight: 700, color: T.accent, marginTop: 4 }}>@befit.lab</div>
+      <div style={{ position: 'relative', textAlign: 'center', marginTop: 16 }}>
+        <img src="/logo2.png" alt="" crossOrigin="anonymous" style={{ height: 104, objectFit: 'contain', filter: T.logoInvert ? 'brightness(0) invert(1)' : 'none' }} />
+        <div style={{ fontSize: 26, fontWeight: 700, color: T.accent, marginTop: 2 }}>@befit.lab</div>
       </div>
     </div>
   );

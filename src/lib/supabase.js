@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, processLock } from '@supabase/supabase-js'
 import { Capacitor } from '@capacitor/core'
 import { Preferences } from '@capacitor/preferences'
 
@@ -39,14 +39,16 @@ const nativeStorage = {
   },
 };
 
-// En el WebView nativo (una sola pestaña), el Web Locks API (navigator.locks)
-// que usa supabase-js puede quedarse colgado: getSession() al arrancar toma el
-// lock leyendo el storage nativo (async) y, si no lo suelta, signInWithPassword()
-// espera para siempre → login atascado en "Validando...". Como no hay múltiples
-// pestañas que sincronizar, usamos un lock NO-OP en nativo (ejecuta la función
-// directamente). En web mantenemos el lock por defecto.
-const noOpLock = async (_name, _acquireTimeout, fn) => await fn();
-
+// En el WebView nativo, el Web Locks API (navigator.locks) por defecto de
+// supabase-js se colgaba (getSession tomaba el lock y no lo soltaba → login
+// atascado en "Validando..."). Antes se usó un lock NO-OP, pero ese NO serializa
+// las operaciones de auth: con la ROTACIÓN de refresh token activada, varias
+// renovaciones simultáneas (timer de auto-refresh + getSession al volver del
+// fondo + onAuthStateChange) usaban el MISMO refresh token → una lo rota y la
+// otra queda inválida → "Invalid/Already Used Refresh Token" → SIGNED_OUT →
+// se cerraba la sesión sola. `processLock` es el lock EN MEMORIA que Supabase
+// recomienda para móvil: serializa las operaciones en una cola de promesas
+// (sin navigator.locks, así no se cuelga). En web mantenemos el lock por defecto.
 export const supabase = createClient(finalUrl, finalKey, {
   auth: {
     storage: isNative ? nativeStorage : window.localStorage,
@@ -55,6 +57,6 @@ export const supabase = createClient(finalUrl, finalKey, {
     // En nativo no hay redirect con sesión en la URL; evitarlo previene falsos
     // negativos al arrancar. En web se mantiene por compatibilidad.
     detectSessionInUrl: !isNative,
-    ...(isNative ? { lock: noOpLock } : {}),
+    ...(isNative ? { lock: processLock } : {}),
   },
 })

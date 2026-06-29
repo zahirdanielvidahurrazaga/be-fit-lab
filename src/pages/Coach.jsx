@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, Users, Activity, QrCode, User } from 'lucide-react';
+import { ChevronRight, Users, Activity, QrCode, User, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { todayLocalStr } from '../lib/dates';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +8,7 @@ import { useScrollDetect } from '../hooks/useScrollDetect';
 import { QRCodeCanvas } from 'qrcode.react';
 import ScheduleStoryExport from '../components/ScheduleStoryExport';
 import { resolveCatColor } from '../lib/categories';
+import { supabase } from '../lib/supabase';
 
 function Coach() {
   const { user, logout, globalClasses, avatarUrl, coaches } = useAuth();
@@ -28,6 +29,29 @@ function Coach() {
   // ── Nav state ───────────────────────────────────────────────────────
   const [showQR, setShowQR] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  // ── Roster (alumnas inscritas en una clase) ─────────────────────────
+  const [rosterClass, setRosterClass] = useState(null);   // clase abierta
+  const [roster, setRoster] = useState([]);
+  const [rosterLoading, setRosterLoading] = useState(false);
+
+  const openRoster = async (c) => {
+    setRosterClass(c);
+    setRoster([]);
+    setRosterLoading(true);
+    const { data } = await supabase
+      .from('reservations')
+      .select('id, checked_in, users:user_id(id, full_name, email, avatar_url)')
+      .eq('class_id', c.id);
+    const list = (data || []).map(r => ({
+      id: r.id,
+      name: r.users?.full_name || r.users?.email?.split('@')[0] || 'Sin nombre',
+      avatar: r.users?.avatar_url || null,
+      checkedIn: !!r.checked_in,
+    })).sort((a, b) => (Number(b.checkedIn) - Number(a.checkedIn)) || a.name.localeCompare(b.name));
+    setRoster(list);
+    setRosterLoading(false);
+  };
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -264,7 +288,7 @@ function Coach() {
                 const ocupacion = (c.max_spots || 10) - c.spots;
                 const porcentaje = Math.round((ocupacion / (c.max_spots || 10)) * 100);
                 return (
-                  <div key={c.id} className="ios-glass-card" style={{ padding: '16px 20px', background: resolveCatColor(c.category, c.category_color), display: 'flex', alignItems: 'center', border: esMia ? '1.5px solid var(--primary)' : '1px solid rgba(0,0,0,0.05)', borderLeft: esMia ? '4px solid var(--primary)' : '1px solid rgba(0,0,0,0.05)', transition: 'all 0.2s' }}>
+                  <motion.div key={c.id} whileTap={{ scale: 0.985 }} onClick={() => openRoster(c)} className="ios-glass-card" style={{ padding: '16px 20px', background: resolveCatColor(c.category, c.category_color), display: 'flex', alignItems: 'center', cursor: 'pointer', border: esMia ? '1.5px solid var(--primary)' : '1px solid rgba(0,0,0,0.05)', borderLeft: esMia ? '4px solid var(--primary)' : '1px solid rgba(0,0,0,0.05)', transition: 'all 0.2s' }}>
                     <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(255,255,255,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginRight: '14px', flexShrink: 0 }}>
                       <span style={{ fontSize: '0.95rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: esMia ? 'var(--primary)' : 'var(--black)' }}>{c.time.split(' ')[0]}</span>
                       <span style={{ fontSize: '0.55rem', fontWeight: 800, color: 'var(--on-surface-variant)' }}>{c.time.split(' ')[1] || 'AM'}</span>
@@ -276,13 +300,15 @@ function Coach() {
                       </div>
                       <span style={{ fontSize: '0.72rem', fontWeight: 700, color: esMia ? 'var(--primary)' : 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{c.instructor}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                        <Users size={13} color="var(--on-surface-variant)" style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--on-surface-variant)', flexShrink: 0 }}>{ocupacion}/{c.max_spots || 10} inscritas</span>
                         <div style={{ flex: 1, height: '3px', background: 'rgba(0,0,0,0.06)', borderRadius: '2px' }}>
                           <div style={{ width: `${porcentaje}%`, height: '100%', background: esMia ? 'var(--primary)' : 'rgba(0,0,0,0.2)', borderRadius: '2px', transition: 'width 0.3s' }} />
                         </div>
-                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--on-surface-variant)', flexShrink: 0 }}>{ocupacion}/{c.max_spots || 10}</span>
+                        <span style={{ fontSize: '0.66rem', fontWeight: 800, color: 'var(--primary)', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>Ver <ChevronRight size={13} /></span>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 );
               }) : (
                 <div style={{ padding: '40px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.9rem', fontStyle: 'italic', background: 'rgba(55,61,59,0.03)', borderRadius: '16px' }}>
@@ -393,6 +419,57 @@ function Coach() {
               <div className="sheet-user-info" style={{ marginTop: '10px' }}>
                 <div className="user-name">{user?.user_metadata?.full_name || 'Coach Be Fit'}</div>
                 <div>{user?.email}</div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Roster — alumnas inscritas en la clase tocada */}
+      <AnimatePresence>
+        {rosterClass && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setRosterClass(null)}
+              style={{ position: 'fixed', inset: 0, zIndex: 6000, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }} />
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 6001, maxHeight: '85vh', background: 'var(--surface, #fff)', borderTopLeftRadius: 28, borderTopRightRadius: 28, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              {/* header */}
+              <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid rgba(0,0,0,0.06)', flexShrink: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <h3 style={{ margin: 0, fontSize: '1.25rem', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>{rosterClass.title}</h3>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>{rosterClass.time} · {rosterClass.instructor}</p>
+                  </div>
+                  <button onClick={() => setRosterClass(null)} aria-label="Cerrar" style={{ width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.06)', color: 'var(--on-surface)', cursor: 'pointer', flexShrink: 0, fontSize: '1rem' }}>✕</button>
+                </div>
+                <div style={{ marginTop: '12px', display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255,145,77,0.12)', color: 'var(--primary)', padding: '6px 12px', borderRadius: '20px', fontWeight: 800, fontSize: '0.8rem' }}>
+                  <Users size={15} /> {roster.length} {roster.length === 1 ? 'alumna inscrita' : 'alumnas inscritas'}
+                </div>
+              </div>
+              {/* lista */}
+              <div style={{ overflowY: 'auto', padding: '12px 18px', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))', WebkitOverflowScrolling: 'touch' }}>
+                {rosterLoading ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: 'var(--on-surface-variant)' }}>Cargando…</div>
+                ) : roster.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--on-surface-variant)' }}>
+                    <Users size={34} color="rgba(0,0,0,0.18)" />
+                    <p style={{ margin: '12px 0 0', fontSize: '0.9rem' }}>Aún no hay alumnas inscritas en esta clase.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {roster.map(a => (
+                      <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'var(--surface-low, #f6f6f6)', borderRadius: '16px' }}>
+                        <div style={{ width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'linear-gradient(135deg,#FF914D,#E07A9C)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {a.avatar ? <img src={a.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: '#fff', fontWeight: 800 }}>{a.name.charAt(0).toUpperCase()}</span>}
+                        </div>
+                        <span style={{ flex: 1, minWidth: 0, fontWeight: 700, color: 'var(--black)', fontSize: '0.92rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
+                        {a.checkedIn
+                          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', fontWeight: 800, color: '#1a9e5f', background: 'rgba(26,158,95,0.12)', padding: '4px 9px', borderRadius: '20px', flexShrink: 0 }}><Check size={13} /> Asistió</span>
+                          : <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--on-surface-variant)', background: 'rgba(0,0,0,0.05)', padding: '4px 9px', borderRadius: '20px', flexShrink: 0 }}>Reservó</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </motion.div>
           </>
