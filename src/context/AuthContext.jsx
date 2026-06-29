@@ -1278,16 +1278,21 @@ export const AuthProvider = ({ children }) => {
   // ============================================
   // MEJORADO: Check-in con info completa del cliente
   // ============================================
-  const checkInClient = async (qrData) => {
+  // opts.windowOpen: si la ventana de check-in de la clase está abierta (solo
+  // aplica a CLIENTES). El PERSONAL (role <> CLIENT) registra su entrada en
+  // cualquier momento → tabla staff_attendance.
+  const checkInClient = async (qrData, opts = {}) => {
     if (!qrData) return { success: false, message: "Código QR inválido.", clientInfo: null };
 
     try {
       // 1. Buscar al usuario escaneado
       const userObj = allUsers.find(u => u.id === qrData);
-      
+
       // Si no lo encontramos en el cache, buscarlo directamente
       let clientInfo = null;
+      let userRole = 'CLIENT';
       if (userObj) {
+        userRole = userObj.role || 'CLIENT';
         clientInfo = {
           id: userObj.id,
           name: userObj.full_name || userObj.email?.split('@')[0] || 'Sin nombre',
@@ -1305,8 +1310,9 @@ export const AuthProvider = ({ children }) => {
           .select('*')
           .eq('id', qrData)
           .single();
-        
+
         if (directUser) {
+          userRole = directUser.role || 'CLIENT';
           clientInfo = {
             id: directUser.id,
             name: directUser.full_name || directUser.email?.split('@')[0] || 'Sin nombre',
@@ -1322,6 +1328,22 @@ export const AuthProvider = ({ children }) => {
 
       if (!clientInfo) {
         return { success: false, message: "Usuario no encontrado en el sistema.", clientInfo: null };
+      }
+
+      // 1.b PERSONAL (coach/barista/recepción/admin): registra ENTRADA, no reserva.
+      if (userRole !== 'CLIENT') {
+        const staffInfo = { ...clientInfo, isStaff: true, role: userRole };
+        const { error: saErr } = await supabase.from('staff_attendance').insert({ user_id: qrData });
+        if (saErr) {
+          console.error('Error registrando entrada de personal:', saErr);
+          return { success: false, message: 'No se pudo registrar la entrada del personal.', clientInfo: staffInfo };
+        }
+        return { success: true, message: `Entrada de ${clientInfo.name} registrada.`, clientInfo: staffInfo };
+      }
+
+      // CLIENTE: respeta la ventana de check-in de la clase (la calcula el lector).
+      if (opts.windowOpen === false) {
+        return { success: false, blockedWindow: true, clientInfo };
       }
 
       // 2. Obtener reservas pendientes del usuario escaneado

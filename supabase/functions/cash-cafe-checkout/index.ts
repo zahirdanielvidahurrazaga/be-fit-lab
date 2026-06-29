@@ -6,6 +6,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Avisa por push + in-app a todas las baristas que entró un pedido nuevo.
+// (Mismo comportamiento que el path de tarjeta en stripe-cafe-notify; antes los
+// pedidos en EFECTIVO no avisaban a nadie → las baristas no se enteraban.)
+async function notifyBaristas(supabase: any, summary: string, orderId: string) {
+  const { data: baristas } = await supabase.from('users').select('id').eq('role', 'BARISTA');
+  if (!baristas?.length) return;
+  const title = 'Nuevo pedido ☕';
+  const body = summary ? summary : 'Tienes un pedido nuevo por preparar.';
+  await Promise.allSettled(baristas.map((b: any) =>
+    fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
+      body: JSON.stringify({ userId: b.id, title, body, type: 'general', data: { kind: 'new_order', order_id: orderId || '' } }),
+    }),
+  ));
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
@@ -68,7 +85,9 @@ serve(async (req) => {
     }).select('id').single();
     if (ordErr) throw ordErr;
 
-    // Trigger push notification to user (optional, can be done similarly to Stripe webhook)
+    // Avisar a las baristas del nuevo pedido (push + in-app). best-effort.
+    const summary = snapshot.map((s) => `${s.qty}× ${s.name}`).join(', ');
+    try { await notifyBaristas(supabase, summary, order.id); } catch (_) { /* no romper el pedido si falla el aviso */ }
 
     return Response.json({ orderId: order.id, total, message: 'Cash order created' }, { headers: corsHeaders });
   } catch (err: unknown) {

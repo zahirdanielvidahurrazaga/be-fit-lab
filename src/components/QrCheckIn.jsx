@@ -5,6 +5,9 @@ import { useAuth } from '../context/AuthContext';
 import { classDateTime } from '../hooks/useLocalNotifications';
 import { todayLocalStr } from '../lib/dates';
 
+// Etiqueta amable del rol del personal (para el registro de entrada de staff).
+const roleLabel = (r) => ({ COACH: 'Coach', BARISTA: 'Barista', RECEPCION: 'Recepción', ADMIN: 'Admin' }[r] || 'Personal');
+
 // Avatar redondo: foto si existe, si no las iniciales.
 const Avatar = ({ name, avatar, size = 52, success = true }) => {
   const initials = (name || '??').substring(0, 2).toUpperCase();
@@ -102,12 +105,24 @@ export default function QrCheckIn({ sideContent = null }) {
     const code = (qrInputRef.current?.value || '').trim();
     if (code === '') return;
 
-    // Solo se permite el check-in dentro de la ventana abierta de la clase
-    // (15 min antes → 10 min después). Si hay clases hoy pero la ventana no está
-    // abierta, se rechaza con aviso. Si no hay clases hoy, no se restringe.
-    if (checkin && checkin.mode !== 'open') {
+    // Cooldown de 1h por código para evitar doble escaneo accidental.
+    const lastScanStr = localStorage.getItem(`last_checkin_${code}`);
+    if (lastScanStr && (Date.now() - parseInt(lastScanStr)) < 1000 * 60 * 60) {
+      showToast('Ya se registró hace poco.', 'error');
+      clearQR();
+      qrInputRef.current?.focus();
+      return;
+    }
+
+    // La ventana de clase (15 min antes → 10 min después) solo limita a CLIENTAS.
+    // El PERSONAL registra su entrada en cualquier momento (lo decide checkInClient).
+    const windowOpen = checkin ? checkin.mode === 'open' : true;
+    const result = await checkInClient(code, { windowOpen });
+
+    // Cliente fuera de la ventana → aviso (no se registró nada).
+    if (result.blockedWindow) {
       showToast(
-        checkin.mode === 'standby'
+        checkin?.mode === 'standby'
           ? `Check-in en espera. Abre en ${fmtRemaining(remaining)}.`
           : 'El check-in de esta clase ya cerró.',
         'error'
@@ -117,16 +132,6 @@ export default function QrCheckIn({ sideContent = null }) {
       return;
     }
 
-    // Cooldown de 1h por alumna para evitar doble escaneo accidental.
-    const lastScanStr = localStorage.getItem(`last_checkin_${code}`);
-    if (lastScanStr && (Date.now() - parseInt(lastScanStr)) < 1000 * 60 * 60) {
-      showToast('Esta alumna ya registró asistencia hace poco.', 'error');
-      clearQR();
-      qrInputRef.current?.focus();
-      return;
-    }
-
-    const result = await checkInClient(code);
     if (result.success) {
       localStorage.setItem(`last_checkin_${code}`, Date.now().toString());
     }
@@ -244,26 +249,28 @@ export default function QrCheckIn({ sideContent = null }) {
                   padding: '20px', display: 'flex', alignItems: 'center', gap: '16px'
                 }}
               >
-                <Avatar name={scannedClient.name} avatar={scannedClient.avatar} size={56} success={scannedClient.status === 'ACTIVE'} />
+                <Avatar name={scannedClient.name} avatar={scannedClient.avatar} size={56} success={scannedClient.isStaff || scannedClient.status === 'ACTIVE'} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--black)', fontFamily: 'var(--font-display)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {scannedClient.name}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginTop: '2px' }}>
-                    {scannedClient.plan} · {scannedClient.classesRemaining >= 9000 ? '∞' : scannedClient.classesRemaining} clases restantes
+                    {scannedClient.isStaff
+                      ? `Personal · ${roleLabel(scannedClient.role)}`
+                      : `${scannedClient.plan} · ${scannedClient.classesRemaining >= 9000 ? '∞' : scannedClient.classesRemaining} clases restantes`}
                   </div>
-                  <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', color: scannedClient.status === 'ACTIVE' ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
-                    {scannedClient.status === 'ACTIVE' ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
+                  <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', color: (scannedClient.isStaff || scannedClient.status === 'ACTIVE') ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
+                    {(scannedClient.isStaff || scannedClient.status === 'ACTIVE') ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
                     {qrMessage}
                   </div>
                 </div>
                 <div style={{
                   flexShrink: 0, padding: '5px 10px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 800,
-                  background: scannedClient.status === 'ACTIVE' ? 'rgba(34,197,94,0.1)' : 'rgba(255,77,77,0.1)',
-                  color: scannedClient.status === 'ACTIVE' ? '#16a34a' : '#dc2626',
+                  background: scannedClient.isStaff ? 'rgba(255,145,77,0.12)' : (scannedClient.status === 'ACTIVE' ? 'rgba(34,197,94,0.1)' : 'rgba(255,77,77,0.1)'),
+                  color: scannedClient.isStaff ? 'var(--primary)' : (scannedClient.status === 'ACTIVE' ? '#16a34a' : '#dc2626'),
                   textTransform: 'uppercase', letterSpacing: '0.05em'
                 }}>
-                  {scannedClient.status === 'ACTIVE' ? 'Activa' : 'Inactiva'}
+                  {scannedClient.isStaff ? 'Personal' : (scannedClient.status === 'ACTIVE' ? 'Activa' : 'Inactiva')}
                 </div>
               </motion.div>
             )}
@@ -296,7 +303,9 @@ export default function QrCheckIn({ sideContent = null }) {
                     {entry.name || 'Desconocido'}
                   </div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginTop: '2px' }}>
-                    {entry.plan || 'Sin plan'} · {entry.classesRemaining == null ? '—' : (entry.classesRemaining >= 9000 ? '∞' : entry.classesRemaining)} clases restantes
+                    {entry.isStaff
+                      ? `Personal · ${roleLabel(entry.role)}`
+                      : `${entry.plan || 'Sin plan'} · ${entry.classesRemaining == null ? '—' : (entry.classesRemaining >= 9000 ? '∞' : entry.classesRemaining)} clases restantes`}
                   </div>
                 </div>
                 <div style={{ flexShrink: 0, textAlign: 'right' }}>

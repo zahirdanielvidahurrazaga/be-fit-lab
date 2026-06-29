@@ -11,6 +11,7 @@ import AdminDisciplinas from '../components/AdminDisciplinas';
 import AdminReportes from '../components/AdminReportes';
 import AdminClientas from '../components/AdminClientas';
 import AdminAsistencias from '../components/AdminAsistencias';
+import StaffAttendance from '../components/StaffAttendance';
 import AdminPlanes from '../components/AdminPlanes';
 import AdminNutricion from '../components/AdminNutricion';
 import AdminEventos from '../components/AdminEventos';
@@ -637,9 +638,12 @@ function Admin({ recepcion = false }) {
                     </div>
                   </div>
                 } />
+                {/* Registro de entrada del personal (coaches/staff) por QR.
+                    Visible en Mostrador → lo ven Admin y Recepción. */}
+                <StaffAttendance />
               </motion.div>
             )}
-  
+
             {/* ============ TAB: CLASES (Calendario Interactivo) ============ */}
             {activeTab === 'clases' && (
               <motion.div key="clases" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
