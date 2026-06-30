@@ -1,10 +1,11 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Cake, Crown, UserX, UserCheck, Shield, Coffee, Dumbbell, ChevronDown, ChevronLeft, ChevronRight, Phone, QrCode, Trash2, CalendarPlus, Plus, Minus, X, Check } from 'lucide-react';
+import { Search, Cake, Crown, UserX, UserCheck, Shield, Coffee, Dumbbell, ChevronDown, ChevronLeft, ChevronRight, Phone, QrCode, Trash2, CalendarPlus, Plus, Minus, X, Check, Camera } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { todayLocalStr } from '../lib/dates';
 import { isPlanExpired, formatPlanDate } from '../lib/membership';
+import { uploadAvatar } from '../lib/avatar';
 
 const DAYS_FULL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const DAYS_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -175,6 +176,35 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
   const unlimited = isUnlimitedClient(client);
   const [credits, setCredits] = useState(client.classes_remaining ?? 0);
   const [savingCredits, setSavingCredits] = useState(false);
+
+  // Foto de perfil de la clienta (la dueña puede ponérsela desde admin).
+  const [avatar, setAvatar] = useState(client.avatar_url || null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const photoInputRef = useRef(null);
+
+  const onPickPhoto = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // permitir re-elegir el mismo archivo
+    if (!file) return;
+    setPhotoBusy(true);
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const { url, error } = await uploadAvatar(client.id, dataUrl);
+      if (error || !url) { alert('No se pudo subir la foto. Intenta de nuevo.'); return; }
+      await patch(client.id, { avatar_url: url });
+      applyLocal?.(client.id, { avatar_url: url });
+      setAvatar(url);
+    } catch (_) {
+      alert('No se pudo procesar la imagen.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
   const [reserved, setReserved] = useState(null); // Set de class_id (null = cargando)
   const [busyId, setBusyId] = useState(null);
 
@@ -294,9 +324,23 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
       >
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '18px 18px 14px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-          {client.avatar_url
-            ? <img src={client.avatar_url} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
-            : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,145,77,0.14)', color: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{(client.full_name || client.email || '?').charAt(0).toUpperCase()}</div>}
+          {/* Avatar con botón de cámara para ponerle/cambiar la foto a la clienta */}
+          <button
+            type="button"
+            onClick={() => !photoBusy && photoInputRef.current?.click()}
+            title="Cambiar foto de perfil"
+            style={{ position: 'relative', width: '48px', height: '48px', flexShrink: 0, border: 'none', background: 'transparent', padding: 0, cursor: photoBusy ? 'default' : 'pointer', borderRadius: '50%' }}
+          >
+            {avatar
+              ? <img src={avatar} alt="" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }} />
+              : <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,145,77,0.14)', color: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{(client.full_name || client.email || '?').charAt(0).toUpperCase()}</div>}
+            <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '20px', height: '20px', borderRadius: '50%', background: PRIMARY, border: '2px solid var(--app-surface-solid, #fff)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {photoBusy
+                ? <div style={{ width: '9px', height: '9px', border: '2px solid rgba(255,255,255,0.5)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                : <Camera size={11} color="#fff" />}
+            </div>
+            <input ref={photoInputRef} type="file" accept="image/*" onChange={onPickPhoto} style={{ display: 'none' }} />
+          </button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 800, color: INK, fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{client.full_name || 'Sin nombre'}</div>
             <div style={{ fontSize: '0.76rem', color: 'var(--on-surface-variant)' }}>{client.membership_plan || 'Sin plan'}</div>

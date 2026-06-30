@@ -1013,15 +1013,15 @@ export const AuthProvider = ({ children }) => {
               if (md.height_cm != null && cur?.height_cm == null) patch.height_cm = parseFloat(md.height_cm);
               if (Object.keys(patch).length) await supabase.from('users').update(patch).eq('id', currentUser.id);
             }
-            const pending = localStorage.getItem('befit_pending_plan');
-            if (pending) {
-              if (userData?.membership_status !== 'ACTIVE') {
-                const p = JSON.parse(pending);
-                const classes = p.title.includes('FIT') ? 20 : (p.title.includes('Premium') ? 30 : 15);
-                await activatePlan(p.title, classes, currentUser.id);
-              }
-              localStorage.removeItem('befit_pending_plan');
-            }
+            // ⚠️ SEGURIDAD: NO activar la membresía aquí por una bandera de
+            // localStorage. Antes se hacía `activatePlan(...)` si había
+            // `befit_pending_plan`, lo que DABA ACCESO SIN COBRO cuando el pago
+            // de Stripe quedaba incompleto/abandonado. La membresía SOLO se
+            // activa con pago confirmado: el webhook (`checkout.session.completed`
+            // con payment_status='paid' / `invoice.payment_succeeded`) o
+            // `stripe-membership-notify` (verifica el PaymentIntent/suscripción).
+            // La bandera se conserva solo para que /planes re-muestre el plan
+            // elegido al volver de Stripe (no activa nada).
           } catch (e) { console.error('Backfill registro:', e); }
         })();
       }
@@ -1268,11 +1268,16 @@ export const AuthProvider = ({ children }) => {
     ));
   };
 
-  const updateClassSpots = async (id, newSpots) => {
-    setGlobalClasses(prev => prev.map(c => 
-      c.id === id ? { ...c, spots: newSpots } : c
-    ));
-    await supabase.from('classes').update({ spots: newSpots }).eq('id', id);
+  // El parámetro es la CAPACIDAD (max_spots). 'spots' (restantes) lo deriva el
+  // trigger de la BD = max_spots - reservas reales. Optimista: ajustamos ambos
+  // localmente (restantes = capacidad - reservadas previas) y refrescamos.
+  const updateClassSpots = async (id, newCapacity) => {
+    setGlobalClasses(prev => prev.map(c => {
+      if (c.id !== id) return c;
+      const reservadas = Math.max(0, (c.max_spots ?? c.spots ?? 0) - (c.spots ?? 0));
+      return { ...c, max_spots: newCapacity, spots: Math.max(0, newCapacity - reservadas) };
+    }));
+    await supabase.from('classes').update({ max_spots: newCapacity }).eq('id', id);
   };
 
   // ============================================
@@ -1346,12 +1351,19 @@ export const AuthProvider = ({ children }) => {
         return { success: false, blockedWindow: true, clientInfo };
       }
 
-      // 2. Obtener reservas pendientes del usuario escaneado
-      const { data: resData, error: resError } = await supabase
+      // 2. Obtener reservas pendientes del usuario escaneado.
+      //    Si el lector nos pasa la clase cuya ventana está abierta (opts.classId),
+      //    marcamos la reserva DE ESA CLASE — no una cualquiera. Antes se tomaba
+      //    resData[0] (la primera pendiente, sin orden), así que si la alumna
+      //    tenía reservas en varias clases marcaba la equivocada y el pase de
+      //    lista de la clase real seguía en "Reservó".
+      let resQuery = supabase
         .from('reservations')
         .select('*')
         .eq('user_id', qrData)
         .eq('checked_in', false);
+      if (opts.classId) resQuery = resQuery.eq('class_id', opts.classId);
+      const { data: resData, error: resError } = await resQuery;
 
       if (resError) throw resError;
 
@@ -1427,10 +1439,10 @@ export const AuthProvider = ({ children }) => {
           clientInfo 
         };
       }
-      return { 
-        success: false, 
-        message: "Sin reservas pendientes para hoy.", 
-        clientInfo 
+      return {
+        success: false,
+        message: opts.classId ? "No tiene reserva en la clase de ahora." : "Sin reservas pendientes para hoy.",
+        clientInfo
       };
     } catch (err) {
       console.error("Error al registrar asistencia:", err);

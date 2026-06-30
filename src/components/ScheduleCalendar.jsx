@@ -232,14 +232,17 @@ export function ClassItem({ classData, full, isPast, isReserved, onReserve, coac
 
   const bgColor = resolveCatColor(category, category_color);
   const disabled = full || isPast || isReserved; // no se puede (re)reservar
+  // Las clases pasadas no se abren; las reservadas/llenas SÍ se pueden tocar
+  // para ver el detalle (y las compañeras si ya estás inscrita).
+  const tappable = !isPast;
 
   return (
     <motion.div
       className="tour-class-card"
-      whileTap={disabled ? undefined : { scale: 0.98 }}
-      onClick={() => { if(!disabled && onReserve) onReserve(); }}
+      whileTap={tappable ? { scale: 0.98 } : undefined}
+      onClick={() => { if (tappable && onReserve) onReserve(); }}
       style={{
-        marginBottom: '16px', cursor: disabled ? 'default' : 'pointer'
+        marginBottom: '16px', cursor: tappable ? 'pointer' : 'default'
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', paddingLeft: '5px' }}>

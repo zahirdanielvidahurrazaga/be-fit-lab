@@ -265,7 +265,7 @@ function Admin({ recepcion = false }) {
         description: newClass.description || null,
         date: newClass.date,
         day: d.getDay(),
-        spots: parseInt(newClass.spots),
+        max_spots: parseInt(newClass.spots), // capacidad fija; el trigger deriva 'spots' (restantes)
         level: newClass.level,
         category_color: newClass.category_color || null
       };
@@ -289,7 +289,7 @@ function Admin({ recepcion = false }) {
             description: newClass.description || null,
             date: current.toISOString().split('T')[0],
             day: current.getDay(),
-            spots: parseInt(newClass.spots),
+            max_spots: parseInt(newClass.spots), // capacidad fija; el trigger deriva 'spots' (restantes)
             level: newClass.level,
             category_color: newClass.category_color || null
           });
@@ -333,7 +333,7 @@ function Admin({ recepcion = false }) {
     setAddingCategory(false); setAddingLevel(false);
     setNewClass({
       title: c.title || '', time: c.time || '', instructor: c.instructor || '', coach_id: c.coach_id || '',
-      spots: resetSpots ? 10 : (c.spots ?? 10), level: c.level || 'Todos los niveles',
+      spots: resetSpots ? 10 : (c.max_spots ?? c.spots ?? 10), level: c.level || 'Todos los niveles',
       category: c.category || 'Fuerza', category_color: resolveCatColor(c.category, c.category_color),
       description: c.description || '',
       date: c.date || todayStr, startDate: c.date || todayStr, endDate: c.date || todayStr, daysOfWeek: []
@@ -814,11 +814,22 @@ function Admin({ recepcion = false }) {
                                     <h3 style={{ fontSize: '1.05rem', margin: '0 0 4px 0', fontFamily: 'var(--font-display)' }}>{c.title}</h3>
                                     <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: 0, fontWeight: 600 }}>{c.time} • {c.instructor || 'Sin coach'}</p>
                                   </div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                                    <button onClick={() => updateClassSpots(c.id, Math.max(0, c.spots - 1))} style={stepBtn}><Minus size={14} color="var(--black)" /></button>
-                                    <span style={{ fontSize: '1.05rem', fontWeight: 800, color: c.spots === 0 ? '#FF4D4D' : 'var(--primary)', minWidth: '22px', textAlign: 'center' }}>{c.spots}</span>
-                                    <button onClick={() => updateClassSpots(c.id, c.spots + 1)} style={stepBtn}><Plus size={14} color="var(--black)" /></button>
-                                  </div>
+                                  {(() => {
+                                    const cap = c.max_spots ?? c.spots ?? 0;
+                                    const reservadas = Math.max(0, cap - (c.spots ?? 0)); // no bajar el cupo bajo lo ya reservado
+                                    return (
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                        <button onClick={() => updateClassSpots(c.id, Math.max(reservadas, cap - 1))} style={stepBtn}><Minus size={14} color="var(--black)" /></button>
+                                        <div style={{ textAlign: 'center', minWidth: '38px' }}>
+                                          <div style={{ fontSize: '1.05rem', fontWeight: 800, color: c.spots === 0 ? '#FF4D4D' : 'var(--primary)', lineHeight: 1 }}>{cap}</div>
+                                          <div style={{ fontSize: '0.58rem', fontWeight: 700, color: c.spots === 0 ? '#FF4D4D' : 'var(--on-surface-variant)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                                            {c.spots === 0 ? 'lleno' : `${c.spots} libre${c.spots === 1 ? '' : 's'}`}
+                                          </div>
+                                        </div>
+                                        <button onClick={() => updateClassSpots(c.id, cap + 1)} style={stepBtn}><Plus size={14} color="var(--black)" /></button>
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                                   <button onClick={() => openEditClass(c)} style={actionBtn}><Pencil size={14} /> Editar</button>

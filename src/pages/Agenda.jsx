@@ -15,6 +15,7 @@ import ProfileMenu from '../components/ProfileMenu';
 import { hasNutritionAccess } from '../lib/plans';
 import { NextClassTicket } from '../components/NextClassTicket';
 import { ClassListSkeleton } from '../components/Skeleton';
+import ClassmatesList from '../components/ClassmatesList';
 
 function Agenda() {
   const isNative = Capacitor.isNativePlatform();
@@ -50,29 +51,17 @@ function Agenda() {
     }
   };
 
+  // Abrir el detalle de la clase. Se abre para CUALQUIER clase no pasada
+  // (incl. reservadas o llenas) para poder ver el detalle/compañeras. Las
+  // validaciones para reservar se hacen al tocar "Reservar".
   const handleReserveClick = (classObj, dateStr) => {
     if (!user) {
       navigate(isNative ? '/login' : '/planes');
       return;
     }
-    // Bloqueo de seguridad: no reservar una clase cuya fecha/hora ya pasó.
     const dt = classDateTime(dateStr, classObj?.time);
     if (dt && dt < new Date()) {
       alert("Esta clase ya terminó.");
-      return;
-    }
-    if ((classObj?.spots ?? 0) <= 0) {
-      alert("Esta clase ya no tiene cupos disponibles.");
-      return;
-    }
-    if (classesRemaining <= 0) {
-      alert("No te quedan clases disponibles. Renueva tu paquete.");
-      return;
-    }
-    // Bloqueo por membresía vencida (el servidor también lo rechaza).
-    if (planExpiresAt && new Date(planExpiresAt) < new Date()) {
-      alert("Tu membresía venció. Renueva tu plan para reservar clases.");
-      navigate('/planes');
       return;
     }
     setModalData(classObj);
@@ -83,6 +72,20 @@ function Agenda() {
   };
 
   const confirmReservation = async () => {
+    // Validaciones (el servidor también las re-verifica de forma autoritativa).
+    if ((modalData?.spots ?? 0) <= 0) {
+      alert("Esta clase ya no tiene cupos disponibles.");
+      return;
+    }
+    if (classesRemaining <= 0) {
+      alert("No te quedan clases disponibles. Renueva tu paquete.");
+      return;
+    }
+    if (planExpiresAt && new Date(planExpiresAt) < new Date()) {
+      alert("Tu membresía venció. Renueva tu plan para reservar clases.");
+      navigate('/planes');
+      return;
+    }
     const success = await bookClass(modalData);
     if (success) {
       setIsSuccess(true);
@@ -96,7 +99,7 @@ function Agenda() {
 
   const handleAddToCalendar = async () => {
     if (!modalData) return;
-    const eventId = await addClassToCalendar(modalData, d);
+    const eventId = await addClassToCalendar(modalData, modalData.date);
 
     if (!eventId) {
       setCalendarError('No se pudo agregar. Otorga el permiso de calendario en Configuración.');
@@ -364,10 +367,34 @@ function Agenda() {
                     );
                   })()}
 
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button onClick={() => { setShowModal(false); setCalendarError(null); }} className="btn-outline" style={{ flex: 1, padding: '13px' }}>Cancelar</button>
-                    <button onClick={confirmReservation} className="btn-primary" style={{ flex: 1, padding: '13px', justifyContent: 'center' }}>Reservar</button>
-                  </div>
+                  {/* Compañeras de clase (solo si ya estás inscrita; la función
+                      segura no expone rosters de clases en las que no estás) */}
+                  {myReservations?.some(r => r.classId === modalData?.id) && (
+                    <ClassmatesList classId={modalData?.id} />
+                  )}
+
+                  {(() => {
+                    const isReservedClass = myReservations?.some(r => r.classId === modalData?.id);
+                    const isFull = (modalData?.spots ?? 0) <= 0;
+                    if (isReservedClass) {
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '14px', background: 'rgba(34,197,94,0.1)', color: '#16A34A', fontWeight: 700, fontSize: '0.9rem' }}>
+                            <CheckCircle2 size={18} /> Ya estás inscrita
+                          </div>
+                          <button onClick={() => { setShowModal(false); setCalendarError(null); }} className="btn-outline" style={{ width: '100%', padding: '13px' }}>Cerrar</button>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button onClick={() => { setShowModal(false); setCalendarError(null); }} className="btn-outline" style={{ flex: 1, padding: '13px' }}>Cancelar</button>
+                        <button onClick={confirmReservation} disabled={isFull} className="btn-primary" style={{ flex: 1, padding: '13px', justifyContent: 'center', opacity: isFull ? 0.5 : 1 }}>
+                          {isFull ? 'Sin cupos' : 'Reservar'}
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </motion.div>

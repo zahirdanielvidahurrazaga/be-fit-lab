@@ -117,7 +117,10 @@ export default function QrCheckIn({ sideContent = null }) {
     // La ventana de clase (15 min antes → 10 min después) solo limita a CLIENTAS.
     // El PERSONAL registra su entrada en cualquier momento (lo decide checkInClient).
     const windowOpen = checkin ? checkin.mode === 'open' : true;
-    const result = await checkInClient(code, { windowOpen });
+    // Pasamos la clase cuya ventana está abierta → el check-in marca la reserva
+    // DE ESA clase (no una cualquiera de la alumna).
+    const classId = windowOpen ? checkin?.cls?.id : null;
+    const result = await checkInClient(code, { windowOpen, classId });
 
     // Cliente fuera de la ventana → aviso (no se registró nada).
     if (result.blockedWindow) {

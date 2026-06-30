@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../context/AuthContext';
 import { User, Mail, Lock, ArrowRight, ChevronLeft, CheckCircle2, Eye, EyeOff, Cake, Ruler, MailCheck } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { motion } from 'framer-motion';
@@ -23,7 +22,6 @@ function Register() {
   const [resendMsg, setResendMsg] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const { activatePlan } = useAuth();
   const purchasedPlan = location.state?.purchasedPlan;
   const isNative = Capacitor.isNativePlatform();
 
@@ -103,13 +101,10 @@ function Register() {
         }
       }
       if (purchasedPlan && data.user) {
-        // El usuario compró un plan antes de registrarse
-        // Esperar a que el trigger cree el perfil, luego activar plan via contexto
-        setTimeout(async () => {
-          const classes = purchasedPlan.title.includes('FIT') ? 20 : (purchasedPlan.title.includes('Premium') ? 30 : 15);
-          await activatePlan(purchasedPlan.title, classes, data.user.id);
-          navigate('/portal');
-        }, 1000);
+        // El usuario eligió un plan antes de registrarse. ⚠️ NO activamos aquí:
+        // activar sin pago daba acceso gratis. Lo mandamos a /planes con el plan
+        // preseleccionado para que COMPLETE EL PAGO (el webhook activa al cobrar).
+        navigate('/planes', { state: { selectedPlan: purchasedPlan } });
       } else {
         // Si venían de la cafetería a comprar, regresarlos ahí con su carrito intacto
         const dest = localStorage.getItem('befit_redirect_after_auth');
