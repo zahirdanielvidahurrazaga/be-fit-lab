@@ -29,6 +29,7 @@ function CategoryLegendBar({ globalClasses }) {
 
 export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReservations, onReserve }) {
   const reservedIds = new Set((myReservations || []).map(r => r.classId));
+  const waitlistIds = new Set((myReservations || []).filter(r => r.status === 'waitlist').map(r => r.classId));
   const todayStr = toLocalDateStr();
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
   const currentMonth = currentMonthDate.getMonth();
@@ -206,6 +207,7 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
                     full={(c.spots ?? 0) <= 0}
                     isPast={isPast}
                     isReserved={reservedIds.has(c.id)}
+                    isWaitlisted={waitlistIds.has(c.id)}
                     onReserve={() => onReserve(c, selectedDateStr)}
                     coaches={coaches}
                     badgeConfigs={badgeConfigs}
@@ -227,7 +229,7 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
   );
 }
 
-export function ClassItem({ classData, full, isPast, isReserved, onReserve, coaches, badgeConfigs }) {
+export function ClassItem({ classData, full, isPast, isReserved, isWaitlisted, onReserve, coaches, badgeConfigs }) {
   const { time, title, instructor, spots, category, category_color, coach_id } = classData;
 
   const bgColor = resolveCatColor(category, category_color);
@@ -289,9 +291,9 @@ export function ClassItem({ classData, full, isPast, isReserved, onReserve, coac
              })()}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isPast ? '#8a7266' : isReserved ? '#16A34A' : full ? '#FF4D4D' : '#22C55E' }}></div>
-             <span style={{ fontSize: '0.75rem', color: isReserved ? '#16A34A' : full && !isPast ? '#FF4D4D' : '#8a7266', fontWeight: 700 }}>
-                {isPast ? 'Ya terminó' : isReserved ? 'Ya reservada' : full ? 'Sin cupos' : `${Math.max(0, spots)} ${spots === 1 ? 'lugar disponible' : 'lugares disponibles'}`}
+             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isPast ? '#8a7266' : isWaitlisted ? '#9AA0A6' : isReserved ? '#16A34A' : full ? '#FF4D4D' : '#22C55E' }}></div>
+             <span style={{ fontSize: '0.75rem', color: isWaitlisted ? '#6b7280' : isReserved ? '#16A34A' : full && !isPast ? '#FF4D4D' : '#8a7266', fontWeight: 700 }}>
+                {isPast ? 'Ya terminó' : isWaitlisted ? 'En lista de espera' : isReserved ? 'Ya reservada' : full ? 'Sin cupos · lista de espera' : `${Math.max(0, spots)} ${spots === 1 ? 'lugar disponible' : 'lugares disponibles'}`}
              </span>
           </div>
         </div>

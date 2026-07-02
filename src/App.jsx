@@ -200,7 +200,10 @@ function App() {
         <Routes>
           {/* Rutas Públicas */}
           <Route path="/" element={isNative ? <Navigate to="/welcome" replace /> : <Landing />} />
-          <Route path="/welcome" element={<Welcome />} />
+          {/* Welcome (onboarding) es SOLO nativo. En web redirige al Landing —
+              así ninguna navegación a /welcome (logout, Planes, enlaces viejos)
+              muestra la pantalla nativa en el navegador. */}
+          <Route path="/welcome" element={isNative ? <Welcome /> : <Navigate to="/" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<Register />} />
           <Route path="/nueva-contrasena" element={<NuevaContrasena />} />

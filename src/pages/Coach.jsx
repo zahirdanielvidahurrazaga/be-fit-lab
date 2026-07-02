@@ -42,7 +42,8 @@ function Coach() {
     const { data } = await supabase
       .from('reservations')
       .select('id, checked_in, users:user_id(id, full_name, email, avatar_url)')
-      .eq('class_id', c.id);
+      .eq('class_id', c.id)
+      .eq('status', 'confirmed'); // el roster del coach = solo inscritas (no lista de espera)
     const list = (data || []).map(r => ({
       id: r.id,
       name: r.users?.full_name || r.users?.email?.split('@')[0] || 'Sin nombre',

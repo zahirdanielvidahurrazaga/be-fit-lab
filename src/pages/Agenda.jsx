@@ -25,6 +25,7 @@ function Agenda() {
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [waitlisted, setWaitlisted] = useState(false); // la reserva quedó en lista de espera
   const [addedToCalendar, setAddedToCalendar] = useState(false);
   const [calendarError, setCalendarError] = useState(null);
   const [showCoachDetail, setShowCoachDetail] = useState(false);
@@ -67,16 +68,15 @@ function Agenda() {
     setModalData(classObj);
     setShowModal(true);
     setIsSuccess(false);
+    setWaitlisted(false);
     setCalendarError(null);
     setShowCoachDetail(false);
   };
 
   const confirmReservation = async () => {
     // Validaciones (el servidor también las re-verifica de forma autoritativa).
-    if ((modalData?.spots ?? 0) <= 0) {
-      alert("Esta clase ya no tiene cupos disponibles.");
-      return;
-    }
+    // Nota: ya NO se bloquea por clase llena — si está llena, el servidor mete
+    // a la clienta a LISTA DE ESPERA (se exige saldo para poder promoverla luego).
     if (classesRemaining <= 0) {
       alert("No te quedan clases disponibles. Renueva tu paquete.");
       return;
@@ -86,14 +86,15 @@ function Agenda() {
       navigate('/planes');
       return;
     }
-    const success = await bookClass(modalData);
-    if (success) {
+    const result = await bookClass(modalData);
+    if (result === 'confirmed' || result === 'waitlist') {
+      setWaitlisted(result === 'waitlist');
       setIsSuccess(true);
       setAddedToCalendar(false);
     } else {
-      // Reserva no realizada (se agotó el cupo justo ahora, sin clases, o error de red).
+      // Reserva no realizada (sin clases, membresía vencida, o error de red).
       setShowModal(false);
-      alert("No se pudo reservar. Es posible que la clase se haya llenado. Actualiza e inténtalo de nuevo.");
+      alert("No se pudo reservar. Actualiza e inténtalo de nuevo.");
     }
   };
 
@@ -231,17 +232,19 @@ function Agenda() {
                     initial={{ scale: 0.7, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ type: 'spring', damping: 15 }}
-                    style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}
+                    style={{ width: '64px', height: '64px', borderRadius: '50%', background: waitlisted ? 'rgba(120,120,130,0.12)' : 'rgba(255,139,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}
                   >
-                    {addedToCalendar ? <CalendarPlus size={32} color="var(--primary)" /> : <CheckCircle2 size={35} color="var(--primary)" />}
+                    {waitlisted ? <Clock size={33} color="var(--on-surface-variant)" /> : addedToCalendar ? <CalendarPlus size={32} color="var(--primary)" /> : <CheckCircle2 size={35} color="var(--primary)" />}
                   </motion.div>
                   <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', marginBottom: '6px' }}>
-                    {addedToCalendar ? '¡Agregada al calendario!' : '¡Reserva Exitosa!'}
+                    {waitlisted ? '¡Estás en lista de espera!' : addedToCalendar ? '¡Agregada al calendario!' : '¡Reserva Exitosa!'}
                   </h2>
-                  <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.9rem', marginBottom: addedToCalendar ? '0' : '24px' }}>
-                    {addedToCalendar ? 'Recibirás un recordatorio antes de tu clase.' : 'Se ha descontado 1 clase de tu membresía.'}
+                  <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.9rem', marginBottom: (addedToCalendar || waitlisted) ? '24px' : '24px' }}>
+                    {waitlisted
+                      ? 'Si se libera un lugar entrarás automáticamente y te avisaremos. Aún no se te descuenta ninguna clase.'
+                      : addedToCalendar ? 'Recibirás un recordatorio antes de tu clase.' : 'Se ha descontado 1 clase de tu membresía.'}
                   </p>
-                  {!addedToCalendar && isNative && (
+                  {!addedToCalendar && !waitlisted && isNative && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <button
                         onClick={handleAddToCalendar}
@@ -269,7 +272,7 @@ function Agenda() {
                       </button>
                     </div>
                   )}
-                  {(!isNative || addedToCalendar) && (
+                  {(!isNative || addedToCalendar || waitlisted) && (
                     <button
                       onClick={() => { setShowModal(false); setIsSuccess(false); setCalendarError(null); }}
                       style={{
@@ -374,14 +377,22 @@ function Agenda() {
                   )}
 
                   {(() => {
-                    const isReservedClass = myReservations?.some(r => r.classId === modalData?.id);
+                    const myRes = myReservations?.find(r => r.classId === modalData?.id);
+                    const isReservedClass = !!myRes;
+                    const isWaitlisted = myRes?.status === 'waitlist';
                     const isFull = (modalData?.spots ?? 0) <= 0;
                     if (isReservedClass) {
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '14px', background: 'rgba(34,197,94,0.1)', color: '#16A34A', fontWeight: 700, fontSize: '0.9rem' }}>
-                            <CheckCircle2 size={18} /> Ya estás inscrita
-                          </div>
+                          {isWaitlisted ? (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '14px', background: 'rgba(120,120,130,0.12)', color: 'var(--on-surface-variant)', fontWeight: 700, fontSize: '0.9rem' }}>
+                              <Clock size={18} /> En lista de espera
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '14px', background: 'rgba(34,197,94,0.1)', color: '#16A34A', fontWeight: 700, fontSize: '0.9rem' }}>
+                              <CheckCircle2 size={18} /> Ya estás inscrita
+                            </div>
+                          )}
                           <button onClick={() => { setShowModal(false); setCalendarError(null); }} className="btn-outline" style={{ width: '100%', padding: '13px' }}>Cerrar</button>
                         </div>
                       );
@@ -389,8 +400,8 @@ function Agenda() {
                     return (
                       <div style={{ display: 'flex', gap: '10px' }}>
                         <button onClick={() => { setShowModal(false); setCalendarError(null); }} className="btn-outline" style={{ flex: 1, padding: '13px' }}>Cancelar</button>
-                        <button onClick={confirmReservation} disabled={isFull} className="btn-primary" style={{ flex: 1, padding: '13px', justifyContent: 'center', opacity: isFull ? 0.5 : 1 }}>
-                          {isFull ? 'Sin cupos' : 'Reservar'}
+                        <button onClick={confirmReservation} className="btn-primary" style={{ flex: 1.4, padding: '13px', justifyContent: 'center', fontSize: isFull ? '0.82rem' : undefined }}>
+                          {isFull ? 'Unirme a lista de espera' : 'Reservar'}
                         </button>
                       </div>
                     );

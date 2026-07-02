@@ -1042,6 +1042,7 @@ export const AuthProvider = ({ children }) => {
           instructor: r.classes?.instructor,
           color: r.classes?.color,
           checkedIn: r.checked_in,
+          status: r.status || 'confirmed', // 'confirmed' | 'waitlist'
           calendarEventId: r.calendar_event_id ?? null
         }));
         setMyReservations(formattedReservations);
@@ -1171,48 +1172,58 @@ export const AuthProvider = ({ children }) => {
   const todayConsumed = todayLog.reduce((s, r) => s + (r.kcal || 0), 0);
   const calorieGoal = planCalories ?? selfCalorieGoal ?? null; // objetivo efectivo del día
 
+  // Devuelve 'confirmed' | 'waitlist' si se anotó, o false si no se pudo.
+  // Si la clase está llena, el RPC la mete a LISTA DE ESPERA (sin descontar
+  // clase); al liberarse un lugar el servidor la promueve sola y le manda push.
   const bookClass = async (classObj) => {
     if (!user) return false;
-    
-    if (classesRemaining > 0 && classObj.spots > 0) {
-      try {
-        // Optimistic UI Update — los planes ilimitados (sentinel ≥9000) NO descuentan.
-        if (classesRemaining < 9000) setClassesRemaining(prev => prev - 1);
+    // Se exige saldo incluso para entrar a la espera (así al promoverla siempre
+    // habrá una clase que descontar). El servidor lo re-valida de forma autoritativa.
+    if (classesRemaining <= 0) return false;
+
+    try {
+      // DB Updates via secure RPC — el servidor decide confirmada vs. espera.
+      const { data: bookStatus, error: rpcError } = await supabase.rpc('book_class_secure', { p_class_id: classObj.id });
+      if (rpcError) throw rpcError;
+
+      const waitlisted = bookStatus === 'waitlist';
+
+      // Optimistic UI Update según el resultado real del servidor.
+      // La lista de espera NO descuenta clase ni ocupa lugar.
+      if (!waitlisted) {
+        if (classesRemaining < 9000) setClassesRemaining(prev => prev - 1); // ilimitado (≥9000) no descuenta
         setGlobalClasses(prev => prev.map(c =>
-          c.id === classObj.id ? { ...c, spots: c.spots - 1 } : c
+          c.id === classObj.id ? { ...c, spots: Math.max(0, (c.spots ?? 0) - 1) } : c
         ));
-        setMyReservations(prev => [...prev, {
-          id: Date.now(), // temporary id
-          classId: classObj.id,
-          title: classObj.title,
-          time: classObj.time,
-          instructor: classObj.instructor,
-          color: classObj.color,
-          checkedIn: false,
-          calendarEventId: null,
-        }]);
+      }
+      setMyReservations(prev => [...prev, {
+        id: Date.now(), // temporary id
+        classId: classObj.id,
+        title: classObj.title,
+        time: classObj.time,
+        instructor: classObj.instructor,
+        color: classObj.color,
+        checkedIn: false,
+        status: waitlisted ? 'waitlist' : 'confirmed',
+        calendarEventId: null,
+      }]);
 
-        // DB Updates via secure RPC
-        const { error: rpcError } = await supabase.rpc('book_class_secure', { p_class_id: classObj.id });
-
-        if (rpcError) throw rpcError;
-
-        // Notificaciones locales
+      // Recordatorios/notificaciones locales solo para reservas CONFIRMADAS.
+      if (!waitlisted) {
         const reservationForNotif = { classId: classObj.id, title: classObj.title, time: classObj.time, instructor: classObj.instructor };
         notifyReservationConfirmed(reservationForNotif);
         scheduleClassReminder(reservationForNotif, classObj.day);
         scheduleCancelDeadlineReminder(reservationForNotif, classObj.day);
-
-        return true;
-      } catch (err) {
-        console.error("Error reservando clase:", err);
-        // Rollback
-        fetchGlobalClasses();
-        fetchUserData(user);
-        return false;
       }
+
+      return waitlisted ? 'waitlist' : 'confirmed';
+    } catch (err) {
+      console.error("Error reservando clase:", err);
+      // Rollback
+      fetchGlobalClasses();
+      fetchUserData(user);
+      return false;
     }
-    return false;
   };
 
   const cancelClass = async (classId) => {
@@ -1351,30 +1362,43 @@ export const AuthProvider = ({ children }) => {
         return { success: false, blockedWindow: true, clientInfo };
       }
 
-      // 2. Obtener reservas pendientes del usuario escaneado.
-      //    Si el lector nos pasa la clase cuya ventana está abierta (opts.classId),
-      //    marcamos la reserva DE ESA CLASE — no una cualquiera. Antes se tomaba
-      //    resData[0] (la primera pendiente, sin orden), así que si la alumna
-      //    tenía reservas en varias clases marcaba la equivocada y el pase de
-      //    lista de la clase real seguía en "Reservó".
-      let resQuery = supabase
+      // 2. Reservas pendientes (sin check-in) del usuario escaneado.
+      const { data: resData, error: resError } = await supabase
         .from('reservations')
         .select('*')
         .eq('user_id', qrData)
         .eq('checked_in', false);
-      if (opts.classId) resQuery = resQuery.eq('class_id', opts.classId);
-      const { data: resData, error: resError } = await resQuery;
 
       if (resError) throw resError;
 
+      // IDs de clases con ventana de check-in ABIERTA ahora, ORDENADAS de la más
+      // próxima a la más lejana (las calcula el lector). Con clases CONSECUTIVAS
+      // varias ventanas pueden estar abiertas a la vez (ej. 8:00 y 8:10 a las
+      // 8:05), así que marcamos la reserva de la clase abierta MÁS PRÓXIMA en la
+      // que la alumna esté inscrita — nunca la equivocada ni una cualquiera.
+      // (Compatibilidad: si llega el viejo `classId`, se usa como lista de uno.)
+      const openIds = (opts.openClassIds && opts.openClassIds.length)
+        ? opts.openClassIds
+        : (opts.classId ? [opts.classId] : null);
+
+      let resToUpdate = null;
       if (resData && resData.length > 0) {
-        // Marcar la primera reserva pendiente como asistida
-        const resToUpdate = resData[0];
+        if (openIds) {
+          for (const cid of openIds) {
+            const m = resData.find(r => r.class_id === cid);
+            if (m) { resToUpdate = m; break; }
+          }
+        } else {
+          resToUpdate = resData[0];
+        }
+      }
+
+      if (resToUpdate) {
         const { error: updateError } = await supabase
           .from('reservations')
           .update({ checked_in: true })
           .eq('id', resToUpdate.id);
-          
+
         if (updateError) throw updateError;
 
         // --- LÓGICA DE INSIGNIAS Y PUSH NOTIFICATION ---
@@ -1441,7 +1465,9 @@ export const AuthProvider = ({ children }) => {
       }
       return {
         success: false,
-        message: opts.classId ? "No tiene reserva en la clase de ahora." : "Sin reservas pendientes para hoy.",
+        message: (resData && resData.length > 0)
+          ? "No tiene reserva en las clases con check-in abierto ahora."
+          : "Sin reservas pendientes para hoy.",
         clientInfo
       };
     } catch (err) {

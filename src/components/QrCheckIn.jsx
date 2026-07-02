@@ -61,6 +61,12 @@ export default function QrCheckIn({ sideContent = null }) {
   // Ventana de check-in por clase: abre 15 min ANTES y cierra 10 min DESPUÉS
   // de la hora de inicio. Estados: 'open' (abierto, cuenta al cierre),
   // 'standby' (en espera, cuenta a la apertura de la siguiente), 'closed'.
+  //
+  // Clases CONSECUTIVAS: dos horarios seguidos (ej. 8:00 y 8:10) tienen sus
+  // ventanas traslapadas, así que a las 8:05 AMBAS están abiertas. Por eso ya
+  // NO elegimos una sola clase: exponemos TODAS las abiertas (openClassIds,
+  // ordenadas por hora) y el check-in marca la reserva de la que corresponda a
+  // cada alumna. El encabezado muestra la más próxima + cuántas más hay.
   const checkin = useMemo(() => {
     const todayStr = todayLocalStr();
     const dow = new Date(todayStr + 'T12:00:00').getDay();
@@ -76,16 +82,24 @@ export default function QrCheckIn({ sideContent = null }) {
     const OPEN_BEFORE = 15 * 60 * 1000;
     const CLOSE_AFTER = 10 * 60 * 1000;
 
-    // ¿Hay una clase con la ventana abierta ahora? (la de cierre más próximo)
-    const active = withDt.find(x => now >= x.start - OPEN_BEFORE && now <= x.start + CLOSE_AFTER);
-    if (active) return { cls: active.c, mode: 'open', target: active.start + CLOSE_AFTER };
+    // TODAS las clases con la ventana abierta ahora (para clases traslapadas).
+    const openList = withDt.filter(x => now >= x.start - OPEN_BEFORE && now <= x.start + CLOSE_AFTER);
+    if (openList.length) {
+      return {
+        mode: 'open',
+        cls: openList[0].c,                          // primaria (la más próxima a cerrar/empezar)
+        openClasses: openList.map(x => x.c),         // todas las abiertas (por hora)
+        openClassIds: openList.map(x => x.c.id),     // ids ordenados → el check-in elige la de la alumna
+        target: Math.min(...openList.map(x => x.start + CLOSE_AFTER)), // cierre más próximo
+      };
+    }
 
     // En espera: la siguiente cuya ventana aún no abre.
     const next = withDt.find(x => now < x.start - OPEN_BEFORE);
-    if (next) return { cls: next.c, mode: 'standby', target: next.start - OPEN_BEFORE };
+    if (next) return { cls: next.c, mode: 'standby', openClasses: [], openClassIds: [], target: next.start - OPEN_BEFORE };
 
     // Todas las ventanas del día ya cerraron.
-    return { cls: withDt[withDt.length - 1].c, mode: 'closed', target: null };
+    return { cls: withDt[withDt.length - 1].c, mode: 'closed', openClasses: [], openClassIds: [], target: null };
   }, [globalClasses, now]);
 
   const remaining = checkin?.target ? Math.max(0, checkin.target - now) : 0;
@@ -117,10 +131,11 @@ export default function QrCheckIn({ sideContent = null }) {
     // La ventana de clase (15 min antes → 10 min después) solo limita a CLIENTAS.
     // El PERSONAL registra su entrada en cualquier momento (lo decide checkInClient).
     const windowOpen = checkin ? checkin.mode === 'open' : true;
-    // Pasamos la clase cuya ventana está abierta → el check-in marca la reserva
-    // DE ESA clase (no una cualquiera de la alumna).
-    const classId = windowOpen ? checkin?.cls?.id : null;
-    const result = await checkInClient(code, { windowOpen, classId });
+    // Pasamos TODAS las clases con ventana abierta (ordenadas por hora) → el
+    // check-in marca la reserva de la clase abierta que corresponda a la alumna.
+    // Con clases consecutivas esto evita marcar la equivocada.
+    const openClassIds = windowOpen ? (checkin?.openClassIds || []) : [];
+    const result = await checkInClient(code, { windowOpen, openClassIds });
 
     // Cliente fuera de la ventana → aviso (no se registró nada).
     if (result.blockedWindow) {
@@ -173,7 +188,9 @@ export default function QrCheckIn({ sideContent = null }) {
             </div>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700, opacity: 0.85 }}>
-                {checkin.mode === 'open' ? 'Check-in abierto' : checkin.mode === 'standby' ? 'Próxima clase' : 'Check-in cerrado'}
+                {checkin.mode === 'open'
+                  ? (checkin.openClasses?.length > 1 ? `Check-in abierto · ${checkin.openClasses.length} clases` : 'Check-in abierto')
+                  : checkin.mode === 'standby' ? 'Próxima clase' : 'Check-in cerrado'}
               </div>
               <div style={{ fontSize: '1.25rem', fontWeight: 900, fontFamily: 'var(--font-display)', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {checkin.cls.title}
@@ -181,6 +198,11 @@ export default function QrCheckIn({ sideContent = null }) {
               <div style={{ fontSize: '0.82rem', fontWeight: 600, opacity: 0.92, marginTop: '2px' }}>
                 {checkin.cls.time}{checkin.cls.instructor ? ` · ${checkin.cls.instructor}` : ''}
               </div>
+              {checkin.mode === 'open' && checkin.openClasses?.length > 1 && (
+                <div style={{ fontSize: '0.72rem', fontWeight: 600, opacity: 0.85, marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  También en check-in: {checkin.openClasses.slice(1).map(c => `${c.time} ${c.title}`).join(' · ')}
+                </div>
+              )}
             </div>
           </div>
 

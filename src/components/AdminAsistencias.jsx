@@ -63,8 +63,9 @@ export default function AdminAsistencias() {
     const ids = dayClasses.map(c => c.id);
     if (ids.length === 0) { setRosters({}); setLoading(false); return; }
     supabase.from('reservations')
-      .select('id, class_id, checked_in, users:user_id(id, full_name, email, avatar_url)')
+      .select('id, class_id, checked_in, status, created_at, users:user_id(id, full_name, email, avatar_url)')
       .in('class_id', ids)
+      .order('created_at', { ascending: true })
       .then(({ data }) => {
         if (!alive) return;
         const map = {};
@@ -74,9 +75,16 @@ export default function AdminAsistencias() {
             name: r.users?.full_name || r.users?.email?.split('@')[0] || 'Sin nombre',
             avatar: r.users?.avatar_url || null,
             checkedIn: !!r.checked_in,
+            waitlisted: r.status === 'waitlist', // en espera: no ocupa lugar
           });
         });
-        Object.values(map).forEach(arr => arr.sort((a, b) => (Number(b.checkedIn) - Number(a.checkedIn)) || a.name.localeCompare(b.name)));
+        // Confirmadas primero (asistió arriba); la lista de espera conserva su
+        // orden de llegada (created_at asc) para respetar la fila.
+        Object.values(map).forEach(arr => arr.sort((a, b) => {
+          if (a.waitlisted !== b.waitlisted) return a.waitlisted ? 1 : -1;
+          if (a.waitlisted) return 0; // ya vienen en orden de llegada
+          return (Number(b.checkedIn) - Number(a.checkedIn)) || a.name.localeCompare(b.name);
+        }));
         setRosters(map);
         setLoading(false);
       });
@@ -85,7 +93,12 @@ export default function AdminAsistencias() {
 
   const totals = useMemo(() => {
     let reservas = 0, asistieron = 0;
-    Object.values(rosters).forEach(arr => { reservas += arr.length; asistieron += arr.filter(s => s.checkedIn).length; });
+    // Solo cuentan las CONFIRMADAS (la lista de espera no ocupa lugar).
+    Object.values(rosters).forEach(arr => {
+      const conf = arr.filter(s => !s.waitlisted);
+      reservas += conf.length;
+      asistieron += conf.filter(s => s.checkedIn).length;
+    });
     return { reservas, asistieron };
   }, [rosters]);
 
@@ -129,7 +142,9 @@ export default function AdminAsistencias() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {dayClasses.map(c => {
-            const roster = rosters[c.id] || [];
+            const all = rosters[c.id] || [];
+            const roster = all.filter(s => !s.waitlisted); // confirmadas (con lugar)
+            const wl = all.filter(s => s.waitlisted);       // lista de espera
             const attended = roster.filter(s => s.checkedIn).length;
             const shown = onlyAttended ? roster.filter(s => s.checkedIn) : roster;
             const open = expanded === c.id;
@@ -145,6 +160,7 @@ export default function AdminAsistencias() {
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{ fontSize: '0.85rem', fontWeight: 900, color: '#16A34A' }}>{attended} <span style={{ color: 'var(--on-surface-variant)', fontWeight: 600, fontSize: '0.72rem' }}>asist.</span></div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{roster.length} {roster.length === 1 ? 'reserva' : 'reservas'}</div>
+                    {wl.length > 0 && <div style={{ fontSize: '0.7rem', color: '#9AA0A6', fontWeight: 700 }}>{wl.length} en espera</div>}
                   </div>
                   <ChevronRight size={18} color="var(--on-surface-variant)" style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
                 </div>
@@ -165,6 +181,19 @@ export default function AdminAsistencias() {
                         )}
                       </div>
                     ))}
+                    {wl.length > 0 && !onlyAttended && (
+                      <div style={{ marginTop: '6px', paddingTop: '10px', borderTop: '1px dashed rgba(0,0,0,0.08)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 800, color: '#9AA0A6', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 6px 6px' }}>
+                          <Clock size={12} /> Lista de espera
+                        </div>
+                        {wl.map((s, i) => (
+                          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 6px' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0,0,0,0.05)', color: '#9AA0A6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.78rem', flexShrink: 0 }}>{i + 1}</div>
+                            <span style={{ flex: 1, minWidth: 0, fontSize: '0.86rem', fontWeight: 600, color: 'var(--on-surface-variant)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
