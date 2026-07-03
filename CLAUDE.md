@@ -7,6 +7,8 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
 ## ⏭️ PRÓXIMA SESIÓN (retomar) — SUBIR ANDROID
+
+> **ESTADO 2026-07-02:** iOS bumpeado a **1.6.0 (build 14)** con el fix del **lector QR robusto** (ver "Sesión 2026-07-02" abajo). `npm run build` + `npx cap sync ios` hechos y **Xcode abierto** → solo falta que el usuario haga Archive → Distribute → Upload. Android sigue en `versionCode 10` / `2.4.2` (otra PC). ⚠️ Las notas de abajo mencionan builds 9/8/7 como PREPARADOS/pendientes: son **histórico**; el binario iOS vigente es el **14** (incluye todo lo acumulado). Las sesiones intermedias 1.5.1–1.6.0 (lista de espera, mejora check-in, push a baristas, registro de entrada de staff, SEO, fix /welcome web) están en el git log pero no todas documentadas aquí.
 **iOS 🆕 1.5.0 (build 9)** PREPARADO el 2026-06-26 (build + `npx cap sync ios` hechos; código **pusheado a `main`** → web ya desplegada). **Xcode ya está ABIERTO limpio con 1.5.0(9)** (se cerró la instancia vieja y se reabrió para que tomara el `project.pbxproj` nuevo). **SOLO FALTA que el usuario haga en Xcode: target App → "Any iOS Device" → Product → Archive → Distribute App → App Store Connect → Upload.** Incluye lo del 26-jun (ver sesión abajo): cancelar/pausar membresía, pase de lista, editar vencimiento desde admin, "Studio" en el nav, y el **fix raíz del deep link** (RR7 `useNavigate`). **OJO:** el 1.4.0 (build 7) sigue esperando aprobación de Apple; el 1.5.0 va como versión nueva por encima.
 **iOS (previo) 1.4.2 (build 8)** quedó preparado el 25-jun pero **NUNCA se subió** (solo se usó para probar en local); lo reemplaza el 1.5.0(9).
 **iOS (previo) 1.4.0 (build 7)** subido el 2026-06-24, esperando aprobación. Incluía 15→24-jun: Stripe LIVE, Recepción, deep links de auth, dominio befitlab.app, fixes 22/23-jun, gestionar clases por clienta, "sin cupos", sidebar scroll, fix de fotos de coaches.
@@ -32,6 +34,20 @@ Ejecuta TÚ (Claude) automáticamente los pasos de CLI; el usuario solo hace los
 - ⚠️ El **hero del landing NO aplica a nativo** (la app redirige `/`→`/welcome`).
 
 **Opcional (smoke test):** un cobro real chico. El flujo NO cambia entre test/live (mismo código), pero confirma que `sk_live` + webhook Live **registran** el sale/pedido. Reembolsable. (Ya se probó el 2026-06-15: pedido quedó `paid` ✅.)
+
+## ✅ Sesión 2026-07-02 (Lector QR robusto — fix "usuario desconocido / sin reserva") — iOS 1.6.0(14)
+**Pusheado a `main`** (commit `9e0836a`, web desplegando). Reporte de la dueña: clientas que **sí reservaron** salían como "usuario desconocido" y "sin reserva" al escanear su QR (en Mostrador de admin y en Recepción), sobre todo con **clases consecutivas a 5–10 min** (confirmado: 8:00/8:10, 9:20/9:30, 6:20/6:30, 7:45/7:50 son lo normal).
+
+- **Causa raíz:** el lector acoplaba *identidad* + *reserva* dentro de una ventana rígida (±15/-10 min) y **adivinaba** cuál clase marcar; cuando fallaba, dejaba a recepción sin salida.
+- **Decisiones de la dueña:** ventana **suave** (nunca bloquea, solo advierte) + **sin walk-in** (si no hay reserva, solo se informa).
+- **`AuthContext.jsx` — `checkInClient` reescrito** (+ helper `finalizeReservationCheckIn` idempotente + `checkInReservation` para selección manual, ambos expuestos en el provider):
+  1. **Lookup robusto de UUID** (`extractUserId`): toma el PRIMER UUID válido del texto escaneado → tolera lecturas pegadas (doble escaneo) o con basura. Truncado → `unreadable:true` = "Código no legible, vuelve a escanear" (NO "usuario desconocido").
+  2. **Siempre resuelve a la persona:** caché `allUsers` → **BD fresca con `maybeSingle`** de respaldo. Si existe, aparece.
+  3. **Solo reservas de HOY** (filtra por `classes.date === todayLocalStr()` vía embed `reservations→classes(title,time,date)`, FK `reservations_class_id_fkey` confirmada) → excluye los **79 no-shows viejos** que antes contaminaban.
+  4. **Ventana SUAVE:** ya NO existe `blockedWindow`. 1 reserva pendiente → **check-in automático** (el 100% de las 36 clientas de hoy). Varias traslapadas → si exactamente 1 está en ventana, esa; si no, **`needsSelection`** con candidatas para que recepción **toque cuál** (no adivina). El `update` lleva `.eq('checked_in', false)` (idempotente, no infla cupos por doble-tap).
+- **`QrCheckIn.jsx` — UI:** maneja `unreadable` / `needsSelection` / `outsideWindow` / `alreadyIn`; muestra la tarjeta de la clienta **aunque no tenga reserva** (recepción ve quién es y su plan); **modal selector** con la clase "Ahora" marcada. Se quitó el paso de `windowOpen` y la rama de bloqueo por ventana.
+- **Verificado:** build OK (`✓ built in 899ms`), FK del embed confirmada, distribución real (36/36 clientas de hoy con 1 pendiente → camino rápido; el selector solo aparece en traslapes reales). ⏭️ **PENDIENTE:** prueba con el **lector físico real** en la tablet de recepción (el foco del input oculto es lo único no reproducible aquí) + confirmar zona horaria/reloj de esa compu (el "hoy" sale de la fecha local del dispositivo).
+- iOS bumpeado a **1.6.0 (build 14)**; web/PWA de recepción/admin recibe el fix con el push. Nativo llega hasta el rebuild.
 
 ## ✅ Sesión 2026-06-30 (FIX acceso-gratis-sin-pago + cupos a prueba de fallos + compañeras + check-in + foto admin)
 **Pusheado a `main`** (web desplegando). Backend (BD + edge functions) **ya en producción**. iOS/Android pendientes de rebuild (acumulan también lo del 26-jun).
