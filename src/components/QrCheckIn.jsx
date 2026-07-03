@@ -29,7 +29,7 @@ const Avatar = ({ name, avatar, size = 52, success = true }) => {
 // el id en el input oculto y enfocado. La tarjeta de la última alumna y la lista
 // del día PERSISTEN (no se auto-borran) para control en recepción.
 export default function QrCheckIn({ sideContent = null }) {
-  const { checkInClient, globalClasses } = useAuth();
+  const { checkInClient, checkInReservation, globalClasses } = useAuth();
   const qrInputRef = useRef(null);
   // Input NO controlado: el lector teclea el código y lo leemos de una sola vez
   // al Enter. Así NO hay un re-render por carácter (eso ralentizaba/perdía lecturas).
@@ -43,6 +43,9 @@ export default function QrCheckIn({ sideContent = null }) {
   const [scannedClient, setScannedClient] = useState(() => readLog()[0] || null);
   const [qrMessage, setQrMessage] = useState(() => readLog()[0]?.message || '');
   const [toast, setToast] = useState(null);
+  // Selector de clase cuando la alumna reservó VARIAS clases traslapadas y no se
+  // puede decidir sola cuál marcar → recepción toca la correcta (no se adivina).
+  const [selection, setSelection] = useState(null); // { clientInfo, candidates, code }
 
   useEffect(() => {
     try { localStorage.setItem(logKey, JSON.stringify(scanLog)); } catch { /* noop */ }
@@ -114,6 +117,23 @@ export default function QrCheckIn({ sideContent = null }) {
     setTimeout(() => setToast(null), 3000);
   };
 
+  // Pinta la tarjeta + agrega al log del día un resultado de check-in.
+  const recordResult = (result) => {
+    setQrMessage(result.message);
+    setScannedClient(result.clientInfo);
+    if (result.clientInfo) {
+      setScanLog(prev => [{
+        ...result.clientInfo,
+        message: result.message,
+        success: result.success,
+        scannedAt: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+      }, ...prev]);
+      if (result.outsideWindow) showToast('Registrada fuera del horario de la clase.', 'success');
+    } else {
+      showToast(result.message || 'Alumna no encontrada.', 'error');
+    }
+  };
+
   const handleQRScan = async (e) => {
     e.preventDefault();
     const code = (qrInputRef.current?.value || '').trim();
@@ -128,47 +148,43 @@ export default function QrCheckIn({ sideContent = null }) {
       return;
     }
 
-    // La ventana de clase (15 min antes → 10 min después) solo limita a CLIENTAS.
-    // El PERSONAL registra su entrada en cualquier momento (lo decide checkInClient).
-    const windowOpen = checkin ? checkin.mode === 'open' : true;
-    // Pasamos TODAS las clases con ventana abierta (ordenadas por hora) → el
-    // check-in marca la reserva de la clase abierta que corresponda a la alumna.
-    // Con clases consecutivas esto evita marcar la equivocada.
-    const openClassIds = windowOpen ? (checkin?.openClassIds || []) : [];
-    const result = await checkInClient(code, { windowOpen, openClassIds });
+    // Pasamos las clases con ventana abierta ahora (solo para el camino rápido /
+    // desempate). La ventana es SUAVE: nunca bloquea, siempre resuelve a la persona.
+    const openClassIds = checkin?.openClassIds || [];
+    const result = await checkInClient(code, { openClassIds });
+    clearQR();
 
-    // Cliente fuera de la ventana → aviso (no se registró nada).
-    if (result.blockedWindow) {
-      showToast(
-        checkin?.mode === 'standby'
-          ? `Check-in en espera. Abre en ${fmtRemaining(remaining)}.`
-          : 'El check-in de esta clase ya cerró.',
-        'error'
-      );
-      clearQR();
+    // Lectura ilegible/truncada → pedir reintento (NO es "usuaria desconocida").
+    if (result.unreadable) {
+      showToast(result.message, 'error');
       qrInputRef.current?.focus();
       return;
+    }
+
+    // Reservó varias clases traslapadas → recepción elige cuál marcar.
+    if (result.needsSelection) {
+      setSelection({ ...result, code });
+      return; // el modal toma el control; se re-enfoca al cerrar
     }
 
     if (result.success) {
       localStorage.setItem(`last_checkin_${code}`, Date.now().toString());
     }
-    setQrMessage(result.message);
-    setScannedClient(result.clientInfo);
-    clearQR();
-
-    if (result.clientInfo) {
-      setScanLog(prev => [{
-        ...result.clientInfo,
-        message: result.message,
-        success: result.success,
-        scannedAt: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
-      }, ...prev]);
-    } else {
-      showToast(result.message || 'Alumna no encontrada.', 'error');
-    }
+    recordResult(result);
 
     // Re-enfocar para el siguiente escaneo SIN borrar la tarjeta (persiste).
+    qrInputRef.current?.focus();
+  };
+
+  // Recepción tocó una de las clases traslapadas → marcar esa reserva.
+  const pickCandidate = async (cand) => {
+    const sel = selection;
+    setSelection(null);
+    const result = await checkInReservation(cand.reservationId, sel.clientInfo);
+    if (result.success && sel.code) {
+      localStorage.setItem(`last_checkin_${sel.code}`, Date.now().toString());
+    }
+    recordResult({ ...result, className: cand.title, classTime: cand.time });
     qrInputRef.current?.focus();
   };
 
@@ -363,6 +379,75 @@ export default function QrCheckIn({ sideContent = null }) {
             }}
           >
             {toast.message}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* SELECTOR de clase (varias reservas traslapadas) — recepción elige cuál */}
+      <AnimatePresence>
+        {selection && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => { setSelection(null); qrInputRef.current?.focus(); }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 10 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ background: 'white', borderRadius: '24px', padding: '22px', width: '100%', maxWidth: '380px', boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
+                <Avatar name={selection.clientInfo?.name} avatar={selection.clientInfo?.avatar} size={44} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--black)', fontFamily: 'var(--font-display)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {selection.clientInfo?.name}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>
+                    Reservó varias clases hoy
+                  </div>
+                </div>
+              </div>
+              <p style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', margin: '10px 0 14px', fontWeight: 600 }}>
+                ¿A cuál clase entra ahora?
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {selection.candidates?.map((cand) => (
+                  <button
+                    key={cand.reservationId}
+                    onClick={() => pickCandidate(cand)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+                      textAlign: 'left', padding: '14px 16px', borderRadius: '16px', cursor: 'pointer',
+                      border: cand.inWindow ? '2px solid var(--primary)' : '1px solid rgba(0,0,0,0.1)',
+                      background: cand.inWindow ? 'rgba(255,145,77,0.08)' : 'white',
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--black)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {cand.title}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginTop: '2px' }}>
+                        {cand.time}
+                      </div>
+                    </div>
+                    {cand.inWindow && (
+                      <span style={{ flexShrink: 0, fontSize: '0.62rem', fontWeight: 800, color: 'var(--primary)', background: 'white', border: '1px solid var(--primary)', borderRadius: '8px', padding: '3px 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Ahora
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => { setSelection(null); qrInputRef.current?.focus(); }}
+                style={{ width: '100%', marginTop: '14px', padding: '12px', borderRadius: '14px', border: 'none', background: 'rgba(0,0,0,0.06)', color: 'var(--on-surface-variant)', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

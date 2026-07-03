@@ -6,6 +6,7 @@ import { removeClassFromCalendar } from '../hooks/useCalendar';
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { DEFAULT_PLANS, dbRowToPlan, setPlans as hydratePlansRegistry } from '../lib/plans';
+import { todayLocalStr } from '../lib/dates';
 
 // El flag del tour se guarda en almacenamiento NATIVO (Preferences) porque el
 // localStorage del WebView lo purga iOS entre lanzamientos → el tour reaparecía.
@@ -1292,64 +1293,135 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ============================================
-  // MEJORADO: Check-in con info completa del cliente
+  // CHECK-IN (lector QR): resolver persona → mostrar/elegir (no adivinar)
   // ============================================
-  // opts.windowOpen: si la ventana de check-in de la clase está abierta (solo
-  // aplica a CLIENTES). El PERSONAL (role <> CLIENT) registra su entrada en
-  // cualquier momento → tabla staff_attendance.
+  // Tarjeta uniforme de la clienta a partir de la fila de `users`.
+  const buildClientInfo = (u) => ({
+    id: u.id,
+    name: u.full_name || u.email?.split('@')[0] || 'Sin nombre',
+    email: u.email || '',
+    phone: u.phone || 'N/A',
+    plan: u.membership_plan || 'Sin Plan',
+    classesRemaining: u.classes_remaining || 0,
+    status: u.membership_status || 'INACTIVE',
+    avatar: u.avatar_url || null,
+  });
+
+  // Extrae y valida el UUID que el lector tecleó. Tolera espacios/saltos de
+  // línea y lecturas PEGADAS (dos escaneos juntos) o con basura alrededor:
+  // toma el PRIMER UUID válido del texto. Si no hay ninguno, el código vino
+  // ilegible/truncado → se pide reintentar (NO se marca "usuaria desconocida").
+  const extractUserId = (raw) => {
+    const m = String(raw || '').match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+    return m ? m[0] : null;
+  };
+
+  // "7:00 AM" → minutos desde medianoche (para ordenar clases traslapadas).
+  const timeToMin = (t) => {
+    const m = /(\d{1,2}):(\d{2})\s*(AM|PM)?/i.exec(t || '');
+    if (!m) return 0;
+    let h = parseInt(m[1], 10); const min = parseInt(m[2], 10); const ap = (m[3] || '').toUpperCase();
+    if (ap === 'PM' && h !== 12) h += 12;
+    if (ap === 'AM' && h === 12) h = 0;
+    return h * 60 + min;
+  };
+
+  // Marca UNA reserva como asistida (idempotente) y evalúa insignias/push.
+  // Reutilizada por el camino automático y por la selección manual (traslape).
+  const finalizeReservationCheckIn = async (reservationId, clientInfo, qrData, userObj) => {
+    const { error: updateError } = await supabase
+      .from('reservations')
+      .update({ checked_in: true })
+      .eq('id', reservationId)
+      .eq('checked_in', false); // idempotente: si ya estaba, no re-marca ni infla
+
+    if (updateError) throw updateError;
+
+    // --- LÓGICA DE INSIGNIAS Y PUSH NOTIFICATION ---
+    try {
+      const { data: history } = await supabase
+        .from('reservations')
+        .select('*, classes(instructor)')
+        .eq('user_id', qrData)
+        .eq('checked_in', true);
+
+      const currentCustom = userObj?.custom_badges || [];
+      const notifiedIds = currentCustom.filter(b => b._internal_notified_id).map(b => b._internal_notified_id);
+
+      let newlyUnlocked = null;
+      for (const rule of badgeConfigs) {
+        if (notifiedIds.includes(rule.id) || rule.rule_type === 'MANUAL' || rule.rule_type === 'PROFILE_COMPLETE') continue;
+
+        let isEarned = false;
+        if (rule.rule_type === 'TOTAL_CLASSES') {
+          isEarned = (history?.length || 0) >= rule.rule_value;
+        } else if (rule.rule_type === 'DIFFERENT_COACHES') {
+          const coaches = new Set((history || []).map(h => h.classes?.instructor).filter(Boolean));
+          isEarned = coaches.size >= rule.rule_value;
+        } else if (rule.rule_type === 'WEEKLY_CLASSES') {
+          const weekCounts = {};
+          (history || []).forEach(h => {
+             const d = new Date(h.created_at);
+             const weekKey = `${d.getFullYear()}-${Math.floor(d.getTime() / (1000*60*60*24*7))}`;
+             weekCounts[weekKey] = (weekCounts[weekKey] || 0) + 1;
+          });
+          const maxWeekly = Math.max(0, ...Object.values(weekCounts));
+          isEarned = maxWeekly >= rule.rule_value;
+        }
+
+        if (isEarned) { newlyUnlocked = rule; break; } // Solo notificar 1 a la vez
+      }
+
+      if (newlyUnlocked) {
+         const updatedCustom = [...currentCustom, { _internal_notified_id: newlyUnlocked.id }];
+         await supabase.from('users').update({ custom_badges: updatedCustom }).eq('id', qrData);
+
+         await supabase.functions.invoke('send-push', {
+           body: {
+             userId: qrData,
+             title: `¡Insignia Desbloqueada! ${newlyUnlocked.icon}`,
+             body: `¡Felicidades ${clientInfo.name}! Acabas de ganar la insignia: ${newlyUnlocked.label}.`,
+             type: 'badge_unlocked'
+           }
+         });
+      }
+    } catch (badgeErr) {
+      console.error("Error al evaluar insignias tras check-in:", badgeErr);
+    }
+    // ------------------------------------
+
+    return { success: true, message: `Asistencia de ${clientInfo.name} registrada.`, clientInfo };
+  };
+
+  // Escaneo del lector QR. FILOSOFÍA: primero resolver SIEMPRE a la persona
+  // (nunca "desconocida" si existe), luego mostrar/elegir en vez de adivinar.
+  // La ventana de tiempo es SUAVE: sirve para el camino rápido, no bloquea.
   const checkInClient = async (qrData, opts = {}) => {
-    if (!qrData) return { success: false, message: "Código QR inválido.", clientInfo: null };
+    const userId = extractUserId(qrData);
+    if (!userId) {
+      // Lectura ilegible/parcial (código truncado o pegado) → reintentar.
+      return { success: false, unreadable: true, message: 'Código no legible. Vuelve a escanear.', clientInfo: null };
+    }
 
     try {
-      // 1. Buscar al usuario escaneado
-      const userObj = allUsers.find(u => u.id === qrData);
-
-      // Si no lo encontramos en el cache, buscarlo directamente
-      let clientInfo = null;
-      let userRole = 'CLIENT';
-      if (userObj) {
-        userRole = userObj.role || 'CLIENT';
-        clientInfo = {
-          id: userObj.id,
-          name: userObj.full_name || userObj.email?.split('@')[0] || 'Sin nombre',
-          email: userObj.email || '',
-          phone: userObj.phone || 'N/A',
-          plan: userObj.membership_plan || 'Sin Plan',
-          classesRemaining: userObj.classes_remaining || 0,
-          status: userObj.membership_status || 'INACTIVE',
-          avatar: userObj.avatar_url || null
-        };
-      } else {
-        // Buscar directo en BD
-        const { data: directUser } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', qrData)
-          .single();
-
-        if (directUser) {
-          userRole = directUser.role || 'CLIENT';
-          clientInfo = {
-            id: directUser.id,
-            name: directUser.full_name || directUser.email?.split('@')[0] || 'Sin nombre',
-            email: directUser.email || '',
-            phone: directUser.phone || 'N/A',
-            plan: directUser.membership_plan || 'Sin Plan',
-            classesRemaining: directUser.classes_remaining || 0,
-            status: directUser.membership_status || 'INACTIVE',
-            avatar: directUser.avatar_url || null
-          };
-        }
+      // 1. Resolver a la persona: caché → BD FRESCA como respaldo (clienta nueva
+      //    o cambiada tras cargar el caché). `maybeSingle` no lanza si hay 0 filas.
+      let userObj = allUsers.find(u => u.id === userId);
+      if (!userObj) {
+        const { data: directUser } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+        userObj = directUser || null;
+      }
+      if (!userObj) {
+        return { success: false, message: 'Esta clienta no está registrada en el sistema.', clientInfo: null };
       }
 
-      if (!clientInfo) {
-        return { success: false, message: "Usuario no encontrado en el sistema.", clientInfo: null };
-      }
+      const userRole = userObj.role || 'CLIENT';
+      const clientInfo = buildClientInfo(userObj);
 
       // 1.b PERSONAL (coach/barista/recepción/admin): registra ENTRADA, no reserva.
       if (userRole !== 'CLIENT') {
         const staffInfo = { ...clientInfo, isStaff: true, role: userRole };
-        const { error: saErr } = await supabase.from('staff_attendance').insert({ user_id: qrData });
+        const { error: saErr } = await supabase.from('staff_attendance').insert({ user_id: userId });
         if (saErr) {
           console.error('Error registrando entrada de personal:', saErr);
           return { success: false, message: 'No se pudo registrar la entrada del personal.', clientInfo: staffInfo };
@@ -1357,122 +1429,71 @@ export const AuthProvider = ({ children }) => {
         return { success: true, message: `Entrada de ${clientInfo.name} registrada.`, clientInfo: staffInfo };
       }
 
-      // CLIENTE: respeta la ventana de check-in de la clase (la calcula el lector).
-      if (opts.windowOpen === false) {
-        return { success: false, blockedWindow: true, clientInfo };
-      }
-
-      // 2. Reservas pendientes (sin check-in) del usuario escaneado.
-      const { data: resData, error: resError } = await supabase
+      // 2. Reservas de HOY de la clienta (con datos de la clase para mostrarlas).
+      const todayStr = todayLocalStr();
+      const { data: resRows, error: resError } = await supabase
         .from('reservations')
-        .select('*')
-        .eq('user_id', qrData)
-        .eq('checked_in', false);
-
+        .select('id, class_id, checked_in, classes(title, time, date)')
+        .eq('user_id', userId);
       if (resError) throw resError;
 
-      // IDs de clases con ventana de check-in ABIERTA ahora, ORDENADAS de la más
-      // próxima a la más lejana (las calcula el lector). Con clases CONSECUTIVAS
-      // varias ventanas pueden estar abiertas a la vez (ej. 8:00 y 8:10 a las
-      // 8:05), así que marcamos la reserva de la clase abierta MÁS PRÓXIMA en la
-      // que la alumna esté inscrita — nunca la equivocada ni una cualquiera.
-      // (Compatibilidad: si llega el viejo `classId`, se usa como lista de uno.)
+      const todays = (resRows || []).filter(r => r.classes?.date === todayStr);
+      const pending = todays.filter(r => !r.checked_in);
+      const already = todays.filter(r => r.checked_in);
+
+      // Sin reserva pendiente hoy → SOLO informar (no se inscribe al vuelo).
+      if (pending.length === 0) {
+        if (already.length > 0) {
+          return { success: true, alreadyIn: true, message: 'Ya tenía asistencia registrada hoy.', clientInfo };
+        }
+        return { success: false, message: 'No tiene reserva para hoy.', clientInfo };
+      }
+
+      // IDs de clases con ventana ABIERTA ahora (las calcula el lector). Solo se
+      // usan para el camino rápido / desempate; la ventana NO bloquea.
       const openIds = (opts.openClassIds && opts.openClassIds.length)
         ? opts.openClassIds
-        : (opts.classId ? [opts.classId] : null);
+        : (opts.classId ? [opts.classId] : []);
 
-      let resToUpdate = null;
-      if (resData && resData.length > 0) {
-        if (openIds) {
-          for (const cid of openIds) {
-            const m = resData.find(r => r.class_id === cid);
-            if (m) { resToUpdate = m; break; }
-          }
-        } else {
-          resToUpdate = resData[0];
-        }
+      // Camino rápido (99%): una sola reserva pendiente → marcar directo.
+      if (pending.length === 1) {
+        const info = await finalizeReservationCheckIn(pending[0].id, clientInfo, userId, userObj);
+        return { ...info, outsideWindow: !openIds.includes(pending[0].class_id),
+                 className: pending[0].classes?.title, classTime: pending[0].classes?.time };
       }
 
-      if (resToUpdate) {
-        const { error: updateError } = await supabase
-          .from('reservations')
-          .update({ checked_in: true })
-          .eq('id', resToUpdate.id);
-
-        if (updateError) throw updateError;
-
-        // --- LÓGICA DE INSIGNIAS Y PUSH NOTIFICATION ---
-        try {
-          const { data: history } = await supabase
-            .from('reservations')
-            .select('*, classes(instructor)')
-            .eq('user_id', qrData)
-            .eq('checked_in', true);
-            
-          const currentCustom = userObj?.custom_badges || [];
-          const notifiedIds = currentCustom.filter(b => b._internal_notified_id).map(b => b._internal_notified_id);
-          
-          let newlyUnlocked = null;
-          for (const rule of badgeConfigs) {
-            if (notifiedIds.includes(rule.id) || rule.rule_type === 'MANUAL' || rule.rule_type === 'PROFILE_COMPLETE') continue;
-            
-            let isEarned = false;
-            if (rule.rule_type === 'TOTAL_CLASSES') {
-              isEarned = (history?.length || 0) >= rule.rule_value;
-            } else if (rule.rule_type === 'DIFFERENT_COACHES') {
-              const coaches = new Set((history || []).map(h => h.classes?.instructor).filter(Boolean));
-              isEarned = coaches.size >= rule.rule_value;
-            } else if (rule.rule_type === 'WEEKLY_CLASSES') {
-              const weekCounts = {};
-              (history || []).forEach(h => {
-                 const d = new Date(h.created_at);
-                 const weekKey = `${d.getFullYear()}-${Math.floor(d.getTime() / (1000*60*60*24*7))}`;
-                 weekCounts[weekKey] = (weekCounts[weekKey] || 0) + 1;
-              });
-              const maxWeekly = Math.max(0, ...Object.values(weekCounts));
-              isEarned = maxWeekly >= rule.rule_value;
-            }
-            
-            if (isEarned) {
-               newlyUnlocked = rule;
-               break; // Solo notificar 1 a la vez
-            }
-          }
-          
-          if (newlyUnlocked) {
-             const updatedCustom = [...currentCustom, { _internal_notified_id: newlyUnlocked.id }];
-             await supabase.from('users').update({ custom_badges: updatedCustom }).eq('id', qrData);
-             
-             await supabase.functions.invoke('send-push', {
-               body: {
-                 userId: qrData,
-                 title: `¡Insignia Desbloqueada! ${newlyUnlocked.icon}`,
-                 body: `¡Felicidades ${clientInfo.name}! Acabas de ganar la insignia: ${newlyUnlocked.label}.`,
-                 type: 'badge_unlocked'
-               }
-             });
-          }
-        } catch (badgeErr) {
-          console.error("Error al evaluar insignias tras check-in:", badgeErr);
-        }
-        // ------------------------------------
-
-        return { 
-          success: true, 
-          message: `Asistencia de ${clientInfo.name} registrada.`, 
-          clientInfo 
-        };
+      // Varias reservas pendientes (clases traslapadas). Si EXACTAMENTE una está
+      // en ventana abierta → esa. Si no, que recepción TOQUE cuál (no adivinar).
+      const inWindow = pending.filter(r => openIds.includes(r.class_id));
+      if (inWindow.length === 1) {
+        const info = await finalizeReservationCheckIn(inWindow[0].id, clientInfo, userId, userObj);
+        return { ...info, className: inWindow[0].classes?.title, classTime: inWindow[0].classes?.time };
       }
+
       return {
         success: false,
-        message: (resData && resData.length > 0)
-          ? "No tiene reserva en las clases con check-in abierto ahora."
-          : "Sin reservas pendientes para hoy.",
-        clientInfo
+        needsSelection: true,
+        clientInfo,
+        candidates: pending
+          .slice()
+          .sort((a, b) => timeToMin(a.classes?.time) - timeToMin(b.classes?.time))
+          .map(r => ({ reservationId: r.id, classId: r.class_id, title: r.classes?.title || 'Clase', time: r.classes?.time || '', inWindow: openIds.includes(r.class_id) })),
       };
     } catch (err) {
       console.error("Error al registrar asistencia:", err);
       return { success: false, message: "Error en la base de datos.", clientInfo: null };
+    }
+  };
+
+  // Marca la reserva ELEGIDA a mano (cuando había varias traslapadas).
+  const checkInReservation = async (reservationId, clientInfo) => {
+    if (!reservationId || !clientInfo) return { success: false, message: 'Selección inválida.', clientInfo };
+    try {
+      const userObj = allUsers.find(u => u.id === clientInfo.id) || null;
+      return await finalizeReservationCheckIn(reservationId, clientInfo, clientInfo.id, userObj);
+    } catch (err) {
+      console.error('Error en check-in manual:', err);
+      return { success: false, message: 'No se pudo registrar la asistencia.', clientInfo };
     }
   };
 
@@ -1642,7 +1663,7 @@ export const AuthProvider = ({ children }) => {
       favoriteRecipeIds, toggleRecipeFavorite,
       todayLog, todayConsumed, calorieGoal, planCalories, logFood, removeFoodLog, updateCalorieGoal,
       login, logout, forceCleanSession, fetchAllUsers, refreshUserData,
-      bookClass, cancelClass, checkInClient, updateClassSpots, updateReservationCalendarId,
+      bookClass, cancelClass, checkInClient, checkInReservation, updateClassSpots, updateReservationCalendarId,
       activatePlan, addClass, deleteClass, addRecipe, deleteRecipe,
       fetchClassReservations, fetchClassesByDayOfWeek, fetchGlobalClasses,
       assignCustomBadge, removeCustomBadge, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig,
