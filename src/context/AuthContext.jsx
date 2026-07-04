@@ -1,12 +1,12 @@
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { registerPushToken, unregisterPushToken } from '../hooks/usePushNotifications';
-import { scheduleClassReminder, cancelClassReminder, notifyReservationConfirmed, scheduleCancelDeadlineReminder, getNextClassOccurrence } from '../hooks/useLocalNotifications';
+import { scheduleClassReminder, cancelClassReminder, notifyReservationConfirmed, scheduleCancelDeadlineReminder, getNextClassOccurrence, classDateTime } from '../hooks/useLocalNotifications';
 import { removeClassFromCalendar } from '../hooks/useCalendar';
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { DEFAULT_PLANS, dbRowToPlan, setPlans as hydratePlansRegistry } from '../lib/plans';
-import { todayLocalStr } from '../lib/dates';
+import { mexicoTodayStr, mexicoClassStart } from '../lib/dates';
 
 // El flag del tour se guarda en almacenamiento NATIVO (Preferences) porque el
 // localStorage del WebView lo purga iOS entre lanzamientos → el tour reaparecía.
@@ -1231,28 +1231,39 @@ export const AuthProvider = ({ children }) => {
     if (!user) return { success: false, reason: 'no_user' };
 
     const classObj = globalClasses.find(c => c.id === classId);
+    const reservation = myReservations.find(r => r.classId === classId);
+    const isWaitlist = reservation?.status === 'waitlist';
 
-    // Bloquear cancelación si faltan 5 horas o menos para la clase
-    if (classObj?.day !== undefined && classObj?.time) {
-      const nextOccurrence = getNextClassOccurrence(classObj.day, classObj.time);
-      const fiveHoursBefore = new Date(nextOccurrence.getTime() - 5 * 60 * 60 * 1000);
-      if (new Date() >= fiveHoursBefore) {
-        return { success: false, reason: 'too_late' };
+    // Bloquear cancelación si faltan 5 horas o menos para la clase — SOLO para
+    // reservas CONFIRMADAS. De la lista de espera se puede salir en cualquier
+    // momento (no hay lugar que proteger ni clase cobrada).
+    // Usa la FECHA REAL de la clase (columna `date`); solo cae a la ocurrencia
+    // por día de semana si la clase no tuviera fecha fija (recurrentes viejas).
+    if (!isWaitlist) {
+      const classStart = classObj?.time
+        ? (classObj.date
+            ? classDateTime(classObj.date, classObj.time)
+            : (classObj.day !== undefined ? getNextClassOccurrence(classObj.day, classObj.time) : null))
+        : null;
+      if (classStart) {
+        const fiveHoursBefore = new Date(classStart.getTime() - 5 * 60 * 60 * 1000);
+        if (new Date() >= fiveHoursBefore) {
+          return { success: false, reason: 'too_late' };
+        }
       }
     }
-
-    const reservation = myReservations.find(r => r.classId === classId);
 
     if (reservation?.calendarEventId) {
       removeClassFromCalendar(reservation.calendarEventId);
     }
 
     try {
-      // Optimistic UI Update — los planes ilimitados (sentinel ≥9000) NO suman.
-      if (classesRemaining < 9000) setClassesRemaining(prev => prev + 1);
+      // Optimistic UI Update. La lista de espera NO cobró clase ni ocupa cupo →
+      // no se reembolsa ni se suma lugar (el servidor hace lo mismo por status).
+      if (!isWaitlist && classesRemaining < 9000) setClassesRemaining(prev => prev + 1);
       setMyReservations(prev => prev.filter(res => res.classId !== classId));
-      if (classObj) {
-        setGlobalClasses(prev => prev.map(c => 
+      if (!isWaitlist && classObj) {
+        setGlobalClasses(prev => prev.map(c =>
           c.id === classId ? { ...c, spots: c.spots + 1 } : c
         ));
       }
@@ -1430,21 +1441,42 @@ export const AuthProvider = ({ children }) => {
       }
 
       // 2. Reservas de HOY de la clienta (con datos de la clase para mostrarlas).
-      const todayStr = todayLocalStr();
+      // "Hoy" se calcula en la zona horaria de MÉXICO (no la del dispositivo), así
+      // la compu de recepción puede tener cualquier zona/idioma y no falla.
+      const todayStr = mexicoTodayStr();
+      const nowMs = Date.now();
       const { data: resRows, error: resError } = await supabase
         .from('reservations')
-        .select('id, class_id, checked_in, classes(title, time, date)')
+        .select('id, class_id, checked_in, status, classes(title, time, date)')
         .eq('user_id', userId);
       if (resError) throw resError;
 
-      const todays = (resRows || []).filter(r => r.classes?.date === todayStr);
-      const pending = todays.filter(r => !r.checked_in);
-      const already = todays.filter(r => r.checked_in);
+      // Una reserva cuenta como "de hoy" si su clase es del día (México), O si su
+      // hora de inicio cae dentro de ±3 h de AHORA. Ese respaldo cubre cualquier
+      // desfase de reloj → nunca esconde una clase que está ocurriendo en este
+      // momento (era la causa del falso "no tiene reserva").
+      const todays = (resRows || []).filter(r => {
+        const d = r.classes?.date, t = r.classes?.time;
+        if (d === todayStr) return true;
+        if (!d || !t) return false;
+        const start = mexicoClassStart(d, t);
+        return start && Math.abs(start.getTime() - nowMs) <= 3 * 60 * 60 * 1000;
+      });
 
-      // Sin reserva pendiente hoy → SOLO informar (no se inscribe al vuelo).
+      // Solo las reservas CONFIRMADAS son asistencia; las de lista de espera NO
+      // ocupan lugar → no se les marca check-in (se avisa aparte).
+      const confirmedToday = todays.filter(r => r.status !== 'waitlist');
+      const pending = confirmedToday.filter(r => !r.checked_in);
+      const already = confirmedToday.filter(r => r.checked_in);
+      const waitlistToday = todays.filter(r => r.status === 'waitlist');
+
+      // Sin reserva CONFIRMADA pendiente hoy → SOLO informar (no se inscribe al vuelo).
       if (pending.length === 0) {
         if (already.length > 0) {
           return { success: true, alreadyIn: true, message: 'Ya tenía asistencia registrada hoy.', clientInfo };
+        }
+        if (waitlistToday.length > 0) {
+          return { success: false, message: 'Está en LISTA DE ESPERA hoy (sin lugar confirmado).', clientInfo };
         }
         return { success: false, message: 'No tiene reserva para hoy.', clientInfo };
       }

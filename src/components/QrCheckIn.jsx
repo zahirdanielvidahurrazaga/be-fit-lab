@@ -2,8 +2,7 @@ import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QrCode, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { classDateTime } from '../hooks/useLocalNotifications';
-import { todayLocalStr } from '../lib/dates';
+import { mexicoTodayStr, mexicoClassStart } from '../lib/dates';
 
 // Etiqueta amable del rol del personal (para el registro de entrada de staff).
 const roleLabel = (r) => ({ COACH: 'Coach', BARISTA: 'Barista', RECEPCION: 'Recepción', ADMIN: 'Admin' }[r] || 'Personal');
@@ -37,7 +36,7 @@ export default function QrCheckIn({ sideContent = null }) {
 
   // El log del día PERSISTE en localStorage (sobrevive cambios de pestaña y
   // recargas) con clave por fecha → se reinicia solo al día siguiente.
-  const logKey = `befit_scanlog_${todayLocalStr()}`;
+  const logKey = `befit_scanlog_${mexicoTodayStr()}`;
   const readLog = () => { try { return JSON.parse(localStorage.getItem(logKey)) || []; } catch { return []; } };
   const [scanLog, setScanLog] = useState(readLog);
   const [scannedClient, setScannedClient] = useState(() => readLog()[0] || null);
@@ -71,13 +70,13 @@ export default function QrCheckIn({ sideContent = null }) {
   // ordenadas por hora) y el check-in marca la reserva de la que corresponda a
   // cada alumna. El encabezado muestra la más próxima + cuántas más hay.
   const checkin = useMemo(() => {
-    const todayStr = todayLocalStr();
+    const todayStr = mexicoTodayStr();
     const dow = new Date(todayStr + 'T12:00:00').getDay();
     const todays = (globalClasses || []).filter(c =>
       c.date === todayStr || (!c.date && (c.day === dow || c.day === String(dow)))
     );
     const withDt = todays
-      .map(c => ({ c, start: classDateTime(todayStr, c.time)?.getTime() }))
+      .map(c => ({ c, start: mexicoClassStart(todayStr, c.time)?.getTime() }))
       .filter(x => x.start)
       .sort((a, b) => a.start - b.start);
     if (!withDt.length) return null;
@@ -139,9 +138,13 @@ export default function QrCheckIn({ sideContent = null }) {
     const code = (qrInputRef.current?.value || '').trim();
     if (code === '') return;
 
-    // Cooldown de 1h por código para evitar doble escaneo accidental.
+    // Cooldown corto (90s) SOLO para evitar el doble-escaneo accidental del mismo
+    // código. Antes era 1 HORA y bloqueaba a las clientas con 2 clases seguidas
+    // al registrar la 2ª ("Ya se registró hace poco"). El backend ya es
+    // idempotente por reserva y maneja "ya asististe" + el selector de traslapes,
+    // así que 90s bastan para el rebote accidental sin estorbar la 2ª clase.
     const lastScanStr = localStorage.getItem(`last_checkin_${code}`);
-    if (lastScanStr && (Date.now() - parseInt(lastScanStr)) < 1000 * 60 * 60) {
+    if (lastScanStr && (Date.now() - parseInt(lastScanStr)) < 1000 * 90) {
       showToast('Ya se registró hace poco.', 'error');
       clearQR();
       qrInputRef.current?.focus();

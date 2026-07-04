@@ -63,14 +63,6 @@ function Portal() {
     setShowCancelModal(false);
   };
 
-  const canCancelReservation = (res) => {
-    const classObj = globalClasses?.find(c => c.id === res.classId);
-    if (!classObj || classObj.day === undefined || !classObj.time) return true;
-    const nextOccurrence = getNextClassOccurrence(classObj.day, classObj.time);
-    const fiveHoursBefore = new Date(nextOccurrence.getTime() - 5 * 60 * 60 * 1000);
-    return new Date() < fiveHoursBefore;
-  };
-
   // Fecha+hora real de la clase de una reserva (clase de fecha fija o recurrente).
   const reservationClassDate = (res) => {
     const c = globalClasses?.find(cl => cl.id === res.classId);
@@ -79,6 +71,21 @@ function Portal() {
     if (c.day !== undefined) return getNextClassOccurrence(c.day, c.time);
     return null;
   };
+
+  // Se puede cancelar si faltan MÁS de 5 h para la clase. Usa la FECHA REAL de la
+  // clase (reservationClassDate); antes calculaba por día de semana y bloqueaba
+  // por error las clases de semanas futuras. De la LISTA DE ESPERA se puede salir
+  // en cualquier momento (no hay lugar que proteger ni clase cobrada).
+  const canCancelReservation = (res) => {
+    if (res?.status === 'waitlist') return true;
+    const classStart = reservationClassDate(res);
+    if (!classStart) return true;
+    const fiveHoursBefore = new Date(classStart.getTime() - 5 * 60 * 60 * 1000);
+    return new Date() < fiveHoursBefore;
+  };
+
+  // ¿La reserva abierta en el modal es de lista de espera? (mensajería distinta).
+  const cancellingWaitlist = selectedReservation?.status === 'waitlist';
 
   // "en 22 min" / "en 5 h" / "en 3 días"
   const formatCountdown = (date) => {
@@ -276,6 +283,7 @@ function Portal() {
                     coaches={coaches}
                     badgeConfigs={badgeConfigs}
                     countdown={formatCountdown(classDate)}
+                    isWaitlisted={res.status === 'waitlist'}
                     canCancel={canCancelReservation(res)}
                     onClick={() => handleCancelClick(res)}
                   />
@@ -347,6 +355,11 @@ function Portal() {
             <div style={{ background: 'var(--fill-subtle)', padding: '15px', borderRadius: '16px', marginBottom: '16px', textAlign: 'left' }}>
               <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--on-surface)' }}>{selectedReservation?.title}</div>
               <div style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 600, marginTop: '5px' }}>{selectedReservation?.time}</div>
+              {cancellingWaitlist && (
+                <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', fontWeight: 800, color: '#6b7280', background: 'var(--fill-subtle)', padding: '4px 9px', borderRadius: '8px' }}>
+                  <Clock size={12} /> En lista de espera
+                </div>
+              )}
             </div>
 
             {cancelError ? (
@@ -356,6 +369,10 @@ function Portal() {
                   Ya no es posible cancelar esta clase — faltan menos de 5 horas para que inicie.
                 </p>
               </div>
+            ) : cancellingWaitlist ? (
+              <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem', marginBottom: '16px', lineHeight: 1.5 }}>
+                ¿Salir de la lista de espera de esta clase? <strong>No se te cobró ninguna clase</strong>, así que no se descuenta ni se devuelve nada de tu paquete.
+              </p>
             ) : (
               <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem', marginBottom: '16px', lineHeight: 1.5 }}>
                 ¿Deseas cancelar esta asistencia? La clase se devolverá a tu paquete. Solo puedes cancelar con <strong>más de 5 horas de anticipación</strong>.
@@ -376,7 +393,7 @@ function Portal() {
                   className="btn-primary"
                   style={{ flex: 1, padding: '12px', fontSize: '0.9rem', justifyContent: 'center', background: '#FF4D4D', boxShadow: '0 10px 25px rgba(255,77,77,0.3)' }}
                 >
-                  Cancelar Clase
+                  {cancellingWaitlist ? 'Salir de lista de espera' : 'Cancelar Clase'}
                 </button>
               )}
             </div>
@@ -540,7 +557,7 @@ function Portal() {
 }
 
 /* TICKET-STYLE CLASS CARD */
-function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, countdown, canCancel, onClick }) {
+function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, countdown, canCancel, isWaitlisted, onClick }) {
   // Foto real del coach (mismo patrón que ScheduleCalendar): coach_id → nombre →
   // email → coach único → perfil público (badge COACH_PROFILE). Fallback: inicial.
   const publicCoachProfile = badgeConfigs?.find(b => b.rule_type === 'COACH_PROFILE');
@@ -576,6 +593,11 @@ function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, c
           <div style={{ minWidth: 0 }}>
             <h4 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--on-surface)', fontFamily: 'var(--font-display)', lineHeight: 1.12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h4>
             <div style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', marginTop: '4px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{coachName}</div>
+            {isWaitlisted && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', fontSize: '0.6rem', fontWeight: 800, color: '#6b7280', background: 'var(--fill-subtle)', padding: '3px 8px', borderRadius: '99px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <Clock size={10} /> En lista de espera
+              </span>
+            )}
           </div>
         </div>
 
