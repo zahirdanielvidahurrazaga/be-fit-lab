@@ -45,10 +45,6 @@ function MiCuenta() {
       const { url } = await uploadAvatar(user.id, avatarUrl);
       if (cancelled || !url) return;
       await supabase.from('users').update({ avatar_url: url }).eq('id', user.id);
-      if (role === 'COACH' || role === 'ADMIN') {
-        const { data: existing } = await supabase.from('badges_config').select('id').eq('rule_type', 'COACH_PROFILE').single();
-        if (existing) await supabase.from('badges_config').update({ icon: url }).eq('id', existing.id);
-      }
       try { localStorage.setItem(`avatar_${user.id}`, url); } catch (e) {}
       setAvatarUrl(url);
     })();
@@ -124,15 +120,6 @@ function MiCuenta() {
       return;
     }
 
-    if (role === 'COACH' || role === 'ADMIN') {
-      const { data: existing } = await supabase.from('badges_config').select('id').eq('rule_type', 'COACH_PROFILE').single();
-      if (existing) {
-        await supabase.from('badges_config').update({ icon: url }).eq('id', existing.id);
-      } else {
-        await supabase.from('badges_config').insert({ rule_type: 'COACH_PROFILE', rule_value: 0, icon: url, label: fullName || 'Coach' });
-      }
-    }
-
     setPendingAvatar(null);
     setSavingAvatar(false);
   };
@@ -196,15 +183,6 @@ function MiCuenta() {
     if (updateError) {
       setError('Error al guardar. Intenta de nuevo.');
     } else {
-      if (role === 'COACH' || role === 'ADMIN') {
-        const { data: existing } = await supabase.from('badges_config').select('*').eq('rule_type', 'COACH_PROFILE').single();
-        if (existing) {
-           await supabase.from('badges_config').update({ label: fullName }).eq('id', existing.id);
-        } else {
-           await supabase.from('badges_config').insert({ rule_type: 'COACH_PROFILE', rule_value: 0, icon: avatarUrl || '', label: fullName });
-        }
-      }
-      
       setInitialProfile({
         fullName, phone, emergencyName, emergencyPhone, bio, experience, birthDate, heightCm
       });

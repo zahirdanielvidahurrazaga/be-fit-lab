@@ -558,12 +558,10 @@ function Portal() {
 
 /* TICKET-STYLE CLASS CARD */
 function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, countdown, canCancel, isWaitlisted, onClick }) {
-  // Foto real del coach (mismo patrón que ScheduleCalendar): coach_id → nombre →
-  // email → coach único → perfil público (badge COACH_PROFILE). Fallback: inicial.
-  const publicCoachProfile = badgeConfigs?.find(b => b.rule_type === 'COACH_PROFILE');
-  const coachInfo = (coaches || []).find(c => (coachId && c.id === coachId) || c.full_name === instructor || c.email === instructor)
-                  || (coaches?.length === 1 ? coaches[0] : null)
-                  || (publicCoachProfile ? { full_name: publicCoachProfile.label, avatar_url: publicCoachProfile.icon } : null);
+  // Foto real de la coach de esta clase (coach_id → nombre → email). Sin fallbacks
+  // "adivinados": si no hay match o no tiene foto → inicial. (Antes caía a coaches[0]
+  // y a un badge global COACH_PROFILE que ponía UNA foto en clases ajenas.)
+  const coachInfo = (coaches || []).find(c => (coachId && c.id === coachId) || c.full_name === instructor || c.email === instructor);
   const photoUrl = coachInfo?.avatar_url;
   const coachName = coachInfo?.full_name || instructor;
   const initial = (coachName || 'C').charAt(0).toUpperCase();

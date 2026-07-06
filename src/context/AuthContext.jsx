@@ -423,15 +423,35 @@ export const AuthProvider = ({ children }) => {
 
   const fetchCoaches = async () => {
     try {
-      const { data, error } = await supabase
+      // 1) Cuentas con rol COACH.
+      const { data: coachRole } = await supabase
         .from('users')
         .select('id, full_name, email, avatar_url, bio, experience')
         .eq('role', 'COACH')
         .order('full_name', { ascending: true });
-        
-      if (data) {
-        setCoaches(data);
+
+      const list = coachRole ? [...coachRole] : [];
+      const known = new Set(list.map(c => c.id));
+
+      // 2) Personas que imparten clases pero cuya cuenta NO es rol COACH — p. ej. la
+      //    dueña, que a veces cambia su cuenta a CLIENT para ver la app como socia.
+      //    Sin esto, sus clases se quedaban sin foto (no salían en la lista de coaches).
+      //    La RLS permite a usuarias autenticadas leer estos perfiles.
+      const { data: refRows } = await supabase
+        .from('classes')
+        .select('coach_id')
+        .not('coach_id', 'is', null);
+      const extraIds = [...new Set((refRows || []).map(r => r.coach_id))].filter(id => !known.has(id));
+      if (extraIds.length) {
+        const { data: extras } = await supabase
+          .from('users')
+          .select('id, full_name, email, avatar_url, bio, experience')
+          .in('id', extraIds);
+        (extras || []).forEach(u => { if (!known.has(u.id)) { list.push(u); known.add(u.id); } });
       }
+
+      list.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+      setCoaches(list);
     } catch (err) {
       console.error(err);
     }

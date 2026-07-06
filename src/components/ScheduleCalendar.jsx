@@ -261,10 +261,12 @@ export function ClassItem({ classData, full, isPast, isReserved, isWaitlisted, o
       }}>
         <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', background: '#FCF9F5', flexShrink: 0, border: '2px solid white', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
            {(() => {
-             const publicCoachProfile = badgeConfigs?.find(b => b.rule_type === 'COACH_PROFILE');
-             const coachInfo = (coaches || []).find(c => (coach_id && c.id === coach_id) || c.full_name === instructor || c.email === instructor)
-                             || (coaches?.length === 1 ? coaches[0] : null)
-                             || (publicCoachProfile ? { full_name: publicCoachProfile.label, avatar_url: publicCoachProfile.icon } : null);
+             // Foto SOLO de la coach real de esta clase (coach_id → nombre → email).
+             // Sin fallbacks "adivinados": si no hay match o no tiene foto, se muestra
+             // la inicial. (Antes había fallback a coaches[0] y a un badge global
+             // COACH_PROFILE que ponía UNA misma foto en clases ajenas → la foto de una
+             // cuenta demo salía en perfiles que no eran.)
+             const coachInfo = (coaches || []).find(c => (coach_id && c.id === coach_id) || c.full_name === instructor || c.email === instructor);
              const photoUrl = coachInfo?.avatar_url;
              const displayInitial = (coachInfo?.full_name || instructor || 'C').charAt(0).toUpperCase();
              return photoUrl 
@@ -282,10 +284,7 @@ export function ClassItem({ classData, full, isPast, isReserved, isWaitlisted, o
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
              {(() => {
-               const publicCoachProfile = badgeConfigs?.find(b => b.rule_type === 'COACH_PROFILE');
-               const coachInfo = (coaches || []).find(c => (coach_id && c.id === coach_id) || c.full_name === instructor || c.email === instructor)
-                               || (coaches?.length === 1 ? coaches[0] : null)
-                               || (publicCoachProfile ? { full_name: publicCoachProfile.label, avatar_url: publicCoachProfile.icon } : null);
+               const coachInfo = (coaches || []).find(c => (coach_id && c.id === coach_id) || c.full_name === instructor || c.email === instructor);
                const displayName = coachInfo?.full_name || instructor;
                return <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{displayName}</span>;
              })()}
