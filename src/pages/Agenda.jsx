@@ -296,6 +296,13 @@ function Agenda() {
                     <div style={{ display: 'inline-block', padding: '5px 12px', background: 'rgba(255,145,77,0.1)', color: 'var(--primary)', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '8px' }}>
                       {modalData?.time}
                     </div>
+                    {modalData?.is_special && (
+                      <div style={{ marginBottom: '8px' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', padding: '5px 13px', borderRadius: '999px', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', color: '#fff', fontSize: '0.64rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', boxShadow: '0 4px 12px rgba(224,122,156,0.4)' }}>
+                          {(modalData.special_label && modalData.special_label.trim()) || 'Especial'}
+                        </span>
+                      </div>
+                    )}
                     <h2 style={{ fontSize: '1.6rem', fontFamily: 'var(--font-display)', margin: '0 0 4px' }}>{modalData?.title}</h2>
                     {modalData?.level && (
                       <span style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>{modalData.level}</span>

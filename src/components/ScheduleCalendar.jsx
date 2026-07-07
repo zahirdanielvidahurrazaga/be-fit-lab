@@ -118,7 +118,8 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
                 const isToday = dateStr === todayStr;
                 const classesOnDay = getClassesForDate(dateStr);
                 const hasClasses = classesOnDay.length > 0;
-                
+                const hasSpecial = classesOnDay.some(c => c.is_special);
+
                 return (
                   <motion.button
                     className={hasClasses ? "tour-calendar-day" : ""}
@@ -128,10 +129,11 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
                       setSelectedDateStr(dateStr);
                       setCalendarView('day');
                     }}
-                    style={{ 
+                    style={{
                       aspectRatio: '1', borderRadius: '12px', border: 'none', cursor: 'pointer',
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative',
-                      background: isToday ? 'var(--primary)' : (hasClasses ? 'rgba(0,0,0,0.03)' : 'transparent'),
+                      background: isToday ? 'var(--primary)' : (hasSpecial ? 'linear-gradient(135deg, rgba(255,145,77,0.16), rgba(224,122,156,0.16))' : (hasClasses ? 'rgba(0,0,0,0.03)' : 'transparent')),
+                      boxShadow: hasSpecial && !isToday ? 'inset 0 0 0 1.5px rgba(224,122,156,0.55)' : 'none',
                       color: isToday ? 'white' : 'var(--black)',
                       fontWeight: isToday ? 800 : (hasClasses ? 700 : 500)
                     }}
@@ -139,8 +141,8 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
                     <span style={{ fontSize: '1rem' }}>{dayNum}</span>
                     {hasClasses && (
                       <div style={{ display: 'flex', gap: '2px', position: 'absolute', bottom: '6px' }}>
-                        {classesOnDay.slice(0, 3).map((_, idx) => (
-                          <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', background: isToday ? 'white' : 'var(--primary)' }} />
+                        {classesOnDay.slice(0, 3).map((c, idx) => (
+                          <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', background: isToday ? 'white' : (c.is_special ? 'linear-gradient(135deg, #FF914D, #E07A9C)' : 'var(--primary)') }} />
                         ))}
                       </div>
                     )}
@@ -164,7 +166,8 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
               const isSelected = d.dateStr === selectedDateStr;
               const classesOnDay = getClassesForDate(d.dateStr);
               const hasClasses = classesOnDay.length > 0;
-              
+              const hasSpecial = classesOnDay.some(c => c.is_special);
+
               return (
                 <div 
                   className={hasClasses ? "tour-calendar-day" : ""}
@@ -183,7 +186,7 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
                   }}>
                     {d.dayNum}
                   </div>
-                  <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: hasClasses ? (isSelected ? 'white' : 'var(--primary)') : 'transparent', marginTop: '-2px' }} />
+                  <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: hasClasses ? (isSelected ? 'white' : (hasSpecial ? 'linear-gradient(135deg, #FF914D, #E07A9C)' : 'var(--primary)')) : 'transparent', marginTop: '-2px' }} />
                 </div>
               );
             })}
@@ -230,9 +233,10 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
 }
 
 export function ClassItem({ classData, full, isPast, isReserved, isWaitlisted, onReserve, coaches, badgeConfigs }) {
-  const { time, title, instructor, spots, category, category_color, coach_id } = classData;
+  const { time, title, instructor, spots, category, category_color, coach_id, is_special, special_label } = classData;
 
   const bgColor = resolveCatColor(category, category_color);
+  const specialText = (special_label && special_label.trim()) || 'Especial';
   const disabled = full || isPast || isReserved; // no se puede (re)reservar
   // Las clases pasadas no se abren; las reservadas/llenas SÍ se pueden tocar
   // para ver el detalle (y las compañeras si ya estás inscrita).
@@ -253,13 +257,23 @@ export function ClassItem({ classData, full, isPast, isReserved, isWaitlisted, o
         <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase' }}>50 min</span>
       </div>
 
-      <div style={{ 
+      <div style={{
         padding: '20px', display: 'flex', alignItems: 'center', gap: '20px',
-        background: bgColor, borderRadius: '28px', boxShadow: 'var(--card-shadow)', 
-        border: '1px solid var(--border-subtle)', position: 'relative', overflow: 'hidden',
+        background: is_special ? 'linear-gradient(135deg, #FFF4EC 0%, #FFEDE8 55%, #FCEBF0 100%)' : bgColor,
+        boxShadow: is_special ? '0 14px 34px rgba(255,145,77,0.22), 0 3px 10px rgba(0,0,0,0.04)' : 'var(--card-shadow)',
+        border: is_special ? '1px solid rgba(255,145,77,0.30)' : '1px solid var(--border-subtle)',
+        borderRadius: '28px', position: 'relative', overflow: 'hidden',
         opacity: isPast ? 0.5 : full ? 0.6 : 1, transition: 'all 0.3s ease'
       }}>
-        <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', background: '#FCF9F5', flexShrink: 0, border: '2px solid white', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
+        {is_special && (
+          <div aria-hidden="true" className="special-smoke-wrap">
+            {/* humo naranja en movimiento (glow viajero, técnica del portafolio) */}
+            <div className="special-smoke special-smoke-a" />
+            <div className="special-smoke special-smoke-b" />
+            <div className="special-smoke special-smoke-c" />
+          </div>
+        )}
+        <div style={{ position: 'relative', zIndex: 1, width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', background: '#FCF9F5', flexShrink: 0, border: '2px solid white', boxShadow: '0 5px 15px rgba(0,0,0,0.08)' }}>
            {(() => {
              // Foto SOLO de la coach real de esta clase (coach_id → nombre → email).
              // Sin fallbacks "adivinados": si no hay match o no tiene foto, se muestra
@@ -275,8 +289,13 @@ export function ClassItem({ classData, full, isPast, isReserved, isWaitlisted, o
            })()}
         </div>
         
-        <div style={{ flex: 1 }}>
-          <h3 style={{ fontSize: '1.15rem', color: '#2D2928', margin: '0 0 2px 0', fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1.2 }}>{title}</h3>
+        <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
+          {is_special && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: '999px', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', color: '#fff', fontSize: '0.62rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.13em', marginBottom: '9px', boxShadow: '0 4px 14px rgba(224,122,156,0.40)' }}>
+              {specialText}
+            </div>
+          )}
+          <h3 style={{ fontSize: is_special ? '1.22rem' : '1.15rem', color: '#2D2928', margin: '0 0 3px 0', fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1.18 }}>{title}</h3>
           {category && (
             <p style={{ margin: '0 0 4px 0', fontSize: '0.65rem', color: '#6F6157', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Entrenamiento de {category === 'Relajacion' ? 'Relajación' : category}
@@ -298,6 +317,7 @@ export function ClassItem({ classData, full, isPast, isReserved, isWaitlisted, o
         </div>
 
         <div style={{
+          position: 'relative', zIndex: 1,
           width: '40px', height: '40px', borderRadius: '15px',
           background: isReserved ? 'rgba(22,163,74,0.12)' : disabled ? 'rgba(0,0,0,0.03)' : 'rgba(255,139,66,0.1)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',

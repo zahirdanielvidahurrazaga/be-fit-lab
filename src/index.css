@@ -963,6 +963,62 @@ h1, h2, h3, h4, h5 {
   box-shadow: var(--card-shadow, 0 8px 32px rgba(55, 61, 59, 0.04));
 }
 
+/* ── Clase especial: humo naranja en movimiento (glow viajero, técnica del portafolio) ── */
+.special-smoke-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+}
+.special-smoke {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  filter: blur(42px);
+  pointer-events: none;
+  will-change: transform;
+}
+.special-smoke-a {
+  width: 240px; height: 240px; margin: -120px 0 0 -120px;
+  background: radial-gradient(circle, rgba(255, 145, 77, 0.72) 0%, rgba(255, 122, 90, 0.30) 52%, transparent 72%);
+  animation: specialRoamA 15s ease-in-out infinite;
+}
+.special-smoke-b {
+  width: 230px; height: 230px; margin: -115px 0 0 -115px;
+  background: radial-gradient(circle, rgba(255, 184, 120, 0.66) 0%, rgba(255, 150, 90, 0.26) 52%, transparent 72%);
+  animation: specialRoamB 19s ease-in-out infinite;
+}
+.special-smoke-c {
+  width: 200px; height: 200px; margin: -100px 0 0 -100px;
+  background: radial-gradient(circle, rgba(255, 165, 100, 0.55) 0%, transparent 68%);
+  animation: specialRoamC 23s ease-in-out infinite;
+}
+@keyframes specialRoamA {
+  0%   { transform: translate(46px, 64px); }
+  33%  { transform: translate(300px, 34px); }
+  66%  { transform: translate(190px, 96px); }
+  100% { transform: translate(46px, 64px); }
+}
+@keyframes specialRoamB {
+  0%   { transform: translate(360px, 40px); }
+  33%  { transform: translate(120px, 92px); }
+  66%  { transform: translate(430px, 70px); }
+  100% { transform: translate(360px, 40px); }
+}
+@keyframes specialRoamC {
+  0%   { transform: translate(210px, 20px); }
+  50%  { transform: translate(250px, 110px); }
+  100% { transform: translate(210px, 20px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .special-smoke-a { animation: none; transform: translate(90px, 60px); }
+  .special-smoke-b { animation: none; transform: translate(330px, 60px); }
+  .special-smoke-c { animation: none; transform: translate(210px, 70px); }
+}
+
 .ios-glass-btn {
   background: var(--app-surface);
   backdrop-filter: blur(20px);

@@ -15,12 +15,14 @@ import StaffAttendance from '../components/StaffAttendance';
 import AdminPlanes from '../components/AdminPlanes';
 import AdminNutricion from '../components/AdminNutricion';
 import AdminEventos from '../components/AdminEventos';
+import AdminCumpleanos from '../components/AdminCumpleanos';
 import QrCheckIn from '../components/QrCheckIn';
 import ScheduleStoryExport from '../components/ScheduleStoryExport';
 import AdminCategoryManager from '../components/AdminCategoryManager';
 import AdminWeekTemplates from '../components/AdminWeekTemplates';
+import SearchableClientSelect from '../components/SearchableClientSelect';
 import { DEFAULT_CATEGORIES, PASTEL_PALETTE, resolveCatColor, categoryLabel } from '../lib/categories';
-import { Coffee, Bell, UserCog, Sparkles, Copy, Trash2, Tag, LayoutTemplate, MoreHorizontal, Dumbbell, CreditCard, ClipboardCheck } from 'lucide-react';
+import { Coffee, Bell, UserCog, Sparkles, Copy, Trash2, Tag, LayoutTemplate, MoreHorizontal, Dumbbell, CreditCard, ClipboardCheck, Cake } from 'lucide-react';
 
 const daysOfWeek = [
   { num: 1, label: 'Lunes' },
@@ -82,6 +84,7 @@ function Admin({ recepcion = false }) {
   const [newClass, setNewClass] = useState({
     title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1',
     description: '',
+    is_special: false, special_label: '',
     date: todayLocalStr(),
     startDate: todayLocalStr(),
     endDate: todayLocalStr(),
@@ -267,7 +270,9 @@ function Admin({ recepcion = false }) {
         day: d.getDay(),
         max_spots: parseInt(newClass.spots), // capacidad fija; el trigger deriva 'spots' (restantes)
         level: newClass.level,
-        category_color: newClass.category_color || null
+        category_color: newClass.category_color || null,
+        is_special: !!newClass.is_special,
+        special_label: newClass.is_special ? (newClass.special_label?.trim() || null) : null
       };
       result = editingClassId ? await updateClass(editingClassId, payload) : await addClass(payload);
     } else {
@@ -291,7 +296,9 @@ function Admin({ recepcion = false }) {
             day: current.getDay(),
             max_spots: parseInt(newClass.spots), // capacidad fija; el trigger deriva 'spots' (restantes)
             level: newClass.level,
-            category_color: newClass.category_color || null
+            category_color: newClass.category_color || null,
+            is_special: !!newClass.is_special,
+            special_label: newClass.is_special ? (newClass.special_label?.trim() || null) : null
           });
         }
         current.setDate(current.getDate() + 1);
@@ -317,6 +324,7 @@ function Admin({ recepcion = false }) {
     setNewClass({
       title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1',
       description: '',
+      is_special: false, special_label: '',
       date: keepDate,
       startDate: keepDate,
       endDate: keepDate,
@@ -336,13 +344,14 @@ function Admin({ recepcion = false }) {
       spots: resetSpots ? 10 : (c.max_spots ?? c.spots ?? 10), level: c.level || 'Todos los niveles',
       category: c.category || 'Fuerza', category_color: resolveCatColor(c.category, c.category_color),
       description: c.description || '',
+      is_special: !!c.is_special, special_label: c.special_label || '',
       date: c.date || todayStr, startDate: c.date || todayStr, endDate: c.date || todayStr, daysOfWeek: []
     });
   };
   const openEditClass = (c) => { prefillFromClass(c); setEditingClassId(c.id); };
   const duplicateClass = (c) => { prefillFromClass(c, { resetSpots: true }); setEditingClassId(null); showToast('Clase copiada — ajusta fecha/hora/cupo y guarda', 'success'); };
   const cancelEdit = () => { setEditingClassId(null); setAddingCategory(false); setAddingLevel(false);
-    setNewClass({ title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1', description: '', date: todayStr, startDate: todayStr, endDate: todayStr, daysOfWeek: [] }); };
+    setNewClass({ title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1', description: '', is_special: false, special_label: '', date: todayStr, startDate: todayStr, endDate: todayStr, daysOfWeek: [] }); };
 
   const handleCreateRecipe = async (e) => {
     e.preventDefault();
@@ -517,6 +526,9 @@ function Admin({ recepcion = false }) {
                   <div onClick={() => { setActiveTab('insignias'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Award size={18} color="var(--primary)" /> Insignias
                   </div>
+                  <div onClick={() => { setActiveTab('cumpleanos'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
+                    <Cake size={18} color="var(--primary)" /> Cumpleaños
+                  </div>
                   <div onClick={() => { setActiveTab('nutricion'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Utensils size={18} color="var(--primary)" /> Comida
                   </div>
@@ -606,6 +618,10 @@ function Admin({ recepcion = false }) {
           <div onClick={() => setActiveTab('insignias')} className={`sidebar-nav-item ${activeTab === 'insignias' ? 'active' : ''}`}>
             <Award size={20} />
             <span>Insignias</span>
+          </div>
+          <div onClick={() => setActiveTab('cumpleanos')} className={`sidebar-nav-item ${activeTab === 'cumpleanos' ? 'active' : ''}`}>
+            <Cake size={20} />
+            <span>Cumpleaños</span>
           </div>
           </>)}
         </nav>
@@ -811,7 +827,14 @@ function Admin({ recepcion = false }) {
                               <div key={c.id} style={{ padding: '14px 16px', background: 'white', borderRadius: '16px', border: '1px solid var(--border-subtle)', borderLeft: `5px solid ${resolveCatColor(c.category, c.category_color)}`, boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
                                   <div style={{ flex: 1, minWidth: 0 }}>
-                                    <h3 style={{ fontSize: '1.05rem', margin: '0 0 4px 0', fontFamily: 'var(--font-display)' }}>{c.title}</h3>
+                                    <h3 style={{ fontSize: '1.05rem', margin: '0 0 4px 0', fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap' }}>
+                                      {c.title}
+                                      {c.is_special && (
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 9px', borderRadius: '999px', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', color: '#fff', fontSize: '0.58rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                                          {(c.special_label && c.special_label.trim()) || 'Especial'}
+                                        </span>
+                                      )}
+                                    </h3>
                                     <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: 0, fontWeight: 600 }}>{c.time} • {c.instructor || 'Sin coach'}</p>
                                   </div>
                                   {(() => {
@@ -844,11 +867,29 @@ function Admin({ recepcion = false }) {
                         </div>
                       )}
 
-                      {/* Formulario de Creación */}
-                      <div style={{ background: 'white', padding: '20px', borderRadius: '20px', border: '1px solid var(--border-subtle)', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
+                      {/* Formulario: inline al AÑADIR; modal centrado al EDITAR (mejor UX en PC).
+                          El wrapper usa display:contents cuando NO edita → no afecta el layout inline;
+                          al editar se vuelve backdrop + tarjeta centrada, reutilizando el mismo formulario. */}
+                      <div
+                        onClick={editingClassId ? cancelEdit : undefined}
+                        style={editingClassId
+                          ? { position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', paddingTop: 'max(20px, env(safe-area-inset-top))', paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }
+                          : { display: 'contents' }}
+                      >
+                      <motion.div
+                        key={editingClassId ? 'class-form-modal' : 'class-form-inline'}
+                        initial={editingClassId ? { opacity: 0, scale: 0.96, y: 8 } : false}
+                        animate={editingClassId ? { opacity: 1, scale: 1, y: 0 } : undefined}
+                        transition={{ duration: 0.18 }}
+                        onClick={editingClassId ? (e => e.stopPropagation()) : undefined}
+                        style={editingClassId
+                          ? { width: '100%', maxWidth: '480px', maxHeight: '88vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', background: 'white', padding: '20px', borderRadius: '20px', boxShadow: '0 24px 60px rgba(0,0,0,0.28)' }
+                          : { background: 'white', padding: '20px', borderRadius: '20px', border: '1px solid var(--border-subtle)', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}
+                      >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                          <h4 style={{ fontSize: '1rem', margin: 0, color: editingClassId ? 'var(--primary)' : 'var(--black)' }}>
-                            {editingClassId ? '✏️ Editar clase' : (selectedCalendarDay === 'bulk' ? 'Configurar Rango Masivo' : 'Añadir clase a este día')}
+                          <h4 style={{ fontSize: '1rem', margin: 0, color: editingClassId ? 'var(--primary)' : 'var(--black)', display: 'flex', alignItems: 'center', gap: '7px' }}>
+                            {editingClassId && <Pencil size={16} />}
+                            {editingClassId ? 'Editar clase' : (selectedCalendarDay === 'bulk' ? 'Configurar Rango Masivo' : 'Añadir clase a este día')}
                           </h4>
                           {editingClassId && (
                             <button onClick={cancelEdit} style={{ background: 'none', border: 'none', color: 'var(--on-surface-variant)', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>Cancelar</button>
@@ -901,7 +942,7 @@ function Admin({ recepcion = false }) {
                             }}
                             style={{...inputStyle, WebkitAppearance: 'none', marginBottom: '10px', fontWeight: 600, color: 'var(--primary)'}}
                           >
-                            <option value="">📋 Elegir clase del catálogo…</option>
+                            <option value="">Elegir clase del catálogo…</option>
                             {(disciplines || []).map(d => <option key={d.id} value={d.id} style={{ color: 'var(--on-surface)', fontWeight: 500 }}>{d.name}</option>)}
                           </select>
                         )}
@@ -937,7 +978,7 @@ function Admin({ recepcion = false }) {
                             else { setAddingLevel(false); setNewClass({...newClass, level: e.target.value}); }
                           }} style={{...inputStyle, WebkitAppearance: 'none'}}>
                             {allLevels.map(l => <option key={l} value={l}>{l}</option>)}
-                            <option value="__new__">➕ Nuevo nivel…</option>
+                            <option value="__new__">+ Nuevo nivel…</option>
                           </select>
                         </div>
                         {addingLevel && (
@@ -951,7 +992,7 @@ function Admin({ recepcion = false }) {
                             else { setAddingCategory(false); const cat = allCategories.find(c => c.name === e.target.value); setNewClass({...newClass, category: e.target.value, category_color: cat ? cat.color : null}); }
                           }} style={{...inputStyle, WebkitAppearance: 'none', marginTop: '4px'}}>
                             {allCategories.map(c => <option key={c.name} value={c.name}>{c.label}</option>)}
-                            <option value="__new__">➕ Nueva categoría…</option>
+                            <option value="__new__">+ Nueva categoría…</option>
                           </select>
 
                           {addingCategory && (
@@ -975,12 +1016,40 @@ function Admin({ recepcion = false }) {
                           </div>
                         </div>
                         
+                        {/* Clase especial: la resalta en toda la agenda (sigue siendo clase normal) */}
+                        <div style={{ marginBottom: '15px', padding: '14px', borderRadius: '14px', border: `1.5px solid ${newClass.is_special ? 'var(--primary)' : 'var(--border-subtle)'}`, background: newClass.is_special ? 'rgba(255,145,77,0.06)' : 'transparent', transition: 'all 0.2s' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: newClass.is_special ? 'linear-gradient(135deg, #FF914D, #E07A9C)' : 'rgba(0,0,0,0.05)' }}>
+                              <Sparkles size={17} color={newClass.is_special ? '#fff' : 'var(--on-surface-variant)'} />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--on-surface)' }}>Clase especial</div>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)' }}>La resalta en la agenda (masterclass, evento…)</div>
+                            </div>
+                            <button type="button" role="switch" aria-checked={newClass.is_special}
+                              onClick={() => setNewClass({ ...newClass, is_special: !newClass.is_special })}
+                              style={{ width: '46px', height: '28px', borderRadius: '999px', border: 'none', cursor: 'pointer', flexShrink: 0, padding: 0, position: 'relative', background: newClass.is_special ? 'var(--primary)' : 'rgba(0,0,0,0.18)', transition: 'background 0.2s' }}>
+                              <span style={{ position: 'absolute', top: '3px', left: newClass.is_special ? '21px' : '3px', width: '22px', height: '22px', borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)', transition: 'left 0.2s' }} />
+                            </button>
+                          </div>
+                          {newClass.is_special && (
+                            <input
+                              placeholder="Etiqueta: Masterclass, Taller, Evento… (opcional)"
+                              value={newClass.special_label}
+                              onChange={e => setNewClass({ ...newClass, special_label: e.target.value })}
+                              maxLength={22}
+                              style={{ ...inputStyle, marginTop: '12px' }}
+                            />
+                          )}
+                        </div>
+
                         <button onClick={async (e) => {
                           await handleCreateClass(e);
                           if (classMode === 'range') setCalendarView('month');
                         }} style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'var(--primary)', color: 'white', fontWeight: 800, border: 'none', cursor: 'pointer' }}>
                           {editingClassId ? 'Guardar cambios' : (classMode === 'single' ? 'Guardar Clase' : 'Generar Clases Múltiples')}
                         </button>
+                      </motion.div>
                       </div>
                     </motion.div>
                   )}
@@ -1072,10 +1141,7 @@ function Admin({ recepcion = false }) {
                       <div className="ios-glass-card" style={{ background: 'var(--surface)', border: 'none', padding: '22px', margin: 0 }}>
                         <div style={{ marginBottom: '16px' }}>
                           <label style={labelStyle}>Alumna</label>
-                          <select value={selectedAlumnaId} onChange={(e)=>setSelectedAlumnaId(e.target.value)} style={{ ...inputStyle, WebkitAppearance: 'none' }}>
-                            <option value="">Seleccionar alumna...</option>
-                            {alumnas.map(a => <option key={a.id} value={a.id}>{a.name} ({a.email})</option>)}
-                          </select>
+                          <SearchableClientSelect clients={alumnas} value={selectedAlumnaId} onChange={setSelectedAlumnaId} placeholder="Buscar alumna por nombre o correo…" />
                         </div>
                         <div style={{ marginBottom: '16px' }}>
                           <label style={labelStyle}>Membresía</label>
@@ -1221,10 +1287,7 @@ function Admin({ recepcion = false }) {
                       </p>
                       <div style={{ marginBottom: '16px' }}>
                         <label style={labelStyle}>Seleccionar Alumna</label>
-                        <select value={selectedBadgeUser} onChange={(e)=>setSelectedBadgeUser(e.target.value)} style={{ ...inputStyle, WebkitAppearance: 'none' }}>
-                          <option value="">Buscar alumna...</option>
-                          {alumnas.map(a => <option key={a.id} value={a.id}>{a.name} ({a.email})</option>)}
-                        </select>
+                        <SearchableClientSelect clients={alumnas} value={selectedBadgeUser} onChange={setSelectedBadgeUser} placeholder="Buscar alumna por nombre o correo…" />
                       </div>
 
                       {selectedBadgeUser && (
@@ -1291,6 +1354,12 @@ function Admin({ recepcion = false }) {
             {activeTab === 'membresias' && (
               <motion.div key="membresias" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
                 <AdminPlanes />
+              </motion.div>
+            )}
+
+            {activeTab === 'cumpleanos' && (
+              <motion.div key="cumpleanos" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
+                <AdminCumpleanos />
               </motion.div>
             )}
           </AnimatePresence>

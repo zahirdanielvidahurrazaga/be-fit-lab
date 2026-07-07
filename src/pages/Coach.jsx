@@ -298,6 +298,7 @@ function Coach() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
                         <h3 style={{ fontSize: '1rem', margin: 0, fontFamily: 'var(--font-display)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.title}</h3>
                         {esMia && <span style={{ flexShrink: 0, fontSize: '0.6rem', fontWeight: 800, color: 'var(--primary)', background: 'rgba(255,139,66,0.1)', padding: '2px 7px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mía</span>}
+                        {c.is_special && <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', fontSize: '0.55rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', padding: '2px 8px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{(c.special_label && c.special_label.trim()) || 'Especial'}</span>}
                       </div>
                       <span style={{ fontSize: '0.72rem', fontWeight: 700, color: esMia ? 'var(--primary)' : 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{c.instructor}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>

@@ -153,6 +153,130 @@ function BigMonth({ year, month, bdays, today, onDayClick }) {
   );
 }
 
+// Calendario de cumpleaños reutilizable (lo usan la clienta y el admin).
+// Si no recibe `people`, los carga solo. `currentUserId` marca "(tú)" en el día.
+export function BirthdayCalendar({ people: peopleProp = null, currentUserId = null }) {
+  const [fetched, setFetched] = useState(null);
+  const selfFetch = peopleProp == null;
+
+  useEffect(() => {
+    if (!selfFetch) return;
+    (async () => {
+      const { data } = await supabase
+        .from('users')
+        .select('id, full_name, avatar_url, birth_date, role')
+        .not('birth_date', 'is', null);
+      setFetched(data || []);
+    })();
+  }, [selfFetch]);
+
+  const people = peopleProp != null ? peopleProp : (fetched || []);
+  const loading = selfFetch && fetched == null;
+
+  const [view, setView] = useState('year');       // 'year' | 'month'
+  const [activeMonth, setActiveMonth] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(null); // { month, day, people }
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const today = { month: now.getMonth(), day: now.getDate() };
+
+  const byMonthDay = useMemo(() => {
+    const arr = Array.from({ length: 12 }, () => new Map());
+    people.filter(p => p.birth_date).forEach(p => {
+      const { m, d } = parseYMD(p.birth_date);
+      const map = arr[m - 1];
+      if (!map.has(d)) map.set(d, []);
+      map.get(d).push(p);
+    });
+    return arr;
+  }, [people]);
+
+  const openMonth = (m) => { setActiveMonth(m); setView('month'); };
+  const backToYear = () => { setView('year'); setActiveMonth(null); };
+
+  return (
+    <>
+      <div style={{ background: 'var(--surface-lowest)', borderRadius: '28px', padding: '24px 16px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', border: '1px solid var(--border-subtle)' }}>
+        {view === 'year' ? (
+          <>
+            <div style={{ textAlign: 'center', marginBottom: '18px' }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '0.8rem', letterSpacing: '0.45em', color: 'var(--on-surface-variant)', textTransform: 'uppercase', paddingLeft: '0.45em' }}>Calendario</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '3rem', fontWeight: 600, color: 'var(--on-surface)', lineHeight: 1 }}>{year}</div>
+            </div>
+            {loading ? (
+              <p style={{ textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.9rem' }}>Cargando…</p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '22px 14px' }}>
+                {MESES.map((_, idx) => (
+                  <MiniMonth key={idx} year={year} month={idx} bdays={byMonthDay[idx]} today={today} onOpen={openMonth} />
+                ))}
+              </div>
+            )}
+            <p style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--on-surface-variant)', marginTop: '18px' }}>Toca un mes para verlo a detalle</p>
+          </>
+        ) : (
+          <motion.div key={activeMonth} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <button onClick={backToYear} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--surface)', border: 'none', borderRadius: '12px', padding: '8px 12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem', color: 'var(--on-surface)' }}>
+                <ChevronLeft size={16} /> Meses
+              </button>
+              <div style={{ flex: 1, textAlign: 'center' }}>
+                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '1.7rem', fontWeight: 600, color: 'var(--on-surface)', textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1 }}>{MESES[activeMonth]}</div>
+                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '0.85rem', color: 'var(--on-surface-variant)', letterSpacing: '0.2em' }}>{year}</div>
+              </div>
+              <div style={{ width: '78px' }} />
+            </div>
+            <BigMonth year={year} month={activeMonth} bdays={byMonthDay[activeMonth]} today={today} onDayClick={(month, day, ppl) => setSelectedDay({ month, day, people: ppl })} />
+            <p style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--on-surface-variant)', marginTop: '14px' }}>Toca un día con foto para ver de quién es el cumple 💕</p>
+          </motion.div>
+        )}
+      </div>
+
+      {/* DETALLE DEL DÍA */}
+      <AnimatePresence>
+        {selectedDay && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedDay(null)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', damping: 24, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ width: 'min(360px, 100%)', maxHeight: '70vh', overflowY: 'auto', borderRadius: '26px', padding: '22px', background: 'var(--glass-bg)', backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)', border: '1px solid var(--glass-border)', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                <div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#C75D3A', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Cumpleaños</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, color: 'var(--on-surface)' }}>{selectedDay.day} de {MESES[selectedDay.month]}</div>
+                </div>
+                <button onClick={() => setSelectedDay(null)} aria-label="Cerrar" style={{ width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <X size={16} color="var(--on-surface)" />
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {selectedDay.people.map(p => {
+                  const mine = p.id === currentUserId;
+                  const isCoach = p.role === 'COACH';
+                  const isBdayToday = today.month === selectedDay.month && today.day === selectedDay.day;
+                  return (
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <Avatar p={p} size={46} ring={mine ? '#FF914D' : 'var(--primary)'} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--on-surface)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.full_name || 'Be Fit Lab'}{mine ? ' (tú)' : ''}</span>
+                          {isCoach && <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--primary)', background: 'rgba(255,145,77,0.12)', padding: '2px 7px', borderRadius: '8px', textTransform: 'uppercase' }}>Coach</span>}
+                        </div>
+                        {isBdayToday && <span style={{ fontSize: '0.78rem', color: '#C75D3A', fontWeight: 700 }}>¡Hoy! 🎉</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
 function Cumpleanos() {
   const navigate = useNavigate();
   const isNative = Capacitor.isNativePlatform();
