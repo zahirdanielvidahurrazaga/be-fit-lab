@@ -34,6 +34,9 @@ const daysOfWeek = [
   { num: 0, label: 'Domingo' }
 ];
 
+// Colores para el resaltado de clases especiales (humo + pill). El 1º (naranja) es el default.
+const SPECIAL_COLORS = ['#FF914D', '#E0679C', '#9B7BEA', '#4AA6E8', '#33BFA6', '#E0A83F'];
+
 // `recepcion` = modo mostrador: reutiliza esta misma pantalla pero limitada a
 // las pestañas que el personal de recepción necesita (QR, Clases y Ventas).
 // Oculta el resto de la navegación y rebranda el header. Ver /recepcion.
@@ -84,7 +87,7 @@ function Admin({ recepcion = false }) {
   const [newClass, setNewClass] = useState({
     title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1',
     description: '',
-    is_special: false, special_label: '',
+    is_special: false, special_label: '', special_color: '',
     date: todayLocalStr(),
     startDate: todayLocalStr(),
     endDate: todayLocalStr(),
@@ -272,7 +275,8 @@ function Admin({ recepcion = false }) {
         level: newClass.level,
         category_color: newClass.category_color || null,
         is_special: !!newClass.is_special,
-        special_label: newClass.is_special ? (newClass.special_label?.trim() || null) : null
+        special_label: newClass.is_special ? (newClass.special_label?.trim() || null) : null,
+        special_color: newClass.is_special ? (newClass.special_color || null) : null
       };
       result = editingClassId ? await updateClass(editingClassId, payload) : await addClass(payload);
     } else {
@@ -298,7 +302,8 @@ function Admin({ recepcion = false }) {
             level: newClass.level,
             category_color: newClass.category_color || null,
             is_special: !!newClass.is_special,
-            special_label: newClass.is_special ? (newClass.special_label?.trim() || null) : null
+            special_label: newClass.is_special ? (newClass.special_label?.trim() || null) : null,
+            special_color: newClass.is_special ? (newClass.special_color || null) : null
           });
         }
         current.setDate(current.getDate() + 1);
@@ -324,7 +329,7 @@ function Admin({ recepcion = false }) {
     setNewClass({
       title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1',
       description: '',
-      is_special: false, special_label: '',
+      is_special: false, special_label: '', special_color: '',
       date: keepDate,
       startDate: keepDate,
       endDate: keepDate,
@@ -344,14 +349,14 @@ function Admin({ recepcion = false }) {
       spots: resetSpots ? 10 : (c.max_spots ?? c.spots ?? 10), level: c.level || 'Todos los niveles',
       category: c.category || 'Fuerza', category_color: resolveCatColor(c.category, c.category_color),
       description: c.description || '',
-      is_special: !!c.is_special, special_label: c.special_label || '',
+      is_special: !!c.is_special, special_label: c.special_label || '', special_color: c.special_color || '',
       date: c.date || todayStr, startDate: c.date || todayStr, endDate: c.date || todayStr, daysOfWeek: []
     });
   };
   const openEditClass = (c) => { prefillFromClass(c); setEditingClassId(c.id); };
   const duplicateClass = (c) => { prefillFromClass(c, { resetSpots: true }); setEditingClassId(null); showToast('Clase copiada — ajusta fecha/hora/cupo y guarda', 'success'); };
   const cancelEdit = () => { setEditingClassId(null); setAddingCategory(false); setAddingLevel(false);
-    setNewClass({ title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1', description: '', is_special: false, special_label: '', date: todayStr, startDate: todayStr, endDate: todayStr, daysOfWeek: [] }); };
+    setNewClass({ title: '', time: '', instructor: '', coach_id: '', spots: 10, level: 'Todos los niveles', category: 'Fuerza', category_color: '#FFE4E1', description: '', is_special: false, special_label: '', special_color: '', date: todayStr, startDate: todayStr, endDate: todayStr, daysOfWeek: [] }); };
 
   const handleCreateRecipe = async (e) => {
     e.preventDefault();
@@ -830,7 +835,7 @@ function Admin({ recepcion = false }) {
                                     <h3 style={{ fontSize: '1.05rem', margin: '0 0 4px 0', fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap' }}>
                                       {c.title}
                                       {c.is_special && (
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 9px', borderRadius: '999px', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', color: '#fff', fontSize: '0.58rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 9px', borderRadius: '999px', background: c.special_color || 'linear-gradient(135deg, #FF914D, #E07A9C)', color: '#fff', fontSize: '0.58rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
                                           {(c.special_label && c.special_label.trim()) || 'Especial'}
                                         </span>
                                       )}
@@ -1033,13 +1038,31 @@ function Admin({ recepcion = false }) {
                             </button>
                           </div>
                           {newClass.is_special && (
-                            <input
-                              placeholder="Etiqueta: Masterclass, Taller, Evento… (opcional)"
-                              value={newClass.special_label}
-                              onChange={e => setNewClass({ ...newClass, special_label: e.target.value })}
-                              maxLength={22}
-                              style={{ ...inputStyle, marginTop: '12px' }}
-                            />
+                            <>
+                              <input
+                                placeholder="Etiqueta: Masterclass, Taller, Evento… (opcional)"
+                                value={newClass.special_label}
+                                onChange={e => setNewClass({ ...newClass, special_label: e.target.value })}
+                                maxLength={22}
+                                style={{ ...inputStyle, marginTop: '12px' }}
+                              />
+                              <div style={{ marginTop: '14px' }}>
+                                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--on-surface-variant)', marginBottom: '9px' }}>Color del resaltado</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '11px' }}>
+                                  {SPECIAL_COLORS.map(col => {
+                                    const selected = (newClass.special_color || SPECIAL_COLORS[0]) === col;
+                                    return (
+                                      <button key={col} type="button" onClick={() => setNewClass({ ...newClass, special_color: col })}
+                                        aria-label={`Color ${col}`}
+                                        style={{ width: '34px', height: '34px', borderRadius: '50%', cursor: 'pointer', background: col, padding: 0,
+                                          border: selected ? '3px solid var(--on-surface)' : '2px solid #fff',
+                                          boxShadow: selected ? `0 0 0 2px ${col}` : '0 2px 7px rgba(0,0,0,0.18)', transition: 'all 0.15s' }} />
+                                    );
+                                  })}
+                                </div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', marginTop: '9px' }}>Así se verán el humo y la etiqueta de la clase.</div>
+                              </div>
+                            </>
                           )}
                         </div>
 

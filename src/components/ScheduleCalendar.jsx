@@ -5,6 +5,17 @@ import { resolveCatColor, categoryLabel } from '../lib/categories';
 import { classDateTime, parseTimeStr } from '../hooks/useLocalNotifications';
 import { toLocalDateStr } from '../lib/dates';
 
+// ── Helpers de color: derivan el humo/pill/tarjeta del color elegido para la clase especial ──
+const _hexRgb = (hex) => {
+  const h = (hex || '').replace('#', '');
+  const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const int = parseInt(n || '0', 16) || 0;
+  return { r: (int >> 16) & 255, g: (int >> 8) & 255, b: int & 255 };
+};
+const _rgba = (hex, a) => { const { r, g, b } = _hexRgb(hex); return `rgba(${r},${g},${b},${a})`; };
+const _mixWhite = (hex, amt) => { const { r, g, b } = _hexRgb(hex); const m = (c) => Math.round(c + (255 - c) * amt); return `rgb(${m(r)},${m(g)},${m(b)})`; };
+const _darken = (hex, amt) => { const { r, g, b } = _hexRgb(hex); const m = (c) => Math.round(c * (1 - amt)); return `rgb(${m(r)},${m(g)},${m(b)})`; };
+
 // Leyenda de categorías presentes (barra glass bajo el calendario)
 function CategoryLegendBar({ globalClasses }) {
   const cats = (() => {
@@ -233,10 +244,17 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
 }
 
 export function ClassItem({ classData, full, isPast, isReserved, isWaitlisted, onReserve, coaches, badgeConfigs }) {
-  const { time, title, instructor, spots, category, category_color, coach_id, is_special, special_label } = classData;
+  const { time, title, instructor, spots, category, category_color, coach_id, is_special, special_label, special_color } = classData;
 
   const bgColor = resolveCatColor(category, category_color);
   const specialText = (special_label && special_label.trim()) || 'Especial';
+  // Color del resaltado especial (NULL/naranja = default cálido; otro = tinte derivado).
+  const accent = special_color || '#FF914D';
+  const smokeBg = (is_special && special_color) ? (a) => `radial-gradient(circle, ${_rgba(accent, a)} 0%, ${_rgba(accent, a * 0.4)} 52%, transparent 72%)` : null;
+  const specialBg = special_color ? `linear-gradient(135deg, ${_mixWhite(accent, 0.90)} 0%, ${_mixWhite(accent, 0.94)} 100%)` : 'linear-gradient(135deg, #FFF4EC 0%, #FFEDE8 55%, #FCEBF0 100%)';
+  const specialShadow = `0 14px 34px ${_rgba(accent, 0.22)}, 0 3px 10px rgba(0,0,0,0.04)`;
+  const specialBorder = `1px solid ${_rgba(accent, 0.30)}`;
+  const specialPill = special_color ? `linear-gradient(135deg, ${accent}, ${_darken(accent, 0.18)})` : 'linear-gradient(135deg, #FF914D, #E07A9C)';
   const disabled = full || isPast || isReserved; // no se puede (re)reservar
   // Las clases pasadas no se abren; las reservadas/llenas SÍ se pueden tocar
   // para ver el detalle (y las compañeras si ya estás inscrita).
@@ -259,18 +277,18 @@ export function ClassItem({ classData, full, isPast, isReserved, isWaitlisted, o
 
       <div style={{
         padding: '20px', display: 'flex', alignItems: 'center', gap: '20px',
-        background: is_special ? 'linear-gradient(135deg, #FFF4EC 0%, #FFEDE8 55%, #FCEBF0 100%)' : bgColor,
-        boxShadow: is_special ? '0 14px 34px rgba(255,145,77,0.22), 0 3px 10px rgba(0,0,0,0.04)' : 'var(--card-shadow)',
-        border: is_special ? '1px solid rgba(255,145,77,0.30)' : '1px solid var(--border-subtle)',
+        background: is_special ? specialBg : bgColor,
+        boxShadow: is_special ? specialShadow : 'var(--card-shadow)',
+        border: is_special ? specialBorder : '1px solid var(--border-subtle)',
         borderRadius: '28px', position: 'relative', overflow: 'hidden',
         opacity: isPast ? 0.5 : full ? 0.6 : 1, transition: 'all 0.3s ease'
       }}>
         {is_special && (
           <div aria-hidden="true" className="special-smoke-wrap">
-            {/* humo naranja en movimiento (glow viajero, técnica del portafolio) */}
-            <div className="special-smoke special-smoke-a" />
-            <div className="special-smoke special-smoke-b" />
-            <div className="special-smoke special-smoke-c" />
+            {/* humo en movimiento (glow viajero). Color: default naranja (CSS) o el elegido (inline). */}
+            <div className="special-smoke special-smoke-a" style={smokeBg ? { background: smokeBg(0.72) } : undefined} />
+            <div className="special-smoke special-smoke-b" style={smokeBg ? { background: smokeBg(0.60) } : undefined} />
+            <div className="special-smoke special-smoke-c" style={smokeBg ? { background: smokeBg(0.50) } : undefined} />
           </div>
         )}
         <div style={{ position: 'relative', zIndex: 1, width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', background: '#FCF9F5', flexShrink: 0, border: '2px solid white', boxShadow: '0 5px 15px rgba(0,0,0,0.08)' }}>
@@ -291,7 +309,7 @@ export function ClassItem({ classData, full, isPast, isReserved, isWaitlisted, o
         
         <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
           {is_special && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: '999px', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', color: '#fff', fontSize: '0.62rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.13em', marginBottom: '9px', boxShadow: '0 4px 14px rgba(224,122,156,0.40)' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: '999px', background: specialPill, color: '#fff', fontSize: '0.62rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.13em', marginBottom: '9px', boxShadow: `0 4px 14px ${_rgba(accent, 0.42)}` }}>
               {specialText}
             </div>
           )}

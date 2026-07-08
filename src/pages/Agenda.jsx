@@ -298,7 +298,7 @@ function Agenda() {
                     </div>
                     {modalData?.is_special && (
                       <div style={{ marginBottom: '8px' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', padding: '5px 13px', borderRadius: '999px', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', color: '#fff', fontSize: '0.64rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', boxShadow: '0 4px 12px rgba(224,122,156,0.4)' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', padding: '5px 13px', borderRadius: '999px', background: modalData.special_color || 'linear-gradient(135deg, #FF914D, #E07A9C)', color: '#fff', fontSize: '0.64rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', boxShadow: '0 4px 12px rgba(224,122,156,0.4)' }}>
                           {(modalData.special_label && modalData.special_label.trim()) || 'Especial'}
                         </span>
                       </div>
