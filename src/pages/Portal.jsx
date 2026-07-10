@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Utensils, TrendingUp, User, QrCode, ChevronRight, Activity, Flame, Sparkles, Clock, MapPin, X, Lock, Wallet, Coffee, Cake } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -16,7 +16,7 @@ import { hasNutritionAccess } from '../lib/plans';
 function Portal() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, logout, classesRemaining, myReservations, cancelClass, profileName, globalClasses, avatarUrl, setShowTour, coaches, badgeConfigs } = useAuth();
+  const { user, plan, logout, classesRemaining, myReservations, cancelClass, profileName, globalClasses, avatarUrl, setShowTour, coaches, badgeConfigs, classesLoaded } = useAuth();
   
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
@@ -45,6 +45,10 @@ function Portal() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [showQR, setShowQR] = useState(false);
+  // Filtro de "Próximas clases": 'hoy' (solo las de hoy) | 'todas'. Arranca en
+  // "Hoy" si tienes clase hoy (para no confundirte con las de otros días).
+  const [classFilter, setClassFilter] = useState('todas');
+  const filterInitRef = useRef(false);
   const isScrolled = useScrollDetect(30);
 
   const handleCancelClick = (res) => {
@@ -106,6 +110,36 @@ function Portal() {
     .filter(({ classDate }) => !classDate || classDate.getTime() >= Date.now())
     .sort((a, b) => (a.classDate?.getTime() || Infinity) - (b.classDate?.getTime() || Infinity));
 
+  // ¿La clase es HOY? (mismo día local del dispositivo).
+  const isTodayLocal = (d) => {
+    if (!d) return false;
+    const n = new Date();
+    return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+  };
+  const todaysUpcoming = upcomingReservations.filter(({ classDate }) => isTodayLocal(classDate));
+  // Lista mostrada según el filtro; en "Hoy" solo las de hoy.
+  const displayedReservations = classFilter === 'hoy' ? todaysUpcoming : upcomingReservations;
+
+  // Al cargar las clases por primera vez, arranca en "Hoy" si hay clase hoy.
+  useEffect(() => {
+    if (filterInitRef.current || !classesLoaded) return;
+    filterInitRef.current = true;
+    setClassFilter(todaysUpcoming.length > 0 ? 'hoy' : 'todas');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classesLoaded]);
+
+  // Etiqueta de fecha para cada ticket: "Hoy" / "Mañana" / "jue 16 jul".
+  const dateChipLabel = (date) => {
+    if (!date) return null;
+    const now = new Date();
+    const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startClass = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const diffDays = Math.round((startClass - startToday) / 86400000);
+    if (diffDays === 0) return 'Hoy';
+    if (diffDays === 1) return 'Mañana';
+    return date.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' });
+  };
+
   const rawName = profileName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Cliente';
   const userName = rawName.split(' ')[0]; // Solo el primer nombre para el saludo
 
@@ -114,7 +148,9 @@ function Portal() {
   const [history, setHistory] = useState(null); // reservas con check-in (asistidas)
   useEffect(() => {
     if (!user) return;
-    supabase.from('reservations').select('created_at').eq('user_id', user.id).eq('checked_in', true)
+    // Traemos la FECHA REAL de la clase (classes.date) — la barra debe reflejar
+    // el día en que se ASISTIÓ, no el día en que se reservó (created_at).
+    supabase.from('reservations').select('created_at, classes(date)').eq('user_id', user.id).eq('checked_in', true)
       .then(({ data }) => setHistory(data || []));
     fetchTodayData(); // salud de hoy si ya está conectada (no pide permiso)
   }, [user]);
@@ -123,11 +159,56 @@ function Portal() {
     const now = new Date();
     const dow = (now.getDay() + 6) % 7; // 0 = lunes
     const monday = new Date(now); monday.setHours(0, 0, 0, 0); monday.setDate(now.getDate() - dow);
-    const perDay = [0, 0, 0, 0, 0, 0, 0];
-    (history || []).forEach(h => { const d = new Date(h.created_at); if (d >= monday) perDay[(d.getDay() + 6) % 7]++; });
-    const weekCount = perDay.reduce((a, b) => a + b, 0);
-    const total = (history || []).length;
-    return { perDay, weekCount, total, points: total * 10, todayIdx: dow, maxDay: Math.max(1, ...perDay) };
+    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 7); // exclusivo
+
+    // Día real de la clase asistida: la fecha de la clase (classes.date). Si por
+    // ser una clase recurrente vieja no tuviera fecha, cae a created_at.
+    const attendedDate = (h) => {
+      const cd = h.classes?.date;
+      if (cd) { const d = new Date(cd + 'T00:00:00'); if (!isNaN(d.getTime())) return d; }
+      return new Date(h.created_at);
+    };
+    // Lunes de la semana de una fecha (para la racha).
+    const weekStart = (d) => { const m = new Date(d); m.setHours(0, 0, 0, 0); m.setDate(m.getDate() - ((m.getDay() + 6) % 7)); return m.getTime(); };
+
+    // Asistidas (check-in) por día de ESTA semana + set de semanas con asistencia.
+    const attendedPerDay = [0, 0, 0, 0, 0, 0, 0];
+    const attendedWeeks = new Set();
+    (history || []).forEach(h => {
+      const d = attendedDate(h);
+      attendedWeeks.add(weekStart(d));
+      if (d >= monday && d < sunday) attendedPerDay[(d.getDay() + 6) % 7]++;
+    });
+
+    // Reservadas de ESTA semana aún NO asistidas (barra "fantasma"): solo clases
+    // con fecha fija y no en lista de espera.
+    const reservedPerDay = [0, 0, 0, 0, 0, 0, 0];
+    (myReservations || []).forEach(r => {
+      if (r.checkedIn || r.status === 'waitlist') return;
+      const c = globalClasses?.find(cl => cl.id === r.classId);
+      if (!c?.date) return;
+      const d = new Date(c.date + 'T00:00:00');
+      if (isNaN(d.getTime()) || d < monday || d >= sunday) return;
+      reservedPerDay[(d.getDay() + 6) % 7]++;
+    });
+
+    const perDayTotal = attendedPerDay.map((a, i) => a + reservedPerDay[i]);
+    const weekCount = attendedPerDay.reduce((a, b) => a + b, 0);     // asistidas esta semana
+    const reservedCount = reservedPerDay.reduce((a, b) => a + b, 0); // reservadas próximas
+    const total = (history || []).length;                           // asistidas histórico
+
+    // Racha: semanas consecutivas con ≥1 asistida, terminando en esta o la pasada
+    // (no se rompe si la semana en curso aún no tiene clase).
+    let racha = 0;
+    const cursor = new Date(monday);
+    if (!attendedWeeks.has(cursor.getTime())) cursor.setDate(cursor.getDate() - 7);
+    while (attendedWeeks.has(cursor.getTime())) { racha++; cursor.setDate(cursor.getDate() - 7); }
+
+    return {
+      attendedPerDay, reservedPerDay, perDayTotal,
+      weekCount, reservedCount, total, points: total * 10, racha,
+      todayIdx: dow, maxDay: Math.max(1, ...perDayTotal),
+    };
   })();
   const greeting = new Date().getHours() < 12 ? 'Buenos días' : new Date().getHours() < 18 ? 'Buenas tardes' : 'Buenas noches';
 
@@ -266,14 +347,48 @@ function Portal() {
 
           {/* PRÓXIMA CLASE - TICKET STYLE */}
           <motion.section id="tour-proximas-clases" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5, delay:0.25}}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '13px' }}>
               <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Próximas clases</h2>
               <Link className="tour-agendar-btn" to="/agenda" style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textDecoration: 'none' }}>Ver todo →</Link>
             </div>
-            
+
+            {/* Selector Hoy · Todas (para no confundir la clase de hoy con las de otros días) */}
+            {upcomingReservations.length > 0 && (
+              <div style={{ display: 'inline-flex', background: 'var(--fill-subtle)', borderRadius: '999px', padding: '4px', marginBottom: '15px', gap: '2px' }}>
+                {[
+                  { key: 'hoy', label: 'Hoy', count: todaysUpcoming.length },
+                  { key: 'todas', label: 'Todas', count: upcomingReservations.length },
+                ].map(seg => {
+                  const active = classFilter === seg.key;
+                  return (
+                    <button
+                      key={seg.key}
+                      onClick={() => setClassFilter(seg.key)}
+                      style={{
+                        border: 'none', cursor: 'pointer', borderRadius: '999px', padding: '7px 16px',
+                        fontSize: '0.8rem', fontWeight: 800, fontFamily: 'var(--font-display)',
+                        display: 'inline-flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s ease',
+                        background: active ? 'var(--app-surface-solid)' : 'transparent',
+                        color: active ? 'var(--primary)' : 'var(--on-surface-variant)',
+                        boxShadow: active ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+                      }}
+                    >
+                      {seg.label}
+                      <span style={{
+                        fontSize: '0.68rem', fontWeight: 800, minWidth: '18px', textAlign: 'center',
+                        borderRadius: '999px', padding: '1px 6px',
+                        background: active ? 'rgba(255,145,77,0.14)' : 'var(--divider)',
+                        color: active ? 'var(--primary)' : 'var(--on-surface-muted)',
+                      }}>{seg.count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {upcomingReservations.length > 0 ? (
-                upcomingReservations.map(({ res, classObj, classDate }, index) => (
+              {displayedReservations.length > 0 ? (
+                displayedReservations.map(({ res, classObj, classDate }, index) => (
                   <TicketCard
                     key={res.id || index}
                     title={res.title}
@@ -283,22 +398,38 @@ function Portal() {
                     coaches={coaches}
                     badgeConfigs={badgeConfigs}
                     countdown={formatCountdown(classDate)}
+                    dateLabel={dateChipLabel(classDate)}
                     isWaitlisted={res.status === 'waitlist'}
                     canCancel={canCancelReservation(res)}
                     onClick={() => handleCancelClick(res)}
                   />
                 ))
+              ) : classFilter === 'hoy' && upcomingReservations.length > 0 ? (
+                /* Sin clases HOY, pero sí tiene próximas otros días */
+                <div style={{
+                  padding: '32px 20px', textAlign: 'center', color: 'var(--on-surface-variant)',
+                  background: 'var(--app-surface-solid)', borderRadius: '24px', border: '1px dashed var(--border-subtle)'
+                }}>
+                  <Calendar size={32} color="var(--on-surface-variant)" style={{ opacity: 0.2, margin: '0 auto 10px' }} />
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: 'var(--on-surface)' }}>No tienes clases hoy</p>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.8rem' }}>Tienes {upcomingReservations.length} {upcomingReservations.length === 1 ? 'clase próxima' : 'clases próximas'} otros días.</p>
+                  <button onClick={() => setClassFilter('todas')} style={{
+                    marginTop: '14px', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer',
+                    background: 'var(--primary)', padding: '9px 22px', borderRadius: '14px', fontSize: '0.85rem',
+                    boxShadow: '0 8px 20px rgba(255,139,66,0.3)'
+                  }}>Ver todas</button>
+                </div>
               ) : (
-                <div style={{ 
-                  padding: '40px 20px', textAlign: 'center', color: 'var(--on-surface-variant)', 
+                <div style={{
+                  padding: '40px 20px', textAlign: 'center', color: 'var(--on-surface-variant)',
                   background: 'var(--app-surface-solid)', borderRadius: '24px', border: '1px dashed var(--border-subtle)'
                 }}>
                   <Calendar size={36} color="var(--on-surface-variant)" style={{ opacity: 0.2, margin: '0 auto 12px' }} />
                   <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: 'var(--on-surface)' }}>Sin clases agendadas</p>
                   <p style={{ margin: '5px 0 0', fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>Reserva tu próxima sesión</p>
-                  <Link className="tour-agendar-btn" to="/agenda" style={{ 
-                    display: 'inline-block', marginTop: '15px', color: 'white', fontWeight: 700, 
-                    textDecoration: 'none', background: 'var(--primary)', padding: '10px 24px', 
+                  <Link className="tour-agendar-btn" to="/agenda" style={{
+                    display: 'inline-block', marginTop: '15px', color: 'white', fontWeight: 700,
+                    textDecoration: 'none', background: 'var(--primary)', padding: '10px 24px',
                     borderRadius: '14px', fontSize: '0.85rem',
                     boxShadow: '0 8px 20px rgba(255,139,66,0.3)'
                   }}>Agendar ahora</Link>
@@ -311,35 +442,67 @@ function Portal() {
           <motion.section id="tour-tu-semana" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5, delay:0.35}} style={{ marginTop: '25px' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '14px' }}>
               <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Tu semana</h2>
-              <span style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>{weekStats.weekCount} {weekStats.weekCount === 1 ? 'clase' : 'clases'}</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>
+                {weekStats.weekCount} {weekStats.weekCount === 1 ? 'asistida' : 'asistidas'}
+                {weekStats.reservedCount > 0 && ` · ${weekStats.reservedCount} reservada${weekStats.reservedCount === 1 ? '' : 's'}`}
+              </span>
             </div>
 
             {/* Gráfica de barras: clases por día de la semana */}
             <motion.div onClick={() => navigate('/evolucion')} whileTap={{ scale: 0.99 }} style={{ background: 'var(--app-surface-solid)', borderRadius: '22px', padding: '18px 16px 14px', boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)', cursor: 'pointer', marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '7px' }}>
-                {weekStats.perDay.map((c, i) => {
+                {weekStats.perDayTotal.map((tot, i) => {
                   const isToday = i === weekStats.todayIdx;
-                  const h = c > 0 ? Math.max(20, (c / weekStats.maxDay) * 100) : 7;
+                  const attended = weekStats.attendedPerDay[i];
+                  const reserved = weekStats.reservedPerDay[i];
+                  const fillPct = tot > 0 ? Math.max(18, (tot / weekStats.maxDay) * 100) : 7;
                   return (
                     <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px' }}>
                       <div style={{ width: '100%', height: '72px', display: 'flex', alignItems: 'flex-end' }}>
-                        <motion.div initial={{ height: 0 }} animate={{ height: `${h}%` }} transition={{ delay: 0.1 + i * 0.05, type: 'spring', stiffness: 120, damping: 16 }}
-                          style={{ width: '100%', maxWidth: '26px', margin: '0 auto', borderRadius: '8px',
-                            background: isToday ? 'linear-gradient(to top, var(--primary), var(--accent))' : (c > 0 ? '#EEBA89' : 'var(--border-subtle)'),
-                            boxShadow: isToday ? '0 4px 12px rgba(255,139,66,0.3)' : 'none', opacity: c === 0 && !isToday ? 0.45 : 1 }} />
+                        <motion.div initial={{ height: 0 }} animate={{ height: `${fillPct}%` }} transition={{ delay: 0.1 + i * 0.05, type: 'spring', stiffness: 120, damping: 16 }}
+                          style={{ width: '100%', maxWidth: '26px', margin: '0 auto', borderRadius: '8px', overflow: 'hidden',
+                            display: 'flex', flexDirection: 'column',
+                            background: tot === 0 ? 'var(--border-subtle)' : undefined,
+                            boxShadow: isToday && attended > 0 ? '0 4px 12px rgba(255,139,66,0.3)' : 'none',
+                            opacity: tot === 0 ? 0.45 : 1 }}>
+                          {/* Reservadas (fantasma) arriba */}
+                          {reserved > 0 && (
+                            <div style={{ height: `${(reserved / tot) * 100}%`, background: 'rgba(255,145,77,0.24)',
+                              borderBottom: attended > 0 ? '1.5px solid var(--app-surface-solid)' : 'none' }} />
+                          )}
+                          {/* Asistidas (sólido) abajo */}
+                          {attended > 0 && (
+                            <div style={{ height: `${(attended / tot) * 100}%`,
+                              background: isToday ? 'linear-gradient(to top, var(--primary), var(--accent))' : '#E8A56B' }} />
+                          )}
+                        </motion.div>
                       </div>
                       <span style={{ fontSize: '0.64rem', fontWeight: 800, color: isToday ? 'var(--primary)' : 'var(--on-surface-variant)' }}>{['L', 'M', 'M', 'J', 'V', 'S', 'D'][i]}</span>
                     </div>
                   );
                 })}
               </div>
+
+              {/* Leyenda asistida / reservada */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '18px', marginTop: '12px' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.62rem', fontWeight: 700, color: 'var(--on-surface-variant)' }}>
+                  <span style={{ width: '9px', height: '9px', borderRadius: '3px', background: '#E8A56B' }} /> Asistida
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.62rem', fontWeight: 700, color: 'var(--on-surface-variant)' }}>
+                  <span style={{ width: '9px', height: '9px', borderRadius: '3px', background: 'rgba(255,145,77,0.24)', border: '1px solid rgba(255,145,77,0.55)' }} /> Reservada
+                </span>
+              </div>
             </motion.div>
 
             {/* 3 cards tappables con número animado */}
             <div style={{ display: 'flex', gap: '10px' }}>
               <StatCard icon={<Activity size={16} />} value={weekStats.weekCount} label="clases" color="var(--primary)" onClick={() => navigate('/agenda')} />
-              <StatCard icon={<Flame size={16} />} value={healthData.calories} label="kcal hoy" color="#FF6B6B" onClick={() => navigate('/evolucion')} />
-              <StatCard icon={<Sparkles size={16} />} value={weekStats.points} label="puntos" color="var(--accent)" onClick={() => navigate('/evolucion')} />
+              {healthData.calories != null ? (
+                <StatCard icon={<Flame size={16} />} value={healthData.calories} label="kcal hoy" color="#FF6B6B" onClick={() => navigate('/evolucion')} />
+              ) : (
+                <StatCard icon={<Flame size={16} />} value={weekStats.racha} label="racha" color="#FF6B6B" onClick={() => navigate('/evolucion')} />
+              )}
+              <StatCard icon={<Sparkles size={16} />} value={weekStats.points} label="puntos totales" color="var(--accent)" onClick={() => navigate('/evolucion')} />
             </div>
             <p style={{ fontSize: '0.66rem', color: 'var(--on-surface-variant)', textAlign: 'center', margin: '9px 0 0', fontWeight: 600 }}>Ganas 10 puntos por cada clase ✦</p>
           </motion.section>
@@ -557,7 +720,7 @@ function Portal() {
 }
 
 /* TICKET-STYLE CLASS CARD */
-function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, countdown, canCancel, isWaitlisted, onClick }) {
+function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, countdown, dateLabel, canCancel, isWaitlisted, onClick }) {
   // Foto real de la coach de esta clase (coach_id → nombre → email). Sin fallbacks
   // "adivinados": si no hay match o no tiene foto → inicial. (Antes caía a coaches[0]
   // y a un badge global COACH_PROFILE que ponía UNA foto en clases ajenas.)
@@ -600,10 +763,19 @@ function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, c
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
-            <MapPin size={13} color="var(--on-surface-variant)" style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>BE FIT LAB</span>
-          </div>
+          {dateLabel ? (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', minWidth: 0,
+              background: dateLabel === 'Hoy' ? 'rgba(255,145,77,0.12)' : 'var(--fill-subtle)',
+              padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}>
+              <Calendar size={12} color={dateLabel === 'Hoy' ? 'var(--primary)' : 'var(--on-surface-variant)'} style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: dateLabel === 'Hoy' ? 'var(--primary)' : 'var(--on-surface-variant)', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>{dateLabel}</span>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
+              <MapPin size={13} color="var(--on-surface-variant)" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>BE FIT LAB</span>
+            </div>
+          )}
           {canCancel ? (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: 800, color: 'var(--primary)', whiteSpace: 'nowrap' }}>
               Gestionar <ChevronRight size={13} />
