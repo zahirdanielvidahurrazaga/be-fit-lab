@@ -39,6 +39,20 @@ Ejecuta TÚ (Claude) automáticamente los pasos de CLI; el usuario solo hace los
 
 **Opcional (smoke test):** un cobro real chico. El flujo NO cambia entre test/live (mismo código), pero confirma que `sk_live` + webhook Live **registran** el sale/pedido. Reembolsable. (Ya se probó el 2026-06-15: pedido quedó `paid` ✅.)
 
+## ✅ Sesión 2026-07-10 (4ª) — SEGURIDAD Punto 3: cerrada la LECTURA abierta de users — iOS 1.7.3(20)
+Tercer y último hueco de la auditoría. Antes, la política `Enable read access for authenticated users` (USING `true`) dejaba a cualquier sesión (¡y por API cruda!) leer TODAS las filas de `users`: correos, teléfonos, contactos de emergencia, `stripe_*`, estado de membresía y datos de salud de las 146 clientas. **Cerrado sin romper lo que sí se comparte** (nombres, fotos, cumpleaños, coaches). SQL en `supabase/sql/security_users_read_scoping.sql` (aplicado a prod). Front migrado (llega a web/PWA ya; a nativo con el rebuild).
+
+- **🔒 Qué se cerró:** se DROPeó la política abierta. Ahora una CLIENTA solo lee **su propia fila** (`Users can view own profile`). El STAFF (admin/recepción/**coach**/barista) sí ve datos de miembros vía **política nueva `Staff can view all users`** = `is_any_staff()` (helper NUEVO que incluye COACH y RECEPCION, que `is_staff()`=ADMIN/BARISTA no cubría) → el **roster de la coach** (`Coach.jsx` embed) y el **buscador del barista** siguen intactos sin tocar front.
+- **🌸 Lo social se sirve SIN PII por canales acotados:**
+  - **`coach_directory`** (VISTA `security_invoker=false`, sin correo): coaches + quien imparte clases aunque sea CLIENT (la dueña como socia). `GRANT` a `anon`+`authenticated`. `fetchCoaches` (AuthContext) ahora lee de aquí en vez de `users` (se eliminó el paso de "extra teachers", la vista ya los incluye). Sirve tickets de clase (clientas) y la landing (visitantes).
+  - **`get_birthdays()`** (RPC `SECURITY DEFINER`, `EXECUTE` solo `authenticated`, sin correo/teléfono): `Cumpleanos.jsx` (2 lecturas) migrado a `supabase.rpc('get_birthdays')`.
+  - **`get_class_attendees()`** (ya existía): compañeras de clase en `ClassmatesList`. Sin cambios.
+- **🧪 Verificación (2 capas):** (1) test en transacción con ROLLBACK, 7 escenarios ✅ (clienta NO lee otras clientas=0, clienta lee su perfil=1, clienta ve coaches=9 y cumpleaños=159, COACH lee roster=171, anon ve coaches=9, anon NO lee clientas=0). (2) **prueba END-TO-END por la API REST real**: anon pidiendo `email,stripe_subscription_id` de clientas → **0 filas** ✅; `rpc/get_birthdays` sin sesión → **denegado 42501** ✅; `coach_directory` anon → 3 coaches con nombre/rol/foto ✅. Build OK.
+- **📧 Nota — se quitó `email` de los objetos coach** (la vista no lo expone). Los matchers `c.email === instructor` (Portal/Agenda/ScheduleCalendar/NextClassTicket) degradan a `false` sin efecto (el match real es por `coach_id`/`full_name`); los labels usan `full_name`. `SearchableClientSelect` usa `email` de CLIENTAS (contexto staff, sigue disponible). Sin impacto.
+- **⚠️ Degradación en apps iOS VIEJAS (pre-1.7.3):** una clienta en un binario anterior que aún lee `users` directo verá **coaches sin foto (iniciales)** y **cumpleaños vacíos** hasta actualizar (NO crash; roster de coach y todo lo demás intactos). Web y **Android (que es web/PWA)** se actualizan al instante → sin degradación. iOS 1.7.3 (build 20) preparado.
+- **↩️ Revertir:** recrear la política `Enable read access for authenticated users` (SELECT, authenticated, USING true) y quitar la de staff; la vista/RPC pueden quedarse (no estorban).
+- **✅ Con esto quedan cerrados los 3 huecos de la auditoría** (escalada de privilegios, spam de push, lectura abierta).
+
 ## ✅ Sesión 2026-07-10 (3ª) — SEGURIDAD: 2 huecos cerrados (escalada de privilegios + spam de push)
 Tras una auditoría de RLS/storage/auth de todo el proyecto, se cerraron los 2 huecos más graves. **Solo BD, sin cambios de front** → ya vive para todas sin actualizar la app. SQL versionado en `supabase/sql/security_user_guard_and_notif.sql` (aplicado a prod vía Management API).
 

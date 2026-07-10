@@ -162,10 +162,9 @@ export function BirthdayCalendar({ people: peopleProp = null, currentUserId = nu
   useEffect(() => {
     if (!selfFetch) return;
     (async () => {
-      const { data } = await supabase
-        .from('users')
-        .select('id, full_name, avatar_url, birth_date, role')
-        .not('birth_date', 'is', null);
+      // RPC sin PII (solo autenticadas): nombre/foto/cumpleaños/rol. La lectura
+      // directa de `users` quedó cerrada a clientas por seguridad.
+      const { data } = await supabase.rpc('get_birthdays');
       setFetched(data || []);
     })();
   }, [selfFetch]);
@@ -293,10 +292,9 @@ function Cumpleanos() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from('users')
-        .select('id, full_name, avatar_url, birth_date, role')
-        .not('birth_date', 'is', null);
+      // RPC sin PII (solo autenticadas). La lectura directa de `users` quedó
+      // cerrada a clientas por seguridad.
+      const { data } = await supabase.rpc('get_birthdays');
       setPeople(data || []);
       setLoading(false);
     })();
