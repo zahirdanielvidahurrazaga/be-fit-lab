@@ -36,6 +36,7 @@ import { usePushNotifications } from './hooks/usePushNotifications';
 import { AppTour } from './components/AppTour';
 import NotificationSheet from './components/NotificationSheet';
 import BadgeUnlockOverlay from './components/BadgeUnlockOverlay';
+import UpdateGate from './components/UpdateGate';
 import './index.css';
 
 // Overlay global de insignia desbloqueada: se muestra en CUALQUIER pantalla
@@ -236,6 +237,7 @@ function App() {
         <AppTour />
         <NotificationSheet />
         <GlobalBadgeOverlay />
+        <UpdateGate />
       </Router>
     </AuthProvider>
   );
