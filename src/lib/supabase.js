@@ -1,6 +1,7 @@
 import { createClient, processLock } from '@supabase/supabase-js'
 import { Capacitor } from '@capacitor/core'
 import { Preferences } from '@capacitor/preferences'
+import { App as CapApp } from '@capacitor/app'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -32,7 +33,15 @@ const nativeStorage = {
     }
     return null;
   },
-  setItem: async (key, value) => { await Preferences.set({ key, value }); },
+  // Doble escritura: Preferences (fuente de verdad) + localStorage (respaldo).
+  // Con la rotación de refresh tokens, un respaldo DESACTUALIZADO es peor que
+  // ninguno: si Preferences se pierde y el fallback devuelve un token viejo,
+  // Supabase lo rechaza ("Refresh Token Not Found") y cierra la sesión. Al
+  // escribir ambos en cada rotación, el respaldo siempre tiene el token vigente.
+  setItem: async (key, value) => {
+    await Preferences.set({ key, value });
+    try { window.localStorage.setItem(key, value); } catch (e) {}
+  },
   removeItem: async (key) => {
     await Preferences.remove({ key });
     try { window.localStorage.removeItem(key); } catch (e) {}
@@ -60,3 +69,19 @@ export const supabase = createClient(finalUrl, finalKey, {
     ...(isNative ? { lock: processLock } : {}),
   },
 })
+
+// Patrón recomendado por Supabase para móvil: pausar el auto-refresh del token
+// cuando la app pasa a SEGUNDO PLANO y reanudarlo al VOLVER. Si un refresh queda
+// en vuelo justo cuando iOS/Android suspende la app, el servidor rota el token
+// pero la respuesta nunca se procesa → el token guardado queda inválido y la
+// PRÓXIMA apertura cierra la sesión ("Already Used"/"Not Found"). supabase-js
+// intenta cubrirlo con visibilitychange, pero ese evento no siempre alcanza a
+// correr en el WebView; appStateChange es la señal NATIVA y sí da tiempo.
+// startAutoRefresh() además dispara un tick inmediato al volver, así el token
+// expirado se renueva al instante (serializado por processLock).
+if (isNative) {
+  CapApp.addListener('appStateChange', ({ isActive }) => {
+    if (isActive) supabase.auth.startAutoRefresh();
+    else supabase.auth.stopAutoRefresh();
+  });
+}

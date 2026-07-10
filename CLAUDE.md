@@ -8,6 +8,7 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 ## ⏭️ PRÓXIMA SESIÓN (retomar) — SUBIR ANDROID
 
+> **ESTADO 2026-07-10 (2ª sesión) — SESIONES QUE SE CIERRAN, fix definitivo:** diagnóstico A FONDO con logs reales de Supabase (ver "Sesión 2026-07-10 (2ª)" abajo). 2 fixes de código en `src/lib/supabase.js` (pausar auto-refresh en background vía `appStateChange` + respaldo doble del token) y 2 de SERVIDOR **ya vivos para todas sin actualizar la app** (JWT 1h→24h y ventana de reuso de refresh 10s→60s, aplicados vía Management API, reversibles con un PATCH). **iOS bumpeado a 1.7.2 (build 19)**, build + `cap sync ios` hechos → falta Archive/Upload. **HALLAZGO: la app Android NO está en Play Store (404)** — las clientas Android usan la web/PWA en Chrome; decidir si se re-publica. iOS 1.7.1 salió al App Store HOY mismo.
 > **ESTADO 2026-07-10:** 3 pedidos de las dueñas (selector "Hoy" en próximas clases · notificación al liberarse lugar · fix gráfica "Tu semana"). **Todo el front pusheado a `main`** (web ya desplegando) y **la corrección de BD (promoción de lista de espera al ABRIR CUPOS) ya está viva en producción** (trigger nuevo). **iOS bumpeado a 1.7.1 (build 18)**: `npm run build` + `npx cap sync ios` hechos y **Xcode abierto** → solo falta que el usuario haga **Archive → Distribute → Upload**. **Android sigue en `versionCode 10` / `2.4.2` (otra PC), pendiente de rebuild.** Ver "Sesión 2026-07-10" abajo.
 > **ESTADO 2026-07-07:** 4 mejoras pedidas por las dueñas (buscador de cobro · modal editar clase · clases especiales con humo · cumpleaños en admin), **todo front → web ya desplegada** (commit `456afd4` en `main`). **iOS bumpeado a 1.7.0 (build 17)**: `npx vite build` + `npx cap sync ios` hechos y **Xcode abierto** → solo falta que el usuario haga **Archive → Distribute → Upload**. **Android sigue en `versionCode 10` / `2.4.2` (otra PC), pendiente de rebuild** con todo lo acumulado. Ver "Sesión 2026-07-07" abajo.
 > **ESTADO 2026-07-06:** iOS preparado a **1.6.2 (build 16)** con el **fix de fotos de coaches** (ver "Sesión 2026-07-06" abajo). `npm run build` + `npx cap sync ios` hechos y **Xcode abierto** → solo falta que el usuario haga Archive → Distribute → Upload. Web ya desplegada con el fix (commit `8fd2523`). Android sigue en `versionCode 10` / `2.4.2` (otra PC).
@@ -37,6 +38,28 @@ Ejecuta TÚ (Claude) automáticamente los pasos de CLI; el usuario solo hace los
 - ⚠️ El **hero del landing NO aplica a nativo** (la app redirige `/`→`/welcome`).
 
 **Opcional (smoke test):** un cobro real chico. El flujo NO cambia entre test/live (mismo código), pero confirma que `sk_live` + webhook Live **registran** el sale/pedido. Reembolsable. (Ya se probó el 2026-06-15: pedido quedó `paid` ✅.)
+
+## ✅ Sesión 2026-07-10 (2ª) — "SE CIERRA LA SESIÓN" en la app: diagnóstico a fondo + fix definitivo — iOS 1.7.2(19)
+Reporte de las dueñas: a varias clientas se les cierra la sesión en la app nativa (recurrente; ya se había atacado 2 veces). Esta vez se diagnosticó con **evidencia del servidor** (logs de auth de Supabase vía Management API, retención 24h) en vez de solo leer código.
+
+**📊 Lo que dicen los logs (24h):** ~380 refreshes exitosos desde iPhones, **0 × "Already Used"** (el `processLock` del 29-jun FUNCIONA), 26 logins con contraseña, y **3 × "Refresh Token Not Found"** = 3 sesiones muertas/día. Las 253 de 349 sesiones vivas se han refrescado bien. O sea: la infra funciona, pero hay una clase residual de muertes.
+
+**🔬 Causa raíz residual (rotación de refresh tokens):** Supabase ROTA el refresh token en cada renovación (cada ~1h de JWT). Si iOS suspende la app con un refresh EN VUELO, el servidor rota pero la respuesta nunca se procesa → el token guardado queda viejo → la próxima apertura lo presenta → si pasaron >10s (ventana de reuso) el servidor **revoca la familia entera** → sesión cerrada. También: la migración legacy de localStorage podía resucitar sesiones ANTIGUAS (token rotado hace semanas → "Not Found" → logout visible). Cada rotación horaria era una oportunidad de perder la sesión.
+
+**🔧 Fixes aplicados (4, en capas):**
+1. **`src/lib/supabase.js` — `appStateChange`:** en nativo, `stopAutoRefresh()` al ir a background y `startAutoRefresh()` al volver (patrón oficial de Supabase para móvil; el `visibilitychange` interno de supabase-js no siempre alcanza a correr en el WebView). `startAutoRefresh()` dispara un tick inmediato al volver → renueva al instante.
+2. **`src/lib/supabase.js` — respaldo doble:** `setItem` ahora escribe Preferences (fuente de verdad) **y** localStorage en cada rotación → el fallback legacy ya nunca devuelve un token rancio (eso producía los "Not Found").
+3. **SERVIDOR (ya vivo para TODAS, sin app update): `jwt_exp` 3600→86400** (JWT de 24h = 24× menos rotaciones = 24× menos ventanas de riesgo). Revertir: `PATCH /v1/projects/fifaowaiokauhuqklzwe/config/auth {"jwt_exp":3600}`.
+4. **SERVIDOR: `security_refresh_token_reuse_interval` 10→60s** (gracia para respuestas perdidas en vuelo: reusar el token viejo <60s devuelve la MISMA sesión en vez de matarla).
+
+**🕵️ Hallazgos colaterales:** (a) **Android NO está en Play Store** — `play.google.com/store/apps/details?id=com.befitlab.app` da **404**; cero tráfico del WebView Android en logs (las Android usan Chrome/PWA). Decidir con las dueñas si se re-publica (el AAB pendiente "en la otra PC" quedó obsoleto como urgencia — nadie lo usa). (b) iOS **1.7.1 salió al App Store HOY** (2026-07-10 20:00 UTC, verificado vía iTunes lookup) — las quejas actuales pueden venir de clientas SIN actualizar (los fixes de sesión existen desde 1.5.1/29-jun). (c) Los 3 "Not Found" de hoy venían con referer de web/PWA. (d) `capacitor.config.json` usa `hostname: befitlab.app` → el referer NO distingue nativo de web; para eso usar user-agent en `edge_logs` (Android WebView trae `; wv)`, WKWebView no trae `Safari`).
+
+**📈 Cómo monitorear si ya no pasa** (query de referencia, retención 24h):
+`GET api.supabase.com/v1/projects/fifaowaiokauhuqklzwe/analytics/endpoints/logs.all` con `sql=select countif(t.event_message like '%Refresh Token Not Found%') as not_found, countif(t.event_message like '%Already Used%') as ya_usado, countif(t.event_message like '%login_method%:%password%') as logins_password from auth_logs t` + `iso_timestamp_start/end`. Esperado tras el fix: `not_found` → ~0 en días, `logins_password` bajando.
+
+**⚠️ Lo que NO cubre el fix:** clientas en **Safari/PWA de iOS** sin usar la app 7+ días (ITP de Apple borra el storage del navegador → logout silencioso, no hay forma de evitarlo desde código; recomendarles la app nativa) y builds iOS <1.5.1 sin actualizar.
+
+**Verificado:** build OK (`✓ built`), config del servidor confirmada en la respuesta del PATCH. **iOS 1.7.2 (build 19)**: `npm run build` + `npx cap sync ios` hechos → falta Archive/Upload del usuario (los fixes 1-2 llegan a nativo con este build; los 3-4 YA están vivos para todas).
 
 ## ✅ Sesión 2026-07-10 (selector "Hoy" en próximas clases · promoción de espera al ABRIR CUPOS · fix gráfica "Tu semana") — iOS 1.7.1(18)
 **Todo el front pusheado a `main`** (web desplegando). El fix de BD **ya en producción**. Tres pedidos de las dueñas, todo en `src/pages/Portal.jsx` salvo la BD.
