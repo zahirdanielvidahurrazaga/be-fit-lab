@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import SearchableClientSelect from './SearchableClientSelect';
-import { RefreshCw, ScrollText, Scale, Receipt, Users, Ban, Undo2, AlertTriangle, ArrowRight } from 'lucide-react';
+import { RefreshCw, ScrollText, Scale, Receipt, Users, Ban, Undo2, AlertTriangle, ArrowRight, Pencil, X } from 'lucide-react';
 
 // Pestaña "Auditoría" del admin — control de saldos y ventas.
 // Se alimenta del libro mayor class_credit_ledger (BD lo llena sola con cada
@@ -46,7 +46,7 @@ const thStyle = { textAlign: 'left', padding: '8px 10px', fontSize: '0.72rem', t
 const tdStyle = { padding: '9px 10px', fontSize: '0.85rem', color: 'var(--black)', borderBottom: '1px solid rgba(0,0,0,0.05)', verticalAlign: 'top' };
 
 export default function AdminControlSaldos() {
-  const { user, allUsers } = useAuth();
+  const { user, allUsers, fetchAllUsers } = useAuth();
 
   // ── Movimientos (ledger) ──────────────────────────────────────────────────
   const [ledgerUserId, setLedgerUserId] = useState('');
@@ -172,6 +172,38 @@ export default function AdminControlSaldos() {
 
   const nombreLedger = ledgerUserId ? (allUsers || []).find(u => u.id === ledgerUserId)?.full_name : null;
 
+  // ── Corregir saldo (con motivo → queda en el ledger) ─────────────────────
+  const [fixTarget, setFixTarget] = useState(null); // { userId, nombre, saldoActual, sugerido }
+  const [fixSaldo, setFixSaldo] = useState('');
+  const [fixMotivo, setFixMotivo] = useState('');
+  const [fixBusy, setFixBusy] = useState(false);
+
+  const openFix = (userId, nombre, saldoActual, sugerido, motivoSugerido = '') => {
+    setFixTarget({ userId, nombre, saldoActual });
+    setFixSaldo(String(sugerido ?? saldoActual ?? 0));
+    setFixMotivo(motivoSugerido);
+  };
+
+  const saveFix = async () => {
+    const nuevo = parseInt(fixSaldo, 10);
+    if (Number.isNaN(nuevo) || nuevo < 0 || nuevo > 9999) { alert('El saldo debe ser un número entre 0 y 9999.'); return; }
+    if (!fixMotivo.trim()) { alert('Escribe el motivo: es lo que queda en el historial.'); return; }
+    setFixBusy(true);
+    const { error } = await supabase.rpc('admin_set_saldo', {
+      p_user_id: fixTarget.userId, p_new_balance: nuevo, p_note: fixMotivo.trim(),
+    });
+    setFixBusy(false);
+    if (error) {
+      const msgs = { NO_AUTORIZADO: 'Solo admin/recepción pueden corregir saldos.', MOTIVO_REQUERIDO: 'Escribe el motivo.', SALDO_INVALIDO: 'Saldo inválido.', CLIENTA_NO_EXISTE: 'La clienta ya no existe.' };
+      alert(msgs[error.message] || 'No se pudo corregir: ' + error.message);
+      return;
+    }
+    setFixTarget(null);
+    fetchDescuadres();
+    fetchLedger();
+    fetchAllUsers?.();
+  };
+
   return (
     <section>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
@@ -215,9 +247,15 @@ export default function AdminControlSaldos() {
                       </span>
                     </td>
                     <td style={tdStyle}>
-                      <button onClick={() => setLedgerUserId(d.user_id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: PRIMARY, fontWeight: 700, fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                        Movimientos <ArrowRight size={12} />
-                      </button>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <button onClick={() => setLedgerUserId(d.user_id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: PRIMARY, fontWeight: 700, fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          Movimientos <ArrowRight size={12} />
+                        </button>
+                        <button onClick={() => openFix(d.user_id, d.nombre || d.email, d.saldo, Math.max(0, (d.plan_clases || 0) - Number(d.reservas || 0)), `Corrección por auditoría: ${d.reservas} reservas desde el inicio del plan vs ${d.descontadas} descontadas`)}
+                          style={{ display: 'flex', alignItems: 'center', gap: '4px', border: 'none', borderRadius: '9px', padding: '5px 9px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: 'rgba(255,145,77,0.12)', color: PRIMARY }}>
+                          <Pencil size={12} /> Corregir
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -242,7 +280,15 @@ export default function AdminControlSaldos() {
           <SearchableClientSelect clients={allUsers || []} value={ledgerUserId} onChange={setLedgerUserId} placeholder="Filtrar por clienta (o deja vacío: últimos movimientos)…" />
         </div>
         {nombreLedger && (
-          <p style={{ ...hint, marginTop: '-4px' }}>Mostrando movimientos de <b>{nombreLedger}</b>.</p>
+          <p style={{ ...hint, marginTop: '-4px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <span>Mostrando movimientos de <b>{nombreLedger}</b>.</span>
+            <button onClick={() => {
+              const u = (allUsers || []).find(x => x.id === ledgerUserId);
+              openFix(ledgerUserId, nombreLedger, u?.classes_remaining ?? 0, u?.classes_remaining ?? 0);
+            }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', border: 'none', borderRadius: '9px', padding: '5px 9px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: 'rgba(255,145,77,0.12)', color: PRIMARY }}>
+              <Pencil size={12} /> Ajustar saldo
+            </button>
+          </p>
         )}
         {ledger.length === 0 ? (
           <p style={{ ...hint, margin: 0 }}>{ledgerLoading ? 'Cargando…' : 'Sin movimientos registrados todavía.'}</p>
@@ -349,6 +395,44 @@ export default function AdminControlSaldos() {
           </div>
         ))}
       </div>
+
+      {/* ── MODAL: corregir saldo ── */}
+      {fixTarget && (
+        <div onClick={() => !fixBusy && setFixTarget(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: 'white', borderRadius: '20px', padding: '22px', width: '100%', maxWidth: '420px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <h3 style={{ ...h3, margin: 0 }}><Pencil size={17} color={PRIMARY} /> Corregir saldo</h3>
+              <button onClick={() => setFixTarget(null)} disabled={fixBusy} style={{ border: 'none', background: 'rgba(0,0,0,0.05)', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X size={15} />
+              </button>
+            </div>
+            <p style={{ ...hint, marginBottom: '14px' }}>
+              <b>{fixTarget.nombre}</b> — saldo actual: <b>{fixTarget.saldoActual}</b> clases.
+            </p>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--on-surface-variant)', marginBottom: '5px' }}>Nuevo saldo</label>
+            <input type="number" min="0" max="9999" value={fixSaldo} onChange={(e) => setFixSaldo(e.target.value)}
+              style={{ width: '100%', padding: '11px 13px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.14)', fontSize: '1rem', fontWeight: 700, marginBottom: '13px', boxSizing: 'border-box' }} />
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--on-surface-variant)', marginBottom: '5px' }}>Motivo (obligatorio)</label>
+            <textarea value={fixMotivo} onChange={(e) => setFixMotivo(e.target.value)} rows={3} placeholder="Ej. Corrección por auditoría: reservas sin descontar"
+              style={{ width: '100%', padding: '11px 13px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.14)', fontSize: '0.88rem', resize: 'vertical', marginBottom: '10px', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+            <p style={{ ...hint, fontSize: '0.75rem', marginBottom: '14px' }}>
+              Quedará en «Movimientos» como ajuste manual, con tu nombre y este motivo.
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setFixTarget(null)} disabled={fixBusy}
+                style={{ flex: 1, padding: '12px', borderRadius: '13px', border: '1px solid rgba(0,0,0,0.12)', background: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', color: 'var(--black)' }}>
+                Cancelar
+              </button>
+              <button onClick={saveFix} disabled={fixBusy || !fixMotivo.trim()}
+                style={{ flex: 1, padding: '12px', borderRadius: '13px', border: 'none', background: PRIMARY, color: 'white', cursor: fixBusy ? 'wait' : 'pointer', fontWeight: 700, fontSize: '0.9rem', opacity: fixBusy || !fixMotivo.trim() ? 0.55 : 1 }}>
+                {fixBusy ? 'Guardando…' : 'Guardar corrección'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
