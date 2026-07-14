@@ -519,7 +519,24 @@ export default function AdminClientas() {
   const onDelete = async (u) => {
     const quien = u.full_name || u.email;
     if (u.id === user?.id) { alert('No puedes eliminar tu propia cuenta.'); return; }
-    if (!confirm(`¿ELIMINAR para siempre a "${quien}"?\n\nSe borrará su cuenta, reservas, fotos, métricas y datos. Esta acción NO se puede deshacer.`)) return;
+
+    // Historial de la cuenta: borrar una cuenta con ventas deja esos cobros
+    // "huérfanos" en el dashboard (pasó con cuentas duplicadas: se cobró en
+    // una, se borró, y el plan "desapareció"). Enseñarlo ANTES de confirmar.
+    let historial = '';
+    try {
+      const [{ count: nVentas }, { count: nReservas }] = await Promise.all([
+        supabase.from('sales').select('id', { count: 'exact', head: true }).eq('user_id', u.id),
+        supabase.from('reservations').select('id', { count: 'exact', head: true }).eq('user_id', u.id),
+      ]);
+      if (nVentas || nReservas) {
+        historial = `\n\nOJO: esta cuenta tiene ${nVentas || 0} cobro(s) registrado(s) y ${nReservas || 0} reserva(s).`
+          + `\nSi es una cuenta duplicada, revisa en Auditoría cuál usa la clienta antes de borrar.`
+          + `\nSi solo quieres quitarle el acceso, mejor usa "Dar de baja".`;
+      }
+    } catch (e) { /* sin bloqueo: si falla el conteo, se confirma igual */ }
+
+    if (!confirm(`¿ELIMINAR para siempre a "${quien}"?\n\nSe borrará su cuenta, reservas, fotos, métricas y datos. Esta acción NO se puede deshacer.${historial}`)) return;
     if (!confirm(`Última confirmación: eliminar definitivamente a ${quien}.`)) return;
     setBusy(true);
     const { data, error } = await supabase.functions.invoke('admin-delete-client', { body: { userId: u.id } });

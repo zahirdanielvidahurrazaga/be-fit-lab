@@ -89,9 +89,13 @@ serve(async (req) => {
     // Ventas de MOSTRADOR (cobros manuales: efectivo/tarjeta/transferencia).
     // No tienen comisión de Stripe → suman igual a bruto y neto.
     const sinceISO = new Date(since * 1000).toISOString();
+    // voided=true son ventas ANULADAS desde Auditoría (duplicadas/erróneas):
+    // no cuentan como ingreso. client_name es el snapshot al momento del cobro
+    // (sobrevive aunque la cuenta de la clienta se borre después).
     const { data: manualSales } = await supabase
       .from('sales')
-      .select('id, amount, method, created_at, plan_name, users:user_id(full_name,email)')
+      .select('id, amount, method, created_at, plan_name, client_name, client_email, users:user_id(full_name,email)')
+      .eq('voided', false)
       .gte('created_at', sinceISO).order('created_at', { ascending: false });
     for (const s of (manualSales || [])) {
       const amt = Number(s.amount) || 0;
@@ -104,7 +108,7 @@ serve(async (req) => {
         id: 's_' + s.id, amount: amt,
         created: Math.floor(new Date(s.created_at).getTime() / 1000),
         type: 'mostrador',
-        email: s.users?.full_name || s.users?.email || (s.method ? 'Pago en ' + s.method : ''),
+        email: s.users?.full_name || s.users?.email || s.client_name || s.client_email || (s.method ? 'Pago en ' + s.method : ''),
         status: 'succeeded',
       });
     }

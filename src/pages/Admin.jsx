@@ -16,13 +16,14 @@ import AdminPlanes from '../components/AdminPlanes';
 import AdminNutricion from '../components/AdminNutricion';
 import AdminEventos from '../components/AdminEventos';
 import AdminCumpleanos from '../components/AdminCumpleanos';
+import AdminControlSaldos from '../components/AdminControlSaldos';
 import QrCheckIn from '../components/QrCheckIn';
 import ScheduleStoryExport from '../components/ScheduleStoryExport';
 import AdminCategoryManager from '../components/AdminCategoryManager';
 import AdminWeekTemplates from '../components/AdminWeekTemplates';
 import SearchableClientSelect from '../components/SearchableClientSelect';
 import { DEFAULT_CATEGORIES, PASTEL_PALETTE, resolveCatColor, categoryLabel } from '../lib/categories';
-import { Coffee, Bell, UserCog, Sparkles, Copy, Trash2, Tag, LayoutTemplate, MoreHorizontal, Dumbbell, CreditCard, ClipboardCheck, Cake } from 'lucide-react';
+import { Coffee, Bell, UserCog, Sparkles, Copy, Trash2, Tag, LayoutTemplate, MoreHorizontal, Dumbbell, CreditCard, ClipboardCheck, Cake, Scale } from 'lucide-react';
 
 const daysOfWeek = [
   { num: 1, label: 'Lunes' },
@@ -180,6 +181,7 @@ function Admin({ recepcion = false }) {
 
   const [selectedAlumnaId, setSelectedAlumnaId] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('Plan Fit');
+  const [charging, setCharging] = useState(false); // candado anti doble-cobro
 
   const handleInscribir = async () => {
     const nombre = newName.trim(), correo = newEmail.trim();
@@ -222,25 +224,47 @@ function Admin({ recepcion = false }) {
   };
 
   const handlePago = async () => {
-    if (!selectedAlumnaId) return;
-    
+    if (!selectedAlumnaId || charging) return; // candado: un cobro a la vez
+
     // Plan canónico desde la fuente única (src/lib/plans)
     const planDetails = PLAN_BY_NAME[selectedPlan];
     if (!planDetails) return;
-    await activatePlan(planDetails.name, planDetails.classes, selectedAlumnaId);
-    // Registrar la venta de mostrador (para el dashboard financiero)
-    try {
-      await supabase.from('sales').insert({
-        user_id: selectedAlumnaId, sold_by: user.id, plan_name: planDetails.name,
-        amount: planDetails.amount || 0, method: selectedPayMethod,
-      });
-    } catch (e) { /* no bloquear el cobro si falla el registro */ }
 
-    setShowPaySuccess(true);
-    setTimeout(() => {
-      setShowPaySuccess(false);
-      setSelectedAlumnaId('');
-    }, 2500);
+    // Confirmación con nombre: el cobro a la alumna equivocada (o a una cuenta
+    // duplicada) fue la causa real del "pagó y no se le activó el plan".
+    const alumna = (allUsers || []).find(u => u.id === selectedAlumnaId);
+    const quien = alumna?.full_name || alumna?.email || 'la alumna seleccionada';
+    let msg = `Cobrar ${planDetails.name} ($${planDetails.amount}) en ${selectedPayMethod} a:\n\n${quien}\n${alumna?.email || ''}`;
+
+    // Si ya tiene plan vigente con saldo, el cobro PISA su saldo → avisar.
+    const vigente = alumna?.membership_status === 'ACTIVE' && (alumna?.classes_remaining ?? 0) > 0
+      && (!alumna?.plan_expires_at || new Date(alumna.plan_expires_at) > new Date());
+    if (vigente) {
+      const saldo = alumna.classes_remaining >= 9000 ? 'ilimitadas' : `${alumna.classes_remaining}`;
+      msg += `\n\nOJO: ya tiene ${alumna.membership_plan || 'un plan'} ACTIVO con ${saldo} clases sin usar.`
+           + `\nAl cobrar, su saldo se REEMPLAZA por ${planDetails.classes} (no se suman).`;
+    }
+    if (!confirm(msg)) return;
+
+    setCharging(true);
+    try {
+      await activatePlan(planDetails.name, planDetails.classes, selectedAlumnaId);
+      // Registrar la venta de mostrador (para el dashboard financiero)
+      try {
+        await supabase.from('sales').insert({
+          user_id: selectedAlumnaId, sold_by: user.id, plan_name: planDetails.name,
+          amount: planDetails.amount || 0, method: selectedPayMethod,
+        });
+      } catch (e) { /* no bloquear el cobro si falla el registro */ }
+
+      setShowPaySuccess(true);
+      setTimeout(() => {
+        setShowPaySuccess(false);
+        setSelectedAlumnaId('');
+      }, 2500);
+    } finally {
+      setCharging(false);
+    }
   };
 
   // Toast notification state
@@ -534,6 +558,9 @@ function Admin({ recepcion = false }) {
                   <div onClick={() => { setActiveTab('cumpleanos'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Cake size={18} color="var(--primary)" /> Cumpleaños
                   </div>
+                  <div onClick={() => { setActiveTab('auditoria'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
+                    <Scale size={18} color="var(--primary)" /> Auditoría
+                  </div>
                   <div onClick={() => { setActiveTab('nutricion'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Utensils size={18} color="var(--primary)" /> Comida
                   </div>
@@ -627,6 +654,10 @@ function Admin({ recepcion = false }) {
           <div onClick={() => setActiveTab('cumpleanos')} className={`sidebar-nav-item ${activeTab === 'cumpleanos' ? 'active' : ''}`}>
             <Cake size={20} />
             <span>Cumpleaños</span>
+          </div>
+          <div onClick={() => setActiveTab('auditoria')} className={`sidebar-nav-item ${activeTab === 'auditoria' ? 'active' : ''}`}>
+            <Scale size={20} />
+            <span>Auditoría</span>
           </div>
           </>)}
         </nav>
@@ -1185,8 +1216,8 @@ function Admin({ recepcion = false }) {
                             ))}
                           </div>
                         </div>
-                        <button onClick={handlePago} style={{ width: '100%', padding: '15px', borderRadius: '14px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '0.95rem' }}>
-                          Confirmar Transacción
+                        <button onClick={handlePago} disabled={charging} style={{ width: '100%', padding: '15px', borderRadius: '14px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none', cursor: charging ? 'wait' : 'pointer', fontSize: '0.95rem', opacity: charging ? 0.6 : 1 }}>
+                          {charging ? 'Procesando…' : 'Confirmar Transacción'}
                         </button>
                       </div>
                     )}
@@ -1383,6 +1414,12 @@ function Admin({ recepcion = false }) {
             {activeTab === 'cumpleanos' && (
               <motion.div key="cumpleanos" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
                 <AdminCumpleanos />
+              </motion.div>
+            )}
+
+            {activeTab === 'auditoria' && (
+              <motion.div key="auditoria" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
+                <AdminControlSaldos />
               </motion.div>
             )}
           </AnimatePresence>
