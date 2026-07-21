@@ -59,7 +59,9 @@ Duda de la dueña por WhatsApp: *«Esto que aparece de sin descontar ¿es que no
 - Al haber cambio aparece: resumen **`8 → 12 (+4)`**, **chips de motivo de un toque** (Clase de cortesía · Repone clase cancelada · Corrección de saldo · Pagó en efectivo) + texto libre, y Guardar/Cancelar. Se guarda por **`admin_set_saldo`** (staff vía `is_reception_or_admin` → recepción sigue funcionando; motivo obligatorio; queda en el ledger con actor y nota) en vez del `patch` crudo.
 - `book`/`unbook` sincronizan `savedCredits` para no marcar cambio pendiente falso.
 
-**⏭️ PENDIENTE:** la dueña corrige los 25 saldos (una sola vez) y anula las ventas duplicadas — **`sales.voided` sigue en 0**. Y **`app_config.latest_ios_version` sigue en `1.7.3` aunque la 1.7.4 salió al App Store el 14-jul** → el banner de «actualiza la app» está apagado; corre `UPDATE public.app_config SET latest_ios_version='1.7.4', updated_at=now() WHERE id=1;`.
+**✅ Version gate al día:** se detectó que la **1.7.4 salió al App Store el 14-jul** (confirmado por `itunes.apple.com/lookup?bundleId=com.befitlab.app`) pero `app_config.latest_ios_version` se quedó en `1.7.3` → el banner de «actualiza la app» llevaba una semana apagado. **Corregido el 21-jul:** `latest_ios_version='1.7.4'` (min sigue en `1.0.0`, nadie bloqueado). ⚠️ **Este paso es parte del release** — al subir un build, actualizar SIEMPRE esta fila.
+
+**⏭️ PENDIENTE:** la dueña corrige los 25 saldos (una sola vez) y anula las ventas duplicadas — **`sales.voided` sigue en 0**.
 
 ## ✅ Sesión 2026-07-14 — AUDITORÍA DE SALDOS: libro mayor + pestaña Auditoría + cobro blindado
 Reporte de la dueña (13-jul): (1) "las clases no se descuentan bien — una clienta terminó su plan y aún le restaban accesos"; (2) "una clienta pagó un plan de 15 clases y no se le activó". Diagnóstico forense con datos de prod.
