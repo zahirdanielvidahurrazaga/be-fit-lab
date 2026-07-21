@@ -36,12 +36,18 @@ const fmtFecha = (iso) => {
          d.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' });
 };
 
+const fmtDia = (iso) => iso ? new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : '—';
+
+const plural = (n, sing, plur) => `${n} ${n === 1 ? sing : plur}`;
+
 const norm = (s = '') => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
 
 const card = { background: 'var(--surface, #fff)', border: '1px solid rgba(0,0,0,0.07)', borderRadius: '18px', padding: '18px', marginBottom: '18px' };
 const h3 = { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem', margin: '0 0 4px', color: 'var(--black)', fontFamily: 'var(--font-display)' };
 const hint = { fontSize: '0.82rem', color: 'var(--on-surface-variant)', margin: '0 0 14px', lineHeight: 1.45 };
 const chip = (bg, color) => ({ fontSize: '0.72rem', fontWeight: 700, padding: '3px 9px', borderRadius: '8px', background: bg, color, whiteSpace: 'nowrap' });
+const leyenda = (bg, border) => ({ flex: '1 1 260px', display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'flex-start', background: bg, border: `1px solid ${border}`, borderRadius: '13px', padding: '11px 13px' });
+const leyendaTxt = { fontSize: '0.78rem', color: 'var(--on-surface-variant)', lineHeight: 1.45 };
 const thStyle = { textAlign: 'left', padding: '8px 10px', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--on-surface-variant)', borderBottom: '1px solid rgba(0,0,0,0.08)', whiteSpace: 'nowrap' };
 const tdStyle = { padding: '9px 10px', fontSize: '0.85rem', color: 'var(--black)', borderBottom: '1px solid rgba(0,0,0,0.05)', verticalAlign: 'top' };
 
@@ -79,6 +85,37 @@ export default function AdminControlSaldos() {
   }, []);
 
   useEffect(() => { fetchDescuadres(); }, [fetchDescuadres]);
+
+  // Fecha en que empezó a grabar el libro mayor. Todo descuadre de un plan
+  // ANTERIOR a esta fecha no tiene movimientos que lo expliquen (no existían):
+  // se marca aparte para que nadie pierda el tiempo buscando en «Movimientos».
+  const [ledgerStart, setLedgerStart] = useState(null);
+  useEffect(() => {
+    supabase.from('class_credit_ledger').select('created_at')
+      .order('created_at', { ascending: true }).limit(1)
+      .then(({ data }) => setLedgerStart(data?.[0]?.created_at || null));
+  }, []);
+
+  // Saldo que debería tener = clases del plan − reservas hechas desde que empezó.
+  const esperado = (d) => Math.max(0, (d.plan_clases || 0) - Number(d.reservas || 0));
+
+  // Primero las que le SOBRAN clases (ahí el estudio pierde dinero), de mayor a menor.
+  const descOrdenados = useMemo(() => {
+    if (!descuadres) return null;
+    return [...descuadres].sort((a, b) => (b.diferencia > 0) - (a.diferencia > 0) || Math.abs(b.diferencia) - Math.abs(a.diferencia));
+  }, [descuadres]);
+
+  const resumenDesc = useMemo(() => {
+    if (!descuadres?.length) return null;
+    const sobran = descuadres.filter(d => d.diferencia > 0);
+    const faltan = descuadres.filter(d => d.diferencia < 0);
+    return {
+      sobran: sobran.length,
+      faltan: faltan.length,
+      regaladas: sobran.reduce((s, d) => s + Number(d.diferencia), 0),
+      debidas: faltan.reduce((s, d) => s + Math.abs(Number(d.diferencia)), 0),
+    };
+  }, [descuadres]);
 
   // ── Ventas (huérfanas / duplicadas / anular) ─────────────────────────────
   const [sales, setSales] = useState([]);
@@ -219,49 +256,92 @@ export default function AdminControlSaldos() {
           </button>
         </h3>
         <p style={hint}>
-          Compara, por clienta con plan activo: las clases que su plan da menos su saldo actual (= lo descontado)
-          contra sus reservas confirmadas desde que empezó el plan. <b>Diferencia positiva</b> = tiene más saldo del
-          que debería (reservas que no se descontaron, ajustes manuales o un re-cobro que reseteó el saldo).
-          El detalle exacto de cada caso está en «Movimientos».
+          Aquí aparece cada clienta cuyo <b>saldo de clases no coincide con las clases que ha reservado</b>.
+          Solo hay dos casos:
         </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+          <div style={leyenda('rgba(220,38,38,0.07)', 'rgba(220,38,38,0.18)')}>
+            <span style={chip('rgba(220,38,38,0.1)', '#DC2626')}>Le sobran clases</span>
+            <span style={leyendaTxt}>Reservó más clases de las que se le descontaron: <b>el estudio se las está regalando</b>. Hay que bajarle el saldo.</span>
+          </div>
+          <div style={leyenda('rgba(234,122,59,0.07)', 'rgba(234,122,59,0.2)')}>
+            <span style={chip('rgba(234,122,59,0.12)', '#EA7A3B')}>Le faltan clases</span>
+            <span style={leyendaTxt}>Se le descontaron clases que no usó: <b>el estudio se las debe</b>. Hay que subirle el saldo.</span>
+          </div>
+        </div>
+
         {descuadres === null ? <p style={hint}>Cargando…</p> : descuadres.length === 0 ? (
           <p style={{ ...hint, color: '#059669', fontWeight: 700, margin: 0 }}>Todo cuadra ✓</p>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr>
-                <th style={thStyle}>Clienta</th><th style={thStyle}>Plan</th><th style={thStyle}>Saldo</th>
-                <th style={thStyle}>Descontadas</th><th style={thStyle}>Reservas</th><th style={thStyle}>Diferencia</th><th style={thStyle}></th>
-              </tr></thead>
-              <tbody>
-                {descuadres.map(d => (
-                  <tr key={d.user_id}>
-                    <td style={tdStyle}><b>{d.nombre || d.email}</b></td>
-                    <td style={tdStyle}>{(d.plan || '').replace('Plan ', '')} ({d.plan_clases})</td>
-                    <td style={tdStyle}>{d.saldo}</td>
-                    <td style={tdStyle}>{d.descontadas}</td>
-                    <td style={tdStyle}>{d.reservas}</td>
-                    <td style={tdStyle}>
-                      <span style={chip(d.diferencia > 0 ? 'rgba(220,38,38,0.1)' : 'rgba(234,122,59,0.12)', d.diferencia > 0 ? '#DC2626' : '#EA7A3B')}>
-                        {d.diferencia > 0 ? `+${d.diferencia} sin descontar` : `${d.diferencia} de más`}
+          <>
+            {resumenDesc && (
+              <p style={{ ...hint, marginBottom: '12px' }}>
+                <b>{plural(descuadres.length, 'clienta', 'clientas')}</b> por revisar:{' '}
+                {resumenDesc.sobran > 0 && <>a <b>{resumenDesc.sobran}</b> le sobran clases (<b>{plural(resumenDesc.regaladas, 'clase regalada', 'clases regaladas')}</b> en total)</>}
+                {resumenDesc.sobran > 0 && resumenDesc.faltan > 0 && ' · '}
+                {resumenDesc.faltan > 0 && <>a <b>{resumenDesc.faltan}</b> le faltan (<b>{plural(resumenDesc.debidas, 'clase que se debe', 'clases que se deben')}</b>)</>}.
+              </p>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {descOrdenados.map(d => {
+                const sobran = d.diferencia > 0;
+                const n = Math.abs(Number(d.diferencia));
+                const debeTener = esperado(d);
+                // Plan anterior al libro mayor → sus movimientos no existen.
+                const heredado = ledgerStart && d.inicio && new Date(d.inicio) < new Date(ledgerStart);
+                const acento = sobran ? '#DC2626' : '#EA7A3B';
+                return (
+                  <div key={d.user_id} style={{ border: '1px solid rgba(0,0,0,0.08)', borderLeft: `4px solid ${acento}`, borderRadius: '14px', padding: '13px 15px', background: 'rgba(0,0,0,0.015)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '9px', flexWrap: 'wrap', marginBottom: '7px' }}>
+                      <b style={{ fontSize: '0.95rem', color: 'var(--black)' }}>{d.nombre || d.email}</b>
+                      <span style={chip(sobran ? 'rgba(220,38,38,0.1)' : 'rgba(234,122,59,0.12)', acento)}>
+                        {sobran ? `Le sobran ${plural(n, 'clase', 'clases')}` : `Le faltan ${plural(n, 'clase', 'clases')}`}
                       </span>
-                    </td>
-                    <td style={tdStyle}>
-                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <button onClick={() => setLedgerUserId(d.user_id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: PRIMARY, fontWeight: 700, fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          Movimientos <ArrowRight size={12} />
-                        </button>
-                        <button onClick={() => openFix(d.user_id, d.nombre || d.email, d.saldo, Math.max(0, (d.plan_clases || 0) - Number(d.reservas || 0)), `Corrección por auditoría: ${d.reservas} reservas desde el inicio del plan vs ${d.descontadas} descontadas`)}
-                          style={{ display: 'flex', alignItems: 'center', gap: '4px', border: 'none', borderRadius: '9px', padding: '5px 9px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: 'rgba(255,145,77,0.12)', color: PRIMARY }}>
-                          <Pencil size={12} /> Corregir
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+
+                    <p style={{ fontSize: '0.86rem', color: 'var(--black)', margin: '0 0 9px', lineHeight: 1.5 }}>
+                      Desde que empezó su plan ({fmtDia(d.inicio)}) reservó <b>{plural(Number(d.reservas), 'clase', 'clases')}</b>,
+                      pero se le descontaron <b>{d.descontadas}</b>.{' '}
+                      {sobran
+                        ? <>Por eso <b>el estudio le está regalando {plural(n, 'clase', 'clases')}</b>.</>
+                        : <>Por eso <b>el estudio le debe {plural(n, 'clase', 'clases')}</b>.</>}
+                    </p>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '9px' }}>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>
+                        Hoy tiene <b style={{ color: 'var(--black)' }}>{plural(d.saldo, 'clase', 'clases')}</b>
+                      </span>
+                      <ArrowRight size={13} color="var(--on-surface-variant)" />
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: acento }}>
+                        debería tener {plural(debeTener, 'clase', 'clases')}
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)' }}>
+                        · {(d.plan || '').replace('Plan ', '')} de {d.plan_clases} clases
+                      </span>
+                    </div>
+
+                    {heredado && (
+                      <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: '0 0 9px', lineHeight: 1.45, display: 'flex', gap: '6px' }}>
+                        <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: '1px' }} />
+                        <span>Su plan empezó <b>antes</b> de que existiera el registro de movimientos ({fmtDia(ledgerStart)}), así que <b>este descuadre no se puede rastrear</b>: viene de antes. Corrígelo y de aquí en adelante ya queda todo registrado.</span>
+                      </p>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <button onClick={() => openFix(d.user_id, d.nombre || d.email, d.saldo, debeTener, `Corrección por auditoría: ${d.reservas} reservas desde el inicio del plan y solo ${d.descontadas} descontadas`)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '5px', border: 'none', borderRadius: '10px', padding: '7px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, background: 'rgba(255,145,77,0.14)', color: PRIMARY }}>
+                        <Pencil size={13} /> Dejar el saldo en {debeTener}
+                      </button>
+                      <button onClick={() => setLedgerUserId(d.user_id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--on-surface-variant)', fontWeight: 700, fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        Ver sus movimientos <ArrowRight size={12} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 
@@ -409,9 +489,10 @@ export default function AdminControlSaldos() {
               </button>
             </div>
             <p style={{ ...hint, marginBottom: '14px' }}>
-              <b>{fixTarget.nombre}</b> — saldo actual: <b>{fixTarget.saldoActual}</b> clases.
+              <b>{fixTarget.nombre}</b> tiene hoy <b>{plural(fixTarget.saldoActual, 'clase', 'clases')}</b>.
+              El número que escribas <b>reemplaza</b> su saldo (no se suma).
             </p>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--on-surface-variant)', marginBottom: '5px' }}>Nuevo saldo</label>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--on-surface-variant)', marginBottom: '5px' }}>Clases que le quedarán</label>
             <input type="number" min="0" max="9999" value={fixSaldo} onChange={(e) => setFixSaldo(e.target.value)}
               style={{ width: '100%', padding: '11px 13px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.14)', fontSize: '1rem', fontWeight: 700, marginBottom: '13px', boxSizing: 'border-box' }} />
             <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--on-surface-variant)', marginBottom: '5px' }}>Motivo (obligatorio)</label>

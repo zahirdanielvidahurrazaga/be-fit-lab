@@ -40,6 +40,27 @@ Ejecuta TÚ (Claude) automáticamente los pasos de CLI; el usuario solo hace los
 
 **Opcional (smoke test):** un cobro real chico. El flujo NO cambia entre test/live (mismo código), pero confirma que `sk_live` + webhook Live **registran** el sale/pedido. Reembolsable. (Ya se probó el 2026-06-15: pedido quedó `paid` ✅.)
 
+## ✅ Sesión 2026-07-21 — La dueña no entendía «+X sin descontar» → sección reescrita + motivo obligatorio en Gestionar clases
+Duda de la dueña por WhatsApp: *«Esto que aparece de sin descontar ¿es que no se les han descontado las clases?»*. Se auditó a fondo antes de responder.
+
+**🔬 VEREDICTO: el sistema descuenta BIEN hoy. Cero fugas.** Se cruzaron **las 474 reservas confirmadas** creadas desde que el libro mayor empezó a grabar (14-jul) contra los descuentos del ledger: **413** con su `reserva -1` en el mismo segundo · **56** de clientas con **Plan Premium ilimitado** (por diseño no descuentan, `trg_pin_unlimited_classes` fija 9999) · **5** que entraron como **lista de espera** y se cobraron al promoverlas horas/días después (`promocion_espera`, verificadas una por una — el matcher ±10s no las ve porque `reservations.created_at` es el de la espera, no el del cobro). **Ninguna reserva se coló sin cobrar.** Además: `book_class_secure` rechaza reservar con saldo 0 o membresía vencida, y `reservations` **no tiene política de INSERT** en RLS (RLS activo) → no hay forma de crear una reserva por fuera de los RPC.
+
+**🧭 De dónde salen los 25 descuadres:** **24 de 25 son de planes iniciados ANTES del 14-jul**, o sea de la época sin registro — irrastreables por definición. Por eso al entrar a «Movimientos» desde el descuadre no aparecía nada: no falta información, es que no se guardaba. **Y «sin descontar» ≠ error:** el número sube igual con ajustes a mano, regalos de clases o un re-cobro que resetea el saldo. Prueba: las 3 únicas clientas con descuadre nacido DESPUÉS del 14-jul tienen diferencia de exactamente ±1 y exactamente 1 `ajuste_manual` — el descuadre *es* el ajuste. (La dueña hizo **17 ajustes manuales en 8 días, todos sin nota**, desde el modal viejo.)
+
+**🎨 (1) «Saldos que no cuadran» reescrita** (`AdminControlSaldos.jsx`) — era una tabla de contador con el chip críptico `+7 sin descontar`:
+- Chip en lenguaje de negocio: **«Le sobran 7 clases»** (el estudio las regala) / **«Le faltan 4 clases»** (el estudio las debe), con leyenda de los 2 casos arriba y resumen (*25 clientas · a 8 le sobran = 29 clases regaladas · a 17 le faltan*).
+- Tabla → **tarjetas que se leen como frase**: «Desde que empezó su plan (26 jun) reservó 19 clases, pero se le descontaron 12. Por eso el estudio le está regalando 7 clases.»
+- **Se muestra el saldo esperado** (antes solo vivía escondido dentro del botón): «Hoy tiene 3 clases → debería tener 0», y el botón dice **«Dejar el saldo en 0»**.
+- **Aviso de descuadre heredado**: si `plan_started_at` < primera fila del ledger (se consulta, no se hardcodea) explica que viene de antes del registro y no se puede rastrear.
+- Orden: primero las que le cuestan dinero al estudio. Modal de corrección aclara **«el número reemplaza el saldo, no se suma»**.
+
+**🔒 (2) «Gestionar clases» ahora exige motivo** (`AdminClientas.jsx`) — era la fuga de trazabilidad: los ±/+4/+8/+12 escribían a BD **al instante** con `patch()` directo, sin nota, y luego reaparecían en Auditoría como descuadres inexplicables.
+- Los botones ahora solo mueven el número **en pantalla**; nada toca la BD hasta confirmar.
+- Al haber cambio aparece: resumen **`8 → 12 (+4)`**, **chips de motivo de un toque** (Clase de cortesía · Repone clase cancelada · Corrección de saldo · Pagó en efectivo) + texto libre, y Guardar/Cancelar. Se guarda por **`admin_set_saldo`** (staff vía `is_reception_or_admin` → recepción sigue funcionando; motivo obligatorio; queda en el ledger con actor y nota) en vez del `patch` crudo.
+- `book`/`unbook` sincronizan `savedCredits` para no marcar cambio pendiente falso.
+
+**⏭️ PENDIENTE:** la dueña corrige los 25 saldos (una sola vez) y anula las ventas duplicadas — **`sales.voided` sigue en 0**. Y **`app_config.latest_ios_version` sigue en `1.7.3` aunque la 1.7.4 salió al App Store el 14-jul** → el banner de «actualiza la app» está apagado; corre `UPDATE public.app_config SET latest_ios_version='1.7.4', updated_at=now() WHERE id=1;`.
+
 ## ✅ Sesión 2026-07-14 — AUDITORÍA DE SALDOS: libro mayor + pestaña Auditoría + cobro blindado
 Reporte de la dueña (13-jul): (1) "las clases no se descuentan bien — una clienta terminó su plan y aún le restaban accesos"; (2) "una clienta pagó un plan de 15 clases y no se le activó". Diagnóstico forense con datos de prod.
 

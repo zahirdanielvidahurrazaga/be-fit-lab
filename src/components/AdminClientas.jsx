@@ -174,8 +174,15 @@ function ClientCard({ u, onRole, onBaja, onReactivar, onDelete, onManage, busy, 
 function ManageClassesModal({ client, onClose, patch, applyLocal }) {
   const { globalClasses, fetchGlobalClasses, fetchAllUsers } = useAuth();
   const unlimited = isUnlimitedClient(client);
+  // El saldo YA NO se escribe al instante: se ajusta en pantalla y se guarda con
+  // motivo (RPC admin_set_saldo) para que todo ajuste quede explicado en el
+  // libro mayor. Sin esto, los ajustes a mano aparecían después en Auditoría
+  // como "descuadres" sin forma de saber si fueron un error o algo a propósito.
   const [credits, setCredits] = useState(client.classes_remaining ?? 0);
+  const [savedCredits, setSavedCredits] = useState(client.classes_remaining ?? 0);
+  const [motivo, setMotivo] = useState('');
   const [savingCredits, setSavingCredits] = useState(false);
+  const creditsDirty = credits !== savedCredits;
 
   // Foto de perfil de la clienta (la dueña puede ponérsela desde admin).
   const [avatar, setAvatar] = useState(client.avatar_url || null);
@@ -263,14 +270,28 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
   const goNextDate = () => { if (dateIdx >= 0 && dateIdx < datesWithClasses.length - 1) setSelectedDate(datesWithClasses[dateIdx + 1]); };
   const dateTitle = new Date(effectiveDate + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
 
-  // Fija el saldo de clases (escribe a DB y refleja en la lista de fondo).
-  const applyCredits = async (newVal) => {
-    const val = Math.max(0, parseInt(newVal, 10) || 0);
-    setCredits(val);
+  // Solo mueve el número en pantalla — no toca la BD hasta que haya motivo.
+  const applyCredits = (newVal) => setCredits(Math.max(0, parseInt(newVal, 10) || 0));
+
+  const saveCredits = async () => {
+    if (!motivo.trim()) { alert('Escribe el motivo del ajuste: queda en el historial de la clienta.'); return; }
     setSavingCredits(true);
-    await patch(client.id, { classes_remaining: val });
+    const { error } = await supabase.rpc('admin_set_saldo', {
+      p_user_id: client.id, p_new_balance: credits, p_note: motivo.trim(),
+    });
     setSavingCredits(false);
+    if (error) {
+      const msgs = { NO_AUTORIZADO: 'Solo admin/recepción pueden ajustar clases.', MOTIVO_REQUERIDO: 'Escribe el motivo.', SALDO_INVALIDO: 'El número de clases no es válido.', CLIENTA_NO_EXISTE: 'La clienta ya no existe.' };
+      alert(msgs[error.message] || 'No se pudo guardar: ' + error.message);
+      return;
+    }
+    setSavedCredits(credits);
+    applyLocal?.(client.id, { classes_remaining: credits });
+    setMotivo('');
+    fetchAllUsers?.();
   };
+
+  const cancelCredits = () => { setCredits(savedCredits); setMotivo(''); };
 
   const book = async (c) => {
     setBusyId(c.id);
@@ -281,7 +302,7 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
       setReserved(prev => new Set(prev).add(c.id));
       if (!unlimited) {
         const nv = Math.max(0, (parseInt(credits, 10) || 0) - 1);
-        setCredits(nv);
+        setCredits(nv); setSavedCredits(nv); // la reserva ya descontó en BD
         applyLocal(client.id, { classes_remaining: nv }); // refleja en la tarjeta de fondo (sin re-escribir DB)
       }
       fetchGlobalClasses?.();
@@ -299,7 +320,7 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
       setReserved(prev => { const n = new Set(prev); n.delete(c.id); return n; });
       if (!unlimited) {
         const nv = (parseInt(credits, 10) || 0) + 1;
-        setCredits(nv);
+        setCredits(nv); setSavedCredits(nv); // la cancelación ya devolvió en BD
         applyLocal(client.id, { classes_remaining: nv });
       }
       fetchGlobalClasses?.();
@@ -378,7 +399,47 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
                   <button key={n} disabled={savingCredits} onClick={() => applyCredits(credits + n)} style={quickBtn}>+{n}</button>
                 ))}
               </div>
-              <div style={{ fontSize: '0.74rem', color: 'var(--on-surface-variant)', textAlign: 'center', marginTop: '10px' }}>Se guarda al instante.</div>
+
+              {!creditsDirty ? (
+                <div style={{ fontSize: '0.74rem', color: 'var(--on-surface-variant)', textAlign: 'center', marginTop: '10px' }}>
+                  Ajusta el número y escribe el motivo para guardar.
+                </div>
+              ) : (
+                <div style={{ marginTop: '14px', borderTop: '1px solid rgba(0,0,0,0.08)', paddingTop: '13px' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: INK, textAlign: 'center', marginBottom: '10px' }}>
+                    {savedCredits} → {credits} clases{' '}
+                    <span style={{ color: credits > savedCredits ? '#059669' : '#DC2626' }}>
+                      ({credits > savedCredits ? '+' : ''}{credits - savedCredits})
+                    </span>
+                  </div>
+                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: 'var(--on-surface-variant)', marginBottom: '6px' }}>
+                    ¿Por qué? (obligatorio)
+                  </label>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                    {['Clase de cortesía', 'Repone clase cancelada', 'Corrección de saldo', 'Pagó en efectivo'].map(m => (
+                      <button key={m} type="button" onClick={() => setMotivo(m)}
+                        style={{ border: '1px solid rgba(0,0,0,0.12)', background: motivo === m ? 'rgba(255,145,77,0.16)' : 'white', color: motivo === m ? PRIMARY : 'var(--on-surface-variant)', borderRadius: '999px', padding: '5px 11px', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                  <input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="…o escríbelo tú"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '11px', border: '1px solid rgba(0,0,0,0.14)', fontSize: '0.86rem', boxSizing: 'border-box', marginBottom: '10px', fontFamily: 'inherit' }} />
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={cancelCredits} disabled={savingCredits}
+                      style={{ flex: 1, padding: '10px', borderRadius: '11px', border: '1px solid rgba(0,0,0,0.12)', background: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.84rem', color: INK }}>
+                      Cancelar
+                    </button>
+                    <button onClick={saveCredits} disabled={savingCredits || !motivo.trim()}
+                      style={{ flex: 1.4, padding: '10px', borderRadius: '11px', border: 'none', background: PRIMARY, color: 'white', cursor: savingCredits ? 'wait' : 'pointer', fontWeight: 800, fontSize: '0.84rem', opacity: savingCredits || !motivo.trim() ? 0.5 : 1 }}>
+                      {savingCredits ? 'Guardando…' : 'Guardar ajuste'}
+                    </button>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', textAlign: 'center', marginTop: '8px' }}>
+                    Queda registrado en Auditoría con tu nombre y este motivo.
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
