@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Utensils, TrendingUp, User, QrCode, ChevronRight, Activity, Flame, Sparkles, Clock, MapPin, X, Lock, Wallet, Coffee, Cake } from 'lucide-react';
+import { Calendar, Utensils, TrendingUp, User, QrCode, ChevronRight, Activity, Flame, Sparkles, Clock, MapPin, X, Lock, Wallet, Coffee, Cake, PartyPopper, Check } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -16,7 +16,7 @@ import { hasNutritionAccess } from '../lib/plans';
 function Portal() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, logout, classesRemaining, myReservations, cancelClass, profileName, globalClasses, avatarUrl, setShowTour, coaches, badgeConfigs, classesLoaded } = useAuth();
+  const { user, plan, logout, classesRemaining, myReservations, waitlistPositions, cancelClass, acceptOffer, profileName, globalClasses, avatarUrl, setShowTour, coaches, badgeConfigs, classesLoaded } = useAuth();
   
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
@@ -81,7 +81,9 @@ function Portal() {
   // por error las clases de semanas futuras. De la LISTA DE ESPERA se puede salir
   // en cualquier momento (no hay lugar que proteger ni clase cobrada).
   const canCancelReservation = (res) => {
-    if (res?.status === 'waitlist') return true;
+    // De la espera o de una oferta pendiente se sale en cualquier momento (no
+    // hay lugar cobrado que proteger).
+    if (res?.status === 'waitlist' || res?.status === 'offered') return true;
     const classStart = reservationClassDate(res);
     if (!classStart) return true;
     const fiveHoursBefore = new Date(classStart.getTime() - 5 * 60 * 60 * 1000);
@@ -89,7 +91,7 @@ function Portal() {
   };
 
   // ¿La reserva abierta en el modal es de lista de espera? (mensajería distinta).
-  const cancellingWaitlist = selectedReservation?.status === 'waitlist';
+  const cancellingWaitlist = selectedReservation?.status === 'waitlist' || selectedReservation?.status === 'offered';
 
   // "en 22 min" / "en 5 h" / "en 3 días"
   const formatCountdown = (date) => {
@@ -184,7 +186,7 @@ function Portal() {
     // con fecha fija y no en lista de espera.
     const reservedPerDay = [0, 0, 0, 0, 0, 0, 0];
     (myReservations || []).forEach(r => {
-      if (r.checkedIn || r.status === 'waitlist') return;
+      if (r.checkedIn || r.status === 'waitlist' || r.status === 'offered') return;
       const c = globalClasses?.find(cl => cl.id === r.classId);
       if (!c?.date) return;
       const d = new Date(c.date + 'T00:00:00');
@@ -399,7 +401,10 @@ function Portal() {
                     badgeConfigs={badgeConfigs}
                     countdown={formatCountdown(classDate)}
                     dateLabel={dateChipLabel(classDate)}
-                    isWaitlisted={res.status === 'waitlist'}
+                    status={res.status}
+                    waitlistPosition={waitlistPositions?.[res.classId]}
+                    offerExpiresAt={res.offerExpiresAt}
+                    onAccept={() => acceptOffer(res.classId)}
                     canCancel={canCancelReservation(res)}
                     onClick={() => handleCancelClick(res)}
                   />
@@ -720,7 +725,9 @@ function Portal() {
 }
 
 /* TICKET-STYLE CLASS CARD */
-function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, countdown, dateLabel, canCancel, isWaitlisted, onClick }) {
+function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, countdown, dateLabel, canCancel, status = 'confirmed', waitlistPosition, offerExpiresAt, onAccept, onClick }) {
+  const isWaitlisted = status === 'waitlist';
+  const isOffered = status === 'offered';
   // Foto real de la coach de esta clase (coach_id → nombre → email). Sin fallbacks
   // "adivinados": si no hay match o no tiene foto → inicial. (Antes caía a coaches[0]
   // y a un badge global COACH_PROFILE que ponía UNA foto en clases ajenas.)
@@ -730,13 +737,25 @@ function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, c
   const initial = (coachName || 'C').charAt(0).toUpperCase();
   const STUB = 96; // ancho del talón
 
+  // Cuenta regresiva "m:ss" para la oferta (si aplica).
+  const [offerLeft, setOfferLeft] = useState(() => offerExpiresAt ? new Date(offerExpiresAt).getTime() - Date.now() : 0);
+  useEffect(() => {
+    if (!isOffered || !offerExpiresAt) return;
+    const id = setInterval(() => setOfferLeft(new Date(offerExpiresAt).getTime() - Date.now()), 1000);
+    setOfferLeft(new Date(offerExpiresAt).getTime() - Date.now());
+    return () => clearInterval(id);
+  }, [isOffered, offerExpiresAt]);
+  const offerMMSS = (() => { const t = Math.max(0, Math.floor(offerLeft / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; })();
+
   return (
+   <div style={{ display: 'flex', flexDirection: 'column', borderRadius: '22px',
+     boxShadow: isOffered ? '0 10px 30px rgba(255,145,77,0.28)' : 'var(--card-shadow)',
+     border: isOffered ? '1.5px solid var(--primary)' : '1px solid var(--border-subtle)', overflow: 'hidden' }}>
     <div
       onClick={onClick}
       style={{
         position: 'relative', display: 'flex', background: 'var(--app-surface-solid)',
-        borderRadius: '22px', overflow: 'hidden', boxShadow: 'var(--card-shadow)',
-        border: '1px solid var(--border-subtle)', cursor: 'pointer', opacity: canCancel ? 1 : 0.85,
+        cursor: 'pointer', opacity: (canCancel || isOffered) ? 1 : 0.85,
       }}
     >
       {/* Muescas del boleto (cortes del color del fondo sobre la perforación) */}
@@ -755,8 +774,13 @@ function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, c
             <h4 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--on-surface)', fontFamily: 'var(--font-display)', lineHeight: 1.12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h4>
             <div style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', marginTop: '4px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{coachName}</div>
             {isWaitlisted && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', fontSize: '0.6rem', fontWeight: 800, color: '#6b7280', background: 'var(--fill-subtle)', padding: '3px 8px', borderRadius: '99px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                <Clock size={10} /> En lista de espera
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', marginTop: '6px', fontSize: '0.66rem', fontWeight: 800, color: '#7c6f64', background: 'var(--fill-subtle)', padding: '4px 10px', borderRadius: '99px' }}>
+                <Clock size={11} /> En espera{Number.isFinite(waitlistPosition) && waitlistPosition ? ` · Nº ${waitlistPosition}` : ''} · aún sin lugar
+              </span>
+            )}
+            {isOffered && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', marginTop: '6px', fontSize: '0.66rem', fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg,#FF914D,#E68245)', padding: '4px 10px', borderRadius: '99px' }}>
+                <PartyPopper size={11} /> ¡Se liberó tu lugar!
               </span>
             )}
           </div>
@@ -798,6 +822,27 @@ function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, c
         <span style={{ marginTop: '4px', fontSize: '0.5rem', fontWeight: 800, color: 'var(--on-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Clase</span>
       </div>
     </div>
+
+    {/* Banda de confirmación cuando hay una OFERTA de lugar pendiente */}
+    {isOffered && (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 14px',
+        background: 'rgba(255,145,77,0.10)', borderTop: '1px dashed var(--primary)' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', flex: 1, minWidth: 0,
+          fontSize: '0.74rem', fontWeight: 800, color: 'var(--primary)' }}>
+          <Clock size={13} /> Confirma en {offerMMSS}
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onAccept?.(); }}
+          style={{ border: 'none', borderRadius: '12px', padding: '9px 16px',
+            background: 'linear-gradient(135deg,#FF914D,#E68245)', color: '#fff',
+            fontSize: '0.82rem', fontWeight: 900, cursor: 'pointer', whiteSpace: 'nowrap',
+            display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+        >
+          <Check size={15} /> Confirmar mi lugar
+        </button>
+      </div>
+    )}
+   </div>
   );
 }
 

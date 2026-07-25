@@ -50,6 +50,7 @@ export const AuthProvider = ({ children }) => {
   const [cafeProductsLoaded, setCafeProductsLoaded] = useState(false);
   const [disciplinesLoaded, setDisciplinesLoaded] = useState(false);
   const [myReservations, setMyReservations] = useState([]);
+  const [waitlistPositions, setWaitlistPositions] = useState({}); // { classId: posición }
   const [allUsers, setAllUsers] = useState([]);
   const [coaches, setCoaches] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -174,6 +175,29 @@ export const AuthProvider = ({ children }) => {
       .subscribe();
     return () => supabase.removeChannel(channel);
   }, [user, badgeConfigs]);
+
+  // Posición en la lista de espera para cada reserva 'waitlist' (RPC del server,
+  // ordena por enqueued_at). Se recalcula cuando cambian mis reservas en espera.
+  const waitlistKey = myReservations
+    .filter(r => r.status === 'waitlist')
+    .map(r => r.classId)
+    .sort()
+    .join(',');
+  useEffect(() => {
+    if (!user || !waitlistKey) { setWaitlistPositions({}); return; }
+    let cancelled = false;
+    (async () => {
+      const ids = waitlistKey.split(',');
+      const entries = await Promise.all(ids.map(async (classId) => {
+        try {
+          const { data } = await supabase.rpc('waitlist_position', { p_class_id: classId, p_user_id: user.id });
+          return [classId, data];
+        } catch { return [classId, null]; }
+      }));
+      if (!cancelled) setWaitlistPositions(Object.fromEntries(entries));
+    })();
+    return () => { cancelled = true; };
+  }, [user, waitlistKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Evalúa insignias cuando cambian perfil/insignias (dispara "Listos para
   // Arrancar" al completar el perfil) y SIEMBRA en silencio en el primer arranque.
@@ -1040,10 +1064,13 @@ export const AuthProvider = ({ children }) => {
           classId: r.class_id,
           title: r.classes?.title,
           time: r.classes?.time,
+          date: r.classes?.date ?? null,
           instructor: r.classes?.instructor,
+          coachId: r.classes?.coach_id ?? null,
           color: r.classes?.color,
           checkedIn: r.checked_in,
-          status: r.status || 'confirmed', // 'confirmed' | 'waitlist'
+          status: r.status || 'confirmed', // 'confirmed' | 'waitlist' | 'offered'
+          offerExpiresAt: r.offer_expires_at ?? null, // deadline para confirmar (status 'offered')
           calendarEventId: r.calendar_event_id ?? null
         }));
         setMyReservations(formattedReservations);
@@ -1232,7 +1259,9 @@ export const AuthProvider = ({ children }) => {
 
     const classObj = globalClasses.find(c => c.id === classId);
     const reservation = myReservations.find(r => r.classId === classId);
-    const isWaitlist = reservation?.status === 'waitlist';
+    // Ni la lista de espera ni una oferta pendiente ocupan un lugar cobrado →
+    // se sale en cualquier momento sin reembolso ni bloqueo de 5 h.
+    const isWaitlist = reservation?.status === 'waitlist' || reservation?.status === 'offered';
 
     // Bloquear cancelación si faltan 5 horas o menos para la clase — SOLO para
     // reservas CONFIRMADAS. De la lista de espera se puede salir en cualquier
@@ -1282,6 +1311,47 @@ export const AuthProvider = ({ children }) => {
       fetchGlobalClasses();
       fetchUserData(user);
       return { success: false, reason: 'error' };
+    }
+  };
+
+  // Aceptar una oferta de lugar (status 'offered' → 'confirmed', cobra 1 clase).
+  // Devuelve { success } o { success:false, reason }.
+  const acceptOffer = async (classId) => {
+    if (!user) return { success: false, reason: 'no_user' };
+    try {
+      const { error } = await supabase.rpc('accept_waitlist_offer', { p_class_id: classId });
+      if (error) throw error;
+      // Optimista: la reserva pasa a confirmada y se descuenta la clase.
+      setMyReservations(prev => prev.map(r =>
+        r.classId === classId ? { ...r, status: 'confirmed', offerExpiresAt: null } : r));
+      if (classesRemaining < 9000) setClassesRemaining(prev => Math.max(0, prev - 1));
+      fetchUserData(user);
+      return { success: true };
+    } catch (err) {
+      const msg = err?.message || '';
+      fetchUserData(user); // re-sincroniza el estado real (quizá ya venció / cascó)
+      if (/OFERTA_VENCIDA/.test(msg)) return { success: false, reason: 'expired' };
+      if (/SIN_OFERTA/.test(msg)) return { success: false, reason: 'gone' };
+      if (/SIN_CLASES/.test(msg)) return { success: false, reason: 'no_credits' };
+      if (/MEMBRESIA_VENCIDA/.test(msg)) return { success: false, reason: 'membership' };
+      console.error('Error aceptando oferta:', err);
+      return { success: false, reason: 'error' };
+    }
+  };
+
+  // Declinar/ceder una oferta de lugar: sale de la fila y el lugar cascada a la
+  // siguiente (lo hace el servidor). No cobra ni reembolsa (nunca se cobró).
+  const declineOffer = async (classId) => {
+    if (!user) return { success: false };
+    try {
+      setMyReservations(prev => prev.filter(r => r.classId !== classId)); // optimista
+      const { error } = await supabase.rpc('decline_waitlist_offer', { p_class_id: classId });
+      if (error) throw error;
+      return { success: true };
+    } catch (err) {
+      console.error('Error declinando oferta:', err);
+      fetchUserData(user);
+      return { success: false };
     }
   };
 
@@ -1688,14 +1758,14 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user, role, plan, membershipStatus, planStartedAt, planExpiresAt, loading, profileName,
       membershipRenewal, hasSubscription,
-      classesRemaining, myReservations, globalClasses, recipes, allUsers,
+      classesRemaining, myReservations, waitlistPositions, globalClasses, recipes, allUsers,
       classesLoaded, recipesLoaded, cafeProductsLoaded,
       avatarUrl, setAvatarUrl, customBadges, badgeConfigs,
       monthlyGoal, updateMonthlyGoal,
       favoriteRecipeIds, toggleRecipeFavorite,
       todayLog, todayConsumed, calorieGoal, planCalories, logFood, removeFoodLog, updateCalorieGoal,
       login, logout, forceCleanSession, fetchAllUsers, refreshUserData,
-      bookClass, cancelClass, checkInClient, checkInReservation, updateClassSpots, updateReservationCalendarId,
+      bookClass, cancelClass, acceptOffer, declineOffer, checkInClient, checkInReservation, updateClassSpots, updateReservationCalendarId,
       activatePlan, addClass, deleteClass, addRecipe, deleteRecipe,
       fetchClassReservations, fetchClassesByDayOfWeek, fetchGlobalClasses,
       assignCustomBadge, removeCustomBadge, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig,

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Bell, X, Send, Megaphone, CheckCheck, Trophy, Calendar, CreditCard, Info } from 'lucide-react';
+import { Bell, X, Send, Megaphone, CheckCheck, Trophy, Calendar, CreditCard, Info, PartyPopper, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
@@ -23,6 +23,10 @@ const iconForType = (type) => {
     case 'reservation': return Calendar;
     case 'payment': return CreditCard;
     case 'admin': return Megaphone;
+    case 'waitlist_promoted':
+    case 'waitlist_confirmed': return PartyPopper;
+    case 'waitlist_offer':
+    case 'waitlist_expired': return Clock;
     default: return Info;
   }
 };

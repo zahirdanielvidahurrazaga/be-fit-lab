@@ -37,6 +37,7 @@ import { AppTour } from './components/AppTour';
 import NotificationSheet from './components/NotificationSheet';
 import BadgeUnlockOverlay from './components/BadgeUnlockOverlay';
 import UpdateGate from './components/UpdateGate';
+import WaitlistOfferGate from './components/WaitlistOfferGate';
 import './index.css';
 
 // Overlay global de insignia desbloqueada: se muestra en CUALQUIER pantalla
@@ -238,6 +239,7 @@ function App() {
         <NotificationSheet />
         <GlobalBadgeOverlay />
         <UpdateGate />
+        <WaitlistOfferGate />
       </Router>
     </AuthProvider>
   );
