@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CalendarDays, MapPin, CheckCircle2, Sparkles } from 'lucide-react';
+import { CalendarDays, MapPin, CheckCircle2 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { supabase } from '../lib/supabase';
 
@@ -9,6 +9,8 @@ import { supabase } from '../lib/supabase';
 // RPC `get_ticket`, que solo devuelve los datos del boleto que ya trae en la mano.
 const PRIMARY = '#FF914D';
 const MAUVE = '#E07A9C';
+// El durazno de la marca en blanco (el mismo del correo y del pase de Wallet).
+const LOGO = 'https://fifaowaiokauhuqklzwe.supabase.co/storage/v1/object/public/wallet-passes/befit-mark.png';
 
 const fmtFecha = (iso) => iso
   ? new Date(iso).toLocaleString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' })
@@ -47,10 +49,9 @@ export default function Boleto() {
         style={{ width: '100%', maxWidth: '380px', background: '#fff', borderRadius: '28px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.12)' }}>
         {/* Encabezado de marca */}
         <div style={{ background: `linear-gradient(135deg, ${PRIMARY}, ${MAUVE})`, padding: '26px 24px', textAlign: 'center' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-            <Sparkles size={14} color="rgba(255,255,255,0.9)" />
-            <span style={{ fontSize: '0.64rem', fontWeight: 800, color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '0.16em' }}>Be Fit Lab</span>
-          </div>
+          <img src={LOGO} alt="Be Fit Lab" width="38"
+            style={{ display: 'block', width: '38px', height: 'auto', margin: '0 auto 10px' }} />
+          <div style={{ fontSize: '0.64rem', fontWeight: 800, color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: '6px' }}>Be Fit Lab</div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: '#fff', margin: 0, lineHeight: 1.15 }}>{ticket.event_title}</h1>
         </div>
 
