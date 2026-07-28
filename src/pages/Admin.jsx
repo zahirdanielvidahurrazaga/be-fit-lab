@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import AdminCafeteria from '../components/AdminCafeteria';
 import AdminDisciplinas from '../components/AdminDisciplinas';
 import AdminReportes from '../components/AdminReportes';
+import ReportesLock from '../components/ReportesLock';
 import AdminClientas from '../components/AdminClientas';
 import AdminAsistencias from '../components/AdminAsistencias';
 import StaffAttendance from '../components/StaffAttendance';
@@ -1389,7 +1390,9 @@ function Admin({ recepcion = false }) {
             {/* ============ TAB: REPORTES (Métricas de Negocio) PREMIUM ============ */}
             {activeTab === 'reportes' && (
               <motion.div key="reportes" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
-                <AdminReportes />
+                <ReportesLock>
+                  <AdminReportes />
+                </ReportesLock>
               </motion.div>
             )}
 
