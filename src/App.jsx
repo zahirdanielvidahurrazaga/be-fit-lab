@@ -29,6 +29,8 @@ const Eventos = lazy(() => import('./pages/Eventos'));
 const Barista = lazy(() => import('./pages/Barista'));
 const Recepcion = lazy(() => import('./pages/Recepcion'));
 const NuevaContrasena = lazy(() => import('./pages/NuevaContrasena'));
+const EventoPublico = lazy(() => import('./pages/EventoPublico'));
+const Boleto = lazy(() => import('./pages/Boleto'));
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { hasNutritionAccess } from './lib/plans';
 import { useLocalNotifications } from './hooks/useLocalNotifications';
@@ -214,6 +216,10 @@ function App() {
           <Route path="/terminos" element={<Terminos />} />
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/cafeteria" element={<Cafeteria />} />
+          {/* Evento abierto al público: cualquiera aparta lugar sin cuenta, y el
+              boleto se consulta con su código (link del correo). */}
+          <Route path="/evento/:id" element={<EventoPublico />} />
+          <Route path="/boleto/:code" element={<Boleto />} />
           
           {/* Rutas Privadas Clienta */}
           <Route path="/portal" element={<ProtectedRoute requireRole="CLIENT"><Portal /></ProtectedRoute>} />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, CalendarDays, MapPin, Sparkles, Share2, Check, Ticket, ImagePlus, Loader2, X, Tag, Users, QrCode, Lock, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, CalendarDays, MapPin, Sparkles, Share2, Check, Ticket, ImagePlus, Loader2, X, Tag, Users, QrCode, Lock, CheckCircle2, UserPlus, Plus } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Capacitor } from '@capacitor/core';
 import { Stripe } from '@capacitor-community/stripe';
@@ -61,7 +61,160 @@ function Lightbox({ src, onClose }) {
   );
 }
 
-function EventDetail({ ev, user, registered, onReg, processing, onBack }) {
+const MAX_INVITADOS = 3;
+
+// Hoja para traer invitados: el novio, una amiga, la familia. Cada invitado
+// ocupa un lugar del cupo y lleva su propio boleto con QR.
+function InvitadosSheet({ ev, yaInscrita, libres, processing, onClose, onPay }) {
+  const [nombres, setNombres] = useState(['']);
+  const [error, setError] = useState('');
+
+  const limpios = nombres.map(n => n.trim()).filter(Boolean);
+  const boletos = (yaInscrita ? 0 : 1) + limpios.length;
+  const total = (ev.price || 0) * boletos;
+  const topeCupo = libres == null ? Infinity : libres;
+
+  const pagar = () => {
+    if (limpios.length !== nombres.length) return setError('Escribe el nombre de cada invitado (o quita el que sobre).');
+    if (!limpios.length) return setError('Agrega al menos un invitado.');
+    if (boletos > topeCupo) return setError(`Solo quedan ${libres} lugares.`);
+    setError('');
+    onPay(limpios);
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 6000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+      <motion.div onClick={e => e.stopPropagation()} initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        style={{ width: '100%', maxWidth: '520px', background: 'var(--app-surface-solid)', borderRadius: '28px 28px 0 0', padding: '10px 22px calc(env(safe-area-inset-bottom,0px) + 26px)', maxHeight: '88vh', overflowY: 'auto' }}>
+        <div style={{ width: '38px', height: '4px', borderRadius: '2px', background: 'var(--fill-subtle)', margin: '0 auto 18px' }} />
+
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--on-surface)', margin: '0 0 4px' }}>Traer invitados</h2>
+        <p style={{ margin: '0 0 20px', fontSize: '0.9rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>
+          No necesitan cuenta ni membresía. Cada invitado ocupa un lugar y le toca su propio boleto.
+        </p>
+
+        {nombres.map((nombre, i) => (
+          <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+            <input value={nombre} onChange={e => setNombres(nombres.map((n, j) => (j === i ? e.target.value : n)))}
+              placeholder={`Nombre del invitado ${i + 1}`}
+              style={{ flex: 1, padding: '14px 15px', borderRadius: '14px', fontSize: '1rem', border: '1px solid var(--glass-border)', background: 'var(--fill-subtle)', color: 'var(--on-surface)', fontFamily: 'var(--font-body)', outline: 'none' }} />
+            {nombres.length > 1 && (
+              <button onClick={() => setNombres(nombres.filter((_, j) => j !== i))} aria-label="Quitar invitado"
+                style={{ width: '48px', flexShrink: 0, borderRadius: '14px', border: 'none', background: 'var(--fill-subtle)', color: 'var(--on-surface-variant)', cursor: 'pointer' }}>
+                <X size={17} />
+              </button>
+            )}
+          </div>
+        ))}
+
+        {nombres.length < MAX_INVITADOS && (
+          <button onClick={() => setNombres([...nombres, ''])}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '11px 16px', borderRadius: '14px', border: `1px dashed ${PRIMARY}`, background: 'rgba(255,145,77,0.08)', color: PRIMARY, fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', marginBottom: '4px' }}>
+            <Plus size={16} /> Otro invitado
+          </button>
+        )}
+        <div style={{ fontSize: '0.76rem', color: 'var(--on-surface-variant)', margin: '10px 0 18px' }}>
+          Máximo {MAX_INVITADOS} invitados.
+        </div>
+
+        {/* Desglose */}
+        <div style={{ ...glass, borderRadius: '18px', padding: '16px 18px', marginBottom: '16px' }}>
+          {!yaInscrita && (
+            <Row label="Tu lugar" value={`$${ev.price}`} />
+          )}
+          {limpios.map((n, i) => <Row key={i} label={n} value={`$${ev.price}`} />)}
+          <div style={{ height: '1px', background: 'var(--glass-border)', margin: '10px 0' }} />
+          <Row label="Total" value={`$${total}`} fuerte />
+        </div>
+
+        {error && (
+          <div style={{ padding: '12px 14px', borderRadius: '13px', background: 'rgba(186,26,26,0.09)', color: '#ba1a1a', fontSize: '0.86rem', fontWeight: 600, marginBottom: '14px' }}>{error}</div>
+        )}
+
+        <button onClick={pagar} disabled={processing}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px', padding: '16px', borderRadius: '16px', border: 'none', cursor: processing ? 'default' : 'pointer', fontWeight: 800, fontSize: '0.98rem', color: '#fff', background: PRIMARY, boxShadow: '0 10px 24px rgba(255,145,77,0.35)', opacity: processing ? 0.7 : 1 }}>
+          {processing
+            ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} style={{ display: 'flex' }}><Loader2 size={18} /></motion.span> Procesando…</>
+            : <><Ticket size={18} /> Pagar ${total}</>}
+        </button>
+        <button onClick={onClose} style={{ width: '100%', marginTop: '10px', padding: '14px', borderRadius: '16px', border: 'none', background: 'transparent', color: 'var(--on-surface-variant)', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>
+          Cancelar
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function Row({ label, value, fuerte }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', padding: '3px 0' }}>
+      <span style={{ fontSize: fuerte ? '0.98rem' : '0.9rem', fontWeight: fuerte ? 800 : 600, color: fuerte ? 'var(--on-surface)' : 'var(--on-surface-variant)' }}>{label}</span>
+      <span style={{ fontSize: fuerte ? '1.05rem' : '0.9rem', fontWeight: fuerte ? 800 : 700, color: fuerte ? PRIMARY : 'var(--on-surface)' }}>{value}</span>
+    </div>
+  );
+}
+
+// Boletos de los invitados que trajo la socia (los muestra ella en la entrada).
+function MisInvitados({ ev, userId }) {
+  const [boletos, setBoletos] = useState([]);
+  const [abierto, setAbierto] = useState(null);
+
+  const cargar = async () => {
+    if (!userId) return;
+    const { data } = await supabase.from('event_registrations')
+      .select('id, guest_name, ticket_code, checked_in')
+      .eq('event_id', ev.id).eq('invited_by', userId).order('created_at');
+    setBoletos(data || []);
+  };
+  useEffect(() => { cargar(); }, [ev.id, userId]);
+
+  if (!boletos.length) return null;
+
+  return (
+    <div style={{ marginBottom: '24px' }}>
+      <h3 style={{ margin: '0 0 10px', fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: 'var(--on-surface)' }}>
+        Mis invitados <span style={{ color: 'var(--on-surface-variant)', fontWeight: 500, fontSize: '0.9rem' }}>· {boletos.length}</span>
+      </h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {boletos.map(b => (
+          <button key={b.id} onClick={() => setAbierto(b)}
+            style={{ ...glass, borderRadius: '16px', padding: '13px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 700, color: 'var(--on-surface)', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.guest_name}</div>
+              <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', letterSpacing: '0.1em', color: PRIMARY, fontWeight: 700 }}>{b.ticket_code}</div>
+            </div>
+            {b.checked_in
+              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 800, color: '#16A34A', background: 'rgba(34,197,94,0.1)', padding: '5px 9px', borderRadius: '8px', flexShrink: 0 }}><Check size={12} /> Entró</span>
+              : <QrCode size={19} color={PRIMARY} style={{ flexShrink: 0 }} />}
+          </button>
+        ))}
+      </div>
+
+      <AnimatePresence>
+        {abierto && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setAbierto(null)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 6000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+            <motion.div onClick={e => e.stopPropagation()} initial={{ scale: 0.92, opacity: 0, y: 16 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0 }}
+              transition={{ type: 'spring', damping: 22, stiffness: 240 }}
+              style={{ width: 'min(340px, 100%)', background: 'var(--app-surface-solid)', borderRadius: '26px', padding: '28px 24px', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.3)' }}>
+              <p style={{ margin: '0 0 4px', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--on-surface-variant)' }}>Boleto de invitado</p>
+              <h2 style={{ margin: '0 0 18px', fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--on-surface)' }}>{abierto.guest_name}</h2>
+              <div style={{ background: '#fff', padding: '14px', borderRadius: '18px', display: 'inline-block', boxShadow: '0 6px 20px rgba(0,0,0,0.1)' }}>
+                <QRCodeCanvas value={abierto.ticket_code} size={190} level="M" />
+              </div>
+              <div style={{ fontFamily: 'monospace', fontSize: '1.5rem', fontWeight: 800, letterSpacing: '0.18em', color: PRIMARY, marginTop: '14px' }}>{abierto.ticket_code}</div>
+              <button onClick={() => setAbierto(null)} style={{ width: '100%', marginTop: '18px', padding: '13px', borderRadius: '14px', border: 'none', background: 'var(--fill-subtle)', color: 'var(--on-surface)', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>Cerrar</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function EventDetail({ ev, user, registered, onReg, processing, onBack, onInvitar }) {
   const [photos, setPhotos] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [lightbox, setLightbox] = useState(null);
@@ -153,6 +306,14 @@ function EventDetail({ ev, user, registered, onReg, processing, onBack }) {
         </button>
       </div>
 
+      {/* Traer invitados: gente sin membresía que viene con la socia */}
+      {ev.registration_open && !past && ev.price > 0 && !(ev.capacity != null && (ev.registered_count ?? 0) >= ev.capacity) && (
+        <button onClick={() => onInvitar(ev)}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px', padding: '14px', borderRadius: '15px', marginTop: '-14px', marginBottom: '26px', ...glass, color: 'var(--on-surface)', fontWeight: 700, fontSize: '0.93rem', cursor: 'pointer' }}>
+          <UserPlus size={18} color={PRIMARY} /> Traer invitados
+        </button>
+      )}
+
       {/* Mi QR para check-in / estado de asistencia */}
       {registered && (
         <div style={{ marginBottom: '22px' }}>
@@ -167,6 +328,9 @@ function EventDetail({ ev, user, registered, onReg, processing, onBack }) {
           ) : null}
         </div>
       )}
+
+      {/* Boletos de los invitados que trajo la socia */}
+      <MisInvitados ev={ev} userId={user?.id} />
 
       {/* Galería compartida */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -261,6 +425,7 @@ export default function Eventos() {
   const [regs, setRegs] = useState(new Set());
   const [selected, setSelected] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [invitarEv, setInvitarEv] = useState(null); // evento para el que se compran boletos de invitado
   const isNative = Capacitor.isNativePlatform();
 
   const load = async () => {
@@ -290,24 +455,28 @@ export default function Eventos() {
     else alert('No se pudo procesar: ' + msg);
   };
 
-  const payForEvent = async (ev) => {
+  // `guests` = nombres de los invitados que trae la socia (opcional). Cada uno
+  // ocupa un lugar y recibe su propio boleto; el cobro se calcula en el servidor.
+  const payForEvent = async (ev, guests = []) => {
     if (processing || !user?.id) return;
     setProcessing(true);
     try {
       if (isNative) {
-        const { data, error } = await supabase.functions.invoke('stripe-event-intent', { body: { eventId: ev.id, userId: user.id, userEmail: user.email } });
+        const { data, error } = await supabase.functions.invoke('stripe-event-intent', { body: { eventId: ev.id, userId: user.id, userEmail: user.email, guests } });
         if (error || data?.error) { payError(data?.error || error.message); return; }
         try { await Stripe.createPaymentSheet({ paymentIntentClientSecret: data.clientSecret, merchantDisplayName: 'Be Fit Lab', enableApplePay: true, applePayMerchantId: 'merchant.com.befitlab.app', countryCode: 'MX' }); }
         catch (e) { await Stripe.createPaymentSheet({ paymentIntentClientSecret: data.clientSecret, merchantDisplayName: 'Be Fit Lab' }); }
         const res = await Stripe.presentPaymentSheet();
         if (res?.paymentResult === 'paymentSheetCompleted') {
-          await supabase.functions.invoke('stripe-event-notify', { body: { paymentIntentId: data.paymentIntentId } });
+          // Emite los boletos (el suyo y los de sus invitados) y manda el correo.
+          await supabase.functions.invoke('event-tickets', { body: { paymentIntentId: data.paymentIntentId } });
           setRegs(s => new Set(s).add(ev.id));
-          setTimeout(load, 900);
+          setInvitarEv(null);
+          setTimeout(() => { load(); loadRegs(); }, 900);
         }
       } else {
         localStorage.setItem('befit_payment_return', String(Date.now()));
-        const { data, error } = await supabase.functions.invoke('stripe-event-checkout', { body: { eventId: ev.id, userId: user.id, userEmail: user.email, returnUrl: window.location.origin } });
+        const { data, error } = await supabase.functions.invoke('stripe-event-checkout', { body: { eventId: ev.id, userId: user.id, userEmail: user.email, guests, returnUrl: window.location.origin } });
         if (error || data?.error) { payError(data?.error || error.message); return; }
         if (data?.url) { window.location.href = data.url; return; }
       }
@@ -361,7 +530,7 @@ export default function Eventos() {
       <main style={{ padding: '10px 18px calc(env(safe-area-inset-bottom,0px) + 120px)', maxWidth: '640px', margin: '0 auto' }}>
         <AnimatePresence mode="wait">
           {selectedLive ? (
-            <EventDetail key="detail" ev={selectedLive} user={user} registered={regs.has(selectedLive.id)} onReg={handleReg} processing={processing} onBack={() => setSelected(null)} />
+            <EventDetail key="detail" ev={selectedLive} user={user} registered={regs.has(selectedLive.id)} onReg={handleReg} processing={processing} onBack={() => setSelected(null)} onInvitar={setInvitarEv} />
           ) : events === null ? (
             <p key="load" style={{ textAlign: 'center', color: 'var(--on-surface-variant)', padding: '50px 0' }}>Cargando…</p>
           ) : upcoming.length === 0 && past.length === 0 ? (
@@ -396,6 +565,19 @@ export default function Eventos() {
           )}
         </AnimatePresence>
       </main>
+
+      <AnimatePresence>
+        {invitarEv && (
+          <InvitadosSheet
+            ev={(events || []).find(e => e.id === invitarEv.id) || invitarEv}
+            yaInscrita={regs.has(invitarEv.id)}
+            libres={invitarEv.capacity == null ? null : Math.max(0, invitarEv.capacity - (invitarEv.registered_count ?? 0))}
+            processing={processing}
+            onClose={() => setInvitarEv(null)}
+            onPay={(nombres) => payForEvent(invitarEv, nombres)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

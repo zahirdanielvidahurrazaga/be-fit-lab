@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, Pencil, Sparkles, ImagePlus, Loader2, Camera, X, Save, MapPin, CalendarDays, Ticket, Bell, Users, ChevronDown, Tag, CheckCircle2, AlertTriangle, Send, QrCode, ScanLine, UserCheck } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { uploadImage } from '../lib/cafeImage';
+import AdminEventoBoletos from './AdminEventoBoletos';
 
 const PRIMARY = '#FF914D';
 const INK = '#1A1C1E';
@@ -42,36 +43,57 @@ export default function AdminEventos() {
   const [ciScan, setCiScan] = useState('');
   const ciInputRef = useRef(null);
 
+  const [ciBuscar, setCiBuscar] = useState('');
+  const [boletosEv, setBoletosEv] = useState(null); // evento abierto en el panel de control
+
+  // Nombre a mostrar: socia con cuenta o invitado sin cuenta.
+  const nombreDe = (r) => r.guest_name || r.users?.full_name || r.users?.email || 'Invitada';
+
   const openCheckin = async (ev) => {
     setCi({ ev, list: null, feedback: null });
+    setCiBuscar('');
     const { data } = await supabase.from('event_registrations')
-      .select('user_id, checked_in, checked_in_at, users(full_name, email, avatar_url)')
+      .select('id, user_id, guest_name, ticket_code, invited_by, checked_in, checked_in_at, users!event_registrations_user_id_fkey(full_name, email, avatar_url)')
       .eq('event_id', ev.id).order('created_at', { ascending: true });
     setCi(c => c && c.ev.id === ev.id ? { ...c, list: data || [] } : c);
   };
   useEffect(() => { if (ci && ci.list) setTimeout(() => ciInputRef.current?.focus(), 50); }, [ci?.ev?.id, ci?.list]);
 
-  const markAttendance = async (userId) => {
+  // Marca asistencia por FILA (sirve igual para socias e invitados).
+  const markAttendance = async (regId) => {
     if (!ci) return;
-    const reg = (ci.list || []).find(r => r.user_id === userId);
+    const reg = (ci.list || []).find(r => r.id === regId);
     if (!reg) { setCi(c => ({ ...c, feedback: { type: 'err', msg: 'No está inscrita en este evento' } })); return; }
-    const name = reg.users?.full_name || reg.users?.email || 'Clienta';
+    const name = nombreDe(reg);
     if (reg.checked_in) { setCi(c => ({ ...c, feedback: { type: 'dup', name, msg: 'Ya tenía asistencia registrada' } })); return; }
     const { error } = await supabase.from('event_registrations')
       .update({ checked_in: true, checked_in_at: new Date().toISOString() })
-      .eq('event_id', ci.ev.id).eq('user_id', userId);
+      .eq('id', regId);
     if (error) { setCi(c => ({ ...c, feedback: { type: 'err', msg: 'No se pudo registrar' } })); return; }
     setCi(c => ({
       ...c,
-      list: (c.list || []).map(r => r.user_id === userId ? { ...r, checked_in: true, checked_in_at: new Date().toISOString() } : r),
+      list: (c.list || []).map(r => r.id === regId ? { ...r, checked_in: true, checked_in_at: new Date().toISOString() } : r),
       feedback: { type: 'ok', name, msg: '¡Asistencia registrada!' },
     }));
   };
+
+  // El lector recibe dos cosas distintas: el QR de una socia (UUID de su cuenta)
+  // o el código del boleto de un invitado (6 caracteres). Se resuelven los dos.
   const handleEventScan = (e) => {
     e.preventDefault();
-    const code = ciScan.trim();
+    const raw = ciScan.trim();
     setCiScan('');
-    if (code) markAttendance(code);
+    if (!raw) return;
+    const uuid = (raw.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i) || [])[0];
+    const lista = ci?.list || [];
+    const reg = uuid
+      ? lista.find(r => r.user_id === uuid)
+      : lista.find(r => (r.ticket_code || '').toUpperCase() === raw.toUpperCase());
+    if (!reg) {
+      setCi(c => ({ ...c, feedback: { type: 'err', msg: uuid ? 'Esa persona no está inscrita en este evento' : `Boleto "${raw.toUpperCase()}" no encontrado en este evento` } }));
+      return;
+    }
+    markAttendance(reg.id);
   };
 
   const load = async () => {
@@ -85,7 +107,7 @@ export default function AdminEventos() {
 
   const viewRegs = async (id) => {
     if (regView[id]) { setRegView(v => ({ ...v, [id]: undefined })); return; }
-    const { data } = await supabase.from('event_registrations').select('user_id, users(full_name, email)').eq('event_id', id).order('created_at', { ascending: true });
+    const { data } = await supabase.from('event_registrations').select('user_id, guest_name, ticket_code, users!event_registrations_user_id_fkey(full_name, email)').eq('event_id', id).order('created_at', { ascending: true });
     setRegView(v => ({ ...v, [id]: data || [] }));
   };
   const [nm, setNm] = useState(null); // modal de aviso { ev, stage, result, error, recipients, loadingRec }
@@ -206,6 +228,9 @@ export default function AdminEventos() {
                 <button onClick={() => avisar(e)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(255,145,77,0.12)', color: PRIMARY, border: 'none', borderRadius: '9px', padding: '7px 11px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
                   <Bell size={13} /> Avisar
                 </button>
+                <button onClick={() => setBoletosEv(e)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(224,122,156,0.14)', color: '#C2456E', border: 'none', borderRadius: '9px', padding: '7px 11px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
+                  <Ticket size={13} /> Boletos
+                </button>
                 {(e.registration_open || (e.registered_count ?? counts[e.id] ?? 0) > 0) && (
                   <button onClick={() => openCheckin(e)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: INK, color: '#fff', border: 'none', borderRadius: '9px', padding: '7px 11px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
                     <QrCode size={13} /> Check-in
@@ -215,13 +240,24 @@ export default function AdminEventos() {
               {regView[e.id] && (
                 <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {regView[e.id].length === 0 ? <span style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)' }}>Aún no hay inscritas.</span>
-                    : regView[e.id].map((r, i) => <div key={i} style={{ fontSize: '0.84rem', color: INK, display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', background: PRIMARY }} />{r.users?.full_name || r.users?.email || 'Clienta'}</div>)}
+                    : regView[e.id].map((r, i) => <div key={i} style={{ fontSize: '0.84rem', color: INK, display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', background: r.guest_name ? '#E07A9C' : PRIMARY }} />{r.guest_name || r.users?.full_name || r.users?.email || 'Clienta'}{r.guest_name && <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#E07A9C' }}>· invitado</span>}</div>)}
                 </div>
               )}
             </div>
           ))}
         </div>
       )}
+
+      {/* Panel de control del evento: boletos, dinero, contacto y asistencia */}
+      <AnimatePresence>
+        {boletosEv && (
+          <AdminEventoBoletos
+            ev={(events.find(x => x.id === boletosEv.id)) || boletosEv}
+            onClose={() => setBoletosEv(null)}
+            onChange={load}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Modal de aviso (bonito, reemplaza confirm/alert) */}
       <AnimatePresence>
@@ -339,9 +375,14 @@ export default function AdminEventos() {
                 )}
               </AnimatePresence>
 
-              {/* Lista de inscritas con su estado + marca manual de respaldo */}
+              {/* Buscador: en la puerta muchas llegan sin el QR a la mano */}
+              <input value={ciBuscar} onChange={(e) => setCiBuscar(e.target.value)}
+                placeholder="Buscar por nombre o código de boleto…"
+                style={{ flexShrink: 0, width: '100%', padding: '11px 13px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.12)', background: '#fff', color: INK, fontSize: '0.88rem', marginBottom: '10px', outline: 'none' }} />
+
+              {/* Lista de inscritas (socias e invitados) + marca manual de respaldo */}
               <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: INK }}>Inscritas</span>
+                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: INK }}>Lista de acceso</span>
                 {ci.list && <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--on-surface-variant)' }}>{ci.list.filter(r => r.checked_in).length}/{ci.list.length} asistieron</span>}
               </div>
               <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -349,17 +390,31 @@ export default function AdminEventos() {
                   <div style={{ textAlign: 'center', padding: '24px', color: 'var(--on-surface-variant)' }}><Loader2 size={22} style={{ animation: 'spin 1s linear infinite' }} /></div>
                 ) : ci.list.length === 0 ? (
                   <span style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', padding: '12px 0' }}>Aún no hay inscritas en este evento.</span>
-                ) : ci.list.map((r) => (
-                  <div key={r.user_id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 11px', borderRadius: '13px', background: r.checked_in ? 'rgba(34,197,94,0.08)' : 'rgba(0,0,0,0.03)' }}>
-                    {r.users?.avatar_url ? <img src={r.users.avatar_url} alt="" style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} /> : <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'rgba(255,145,77,0.14)', color: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.82rem', flexShrink: 0 }}>{(r.users?.full_name || r.users?.email || '?').charAt(0).toUpperCase()}</div>}
-                    <span style={{ flex: 1, minWidth: 0, fontSize: '0.88rem', fontWeight: 600, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.users?.full_name || r.users?.email || 'Clienta'}</span>
+                ) : (() => {
+                  const q = ciBuscar.trim().toLowerCase();
+                  const filtrada = q
+                    ? ci.list.filter(r => nombreDe(r).toLowerCase().includes(q) || (r.ticket_code || '').toLowerCase().includes(q))
+                    : ci.list;
+                  if (!filtrada.length) return <span style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', padding: '12px 0' }}>Nadie coincide con “{ciBuscar}”.</span>;
+                  return filtrada.map((r) => (
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 11px', borderRadius: '13px', background: r.checked_in ? 'rgba(34,197,94,0.08)' : 'rgba(0,0,0,0.03)' }}>
+                    {r.users?.avatar_url ? <img src={r.users.avatar_url} alt="" style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} /> : <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: r.guest_name ? 'rgba(224,122,156,0.16)' : 'rgba(255,145,77,0.14)', color: r.guest_name ? '#E07A9C' : PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.82rem', flexShrink: 0 }}>{nombreDe(r).charAt(0).toUpperCase()}</div>}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 600, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nombreDe(r)}</div>
+                      {r.guest_name && (
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#E07A9C', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          Invitado <span style={{ fontFamily: 'monospace', letterSpacing: '0.06em', color: 'var(--on-surface-variant)' }}>{r.ticket_code}</span>
+                        </div>
+                      )}
+                    </div>
                     {r.checked_in ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.76rem', fontWeight: 800, color: '#16A34A', flexShrink: 0 }}><CheckCircle2 size={15} /> Asistió</span>
                     ) : (
-                      <button onClick={() => markAttendance(r.user_id)} style={{ flexShrink: 0, fontSize: '0.76rem', fontWeight: 700, color: INK, background: '#fff', border: '1px solid rgba(0,0,0,0.12)', borderRadius: '9px', padding: '6px 10px', cursor: 'pointer' }}>Marcar</button>
+                      <button onClick={() => markAttendance(r.id)} style={{ flexShrink: 0, fontSize: '0.76rem', fontWeight: 700, color: INK, background: '#fff', border: '1px solid rgba(0,0,0,0.12)', borderRadius: '9px', padding: '6px 10px', cursor: 'pointer' }}>Marcar</button>
                     )}
                   </div>
-                ))}
+                  ));
+                })()}
               </div>
             </motion.div>
           </motion.div>

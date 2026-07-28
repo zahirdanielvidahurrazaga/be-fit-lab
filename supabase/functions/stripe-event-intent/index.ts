@@ -9,11 +9,22 @@ const corsHeaders = {
 
 // PaymentIntent para inscribirse a un evento de pago (hoja nativa). Valida precio,
 // cupo y que no esté ya inscrita. El precio se lee de la BD (server-side).
+// También cobra los boletos de los INVITADOS que trae la socia (`guests`): cada
+// invitado ocupa un lugar y lleva su propio boleto.
+const MAX_INVITADOS = 3;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
-    const { eventId, userId, userEmail } = await req.json();
+    const { eventId, userId, userEmail, guests } = await req.json();
     if (!eventId || !userId) return Response.json({ error: 'Faltan datos' }, { status: 400, headers: corsHeaders });
+
+    const invitados: string[] = Array.isArray(guests)
+      ? guests.map((g: unknown) => String(g ?? '').trim().slice(0, 60)).filter(Boolean)
+      : [];
+    if (invitados.length > MAX_INVITADOS) {
+      return Response.json({ error: `Máximo ${MAX_INVITADOS} invitados` }, { status: 400, headers: corsHeaders });
+    }
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
@@ -22,26 +33,37 @@ serve(async (req) => {
     if (!ev.registration_open) return Response.json({ error: 'Inscripción cerrada' }, { status: 400, headers: corsHeaders });
     if (!ev.price || ev.price <= 0) return Response.json({ error: 'Evento sin costo' }, { status: 400, headers: corsHeaders });
 
-    // ¿ya inscrita?
+    // Si ya está inscrita solo se le cobran los invitados (su lugar ya lo pagó).
     const { data: existing } = await supabase.from('event_registrations').select('id').eq('event_id', eventId).eq('user_id', userId).maybeSingle();
-    if (existing) return Response.json({ error: 'YA_INSCRITA' }, { status: 409, headers: corsHeaders });
+    const cobrarSuLugar = !existing;
+    const qty = (cobrarSuLugar ? 1 : 0) + invitados.length;
+    if (qty === 0) return Response.json({ error: 'YA_INSCRITA' }, { status: 409, headers: corsHeaders });
 
-    // cupo
+    // cupo (los invitados también ocupan lugar)
     if (ev.capacity != null) {
       const { count } = await supabase.from('event_registrations').select('*', { count: 'exact', head: true }).eq('event_id', eventId);
-      if ((count ?? 0) >= ev.capacity) return Response.json({ error: 'EVENT_FULL' }, { status: 409, headers: corsHeaders });
+      const libres = ev.capacity - (count ?? 0);
+      if (libres <= 0) return Response.json({ error: 'EVENT_FULL' }, { status: 409, headers: corsHeaders });
+      if (qty > libres) return Response.json({ error: `Solo quedan ${libres} lugares`, libres }, { status: 409, headers: corsHeaders });
     }
 
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-06-20' });
     const pi = await stripe.paymentIntents.create({
-      amount: ev.price * 100,
+      amount: ev.price * qty * 100,
       currency: 'mxn',
       payment_method_types: ['card'],
       ...(userEmail ? { receipt_email: userEmail } : {}),
-      metadata: { type: 'event', event_id: eventId, supabase_user_id: userId, title: ev.title },
+      metadata: {
+        type: 'event',
+        event_id: eventId,
+        supabase_user_id: userId,
+        title: ev.title,
+        guest_names: JSON.stringify(invitados),
+        ...(userEmail ? { buyer_email: String(userEmail) } : {}),
+      },
     });
 
-    return Response.json({ clientSecret: pi.client_secret, paymentIntentId: pi.id, amount: ev.price }, { headers: corsHeaders });
+    return Response.json({ clientSecret: pi.client_secret, paymentIntentId: pi.id, amount: ev.price * qty, boletos: qty }, { headers: corsHeaders });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error('stripe-event-intent error:', message);

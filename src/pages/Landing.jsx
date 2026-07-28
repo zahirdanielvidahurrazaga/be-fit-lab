@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence, useScroll, useTransform, useInView, useSpring as useMotionSpring } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 import PolaroidGallery from '../components/PolaroidGallery';
+import LandingEvento from '../components/LandingEvento';
 
 // Link de react-router con animaciones de framer-motion (hover naranja + desplazamiento)
 const MotionLink = motion(Link);
@@ -529,6 +530,10 @@ export default function Landing() {
         {/* Bottom rule */}
         <div style={{ position:'absolute', bottom:0, left:'5%', right:'5%', height:'1px', background:'rgba(255,255,255,0.07)' }}/>
       </section>
+
+      {/* ── Próximo evento (abierto al público, no solo socias) ───── */}
+      {/* Solo se pinta si hay un evento con inscripción abierta. */}
+      <LandingEvento />
 
       {/* ── El Método ─────────────────────────────────────────────── */}
       <section id="metodo" style={{ padding:'12rem 5%', background:'var(--surface-lowest)', position:'relative', overflow:'hidden' }}>

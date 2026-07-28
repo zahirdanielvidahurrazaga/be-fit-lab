@@ -55,6 +55,21 @@ serve(async (req) => {
 
       const { supabase_user_id, plan_title, class_count } = session.metadata ?? {};
 
+      // Pago de BOLETOS DE INVITADO (web pública, sin cuenta) → emitir boletos.
+      // Respaldo por si la persona cerró la pestaña antes de la pantalla de
+      // gracias; `event-tickets` es idempotente, así que no duplica.
+      if (session.metadata?.type === 'event_guest') {
+        try {
+          const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/event-tickets`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
+            body: JSON.stringify({ paymentIntentId: session.payment_intent }),
+          });
+          if (!res.ok) console.error('event-tickets respondió', res.status, await res.text());
+        } catch (e) { console.error('Error emitiendo boletos de invitado:', e); }
+        return new Response('ok');
+      }
+
       // Pago de INSCRIPCIÓN A EVENTO → inscribir a la clienta
       if (session.metadata?.type === 'event') {
         const eventId = session.metadata.event_id;

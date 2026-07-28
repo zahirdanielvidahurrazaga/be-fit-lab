@@ -5,3 +5,12 @@ project_id = "fifaowaiokauhuqklzwe"
 # pago web se activa. No quitar verify_jwt=false.
 [functions.stripe-webhook]
 verify_jwt = false
+
+# Compra de boletos de evento por gente SIN cuenta: no hay sesión que mandar,
+# así que estas dos van públicas. El precio y el cupo se validan server-side y
+# los boletos solo se emiten contra un pago verificado con Stripe.
+[functions.event-public-checkout]
+verify_jwt = false
+
+[functions.event-tickets]
+verify_jwt = false
