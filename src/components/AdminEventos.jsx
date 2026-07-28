@@ -125,8 +125,8 @@ export default function AdminEventos() {
     setNm(m => ({ ...m, recipients: data || [], loadingRec: false }));
   };
 
-  const blank = { title: '', description: '', event_date: '', location: '', image_url: '', price: '', capacity: '', registration_open: false, notify: true };
-  const startEdit = (e) => setForm({ id: e.id, title: e.title || '', description: e.description || '', event_date: toLocalInput(e.event_date), location: e.location || '', image_url: e.image_url || '', price: e.price ?? '', capacity: e.capacity ?? '', registration_open: !!e.registration_open, notify: false });
+  const blank = { title: '', description: '', event_date: '', location: '', image_url: '', price: '', capacity: '', registration_open: false, notify: true, slug: '' };
+  const startEdit = (e) => setForm({ id: e.id, title: e.title || '', description: e.description || '', event_date: toLocalInput(e.event_date), location: e.location || '', image_url: e.image_url || '', slug: e.slug || '', price: e.price ?? '', capacity: e.capacity ?? '', registration_open: !!e.registration_open, notify: false });
 
   const notifyClients = (ev) => supabase.functions.invoke('notify-event', { body: {
     title: '✨ Nuevo evento: ' + ev.title,
@@ -141,6 +141,7 @@ export default function AdminEventos() {
       title: form.title.trim(), description: form.description.trim() || null,
       event_date: form.event_date ? new Date(form.event_date).toISOString() : null,
       location: form.location.trim() || null, image_url: form.image_url || null,
+      slug: form.slug.trim() || null,
       price: form.price === '' ? null : (parseInt(form.price, 10) || 0),
       capacity: form.capacity === '' ? null : (parseInt(form.capacity, 10) || null),
       registration_open: !!form.registration_open,
@@ -174,7 +175,13 @@ export default function AdminEventos() {
                 <button onClick={() => setForm(null)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={16} /></button>
               </div>
               <div style={{ marginBottom: '12px' }}><PhotoButton url={form.image_url} onUploaded={(u) => setForm(f => ({ ...f, image_url: u }))} /></div>
-              <input placeholder="Título del evento" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={{ ...input, marginBottom: '12px' }} />
+              <input placeholder="Título del evento" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={{ ...input, marginBottom: '8px' }} />
+              {/* Link corto para Instagram: befitlab.app/evento/<esto> */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', padding: '9px 12px', borderRadius: '12px', background: 'rgba(255,145,77,0.08)' }}>
+                <span style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', whiteSpace: 'nowrap' }}>befitlab.app/evento/</span>
+                <input placeholder="rodeo" value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value })}
+                  style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontSize: '0.88rem', fontWeight: 700, color: PRIMARY, fontFamily: 'inherit' }} />
+              </div>
               <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
                 <input type="datetime-local" value={form.event_date} onChange={e => setForm({ ...form, event_date: e.target.value })} style={{ ...input, flex: '1 1 200px' }} />
                 <input placeholder="Lugar (ej. El estudio)" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} style={{ ...input, flex: '1 1 160px' }} />

@@ -98,7 +98,7 @@ export default function LandingEvento() {
 
             {/* Botón con forma de talón de boleto: acción + precio troquelados */}
             <motion.div whileHover={{ y: -3 }} whileTap={{ scale: 0.985 }} transition={{ type: 'spring', stiffness: 400, damping: 22 }} style={{ alignSelf: 'flex-start' }}>
-              <Link to={`/evento/${ev.id}`}
+              <Link to={`/evento/${ev.slug || ev.id}`}
                 style={{
                   display: 'inline-flex', alignItems: 'stretch', textDecoration: 'none',
                   borderRadius: '100px', overflow: 'hidden', color: '#fff',

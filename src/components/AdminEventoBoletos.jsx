@@ -61,7 +61,8 @@ export default function AdminEventoBoletos({ ev, onClose, onChange }) {
     };
   }, [lista, ev.price]);
 
-  const linkPublico = `https://befitlab.app/evento/${ev.id}`;
+  // Con slug queda /evento/rodeo; sin él, cae al UUID.
+  const linkPublico = `https://befitlab.app/evento/${ev.slug || ev.id}`;
 
   const copiar = async (texto, clave) => {
     try { await navigator.clipboard.writeText(texto); setCopiado(clave); setTimeout(() => setCopiado(''), 1800); }

@@ -96,8 +96,14 @@ export default function EventoPublico() {
   const [compra, setCompra] = useState(null); // { tickets, correo }
   const [confirmando, setConfirmando] = useState(false);
 
+  // La ruta acepta las dos formas: /evento/<uuid> (links ya compartidos) y
+  // /evento/rodeo (el corto, para Instagram).
   const cargar = async () => {
-    const { data } = await supabase.from('events').select('*').eq('id', id).maybeSingle();
+    const esUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    const base = supabase.from('events').select('*');
+    const { data } = esUuid
+      ? await base.eq('id', id).maybeSingle()
+      : await base.eq('slug', String(id).toLowerCase()).maybeSingle();
     if (!data) setNoExiste(true); else setEv(data);
   };
   useEffect(() => { window.scrollTo(0, 0); cargar(); }, [id]);
@@ -145,7 +151,7 @@ export default function EventoPublico() {
     try {
       const { data, error: fnError } = await supabase.functions.invoke('event-public-checkout', {
         body: {
-          eventId: id,
+          eventId: ev.id,
           name: form.name.trim(),
           email: form.email.trim(),
           phone: form.phone.trim(),
