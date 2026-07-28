@@ -31,6 +31,7 @@ const Recepcion = lazy(() => import('./pages/Recepcion'));
 const NuevaContrasena = lazy(() => import('./pages/NuevaContrasena'));
 const EventoPublico = lazy(() => import('./pages/EventoPublico'));
 const Boleto = lazy(() => import('./pages/Boleto'));
+const NoEncontrado = lazy(() => import('./pages/NoEncontrado'));
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { hasNutritionAccess } from './lib/plans';
 import { useLocalNotifications } from './hooks/useLocalNotifications';
@@ -239,6 +240,9 @@ function App() {
           {/* Barista / Recepción */}
           <Route path="/barista" element={<ProtectedRoute requireRole={['BARISTA', 'ADMIN']}><Barista /></ProtectedRoute>} />
           <Route path="/recepcion" element={<ProtectedRoute requireRole={['RECEPCION', 'ADMIN']}><Recepcion /></ProtectedRoute>} />
+
+          {/* Cualquier otra dirección: antes quedaba la pantalla EN BLANCO */}
+          <Route path="*" element={<NoEncontrado />} />
         </Routes>
         </Suspense>
         <AppTour />
