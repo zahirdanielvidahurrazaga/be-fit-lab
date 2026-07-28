@@ -10,13 +10,14 @@ import { supabase } from '../lib/supabase';
 // hash bcrypt en una tabla que nadie puede leer por la API). Si estuviera aquí,
 // cualquiera que abra el JavaScript del sitio la leería.
 //
-// Se desbloquea por SESIÓN del navegador: al cerrar la pestaña vuelve a pedirla.
+// Se pide CADA VEZ que se entra a la pestaña: el componente se desmonta al
+// cambiar de sección, así que el estado se pierde a propósito (nada se guarda
+// en el navegador). Mientras estén dentro de Reportes no se vuelve a pedir.
 const PRIMARY = '#FF914D';
 const INK = '#1A1C1E';
-const LLAVE = 'befit_reportes_ok';
 
 export default function ReportesLock({ children }) {
-  const [abierto, setAbierto] = useState(() => sessionStorage.getItem(LLAVE) === '1');
+  const [abierto, setAbierto] = useState(false);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [verificando, setVerificando] = useState(false);
@@ -34,7 +35,6 @@ export default function ReportesLock({ children }) {
     setVerificando(false);
     if (rpcError) { setError('No se pudo verificar. Revisa tu conexión.'); return; }
     if (data === true) {
-      sessionStorage.setItem(LLAVE, '1');
       setAbierto(true);
     } else {
       setError('Clave incorrecta.');
@@ -74,7 +74,7 @@ export default function ReportesLock({ children }) {
         </form>
 
         <p style={{ margin: '18px 0 0', fontSize: '0.78rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>
-          Se vuelve a pedir cada vez que se abre el navegador.
+          Se pide cada vez que entras a Reportes.
         </p>
       </div>
     </motion.div>
