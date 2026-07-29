@@ -9,7 +9,13 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 ## ⏭️ PRÓXIMA SESIÓN (retomar) — SUBIR ANDROID
 
 > ### 🤖 SI ESTOY EN LA OTRA PC: BUILD DE ANDROID (esto es lo que toca)
-> **Objetivo:** generar y subir el AAB de **Android 2.6.1 (versionCode 13)**. Ya está todo commiteado y pusheado a `main` (último commit de release: `74e80f7`); en la otra PC **solo hay que traer y compilar**.
+> **Objetivo:** generar y subir el AAB de **Android 2.6.2 (versionCode 14)**. Ya está todo commiteado y pusheado a `main` (último commit de release: `71e5122`); en la otra PC **solo hay que traer y compilar**.
+>
+> ⚠️ **Se saltaron la 2.6.1 / versionCode 13 a propósito** (y en iOS la 1.9.1 / build 25): se prepararon el 28-jul y desde la Mac no hay forma de comprobar si alcanzaron a subirse. Reusar un build number ya subido es la causa #1 de rechazos; saltarlo no cuesta nada.
+>
+> **Qué lleva esta versión (además del arreglo de pagos de la tanda anterior):** la **lista de espera v3** — al formarse en una clase llena la clienta elige "apártamelo automáticamente" (default) o "prefiero que me pregunten". El arreglo de fondo YA está vivo en BD y web; el binario solo agrega el selector y los textos nuevos.
+>
+> ⚠️ **La firma NO está en esta Mac** (no hay `signingConfigs` en `android/app/build.gradle`, ni `key.properties`, ni `.jks`) → **el AAB se genera sí o sí en la otra PC**, con Android Studio.
 >
 > **Qué lleva esta versión (por qué importa subirla):** el **arreglo del pago desde la app**. Antes, **ningún** pago hecho desde la app nativa llegaba a cobrarse (0 de 9 intentos del evento; la web iba 3 de 3) porque `Eventos.jsx` pedía **Apple Pay en Android** y eso hacía fallar la creación de la hoja. Ahora Apple Pay va solo en iOS, Google Pay solo en Android, y **si la hoja falla cae al Checkout del navegador** con el mismo cobro. Igual en `Planes.jsx` para las membresías. **Las 6 usuarias de Android traen APKs congelados** (Android no está en Play → no se actualizan solas), así que hasta que no instalen este build siguen sin poder pagar dentro de la app; mientras tanto la salida es **pagar en `befitlab.app` desde el navegador**.
 >
@@ -18,12 +24,12 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 > 2. `npm install`.
 > 3. `npm run build` (Vite v8/rolldown, ~1 s, ya no se cuelga).
 > 4. `npx cap sync android`.
-> 5. Confirmar en `android/app/build.gradle` que dice `versionCode 13` / `versionName "2.6.1"`. Si Play reclama "version code already used", subirlo +1, regenerar y volver a subir.
+> 5. Confirmar en `android/app/build.gradle` que dice `versionCode 14` / `versionName "2.6.2"`. Si Play reclama "version code already used", subirlo +1, regenerar y volver a subir.
 > 6. Si la firma está en gradle: `cd android && ./gradlew bundleRelease` → `android/app/build/outputs/bundle/release/app-release.aab`. Si no, `npx cap open android` y que el usuario lo genere en Android Studio.
 >
 > **Pasos del usuario (GUI):** Android Studio → *Build → Generate Signed Bundle/APK → Android App Bundle* con el **keystore de release** (está en esa PC), y subirlo. ⚠️ **Recordar: la app Android NO está publicada en Play Store** (da 404); hoy se instala por APK. Si se decide publicarla, ese es un trámite aparte.
 >
-> **iOS de esta misma tanda:** **1.9.1 (build 25)** — el `dist` y `cap sync ios` ya están hechos y Xcode quedó abierto en la Mac; falta *Archive → Distribute → Upload*. Cuando Apple la apruebe: `UPDATE public.app_config SET latest_ios_version='1.9.1', updated_at=now() WHERE id=1;`
+> **iOS de esta misma tanda:** **1.9.2 (build 26)** — el `dist` y `cap sync ios` ya están hechos y **Xcode quedó abierto** en la Mac; falta *Archive → Distribute → Upload*. Cuando Apple la apruebe: `UPDATE public.app_config SET latest_ios_version='1.9.2', updated_at=now() WHERE id=1;` (hoy `app_config` dice `1.9.0`, que es la que está viva en el App Store).
 
 
 > **🔴 ESTADO 2026-07-29 — LISTA DE ESPERA v3: "AUTO-APARTAR CON CONSENTIMIENTO AL FORMARSE" (arreglado, BD + web desplegadas).**
