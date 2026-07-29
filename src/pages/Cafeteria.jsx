@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { Stripe } from '@capacitor-community/stripe';
 import { ShoppingCart, ChevronLeft, ChevronRight, Info, Coffee, X, Receipt, Check, CreditCard, AlertCircle, Plus, Flame, Home, Gift, Star } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, errorDeFuncion } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import CafeProductSheet from '../components/CafeProductSheet';
 import CafeCartSheet from '../components/CafeCartSheet';
@@ -248,8 +248,7 @@ function Cafeteria() {
 
       if (meta.paymentMethod === 'cash') {
         const { data, error } = await supabase.functions.invoke('cash-cafe-checkout', { body });
-        if (error) throw new Error(error.message);
-        if (data?.error) throw new Error(data.error);
+        if (error || data?.error) throw new Error(await errorDeFuncion(error, data, 'No se pudo registrar el pedido. Intenta de nuevo.'));
         
         const resumen = cart.map(i => `${i.qty}× ${i.name}`).join(', ');
         if (user?.id) supabase.functions.invoke('send-push', { body: { userId: user.id, title: 'Pedido confirmado', body: `${resumen}. ¡Paga en caja al recoger!`, type: 'payment', skipLog: true } });
@@ -264,7 +263,7 @@ function Cafeteria() {
 
       if (Capacitor.isNativePlatform()) {
         const { data, error } = await supabase.functions.invoke('stripe-cafe-intent', { body });
-        if (error) throw new Error(error.message);
+        if (error) throw new Error(await errorDeFuncion(error, data, 'No se pudo iniciar el pago. Intenta de nuevo.'));
         if (!data?.clientSecret) throw new Error('No se recibió el intent de pago');
         const isIOS = Capacitor.getPlatform() === 'ios';
         const isAndroid = Capacitor.getPlatform() === 'android';
@@ -298,8 +297,7 @@ function Cafeteria() {
         // Redirigir en la MISMA pestaña: window.open desde un timer lo bloquea el navegador
         // como popup (por eso "no salía el pago"). El success_url regresa a /cafeteria.
         const { data, error } = await supabase.functions.invoke('stripe-cafe-checkout', { body });
-        if (error) throw new Error(error.message);
-        if (data?.error) throw new Error(data.error);
+        if (error || data?.error) throw new Error(await errorDeFuncion(error, data, 'No se pudo iniciar el pago. Intenta de nuevo.'));
         if (data?.url) {
           // Marca para que al volver de Stripe NO se haga auto-signout (el sessionStorage
           // del tab puede perderse en el viaje cross-dominio). Sobrevive en localStorage.
