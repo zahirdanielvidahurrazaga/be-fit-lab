@@ -41,15 +41,22 @@ function Coach() {
     setRosterLoading(true);
     const { data } = await supabase
       .from('reservations')
-      .select('id, checked_in, users:user_id(id, full_name, email, avatar_url)')
+      .select('id, checked_in, status, users:user_id(id, full_name, email, avatar_url)')
       .eq('class_id', c.id)
-      .eq('status', 'confirmed'); // el roster del coach = solo inscritas (no lista de espera)
+      // Inscritas + las que tienen un lugar APARTADO pendiente de confirmar.
+      // Antes solo traía 'confirmed' y una clienta con lugar ofertado quedaba
+      // INVISIBLE aquí mientras su app se lo pintaba como reservado: la dueña
+      // reportó exactamente eso el 29-jul ("aparece reservada y no está en la
+      // lista"). Mejor mostrarla marcada que no mostrarla.
+      .in('status', ['confirmed', 'offered']);
     const list = (data || []).map(r => ({
       id: r.id,
       name: r.users?.full_name || r.users?.email?.split('@')[0] || 'Sin nombre',
       avatar: r.users?.avatar_url || null,
       checkedIn: !!r.checked_in,
-    })).sort((a, b) => (Number(b.checkedIn) - Number(a.checkedIn)) || a.name.localeCompare(b.name));
+      pendiente: r.status === 'offered',
+    })).sort((a, b) => (Number(a.pendiente) - Number(b.pendiente))
+      || (Number(b.checkedIn) - Number(a.checkedIn)) || a.name.localeCompare(b.name));
     setRoster(list);
     setRosterLoading(false);
   };
@@ -465,7 +472,9 @@ function Coach() {
                           {a.avatar ? <img src={a.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: '#fff', fontWeight: 800 }}>{a.name.charAt(0).toUpperCase()}</span>}
                         </div>
                         <span style={{ flex: 1, minWidth: 0, fontWeight: 700, color: 'var(--black)', fontSize: '0.92rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
-                        {a.checkedIn
+                        {a.pendiente
+                          ? <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#b45309', background: 'rgba(255,145,77,0.16)', padding: '4px 9px', borderRadius: '20px', flexShrink: 0 }}>Por confirmar</span>
+                          : a.checkedIn
                           ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', fontWeight: 800, color: '#1a9e5f', background: 'rgba(26,158,95,0.12)', padding: '4px 9px', borderRadius: '20px', flexShrink: 0 }}><Check size={13} /> Asistió</span>
                           : <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--on-surface-variant)', background: 'rgba(0,0,0,0.05)', padding: '4px 9px', borderRadius: '20px', flexShrink: 0 }}>Reservó</span>}
                       </div>

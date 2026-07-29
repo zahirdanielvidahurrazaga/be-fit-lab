@@ -1071,6 +1071,8 @@ export const AuthProvider = ({ children }) => {
           checkedIn: r.checked_in,
           status: r.status || 'confirmed', // 'confirmed' | 'waitlist' | 'offered'
           offerExpiresAt: r.offer_expires_at ?? null, // deadline para confirmar (status 'offered')
+          autoClaim: r.auto_claim !== false,          // en espera: ¿entro solita al liberarse?
+          promotedAt: r.promoted_at ?? null,          // el sistema le dio el lugar (no lo eligió ella)
           calendarEventId: r.calendar_event_id ?? null
         }));
         setMyReservations(formattedReservations);
@@ -1202,8 +1204,14 @@ export const AuthProvider = ({ children }) => {
 
   // Devuelve 'confirmed' | 'waitlist' si se anotó, o false si no se pudo.
   // Si la clase está llena, el RPC la mete a LISTA DE ESPERA (sin descontar
-  // clase); al liberarse un lugar el servidor la promueve sola y le manda push.
-  const bookClass = async (classObj) => {
+  // clase). `autoClaim` es la decisión que toma la clienta AL FORMARSE, no
+  // después: true (default) = al liberarse un lugar queda inscrita directo;
+  // false = se le ofrece con plazo para confirmar.
+  //
+  // Se pregunta aquí, y no al liberarse el lugar, porque el aviso posterior
+  // viaja por un canal que falla: el 29-jul una clienta perdió su lugar dos
+  // veces seguidas porque no tiene dispositivo registrado para push.
+  const bookClass = async (classObj, autoClaim = true) => {
     if (!user) return false;
     // Se exige saldo incluso para entrar a la espera (así al promoverla siempre
     // habrá una clase que descontar). El servidor lo re-valida de forma autoritativa.
@@ -1211,7 +1219,10 @@ export const AuthProvider = ({ children }) => {
 
     try {
       // DB Updates via secure RPC — el servidor decide confirmada vs. espera.
-      const { data: bookStatus, error: rpcError } = await supabase.rpc('book_class_secure', { p_class_id: classObj.id });
+      const { data: bookStatus, error: rpcError } = await supabase.rpc('book_class_secure', {
+        p_class_id: classObj.id,
+        p_auto_claim: autoClaim !== false,
+      });
       if (rpcError) throw rpcError;
 
       const waitlisted = bookStatus === 'waitlist';
@@ -1233,6 +1244,8 @@ export const AuthProvider = ({ children }) => {
         color: classObj.color,
         checkedIn: false,
         status: waitlisted ? 'waitlist' : 'confirmed',
+        autoClaim: autoClaim !== false,
+        promotedAt: null,
         calendarEventId: null,
       }]);
 
@@ -1268,7 +1281,14 @@ export const AuthProvider = ({ children }) => {
     // momento (no hay lugar que proteger ni clase cobrada).
     // Usa la FECHA REAL de la clase (columna `date`); solo cae a la ocurrencia
     // por día de semana si la clase no tuviera fecha fija (recurrentes viejas).
-    if (!isWaitlist) {
+    // GRACIA: si fue el SISTEMA quien la inscribió desde la lista de espera,
+    // ella no eligió el momento — puede soltarlo durante 1 h aunque falten
+    // menos de 5 h. Sin esto, auto-apartar podría dejarla atrapada con una
+    // clase que ya no puede tomar.
+    const promoted = reservation?.promotedAt ? new Date(reservation.promotedAt) : null;
+    const enGracia = promoted && (Date.now() - promoted.getTime()) < 60 * 60 * 1000;
+
+    if (!isWaitlist && !enGracia) {
       const classStart = classObj?.time
         ? (classObj.date
             ? classDateTime(classObj.date, classObj.time)
@@ -1311,6 +1331,22 @@ export const AuthProvider = ({ children }) => {
       fetchGlobalClasses();
       fetchUserData(user);
       return { success: false, reason: 'error' };
+    }
+  };
+
+  // Cambiar la preferencia sin salirse de la fila: "apártamelo" ⇄ "pregúntame".
+  const setWaitlistAutoClaim = async (classId, auto) => {
+    if (!user) return { success: false };
+    setMyReservations(prev => prev.map(r =>
+      r.classId === classId ? { ...r, autoClaim: !!auto } : r)); // optimista
+    try {
+      const { error } = await supabase.rpc('set_waitlist_auto_claim', { p_class_id: classId, p_auto: !!auto });
+      if (error) throw error;
+      return { success: true };
+    } catch (err) {
+      console.error('Error cambiando la preferencia de espera:', err);
+      fetchUserData(user);
+      return { success: false };
     }
   };
 
@@ -1765,7 +1801,7 @@ export const AuthProvider = ({ children }) => {
       favoriteRecipeIds, toggleRecipeFavorite,
       todayLog, todayConsumed, calorieGoal, planCalories, logFood, removeFoodLog, updateCalorieGoal,
       login, logout, forceCleanSession, fetchAllUsers, refreshUserData,
-      bookClass, cancelClass, acceptOffer, declineOffer, checkInClient, checkInReservation, updateClassSpots, updateReservationCalendarId,
+      bookClass, cancelClass, acceptOffer, declineOffer, setWaitlistAutoClaim, checkInClient, checkInReservation, updateClassSpots, updateReservationCalendarId,
       activatePlan, addClass, deleteClass, addRecipe, deleteRecipe,
       fetchClassReservations, fetchClassesByDayOfWeek, fetchGlobalClasses,
       assignCustomBadge, removeCustomBadge, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig,

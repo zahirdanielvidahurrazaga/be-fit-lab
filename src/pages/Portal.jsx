@@ -403,6 +403,7 @@ function Portal() {
                     dateLabel={dateChipLabel(classDate)}
                     status={res.status}
                     waitlistPosition={waitlistPositions?.[res.classId]}
+                    autoClaim={res.autoClaim}
                     offerExpiresAt={res.offerExpiresAt}
                     onAccept={() => acceptOffer(res.classId)}
                     canCancel={canCancelReservation(res)}
@@ -725,7 +726,7 @@ function Portal() {
 }
 
 /* TICKET-STYLE CLASS CARD */
-function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, countdown, dateLabel, canCancel, status = 'confirmed', waitlistPosition, offerExpiresAt, onAccept, onClick }) {
+function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, countdown, dateLabel, canCancel, status = 'confirmed', waitlistPosition, autoClaim = true, offerExpiresAt, onAccept, onClick }) {
   const isWaitlisted = status === 'waitlist';
   const isOffered = status === 'offered';
   // Foto real de la coach de esta clase (coach_id → nombre → email). Sin fallbacks
@@ -775,7 +776,7 @@ function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, c
             <div style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', marginTop: '4px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{coachName}</div>
             {isWaitlisted && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', marginTop: '6px', fontSize: '0.66rem', fontWeight: 800, color: '#7c6f64', background: 'var(--fill-subtle)', padding: '4px 10px', borderRadius: '99px' }}>
-                <Clock size={11} /> En espera{Number.isFinite(waitlistPosition) && waitlistPosition ? ` · Nº ${waitlistPosition}` : ''} · aún sin lugar
+                <Clock size={11} /> En espera{Number.isFinite(waitlistPosition) && waitlistPosition ? ` · Nº ${waitlistPosition}` : ''} · aún SIN lugar{autoClaim ? ' · entras sola' : ' · te preguntamos'}
               </span>
             )}
             {isOffered && (

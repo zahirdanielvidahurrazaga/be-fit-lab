@@ -26,6 +26,9 @@ function Agenda() {
   const [modalData, setModalData] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [waitlisted, setWaitlisted] = useState(false); // la reserva quedó en lista de espera
+  // Decisión que se toma AL FORMARSE (no cuando se libera el lugar, que es
+  // cuando el aviso puede no llegar). true = entro solita y se me cobra.
+  const [autoClaim, setAutoClaim] = useState(true);
   const [addedToCalendar, setAddedToCalendar] = useState(false);
   const [calendarError, setCalendarError] = useState(null);
   const [showCoachDetail, setShowCoachDetail] = useState(false);
@@ -69,6 +72,7 @@ function Agenda() {
     setShowModal(true);
     setIsSuccess(false);
     setWaitlisted(false);
+    setAutoClaim(true);
     setCalendarError(null);
     setShowCoachDetail(false);
   };
@@ -86,7 +90,7 @@ function Agenda() {
       navigate('/planes');
       return;
     }
-    const result = await bookClass(modalData);
+    const result = await bookClass(modalData, autoClaim);
     if (result === 'confirmed' || result === 'waitlist') {
       setWaitlisted(result === 'waitlist');
       setIsSuccess(true);
@@ -241,7 +245,9 @@ function Agenda() {
                   </h2>
                   <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.9rem', marginBottom: (addedToCalendar || waitlisted) ? '24px' : '24px' }}>
                     {waitlisted
-                      ? 'Si se libera un lugar entrarás automáticamente y te avisaremos. Aún no se te descuenta ninguna clase.'
+                      ? (autoClaim
+                          ? 'Todavía NO tienes lugar. Si se libera uno entrarás automáticamente, te avisamos y ahí se descuenta tu clase. Por ahora no se te ha descontado nada.'
+                          : 'Todavía NO tienes lugar. Si se libera uno te avisamos y tendrás un plazo para confirmarlo. Por ahora no se te ha descontado nada.')
                       : addedToCalendar ? 'Recibirás un recordatorio antes de tu clase.' : 'Se ha descontado 1 clase de tu membresía.'}
                   </p>
                   {!addedToCalendar && !waitlisted && isNative && (
@@ -405,12 +411,51 @@ function Agenda() {
                       );
                     }
                     return (
+                      <>
+                      {/* Clase llena → la clienta decide AQUÍ qué pasa cuando se
+                          libere un lugar. Antes se le preguntaba después, por push,
+                          y quien no lo recibía perdía el lugar sin enterarse. */}
+                      {isFull && (
+                        <div style={{ marginBottom: '14px', padding: '14px', borderRadius: '16px', background: 'var(--fill-subtle)' }}>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--on-surface)', marginBottom: '10px' }}>
+                            Si se libera un lugar…
+                          </div>
+                          {[
+                            { v: true,  t: 'Apártamelo automáticamente', s: 'Quedas inscrita al momento y se descuenta 1 clase. Si ya no puedes, cancelas y te la devolvemos.' },
+                            { v: false, t: 'Prefiero que me pregunten',  s: 'Te avisamos y tienes un plazo para confirmar. Si no alcanzas, pasa a la siguiente.' },
+                          ].map(o => (
+                            <button
+                              key={String(o.v)}
+                              onClick={() => setAutoClaim(o.v)}
+                              style={{
+                                display: 'flex', alignItems: 'flex-start', gap: '10px', width: '100%',
+                                textAlign: 'left', padding: '10px', marginBottom: o.v ? '6px' : 0,
+                                border: `1.5px solid ${autoClaim === o.v ? 'var(--primary)' : 'transparent'}`,
+                                background: autoClaim === o.v ? 'rgba(255,145,77,0.08)' : 'transparent',
+                                borderRadius: '12px', cursor: 'pointer',
+                              }}
+                            >
+                              <span style={{
+                                width: 17, height: 17, borderRadius: '50%', flexShrink: 0, marginTop: 2,
+                                border: `2px solid ${autoClaim === o.v ? 'var(--primary)' : 'var(--on-surface-variant)'}`,
+                                background: autoClaim === o.v ? 'var(--primary)' : 'transparent',
+                                boxShadow: autoClaim === o.v ? 'inset 0 0 0 2.5px var(--app-surface-solid)' : 'none',
+                              }} />
+                              <span style={{ minWidth: 0 }}>
+                                <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--on-surface)' }}>{o.t}</span>
+                                <span style={{ display: 'block', fontSize: '0.72rem', color: 'var(--on-surface-variant)', marginTop: 2, lineHeight: 1.35 }}>{o.s}</span>
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       <div style={{ display: 'flex', gap: '10px' }}>
                         <button onClick={() => { setShowModal(false); setCalendarError(null); }} className="btn-outline" style={{ flex: 1, padding: '13px' }}>Cancelar</button>
                         <button onClick={confirmReservation} className="btn-primary" style={{ flex: 1.4, padding: '13px', justifyContent: 'center', fontSize: isFull ? '0.82rem' : undefined }}>
                           {isFull ? 'Unirme a lista de espera' : 'Reservar'}
                         </button>
                       </div>
+                      </>
                     );
                   })()}
                 </div>
