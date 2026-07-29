@@ -174,11 +174,26 @@ serve(async (req) => {
       // (b) subscription_cycle (renovación mensual → resetear clases).
       if (reason !== 'subscription_create' && reason !== 'subscription_cycle') return new Response('ok');
 
-      const subscriptionId = invoice.subscription as string;
-      if (!subscriptionId) return new Response('ok');
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      const { supabase_user_id, plan_title, class_count } = subscription.metadata ?? {};
-      if (!plan_title) return new Response('ok');
+      // OJO: Stripe quitó `invoice.subscription` de la raíz en su API de 2025; ahora
+      // vive en `parent.subscription_details`. El endpoint manda la versión NUEVA
+      // (api_version: null = la de la cuenta), así que leemos las dos. Sin esto las
+      // renovaciones entraban, no encontraban el id y se salían en silencio con un
+      // 200 → Stripe las daba por buenas y nadie recibía sus clases.
+      const subDetails = (invoice as any).parent?.subscription_details ?? null;
+      const subscriptionId = ((invoice as any).subscription as string) ?? subDetails?.subscription ?? null;
+      if (!subscriptionId) {
+        console.error('invoice.payment_succeeded sin suscripción identificable:', invoice.id);
+        return new Response('ok');
+      }
+
+      // La metadata ya viaja en el propio invoice; solo pedimos la suscripción si falta.
+      let meta: Record<string, string> = subDetails?.metadata ?? {};
+      if (!meta.plan_title) meta = (await stripe.subscriptions.retrieve(subscriptionId)).metadata ?? {};
+      const { supabase_user_id, plan_title, class_count } = meta;
+      if (!plan_title) {
+        console.error('Suscripción sin plan_title en metadata:', subscriptionId);
+        return new Response('ok');
+      }
 
       if (reason === 'subscription_create') {
         // Primer cobro de una suscripción creada con la hoja nativa → activar plan
@@ -194,21 +209,28 @@ serve(async (req) => {
           console.log(`✅ Plan activado (nativo): ${plan_title} para ${supabase_user_id}`);
         }
       } else {
-        // Renovación mensual → resetear clases
+        // Renovación mensual → resetear clases. Buscamos por suscripción y, si esa
+        // columna quedó desfasada (p. ej. la clienta volvió a comprar), caemos al id
+        // que trae la metadata. No pisamos `stripe_subscription_id` en ese caso: el
+        // de la fila puede ser más nuevo que el del invoice que estamos procesando.
         const { data: users } = await supabase
           .from('users')
           .select('id')
           .eq('stripe_subscription_id', subscriptionId)
           .limit(1);
-        if (users?.length) {
-          await supabase.from('users').update({
-            membership_status: 'ACTIVE',
-            classes_remaining: parseInt(class_count ?? '0'),
-            membership_renewal: 'active',
-            ...planDates(),
-          }).eq('id', users[0].id);
-          console.log(`🔄 Clases renovadas: ${class_count} para usuario ${users[0].id}`);
+        const targetId = users?.[0]?.id ?? supabase_user_id ?? null;
+        if (!targetId) {
+          console.error('Renovación sin usuaria asociada:', subscriptionId);
+          return new Response('ok');
         }
+        const { error } = await supabase.from('users').update({
+          membership_status: 'ACTIVE',
+          classes_remaining: parseInt(class_count ?? '0'),
+          membership_renewal: 'active',
+          ...planDates(),
+        }).eq('id', targetId);
+        if (error) console.error('Error renovando clases:', error.message);
+        else console.log(`🔄 Clases renovadas: ${class_count} para usuaria ${targetId}`);
       }
     }
 

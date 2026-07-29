@@ -29,7 +29,10 @@ serve(async (req) => {
       piSucceeded = pi.status === 'succeeded';
       if (!subId && pi.invoice) {
         const inv = await stripe.invoices.retrieve(pi.invoice as string);
-        subId = (inv.subscription as string) ?? null;
+        // Igual que en el webhook: en la API nueva el id vive en `parent`.
+        subId = ((inv as any).subscription as string)
+          ?? (inv as any).parent?.subscription_details?.subscription
+          ?? null;
       }
     }
     if (!subId) return Response.json({ error: 'No se pudo identificar la suscripción' }, { status: 400, headers: corsHeaders });

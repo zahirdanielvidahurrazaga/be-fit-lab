@@ -175,7 +175,10 @@ function Planes() {
           // Cancelado o fallido: volver al paso 1 (sin error si solo canceló)
           setIsProcessing(false);
           if (res?.paymentResult && res.paymentResult !== 'paymentSheetCanceled') {
-            setPaymentError('No se pudo completar el pago. Intenta de nuevo.');
+            // Mensaje con salida: en Android la app instalada puede ser vieja (no está
+            // en Play, no se actualiza sola) y ahí la hoja nativa falla siempre; desde
+            // el navegador el cobro va por Checkout hospedado y sí funciona.
+            setPaymentError('No se pudo completar el pago. Intenta de nuevo y, si vuelve a fallar, entra a befitlab.app desde tu navegador para pagar ahí.');
           }
         }
         return;
@@ -473,7 +476,9 @@ function Planes() {
                       </div>
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>
-                      Al hacer clic en "Ir a pagar" serás redirigida a la página segura de <strong>Stripe</strong> para ingresar tu tarjeta. El pago está encriptado y seguro.
+                      {Capacitor.isNativePlatform()
+                        ? <>Al tocar "Ir a pagar" se abre la hoja de pago segura de <strong>Stripe</strong> dentro de la app. El pago está encriptado y seguro.</>
+                        : <>Al hacer clic en "Ir a pagar" serás redirigida a la página segura de <strong>Stripe</strong> para ingresar tu tarjeta. El pago está encriptado y seguro.</>}
                     </div>
                   </div>
 
