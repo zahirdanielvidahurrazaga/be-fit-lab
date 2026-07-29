@@ -8,6 +8,7 @@ import { isPlanExpired, formatPlanDate, daysUntilExpiry } from '../lib/membershi
 import { motion } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { Stripe } from '@capacitor-community/stripe';
+import { Browser } from '@capacitor/browser';
 
 function Planes() {
   const navigate = useNavigate();
@@ -123,6 +124,35 @@ function Planes() {
     }, 3000);
   };
 
+  // Checkout hospedado: en web redirige la pestaña, y DENTRO de la app abre el
+  // navegador. Es la vía que funciona siempre, así que también es el respaldo
+  // cuando la hoja nativa no se puede usar. Al pagar, el webhook activa el plan y
+  // la pantalla reacciona sola por Realtime (startWatchingPayment).
+  const pagarPorNavegador = async () => {
+    const esNativo = Capacitor.isNativePlatform();
+    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+      body: {
+        planTitle: selectedPlan.title,
+        userId: user.id,
+        userEmail: user.email,
+        returnUrl: esNativo ? 'https://befitlab.app' : window.location.origin,
+      },
+    });
+    if (error) throw new Error(await errorDeFuncion(error, data, 'No se pudo iniciar el pago. Intenta de nuevo.'));
+    if (!data?.url) throw new Error('No se recibió URL de pago');
+
+    startWatchingPayment();
+    setCheckoutStep(2);
+    setIsProcessing(false);
+
+    localStorage.setItem('befit_payment_return', Date.now().toString());
+    // Guardar el plan elegido: al volver de Stripe la pestaña se re-monta y
+    // selectedPlan se pierde; lo restauramos para mostrar título/precio correctos.
+    localStorage.setItem('befit_pending_plan', JSON.stringify(selectedPlan));
+    if (esNativo) await Browser.open({ url: data.url });
+    else window.location.href = data.url;
+  };
+
   const handleStripeCheckout = async () => {
     if (!user) return;
     setIsProcessing(true);
@@ -142,6 +172,7 @@ function Planes() {
         // Presentar la hoja nativa (con Apple Pay en iOS y Google Pay en Android)
         const isIOS = Capacitor.getPlatform() === 'ios';
         const isAndroid = Capacitor.getPlatform() === 'android';
+        let hojaLista = true;
 
         try {
           await Stripe.createPaymentSheet({
@@ -155,12 +186,19 @@ function Planes() {
           });
         } catch (e) {
           console.error('Error con Apple/Google Pay:', e);
-          await Stripe.createPaymentSheet({
-            paymentIntentClientSecret: data.clientSecret,
-            merchantDisplayName: 'Be Fit Lab',
-          });
+          try {
+            await Stripe.createPaymentSheet({
+              paymentIntentClientSecret: data.clientSecret,
+              merchantDisplayName: 'Be Fit Lab',
+            });
+          } catch (e2) { console.error('Hoja simple:', e2); hojaLista = false; }
         }
-        const res = await Stripe.presentPaymentSheet();
+
+        let res = null;
+        if (hojaLista) {
+          try { res = await Stripe.presentPaymentSheet(); }
+          catch (e) { console.error('presentPaymentSheet:', e); }
+        }
 
         if (res?.paymentResult === 'paymentSheetCompleted') {
           // Pagado: activar el plan en el servidor; la UI reacciona por Realtime/polling
@@ -171,41 +209,18 @@ function Planes() {
           await supabase.functions.invoke('stripe-membership-notify', {
             body: { paymentIntentId: data.paymentIntentId, subscriptionId: data.subscriptionId },
           });
+        } else if (res?.paymentResult !== 'paymentSheetCanceled') {
+          // No canceló: la hoja falló. En vez de dejarla sin poder pagar (le pasaba
+          // a las Android con la app vieja, que no se actualiza sola porque no está
+          // en Play), la mandamos al Checkout del navegador con el mismo cobro.
+          await pagarPorNavegador();
         } else {
-          // Cancelado o fallido: volver al paso 1 (sin error si solo canceló)
-          setIsProcessing(false);
-          if (res?.paymentResult && res.paymentResult !== 'paymentSheetCanceled') {
-            // Mensaje con salida: en Android la app instalada puede ser vieja (no está
-            // en Play, no se actualiza sola) y ahí la hoja nativa falla siempre; desde
-            // el navegador el cobro va por Checkout hospedado y sí funciona.
-            setPaymentError('No se pudo completar el pago. Intenta de nuevo y, si vuelve a fallar, entra a befitlab.app desde tu navegador para pagar ahí.');
-          }
+          setIsProcessing(false); // solo canceló: volver al paso 1 sin error
         }
         return;
       }
 
-      // ── WEB: Checkout hospedado (redirige en la misma pestaña) ──────────────
-      const { data, error } = await supabase.functions.invoke('stripe-checkout', {
-        body: {
-          planTitle: selectedPlan.title,
-          userId: user.id,
-          userEmail: user.email,
-          returnUrl: window.location.origin,
-        },
-      });
-      if (error) throw new Error(await errorDeFuncion(error, data, 'No se pudo iniciar el pago. Intenta de nuevo.'));
-      if (!data?.url) throw new Error('No se recibió URL de pago');
-
-      // Escuchar con Realtime mientras el usuario paga
-      startWatchingPayment();
-      setCheckoutStep(2);
-      setIsProcessing(false);
-
-      localStorage.setItem('befit_payment_return', Date.now().toString());
-      // Guardar el plan elegido: al volver de Stripe la pestaña se re-monta y
-      // selectedPlan se pierde; lo restauramos para mostrar título/precio correctos.
-      localStorage.setItem('befit_pending_plan', JSON.stringify(selectedPlan));
-      window.location.href = data.url;
+      await pagarPorNavegador();
     } catch (err) {
       console.error('Error iniciando pago:', err);
       setPaymentError(err.message || 'Error al conectar con Stripe. Intenta de nuevo.');

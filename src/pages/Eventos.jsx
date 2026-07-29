@@ -5,6 +5,7 @@ import { ChevronLeft, CalendarDays, MapPin, Sparkles, Share2, Check, Ticket, Ima
 import { QRCodeCanvas } from 'qrcode.react';
 import { Capacitor } from '@capacitor/core';
 import { Stripe } from '@capacitor-community/stripe';
+import { Browser } from '@capacitor/browser';
 import { supabase, errorDeFuncion } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { uploadImage } from '../lib/cafeImage';
@@ -455,6 +456,26 @@ export default function Eventos() {
     else alert('No se pudo procesar: ' + msg);
   };
 
+  // Cobro por Checkout hospedado: en web redirige la pestaña, y DENTRO de la app
+  // abre el navegador. Es la vía que sí funciona siempre, así que también sirve de
+  // respaldo cuando la hoja nativa no se puede usar (pasaba en Android: nadie
+  // lograba pagar un evento desde la app y el intento moría sin explicación).
+  const pagarPorNavegador = async (ev, guests = []) => {
+    localStorage.setItem('befit_payment_return', String(Date.now()));
+    const returnUrl = isNative ? 'https://befitlab.app' : window.location.origin;
+    const { data, error } = await supabase.functions.invoke('stripe-event-checkout', { body: { eventId: ev.id, userId: user.id, userEmail: user.email, guests, returnUrl } });
+    if (error || data?.error) { payError(await errorDeFuncion(error, data, 'No se pudo procesar el pago.')); return false; }
+    if (!data?.url) return false;
+    if (isNative) {
+      await Browser.open({ url: data.url });
+      // Al volver del navegador el webhook ya inscribió; refrescamos por si acaso.
+      setTimeout(() => { load(); loadRegs(); }, 1500);
+    } else {
+      window.location.href = data.url;
+    }
+    return true;
+  };
+
   // `guests` = nombres de los invitados que trae la socia (opcional). Cada uno
   // ocupa un lugar y recibe su propio boleto; el cobro se calcula en el servidor.
   const payForEvent = async (ev, guests = []) => {
@@ -464,21 +485,48 @@ export default function Eventos() {
       if (isNative) {
         const { data, error } = await supabase.functions.invoke('stripe-event-intent', { body: { eventId: ev.id, userId: user.id, userEmail: user.email, guests } });
         if (error || data?.error) { payError(await errorDeFuncion(error, data, 'No se pudo procesar el pago.')); return; }
-        try { await Stripe.createPaymentSheet({ paymentIntentClientSecret: data.clientSecret, merchantDisplayName: 'Be Fit Lab', enableApplePay: true, applePayMerchantId: 'merchant.com.befitlab.app', countryCode: 'MX' }); }
-        catch (e) { await Stripe.createPaymentSheet({ paymentIntentClientSecret: data.clientSecret, merchantDisplayName: 'Be Fit Lab' }); }
-        const res = await Stripe.presentPaymentSheet();
+
+        // Apple Pay solo en iOS y Google Pay solo en Android: pedir Apple Pay en un
+        // Android hacía fallar la creación de la hoja y se perdía el pago.
+        const isIOS = Capacitor.getPlatform() === 'ios';
+        const isAndroid = Capacitor.getPlatform() === 'android';
+        let hojaLista = true;
+        try {
+          await Stripe.createPaymentSheet({
+            paymentIntentClientSecret: data.clientSecret,
+            merchantDisplayName: 'Be Fit Lab',
+            enableApplePay: isIOS,
+            applePayMerchantId: isIOS ? 'merchant.com.befitlab.app' : undefined,
+            enableGooglePay: isAndroid,
+            GooglePayIsTesting: false,
+            countryCode: 'MX',
+          });
+        } catch (e) {
+          console.error('Hoja con Apple/Google Pay:', e);
+          try {
+            await Stripe.createPaymentSheet({ paymentIntentClientSecret: data.clientSecret, merchantDisplayName: 'Be Fit Lab' });
+          } catch (e2) { console.error('Hoja simple:', e2); hojaLista = false; }
+        }
+
+        let res = null;
+        if (hojaLista) {
+          try { res = await Stripe.presentPaymentSheet(); }
+          catch (e) { console.error('presentPaymentSheet:', e); }
+        }
+
         if (res?.paymentResult === 'paymentSheetCompleted') {
           // Emite los boletos (el suyo y los de sus invitados) y manda el correo.
           await supabase.functions.invoke('event-tickets', { body: { paymentIntentId: data.paymentIntentId } });
           setRegs(s => new Set(s).add(ev.id));
           setInvitarEv(null);
           setTimeout(() => { load(); loadRegs(); }, 900);
+        } else if (res?.paymentResult !== 'paymentSheetCanceled') {
+          // No canceló: la hoja falló. En vez de dejarla sin poder pagar, la
+          // mandamos al Checkout del navegador con el mismo cobro.
+          await pagarPorNavegador(ev, guests);
         }
       } else {
-        localStorage.setItem('befit_payment_return', String(Date.now()));
-        const { data, error } = await supabase.functions.invoke('stripe-event-checkout', { body: { eventId: ev.id, userId: user.id, userEmail: user.email, guests, returnUrl: window.location.origin } });
-        if (error || data?.error) { payError(await errorDeFuncion(error, data, 'No se pudo procesar el pago.')); return; }
-        if (data?.url) { window.location.href = data.url; return; }
+        await pagarPorNavegador(ev, guests);
       }
     } catch (err) { console.error(err); alert('No se pudo procesar el pago.'); }
     finally { setProcessing(false); }

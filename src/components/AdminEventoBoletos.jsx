@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { X, Users, Ticket, CheckCircle2, DollarSign, Link2, Copy, Check, Download, Mail, Trash2, Loader2, Search, UserPlus } from 'lucide-react';
+import { X, Users, Ticket, CheckCircle2, DollarSign, Link2, Copy, Check, Download, Mail, Trash2, Loader2, Search, UserPlus, Plus, Banknote } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 // Panel de CONTROL de un evento: todo lo vendido en un solo lugar — socias e
@@ -30,10 +30,13 @@ export default function AdminEventoBoletos({ ev, onClose, onChange }) {
   const [copiado, setCopiado] = useState('');
   const [ocupado, setOcupado] = useState(null); // id de la fila con acción en curso
   const [aviso, setAviso] = useState(null);
+  const [altaAbierta, setAltaAbierta] = useState(false);
+  const [alta, setAlta] = useState({ nombre: '', email: '', tel: '', acomp: [] });
+  const [emitiendo, setEmitiendo] = useState(false);
 
   const cargar = async () => {
     const { data } = await supabase.from('event_registrations')
-      .select('id, user_id, guest_name, guest_email, guest_phone, invited_by, ticket_code, checked_in, checked_in_at, payment_intent_id, created_at, users!event_registrations_user_id_fkey(full_name, email, phone)')
+      .select('id, user_id, guest_name, guest_email, guest_phone, invited_by, ticket_code, checked_in, checked_in_at, payment_intent_id, issued_by, created_at, users!event_registrations_user_id_fkey(full_name, email, phone)')
       .eq('event_id', ev.id).order('created_at', { ascending: true });
     // Nombre de quien invitó (para la columna "vino con")
     const anfitriones = [...new Set((data || []).map(r => r.invited_by).filter(Boolean))];
@@ -57,7 +60,8 @@ export default function AdminEventoBoletos({ ev, onClose, onChange }) {
       socias: l.filter(r => r.user_id).length,
       invitados: l.filter(r => !r.user_id).length,
       asistieron: l.filter(r => r.checked_in).length,
-      ingresos: l.filter(r => r.payment_intent_id).length * (ev.price || 0),
+      ingresos: l.filter(r => r.payment_intent_id || r.issued_by).length * (ev.price || 0),
+      enRecepcion: l.filter(r => r.issued_by).length,
     };
   }, [lista, ev.price]);
 
@@ -67,6 +71,45 @@ export default function AdminEventoBoletos({ ev, onClose, onChange }) {
   const copiar = async (texto, clave) => {
     try { await navigator.clipboard.writeText(texto); setCopiado(clave); setTimeout(() => setCopiado(''), 1800); }
     catch (_) { setAviso({ tipo: 'err', msg: 'No se pudo copiar' }); }
+  };
+
+  // Emitir boletos a mano: para quien paga en efectivo o transferencia en
+  // recepción, o de plano no logra pagar en línea. El RPC valida rol, datos y
+  // cupo; aquí solo mandamos el correo de cada boleto emitido.
+  const emitir = async (e) => {
+    e.preventDefault();
+    const acompanantes = alta.acomp.map(a => a.trim()).filter(Boolean);
+    setEmitiendo(true); setAviso(null);
+    const { data, error } = await supabase.rpc('admin_issue_event_ticket', {
+      p_event_id: ev.id,
+      p_name: alta.nombre.trim(),
+      p_email: alta.email.trim(),
+      p_phone: alta.tel.trim() || null,
+      p_guests: acompanantes,
+    });
+    if (error) {
+      setEmitiendo(false);
+      setAviso({ tipo: 'err', msg: error.message || 'No se pudo emitir el boleto' });
+      setTimeout(() => setAviso(null), 5000);
+      return;
+    }
+    // El correo va por boleto (cada uno lleva su propio código).
+    const enviados = await Promise.allSettled(
+      (data || []).map(b => supabase.functions.invoke('event-tickets', { body: { resendRegistrationId: b.id } })),
+    );
+    const fallaron = enviados.filter(r => r.status === 'rejected' || r.value?.error).length;
+    setEmitiendo(false);
+    setAlta({ nombre: '', email: '', tel: '', acomp: [] });
+    setAltaAbierta(false);
+    await cargar(); onChange?.();
+    const n = (data || []).length;
+    setAviso({
+      tipo: fallaron ? 'err' : 'ok',
+      msg: fallaron
+        ? `Se emitieron ${n} boleto(s), pero ${fallaron} correo(s) no salieron. Puedes reenviarlos con el botón del sobre.`
+        : `Listo: ${n} boleto(s) emitidos y enviados a ${alta.email.trim()}.`,
+    });
+    setTimeout(() => setAviso(null), 6000);
   };
 
   const reenviar = async (r) => {
@@ -89,10 +132,11 @@ export default function AdminEventoBoletos({ ev, onClose, onChange }) {
   };
 
   const exportarCSV = () => {
-    const filas = [['Nombre', 'Tipo', 'Boleto', 'Correo', 'Teléfono', 'Vino con', 'Asistió', 'Comprado']];
+    const filas = [['Nombre', 'Tipo', 'Boleto', 'Correo', 'Teléfono', 'Vino con', 'Asistió', 'Comprado', 'Pago']];
     (lista || []).forEach(r => filas.push([
       nombre(r), r.user_id ? 'Socia' : 'Invitado', r.ticket_code || '',
       contacto(r), telefono(r), r.anfitrion || '', r.checked_in ? 'Sí' : 'No', fmtCorto(r.created_at),
+      r.issued_by ? 'En recepción' : (r.payment_intent_id ? 'En línea' : '—'),
     ]));
     const csv = '﻿' + filas.map(f => f.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
@@ -142,6 +186,57 @@ export default function AdminEventoBoletos({ ev, onClose, onChange }) {
           </button>
         </div>
 
+        {/* Emitir boleto a mano (pago en recepción) */}
+        <div style={{ flexShrink: 0, marginBottom: '14px' }}>
+          {!altaAbierta ? (
+            <button onClick={() => setAltaAbierta(true)} disabled={ev.capacity != null && stats.total >= ev.capacity}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', border: `1.5px dashed ${PRIMARY}`, borderRadius: '14px', padding: '11px', background: 'rgba(255,145,77,0.05)', color: PRIMARY, fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', opacity: (ev.capacity != null && stats.total >= ev.capacity) ? 0.45 : 1 }}>
+              <Plus size={16} /> {(ev.capacity != null && stats.total >= ev.capacity) ? 'Cupo lleno' : 'Emitir boleto (pagó en recepción)'}
+            </button>
+          ) : (
+            <form onSubmit={emitir} style={{ border: '1px solid rgba(255,145,77,0.35)', borderRadius: '16px', padding: '14px', background: 'rgba(255,145,77,0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '10px' }}>
+                <Banknote size={16} color={PRIMARY} />
+                <strong style={{ fontSize: '0.86rem', color: INK }}>Boleto pagado en efectivo o transferencia</strong>
+              </div>
+              <p style={{ margin: '0 0 11px', fontSize: '0.78rem', color: 'var(--on-surface-variant)', lineHeight: 1.45 }}>
+                Ocupa lugar igual que los de la web y el boleto le llega por correo.
+                {ev.capacity != null && <> Quedan <strong>{ev.capacity - stats.total}</strong> lugares.</>}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <input required value={alta.nombre} onChange={e => setAlta(a => ({ ...a, nombre: e.target.value }))} placeholder="Nombre completo"
+                  style={{ padding: '10px 12px', borderRadius: '11px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '0.86rem', outline: 'none', boxSizing: 'border-box' }} />
+                <input required type="email" value={alta.email} onChange={e => setAlta(a => ({ ...a, email: e.target.value }))} placeholder="Correo (ahí le llega el boleto)"
+                  style={{ padding: '10px 12px', borderRadius: '11px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '0.86rem', outline: 'none', boxSizing: 'border-box' }} />
+                <input value={alta.tel} onChange={e => setAlta(a => ({ ...a, tel: e.target.value }))} placeholder="Teléfono (opcional)"
+                  style={{ padding: '10px 12px', borderRadius: '11px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '0.86rem', outline: 'none', boxSizing: 'border-box' }} />
+                {alta.acomp.map((nom, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '6px' }}>
+                    <input value={nom} onChange={e => setAlta(a => ({ ...a, acomp: a.acomp.map((v, j) => j === i ? e.target.value : v) }))} placeholder={`Acompañante ${i + 1}`}
+                      style={{ flex: 1, padding: '10px 12px', borderRadius: '11px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '0.86rem', outline: 'none', boxSizing: 'border-box' }} />
+                    <button type="button" onClick={() => setAlta(a => ({ ...a, acomp: a.acomp.filter((_, j) => j !== i) }))} aria-label="Quitar acompañante"
+                      style={{ flexShrink: 0, width: '38px', borderRadius: '11px', border: '1px solid rgba(0,0,0,0.12)', background: '#fff', color: '#ba1a1a', cursor: 'pointer' }}><X size={15} /></button>
+                  </div>
+                ))}
+              </div>
+              <button type="button" onClick={() => setAlta(a => ({ ...a, acomp: [...a.acomp, ''] }))}
+                style={{ marginTop: '9px', display: 'flex', alignItems: 'center', gap: '5px', border: 'none', background: 'none', color: PRIMARY, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', padding: 0 }}>
+                <UserPlus size={14} /> Agregar acompañante
+              </button>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '13px' }}>
+                <button type="button" onClick={() => { setAltaAbierta(false); setAlta({ nombre: '', email: '', tel: '', acomp: [] }); }}
+                  style={{ flex: 1, border: '1px solid rgba(0,0,0,0.12)', borderRadius: '12px', padding: '10px', background: '#fff', color: INK, fontWeight: 700, fontSize: '0.84rem', cursor: 'pointer' }}>
+                  Cancelar
+                </button>
+                <button type="submit" disabled={emitiendo}
+                  style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', border: 'none', borderRadius: '12px', padding: '10px', background: PRIMARY, color: '#fff', fontWeight: 800, fontSize: '0.84rem', cursor: emitiendo ? 'default' : 'pointer', opacity: emitiendo ? 0.6 : 1 }}>
+                  {emitiendo ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Emitiendo…</> : <><Ticket size={15} /> Emitir {1 + alta.acomp.filter(a => a.trim()).length} boleto(s)</>}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+
         {/* Buscador + exportar */}
         <div style={{ flexShrink: 0, display: 'flex', gap: '8px', marginBottom: '12px' }}>
           <div style={{ flex: 1, position: 'relative' }}>
@@ -179,6 +274,11 @@ export default function AdminEventoBoletos({ ev, onClose, onChange }) {
                     background: r.user_id ? 'rgba(255,145,77,0.14)' : 'rgba(224,122,156,0.16)', color: r.user_id ? PRIMARY : MAUVE }}>
                     {r.user_id ? 'Socia' : 'Invitado'}
                   </span>
+                  {r.issued_by && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', fontWeight: 800, padding: '3px 7px', borderRadius: '7px', background: 'rgba(0,0,0,0.06)', color: 'var(--on-surface-variant)' }}>
+                      <Banknote size={11} /> En recepción
+                    </span>
+                  )}
                   {r.checked_in && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', fontWeight: 800, color: '#16A34A' }}><CheckCircle2 size={12} /> Entró</span>}
                 </div>
                 <div style={{ fontSize: '0.76rem', color: 'var(--on-surface-variant)', marginTop: '3px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
