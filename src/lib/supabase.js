@@ -85,3 +85,18 @@ if (isNative) {
     else supabase.auth.stopAutoRefresh();
   });
 }
+
+// Los errores de las edge functions viajan en el CUERPO de la respuesta, pero
+// supabase-js solo expone un genérico en `error.message` ("Edge Function returned
+// a non-2xx status code"). Sin leer el cuerpo, la clienta ve ESE texto en pantalla
+// en lugar de "Máximo 4 boletos por compra" o "¡Se agotaron los lugares!", y las
+// ramas que buscan códigos como EVENT_FULL nunca llegan a activarse.
+export async function errorDeFuncion(error, data, respaldo = 'No pudimos completar la operación. Intenta de nuevo.') {
+  if (data?.error) return String(data.error);
+  if (!error) return '';
+  try {
+    const cuerpo = await error.context?.json?.();
+    if (cuerpo?.error) return String(cuerpo.error);
+  } catch { /* la respuesta no traía JSON legible */ }
+  return respaldo;
+}

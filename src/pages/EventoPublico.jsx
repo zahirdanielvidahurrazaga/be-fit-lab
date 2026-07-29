@@ -3,7 +3,7 @@ import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CalendarDays, MapPin, Ticket, Users, Plus, X, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { supabase } from '../lib/supabase';
+import { supabase, errorDeFuncion } from '../lib/supabase';
 import BrandSpheres from '../components/BrandSpheres';
 
 // Página PÚBLICA de un evento: cualquiera puede apartar su lugar sin tener
@@ -159,7 +159,7 @@ export default function EventoPublico() {
           returnUrl: window.location.origin,
         },
       });
-      const msg = data?.error || fnError?.message;
+      const msg = await errorDeFuncion(fnError, data, 'No pudimos abrir el pago. Intenta de nuevo.');
       if (msg) {
         if (String(msg).includes('EVENT_FULL')) setError('¡Se agotaron los lugares!');
         else if (String(msg).includes('CERRADO')) setError('Las inscripciones de este evento ya cerraron.');

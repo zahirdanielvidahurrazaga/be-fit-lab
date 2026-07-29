@@ -5,7 +5,7 @@ import { ChevronLeft, CalendarDays, MapPin, Sparkles, Share2, Check, Ticket, Ima
 import { QRCodeCanvas } from 'qrcode.react';
 import { Capacitor } from '@capacitor/core';
 import { Stripe } from '@capacitor-community/stripe';
-import { supabase } from '../lib/supabase';
+import { supabase, errorDeFuncion } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { uploadImage } from '../lib/cafeImage';
 
@@ -463,7 +463,7 @@ export default function Eventos() {
     try {
       if (isNative) {
         const { data, error } = await supabase.functions.invoke('stripe-event-intent', { body: { eventId: ev.id, userId: user.id, userEmail: user.email, guests } });
-        if (error || data?.error) { payError(data?.error || error.message); return; }
+        if (error || data?.error) { payError(await errorDeFuncion(error, data, 'No se pudo procesar el pago.')); return; }
         try { await Stripe.createPaymentSheet({ paymentIntentClientSecret: data.clientSecret, merchantDisplayName: 'Be Fit Lab', enableApplePay: true, applePayMerchantId: 'merchant.com.befitlab.app', countryCode: 'MX' }); }
         catch (e) { await Stripe.createPaymentSheet({ paymentIntentClientSecret: data.clientSecret, merchantDisplayName: 'Be Fit Lab' }); }
         const res = await Stripe.presentPaymentSheet();
@@ -477,7 +477,7 @@ export default function Eventos() {
       } else {
         localStorage.setItem('befit_payment_return', String(Date.now()));
         const { data, error } = await supabase.functions.invoke('stripe-event-checkout', { body: { eventId: ev.id, userId: user.id, userEmail: user.email, guests, returnUrl: window.location.origin } });
-        if (error || data?.error) { payError(data?.error || error.message); return; }
+        if (error || data?.error) { payError(await errorDeFuncion(error, data, 'No se pudo procesar el pago.')); return; }
         if (data?.url) { window.location.href = data.url; return; }
       }
     } catch (err) { console.error(err); alert('No se pudo procesar el pago.'); }

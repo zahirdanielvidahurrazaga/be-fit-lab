@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Check, X, Calendar, Wallet, AlertCircle, Loader2, PauseCircle, PlayCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase, errorDeFuncion } from '../lib/supabase';
 import { PricingCarousel } from '../components/PricingCarousel';
 import { isPlanExpired, formatPlanDate, daysUntilExpiry } from '../lib/membership';
 import { motion } from 'framer-motion';
@@ -136,7 +136,7 @@ function Planes() {
         const { data, error } = await supabase.functions.invoke('stripe-membership-intent', {
           body: { planTitle: selectedPlan.title, userId: user.id, userEmail: user.email },
         });
-        if (error) throw new Error(error.message);
+        if (error) throw new Error(await errorDeFuncion(error, data, 'No se pudo iniciar el pago. Intenta de nuevo.'));
         if (!data?.clientSecret) throw new Error('No se recibió el intent de pago');
 
         // Presentar la hoja nativa (con Apple Pay en iOS y Google Pay en Android)
@@ -193,7 +193,7 @@ function Planes() {
           returnUrl: window.location.origin,
         },
       });
-      if (error) throw new Error(error.message);
+      if (error) throw new Error(await errorDeFuncion(error, data, 'No se pudo iniciar el pago. Intenta de nuevo.'));
       if (!data?.url) throw new Error('No se recibió URL de pago');
 
       // Escuchar con Realtime mientras el usuario paga
