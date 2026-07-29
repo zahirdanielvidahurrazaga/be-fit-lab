@@ -19,8 +19,18 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 >
 > **Qué lleva esta versión (por qué importa subirla):** el **arreglo del pago desde la app**. Antes, **ningún** pago hecho desde la app nativa llegaba a cobrarse (0 de 9 intentos del evento; la web iba 3 de 3) porque `Eventos.jsx` pedía **Apple Pay en Android** y eso hacía fallar la creación de la hoja. Ahora Apple Pay va solo en iOS, Google Pay solo en Android, y **si la hoja falla cae al Checkout del navegador** con el mismo cobro. Igual en `Planes.jsx` para las membresías. **Las 6 usuarias de Android traen APKs congelados** (Android no está en Play → no se actualizan solas), así que hasta que no instalen este build siguen sin poder pagar dentro de la app; mientras tanto la salida es **pagar en `befitlab.app` desde el navegador**.
 >
+> 🚨 **ANTES DE COMPILAR EN LA OTRA PC — VERIFICAR EL `.env`.** El `.env` **está en `.gitignore`**, así que NO llega por `git pull`: la otra PC usa el suyo. Y la **pk de Stripe se hornea en el bundle**, así que un `.env` viejo con llave de PRUEBA produce un AAB **que no puede cobrar**. Los assets compilados (`android/app/src/main/assets/public`) **también están gitignored** → hay que compilar sí o sí, no basta con el pull.
+> Verificar que el `.env` tenga estas 3 y que Stripe sea **`pk_live_51Tc…`** (NO `pk_test_`):
+> ```bash
+> grep -E "VITE_SUPABASE_URL|VITE_SUPABASE_ANON_KEY|VITE_STRIPE_PUBLISHABLE_KEY" .env | sed 's/\(=.\{12\}\).*/\1…/'
+> ```
+> Y **después** de `npm run build`, confirmar qué llave quedó horneada:
+> ```bash
+> grep -oh "pk_live_[A-Za-z0-9]\{6\}\|pk_test_[A-Za-z0-9]\{6\}" dist/assets/*.js | sort -u   # debe decir pk_live_51TcfJ
+> ```
+>
 > **Pasos que hace Claude (CLI), sin pedir permiso paso a paso:**
-> 1. `git pull origin main` (trae el código + el `versionCode 13` ya bumpeado).
+> 1. `git pull origin main` (trae el código + el `versionCode 14` ya bumpeado).
 > 2. `npm install`.
 > 3. `npm run build` (Vite v8/rolldown, ~1 s, ya no se cuelga).
 > 4. `npx cap sync android`.
@@ -29,7 +39,7 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 >
 > **Pasos del usuario (GUI):** Android Studio → *Build → Generate Signed Bundle/APK → Android App Bundle* con el **keystore de release** (está en esa PC), y subirlo. ⚠️ **Recordar: la app Android NO está publicada en Play Store** (da 404); hoy se instala por APK. Si se decide publicarla, ese es un trámite aparte.
 >
-> **iOS de esta misma tanda:** **1.9.2 (build 26)** — el `dist` y `cap sync ios` ya están hechos y **Xcode quedó abierto** en la Mac; falta *Archive → Distribute → Upload*. Cuando Apple la apruebe: `UPDATE public.app_config SET latest_ios_version='1.9.2', updated_at=now() WHERE id=1;` (hoy `app_config` dice `1.9.0`, que es la que está viva en el App Store).
+> **iOS de esta misma tanda:** **1.9.2 (build 26) ✅ YA SUBIDA a App Store Connect** por el usuario el 2026-07-29 → **esperando revisión de Apple**. ⏭️ **EN CUANTO LA APRUEBEN:** `UPDATE public.app_config SET latest_ios_version='1.9.2', updated_at=now() WHERE id=1;` (hoy `app_config` dice `1.9.0`, que es la viva; si no se actualiza, el banner de "actualiza la app" se queda apuntando a la vieja — ya pasó antes). Verificar que salió con: `curl -s "https://itunes.apple.com/lookup?bundleId=com.befitlab.app&country=mx"`.
 
 
 > **🔴 ESTADO 2026-07-29 — LISTA DE ESPERA v3: "AUTO-APARTAR CON CONSENTIMIENTO AL FORMARSE" (arreglado, BD + web desplegadas).**
