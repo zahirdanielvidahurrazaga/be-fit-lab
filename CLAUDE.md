@@ -67,7 +67,27 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 > **✅ ESTADO 2026-07-30 — iOS 1.9.2 APROBADA Y VIVA · VERIFICACIÓN DE LA v3 EN PROD · 1 HUECO MÁS CERRADO.**
 > **(a) iOS 1.9.2 (build 26) YA ESTÁ EN EL APP STORE** (publicada 29-jul, confirmada por iTunes lookup) → **`app_config.latest_ios_version` ya actualizado a `1.9.2`** (hecho el 30-jul 00:44 CDMX). **(b) Android 2.6.2 (vc 14) subida a Play en prueba interna** y auditada por dentro por la PC de Windows (ver bloque de arriba). **(c) VERIFICADO QUE EL CAMBIO DE FIRMA DE `book_class_secure` NO ROMPIÓ NADA:** entre las 14:58 y las 22:55 del 29-jul (o sea, DESPUÉS del cambio) se crearon **14 reservas confirmadas + 1 en lista de espera con tráfico real**, todas con `auto_claim=true`, y el ledger de ese rango es normal (13 `reserva`, 6 `cancelacion`). **(d) Primera usuaria real del mecanismo nuevo:** `karen de la cruz` quedó en espera del Cardio Dance del **vie 31-jul 9:20** (12/12) con `auto_claim=true` y push activo → si alguien cancela, entra sola. Es el canario en vivo.
 > **🔴 (e) HUECO ENCONTRADO Y CERRADO — promoción en clases YA PASADAS.** Al revisar los datos aparecieron **17 filas de lista de espera colgadas de clases del 8 al 23-jul** (gente que se formó, nunca entró y la fila nunca se limpió). Son inertes… salvo que alguien **edite el cupo de una clase vieja**: `fill_waitlist_for_class` calculaba `waitlist_offer_deadline` sobre un `v_start` en el pasado → el plazo salía vencido → caía por la rama de "no queda ventana útil" → **auto-confirmaba y COBRABA una clase que ya ocurrió**. **Arreglado** con un guard al inicio de `fill_waitlist_for_class`: si `v_start <= now()` retorna sin hacer nada. **Probado con ROLLBACK**: subir el cupo de la Zumba del 14-jul deja los 3 saldos intactos y a las 3 en `waitlist`; y el camino normal con clase futura sigue promoviendo y cobrando bien.
-> ⏭️ **Pendientes reales:** (1) **que Android llegue a las clientas** — la 2.6.2 está en prueba interna; hasta promover a producción (o dar de alta a las 6 como testers de ESA pista) siguen con el APK de `pk_test` y la salida es pagar por web; (2) **cobro real chico desde un Android con el build nuevo** (nunca ha habido un cobro nativo exitoso en Android); (3) opcional: limpiar las 17 filas de espera de clases pasadas (ya son inofensivas con el guard).
+> ⏭️ **Pendientes reales:** (1) **que Android llegue a las clientas** — la 2.6.2 está en prueba interna; hasta promover a producción (o dar de alta a las 6 como testers de ESA pista) siguen con el APK de `pk_test` y la salida es pagar por web; (2) **cobro real chico desde un Android con el build nuevo** (nunca ha habido un cobro nativo exitoso en Android).
+> **✅ (f) LIMPIEZA HECHA 2026-07-30:** se borraron las **18 filas** de lista de espera colgadas de clases pasadas (11 personas, 12 clases, del 8 al 23-jul). Probado antes con ROLLBACK: **0 saldos tocados, 0 movimientos en el ledger** (la espera nunca cobró) y la única espera vigente intacta. Query usado:
+> ```sql
+> delete from public.reservations r using public.classes c
+> where c.id = r.class_id and r.status in ('waitlist','offered')
+>   and (c.date + c.time::time) at time zone 'America/Mexico_City' <= now();
+> ```
+> Quedó **1 sola espera vigente**: `karen de la cruz` → Cardio Dance vie 31-jul (canario del mecanismo nuevo).
+
+## 🧹 PENDIENTE PARA UNA BUILD FUTURA — limpieza automática de datos viejos
+**Hoy NO existe ninguna función de mantenimiento**; los únicos cron son `expire_waitlist_offers` (cada minuto) y `daily_photo_reminders` (diario). Las filas de espera de clases pasadas se acumulan solas y hubo que borrarlas a mano el 30-jul (18 filas). **Con el guard de "clase ya empezó" en `fill_waitlist_for_class` ya son inofensivas**, así que esto es higiene, no urgencia.
+
+**Propuesta cuando se retome** (una función + un cron diario, todo BD, sin tocar binarios):
+- `cleanup_stale_data()` **SECURITY DEFINER**, corriendo ~03:00 México vía `pg_cron`, que borre:
+  1. `reservations` con `status in ('waitlist','offered')` de clases **ya empezadas** (el caso de hoy). ⚠️ **NUNCA tocar las `confirmed`**: son el historial de asistencia y alimentan Reportes, la gráfica "Tu semana" y las insignias.
+  2. `notification_logs` con más de ~90 días (hoy crece sin tope y es la tabla más ruidosa).
+  3. `device_tokens` que APNs/FCM ya rechazaron — esto **ya lo hace `push-deliver`** al vuelo, pero conviene un barrido por si quedan huérfanos de cuentas borradas.
+- **Devolver un conteo por categoría y registrarlo** (un `raise notice` no sirve para auditar; mejor una tabla `maintenance_log` o un `notification_logs` de tipo interno) — la lección de esta semana es que **lo que no deja rastro no se puede diagnosticar**.
+- **Probar con ROLLBACK contando saldos y ledger antes/después**, como se hizo el 30-jul: cualquier limpieza que mueva `classes_remaining` está mal.
+
+> **🔴 ESTADO 2026-07-29 — LISTA DE ESPERA v3
 
 > **🔴 ESTADO 2026-07-29 — LISTA DE ESPERA v3: "AUTO-APARTAR CON CONSENTIMIENTO AL FORMARSE" (arreglado, BD + web desplegadas).**
 > **Reporte de la dueña:** una clienta se formó en lista de espera para Cardio Dance (vie 31-jul 9:20); hoy le apareció **como reservada** sin que le llegara aviso ni confirmara nada, **no salía en la lista de asistentes**, sintió que le descontaron una clase, luego la clase **desapareció** y más tarde **reapareció**.
