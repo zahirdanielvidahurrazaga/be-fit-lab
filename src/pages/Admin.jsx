@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { supabase } from '../lib/supabase';
 import AdminCafeteria from '../components/AdminCafeteria';
+import AdminProgreso from '../components/AdminProgreso';
 import AdminDisciplinas from '../components/AdminDisciplinas';
 import AdminReportes from '../components/AdminReportes';
 import ReportesLock from '../components/ReportesLock';
@@ -24,7 +25,7 @@ import AdminCategoryManager from '../components/AdminCategoryManager';
 import AdminWeekTemplates from '../components/AdminWeekTemplates';
 import SearchableClientSelect from '../components/SearchableClientSelect';
 import { DEFAULT_CATEGORIES, PASTEL_PALETTE, resolveCatColor, categoryLabel } from '../lib/categories';
-import { Coffee, Bell, UserCog, Sparkles, Copy, Trash2, Tag, LayoutTemplate, MoreHorizontal, Dumbbell, CreditCard, ClipboardCheck, Cake, Scale } from 'lucide-react';
+import { Coffee, Bell, UserCog, Sparkles, Copy, Trash2, Tag, LayoutTemplate, MoreHorizontal, Dumbbell, CreditCard, ClipboardCheck, Cake, Scale, Camera } from 'lucide-react';
 
 const daysOfWeek = [
   { num: 1, label: 'Lunes' },
@@ -565,6 +566,9 @@ function Admin({ recepcion = false }) {
                   <div onClick={() => { setActiveTab('nutricion'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Utensils size={18} color="var(--primary)" /> Comida
                   </div>
+                  <div onClick={() => { setActiveTab('progreso'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
+                    <Camera size={18} color="var(--primary)" /> Progreso
+                  </div>
                   <div onClick={() => { setActiveTab('cafeteria'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Coffee size={18} color="var(--primary)" /> Cafetería
                   </div>
@@ -627,6 +631,10 @@ function Admin({ recepcion = false }) {
           <div onClick={() => setActiveTab('nutricion')} className={`sidebar-nav-item ${activeTab === 'nutricion' ? 'active' : ''}`}>
             <Utensils size={20} />
             <span>Nutrición</span>
+          </div>
+          <div onClick={() => setActiveTab('progreso')} className={`sidebar-nav-item ${activeTab === 'progreso' ? 'active' : ''}`}>
+            <Camera size={20} />
+            <span>Progreso</span>
           </div>
           <div onClick={() => setActiveTab('cafeteria')} className={`sidebar-nav-item ${activeTab === 'cafeteria' ? 'active' : ''}`}>
             <Coffee size={20} />
@@ -1231,6 +1239,13 @@ function Admin({ recepcion = false }) {
             {activeTab === 'nutricion' && (
               <motion.div key="nutricion" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
                 <AdminNutricion />
+              </motion.div>
+            )}
+
+            {/* ============ TAB: PROGRESO (fotos de las clientas) ============ */}
+            {activeTab === 'progreso' && (
+              <motion.div key="progreso" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
+                <AdminProgreso />
               </motion.div>
             )}
 

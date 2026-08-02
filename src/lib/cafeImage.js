@@ -45,10 +45,12 @@ export function compressCafeImage(source, maxSize = 900, quality = 0.82) {
 
 // Sube una imagen comprimida a Storage (bucket público) con nombre único y
 // devuelve su URL pública. RLS del bucket cafe-products: solo admin escribe.
-export async function uploadImage(source, { bucket = 'cafe-products', folder = '' } = {}) {
+export async function uploadImage(source, { bucket = 'cafe-products', folder = '', maxSize = 900 } = {}) {
   if (!source) return { url: null, error: 'sin_imagen' };
   let blob;
-  try { blob = await compressCafeImage(source); }
+  // `maxSize` mayor para imágenes que se ven a pantalla completa (portadas),
+  // no solo para las miniaturas de producto.
+  try { blob = await compressCafeImage(source, maxSize); }
   catch (e) { return { url: null, error: e }; }
 
   const id = (crypto?.randomUUID?.() || String(Date.now() + Math.random())).replace(/[^a-z0-9-]/gi, '');

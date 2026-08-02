@@ -15,13 +15,13 @@ const SIX_WEEKS = 42 * 24 * 60 * 60 * 1000;
 // Respira sutilmente (motion) para que se note que es una guía.
 function PoseGuide({ angle }) {
   // Silueta femenina real (dominio público, recoloreada a blanco translúcido) que
-  // orienta la pose. 'front' = de frente; 'left'/'right' = perfil (el derecho se
-  // refleja en espejo). El contenedor padre la centra sobre la cámara en vivo.
-  const src = angle === 'front' ? poseFront : poseSide;
-  const flip = angle === 'right';
+  // orienta la pose. 'front' y 'back' comparten la misma silueta: es un contorno
+  // sin rasgos, así que el cuerpo de frente y de espaldas se encuadran igual.
+  // 'left' usa el contorno de perfil.
+  const src = angle === 'left' ? poseSide : poseFront;
 
   return (
-    <div style={{ height: '94%', display: 'flex', alignItems: 'center', justifyContent: 'center', transform: flip ? 'scaleX(-1)' : 'none' }}>
+    <div style={{ height: '94%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <motion.img
         src={src}
         alt=""
@@ -35,10 +35,15 @@ function PoseGuide({ angle }) {
 }
 
 // Los 3 ángulos. `col` mapea a la columna existente de la tabla.
+// 2026-08-01 (pedido de las dueñas): el tercer ángulo pasó de "Perfil derecho" a
+// ESPALDAS, que es el que faltaba y el que mejor muestra postura y espalda en
+// pilates. Sigue guardándose en `back_path` — la columna ya se llamaba así, solo
+// que antes almacenaba el perfil derecho. Por eso NO hubo migración: las
+// sesiones viejas siguen mostrando su foto en la misma tarjeta.
 const ANGLES = [
   { key: 'front', col: 'front_path', label: 'Frente', title: 'Vista Frontal', phrase: 'Tu mejor versión te espera', hint: 'Brazos relajados a los costados, mirando al frente.' },
-  { key: 'left', col: 'side_path', label: 'Perfil izq.', title: 'Perfil Izquierdo', phrase: 'Constancia, no perfección', hint: 'Gira 90° a tu izquierda, brazos relajados.' },
-  { key: 'right', col: 'back_path', label: 'Perfil der.', title: 'Perfil Derecho', phrase: 'Hoy más fuerte que ayer', hint: 'Gira 90° a tu derecha, brazos relajados.' },
+  { key: 'left', col: 'side_path', label: 'Perfil', title: 'Vista de Perfil', phrase: 'Constancia, no perfección', hint: 'Gira 90° a tu izquierda, brazos relajados.' },
+  { key: 'back', col: 'back_path', label: 'Espaldas', title: 'Vista de Espaldas', phrase: 'Hoy más fuerte que ayer', hint: 'Dale la espalda a la cámara, brazos relajados a los costados.' },
 ];
 
 const glass = {
@@ -320,7 +325,7 @@ function CaptureWizard({ userId, onClose, onSaved }) {
           ) : (
             /* ─── Estado final: review de las 3 fotos ─── */
             <>
-              <p style={{ margin: '6px 0 14px', fontSize: '0.86rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>¡Listo! Revisa tus 3 fotos y guarda tu sesión. Quedarán privadas detrás de cada tarjeta.</p>
+              <p style={{ margin: '6px 0 14px', fontSize: '0.86rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>¡Listo! Revisa tus 3 fotos y guarda tu sesión. Quedarán guardadas en privado detrás de cada tarjeta; solo tú y tu coach pueden verlas.</p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '18px' }}>
                 {ANGLES.map((a, i) => (
                   <div key={a.key} style={{ position: 'relative', aspectRatio: '2 / 3', borderRadius: '14px', overflow: 'hidden', background: '#000' }}>
@@ -389,8 +394,8 @@ export default function ProgressPhotos({ userId }) {
 
     const withUrls = await Promise.all(validSessions.map(async (s) => {
       const sign = async (p) => p ? (await supabase.storage.from('progress-photos').createSignedUrl(p, 3600)).data?.signedUrl : null;
-      const [front, left, right] = await Promise.all([sign(s.front_path), sign(s.side_path), sign(s.back_path)]);
-      return { ...s, urls: { front, left, right } };
+      const [front, left, back] = await Promise.all([sign(s.front_path), sign(s.side_path), sign(s.back_path)]);
+      return { ...s, urls: { front, left, back } };
     }));
     setSessions(withUrls);
   };
@@ -484,7 +489,7 @@ export default function ProgressPhotos({ userId }) {
       ) : sessions.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '30px 20px', color: 'var(--on-surface-variant)' }}>
           <Camera size={32} style={{ opacity: 0.3, marginBottom: '10px' }} />
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>Aún no tienes fotos. Cada 6 semanas toma 3 (frente y perfiles) para ver tu evolución 💪</p>
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>Aún no tienes fotos. Cada 6 semanas toma 3 (frente, perfil y espaldas) para ver tu evolución 💪</p>
         </div>
       ) : (
         sessions.map((s, i) => (

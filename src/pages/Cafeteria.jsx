@@ -68,6 +68,11 @@ function Cafeteria() {
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);   // pide registrarse/login para comprar
   const [returnedFromPay, setReturnedFromPay] = useState(false); // volvió del checkout web (Stripe)
   const [loyalty, setLoyalty] = useState({ stamps: 0, gifts_available: 0 }); // Starbucks style rewards
+  // Portadas de "Novedades", editables desde Admin → Cafetería (tabla cafe_covers).
+  // Antes estaban hardcodeadas aquí, lo que obligaba a recompilar la app para
+  // cambiar una imagen. Ahora la dueña las cambia sola y se ven al instante.
+  const [covers, setCovers] = useState([]);
+  const [coverIndex, setCoverIndex] = useState(0);
 
 
 
@@ -120,6 +125,29 @@ function Cafeteria() {
     const keys = visibleTabs.map(t => t.key);
     if (keys.length && !keys.includes(activeCat)) setActiveCat(keys[0]);
   }, [cafeProducts]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Portadas: carga + realtime (Admin las cambia y la app abierta se entera).
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase.from('cafe_covers')
+        .select('*').eq('active', true)
+        .order('sort_order', { ascending: true });
+      setCovers(data || []);
+      setCoverIndex(0);
+    };
+    load();
+    const ch = supabase.channel('public:cafe_covers')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cafe_covers' }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
+  // Rotación automática cuando hay más de una portada.
+  useEffect(() => {
+    if (covers.length < 2) return;
+    const t = setInterval(() => setCoverIndex(i => (i + 1) % covers.length), 5000);
+    return () => clearInterval(t);
+  }, [covers.length]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -375,25 +403,46 @@ function Cafeteria() {
             {/* Carrusel Featured */}
             <div style={{ marginBottom: '20px' }}>
               <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, color: '#2B211C', margin: '0 0 16px' }}>Novedades</h2>
-              <div style={{ position: 'relative', width: '100%', aspectRatio: '4/5', borderRadius: '28px', overflow: 'hidden', background: '#DCD4C7', cursor: 'pointer' }} onClick={() => setActiveTab('order')}>
-                <img src="/cafeteria/Promocional.webp" alt="Especial" decoding="async" fetchPriority="high" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)' }} />
-                <div style={{ position: 'absolute', bottom: '24px', left: '24px', right: '24px' }}>
-                  <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Temporada</div>
-                  <div style={{ color: '#fff', fontSize: '1.8rem', fontWeight: 800, fontFamily: 'var(--font-display)', lineHeight: 1.1, marginBottom: '16px' }}>Recién hecho<br/>para ti</div>
-                  <button style={{ 
-                    width: '100%', padding: '16px', borderRadius: '100px', 
-                    background: 'rgba(255, 255, 255, 0.25)', 
-                    backdropFilter: 'blur(16px) saturate(180%)',
-                    WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-                    border: '1px solid rgba(255, 255, 255, 0.5)', 
-                    color: '#fff', 
-                    fontWeight: 800, fontSize: '1.05rem', cursor: 'pointer', 
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-                    textShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                  }}>Pedir Ahora</button>
-                </div>
-              </div>
+              {(() => {
+                // Portada activa. Si Admin todavía no subió ninguna, se cae a la
+                // que venía empaquetada, para que la sección nunca quede vacía.
+                const cover = covers[coverIndex] || { image_url: '/cafeteria/Promocional.webp', eyebrow: 'Temporada', title: 'Recién hecho\npara ti', cta: 'Pedir Ahora' };
+                return (
+                  <div style={{ position: 'relative', width: '100%', aspectRatio: '4/5', borderRadius: '28px', overflow: 'hidden', background: '#DCD4C7', cursor: 'pointer' }} onClick={() => setActiveTab('order')}>
+                    <AnimatePresence mode="wait">
+                      <motion.img key={cover.image_url} src={cover.image_url} alt={cover.title || 'Novedades'} decoding="async" fetchPriority="high"
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </AnimatePresence>
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)' }} />
+                    <div style={{ position: 'absolute', bottom: '24px', left: '24px', right: '24px' }}>
+                      {cover.eyebrow && <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>{cover.eyebrow}</div>}
+                      {cover.title && <div style={{ color: '#fff', fontSize: '1.8rem', fontWeight: 800, fontFamily: 'var(--font-display)', lineHeight: 1.1, marginBottom: '16px', whiteSpace: 'pre-line' }}>{cover.title}</div>}
+                      <button style={{
+                        width: '100%', padding: '16px', borderRadius: '100px',
+                        background: 'rgba(255, 255, 255, 0.25)',
+                        backdropFilter: 'blur(16px) saturate(180%)',
+                        WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+                        border: '1px solid rgba(255, 255, 255, 0.5)',
+                        color: '#fff',
+                        fontWeight: 800, fontSize: '1.05rem', cursor: 'pointer',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                        textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      }}>{cover.cta || 'Pedir Ahora'}</button>
+                    </div>
+
+                    {/* Puntos: solo si la dueña subió más de una portada */}
+                    {covers.length > 1 && (
+                      <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '6px' }}>
+                        {covers.map((c, i) => (
+                          <div key={c.id} onClick={(e) => { e.stopPropagation(); setCoverIndex(i); }}
+                            style={{ width: i === coverIndex ? '20px' : '7px', height: '7px', borderRadius: '10px', background: i === coverIndex ? '#fff' : 'rgba(255,255,255,0.5)', transition: 'width 0.3s', cursor: 'pointer' }} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </motion.div>
         )}

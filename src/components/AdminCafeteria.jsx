@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, Check, Coffee, Sliders, ImagePlus, Loader2, ChevronDown, Camera } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import AdminCafeOptions from './AdminCafeOptions';
+import AdminCafeCovers from './AdminCafeCovers';
 import { uploadCafeImage, resolveCafeImage } from '../lib/cafeImage';
 
 const CATEGORIES = [
@@ -164,9 +165,12 @@ function AdminCafeteria() {
         </h2>
         <Tab id="products" label="Productos" Icon={Coffee} />
         <Tab id="options" label="Personalización" Icon={Sliders} />
+        <Tab id="covers" label="Portada" Icon={ImagePlus} />
       </div>
 
-      {subtab === 'products' ? (
+      {subtab === 'covers' ? (
+        <AdminCafeCovers />
+      ) : subtab === 'products' ? (
         <>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
             <button onClick={() => setShowAdd(s => !s)} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
