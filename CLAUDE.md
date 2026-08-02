@@ -26,7 +26,14 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 - **⚠️ POR QUÉ BD + STORAGE Y NO `public/`:** lo que vive en `public/` se hornea en el bundle → cambiarlo exigiría recompilar y publicar, y **Android está congelado** (2.6.2 en prueba interna) mientras iOS depende de la revisión de Apple. Así la dueña cambia la portada sola y se ve **al instante en la web y en las apps ya instaladas**.
 - **ADMIN → Cafetería → nueva sub-pestaña "Portada"** (`AdminCafeCovers.jsx`): subir imagen, etiqueta, título y texto del botón; mostrar/ocultar, reordenar y eliminar. Si hay **varias activas, rotan solas cada 5 s** con puntos de navegación. Si no hay ninguna, cae a la imagen original. Los campos de texto **guardan al salir del campo**, no en cada tecla. `uploadImage` acepta ahora `maxSize` (portadas a 1400px, no a 900 como las miniaturas).
 
-⏭️ **PENDIENTE DE ESTA TANDA:** lo de admin y la web ya está vivo, pero **el cambio de "Espaldas" es de la app de la clienta** → hasta que salga un binario nuevo, iOS 1.9.2 y los APKs viejos siguen mostrando "Perfil der." (guardando en la misma columna, así que no se rompe nada). Bumpear a **iOS 1.9.3** y Android **versionCode 15** (el 14 ya está quemado en Play) cuando se retome.
+✅ **WEB DESPLEGADA** (commit `e843cf7`). Verificada bajando cada chunk y buscando texto del cambio (NO por nombre de bundle): `Admin-*.js` trae "Progreso", `Cafeteria-*.js` trae "cafe_covers", `Evolucion-*.js` trae "Espaldas".
+
+✅ **BINARIOS PREPARADOS — iOS 1.9.3 (build 27) y Android 2.6.3 (versionCode 15).** `npm run build` + `npx cap sync ios` + `npx cap sync android` hechos. **Xcode abierto → falta que el usuario haga Archive → Distribute → Upload.** El AAB de Android va en la PC de Windows (ahí está el keystore), con `git pull` primero.
+- **Verificación de la llave hecha (la del runbook):** `.env` con `pk_live_51TcfJ…` → bundle horneado con **`pk_live_51TcfJ`, cero `pk_test`**, y confirmado también dentro de `ios/App/App/public/assets/` y `android/app/src/main/assets/public/assets/`. "Espaldas" confirmado en los assets nativos de ambas.
+- **Se saltó Android 2.6.2/vc14** porque ya está quemado en Play (subido a prueba interna el 29-jul). El vc15 es el siguiente libre.
+- ⏭️ **En cuanto Apple apruebe la 1.9.3:** `UPDATE public.app_config SET latest_ios_version='1.9.3', updated_at=now() WHERE id=1;` (hoy dice `1.9.2`). Verificar con `curl -s "https://itunes.apple.com/lookup?bundleId=com.befitlab.app&country=mx"`.
+
+⏭️ **PENDIENTE DE REVISIÓN HUMANA:** **Camila Cruz Ramírez** (`cruzramirezcamila@gmail.com`) — suscripción de Stripe viva, plan vencido el 29-jul y 0 clases. El candado 4 la protege del borrado pero no la arregla: hay que revisar si ese cobro entró.
 
 ## ⏭️ PRÓXIMA SESIÓN (retomar) — ANDROID 2.6.2 YA ESTÁ EN PLAY (prueba interna): falta que llegue a las usuarias
 
