@@ -18,7 +18,9 @@ const hasSeenTour = async (userId) => {
   return false;
 };
 
-const AuthContext = createContext({});
+// Se exporta para que el modo demo (src/demo/DemoProvider.jsx) pueda servir la
+// misma forma con datos en memoria, sin que Portal ni Agenda se enteren.
+export const AuthContext = createContext({});
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

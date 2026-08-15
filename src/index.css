@@ -8,6 +8,7 @@
   
   --primary: #FF914D; 
   --primary-dim: #E68245;
+  --primary-strong: #FF6B00;   /* fin del degradado de la pestaña activa */
   --on-primary: #FFFFFF; 
   --accent: #FFD4BA; 
   --on-accent: #000000;
@@ -52,6 +53,7 @@
 
   --primary: #FF914D;
   --primary-dim: #E68245;
+  --primary-strong: #FF6B00;
   --on-primary: #FFFFFF;
   --accent: #2B231D;
   --on-accent: #FFD4BA;
@@ -1142,7 +1144,7 @@ h1, h2, h3, h4, h5 {
   width: 54px;
   height: 54px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #FF914D, #E67A38);
+  background: linear-gradient(135deg, var(--primary), var(--primary-dim));
   color: white;
   border: none;
   display: flex;
@@ -1493,7 +1495,7 @@ h1, h2, h3, h4, h5 {
 
   .sidebar-nav-item.active {
     color: white;
-    background: linear-gradient(135deg, #FF914D, #FF6B00);
+    background: linear-gradient(135deg, var(--primary), var(--primary-strong));
     box-shadow: 0 10px 25px rgba(255, 107, 0, 0.35);
   }
 
@@ -1633,7 +1635,7 @@ h1, h2, h3, h4, h5 {
 
   .coach-desktop-sidebar .sidebar-nav-item.active {
     color: white;
-    background: linear-gradient(135deg, #FF914D, #FF6B00);
+    background: linear-gradient(135deg, var(--primary), var(--primary-strong));
     box-shadow: 0 10px 25px rgba(255, 107, 0, 0.35);
   }
 

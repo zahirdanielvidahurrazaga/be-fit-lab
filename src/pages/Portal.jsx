@@ -17,7 +17,7 @@ import { ESTUDIO, moduloActivo } from '../config/estudio';
 function Portal() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, logout, classesRemaining, myReservations, waitlistPositions, cancelClass, acceptOffer, profileName, globalClasses, avatarUrl, setShowTour, coaches, badgeConfigs, classesLoaded } = useAuth();
+  const { user, plan, logout, classesRemaining, myReservations, waitlistPositions, cancelClass, acceptOffer, profileName, globalClasses, avatarUrl, setShowTour, coaches, badgeConfigs, classesLoaded, demoHistorial } = useAuth();
   
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
@@ -143,16 +143,33 @@ function Portal() {
     return date.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' });
   };
 
+  // Tarjetas de "Explora": solo las de módulos contratados. Se calculan aquí
+  // para poder ocultar el encabezado también cuando no queda ninguna — si no,
+  // queda un título "Explora" suelto sobre un hueco.
+  const tarjetasExplora = [
+    { modulo: 'cafeteria', to: '/cafeteria', img: '/fotos-hero/IMG_5410.JPG', Icon: Coffee, title: 'Coffee Lab', sub: 'Café & smoothies', overlay: 'linear-gradient(160deg, rgba(60,30,15,0.18) 0%, rgba(35,18,8,0.74) 100%)' },
+    { modulo: 'cumpleanos', to: '/cumpleanos', img: '/fotos-hero/cumple.png', Icon: Cake, title: 'Cumpleaños', sub: 'Tu cuenta regresiva', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)' },
+    { modulo: 'eventos', to: '/eventos', img: '/fotos-hero/_DSC0470.jpg', Icon: Sparkles, title: 'Eventos', sub: 'Próximas experiencias', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)' },
+  ].filter(c => moduloActivo(c.modulo));
+
   const rawName = profileName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Cliente';
   const userName = rawName.split(' ')[0]; // Solo el primer nombre para el saludo
 
   // ── Resumen "Tu semana" (datos reales) ──────────────────────────────────
   const { healthData, fetchTodayData } = useHealth();
   const [history, setHistory] = useState(null); // reservas con check-in (asistidas)
+  // En modo demo el historial viene de la semilla. Se resuelve aquí y no con
+  // un setState dentro del efecto, que dispararía renders en cascada.
+  const historial = demoHistorial ?? history;
   useEffect(() => {
     if (!user) return;
     // Traemos la FECHA REAL de la clase (classes.date) — la barra debe reflejar
     // el día en que se ASISTIÓ, no el día en que se reservó (created_at).
+    // En la maqueta de venta el historial ya viene sembrado en memoria, así que
+    // no hay nada que pedir: pegarle a Supabase con un id inventado devolvería
+    // vacío y la gráfica "Tu semana" saldría en ceros, que es justo lo que no se
+    // quiere enseñar en una junta.
+    if (demoHistorial) return;
     supabase.from('reservations').select('created_at, classes(date)').eq('user_id', user.id).eq('checked_in', true)
       .then(({ data }) => setHistory(data || []));
     fetchTodayData(); // salud de hoy si ya está conectada (no pide permiso)
@@ -177,7 +194,7 @@ function Portal() {
     // Asistidas (check-in) por día de ESTA semana + set de semanas con asistencia.
     const attendedPerDay = [0, 0, 0, 0, 0, 0, 0];
     const attendedWeeks = new Set();
-    (history || []).forEach(h => {
+    (historial || []).forEach(h => {
       const d = attendedDate(h);
       attendedWeeks.add(weekStart(d));
       if (d >= monday && d < sunday) attendedPerDay[(d.getDay() + 6) % 7]++;
@@ -198,7 +215,7 @@ function Portal() {
     const perDayTotal = attendedPerDay.map((a, i) => a + reservedPerDay[i]);
     const weekCount = attendedPerDay.reduce((a, b) => a + b, 0);     // asistidas esta semana
     const reservedCount = reservedPerDay.reduce((a, b) => a + b, 0); // reservadas próximas
-    const total = (history || []).length;                           // asistidas histórico
+    const total = (historial || []).length;                           // asistidas histórico
 
     // Racha: semanas consecutivas con ≥1 asistida, terminando en esta o la pasada
     // (no se rompe si la semana en curso aún no tiene clase).
@@ -328,17 +345,14 @@ function Portal() {
           </motion.div>
 
           {/* STORIES-STYLE HORIZONTAL SCROLL */}
-          <motion.section 
+          {tarjetasExplora.length > 0 && (
+          <motion.section
             initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{duration:0.5, delay:0.15}}
             style={{ marginTop: '25px' }}
           >
             <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '15px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Explora</h2>
             <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '6px', marginLeft: '-5px', paddingLeft: '5px', paddingRight: '5px' }}>
-              {[
-                { modulo: 'cafeteria', to: '/cafeteria', img: '/fotos-hero/IMG_5410.JPG', Icon: Coffee, title: 'Coffee Lab', sub: 'Café & smoothies', overlay: 'linear-gradient(160deg, rgba(60,30,15,0.18) 0%, rgba(35,18,8,0.74) 100%)' },
-                { modulo: 'cumpleanos', to: '/cumpleanos', img: '/fotos-hero/cumple.png', Icon: Cake, title: 'Cumpleaños', sub: 'Tu cuenta regresiva', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)' },
-                { modulo: 'eventos', to: '/eventos', img: '/fotos-hero/_DSC0470.jpg', Icon: Sparkles, title: 'Eventos', sub: 'Próximas experiencias', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)' },
-              ].filter(c => moduloActivo(c.modulo)).map(c => (
+              {tarjetasExplora.map(c => (
                 <motion.div key={c.to} data-tour={`explora-${c.to.slice(1)}`} onClick={() => navigate(c.to)} whileTap={{ scale: 0.97 }}
                   style={{ flex: '0 0 auto', width: '210px', height: '250px', borderRadius: '26px', cursor: 'pointer', position: 'relative', overflow: 'hidden', backgroundImage: `${c.overlay}, url('${c.img}')`, backgroundSize: 'cover', backgroundPosition: 'center', padding: '18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 14px 34px rgba(0,0,0,0.18)' }}>
                   <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: 'rgba(255,255,255,0.20)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -352,6 +366,7 @@ function Portal() {
               ))}
             </div>
           </motion.section>
+          )}
         </div>
 
         <div className="dashboard-content" style={{ zIndex: 1, position: 'relative' }}>

@@ -93,6 +93,8 @@ export const ESTUDIO = {
   colores: {
     primario: '#FF914D',
     primarioTenue: '#E68245',
+    // Fin del degradado de la pestaña activa del panel: más vivo que el tenue.
+    primarioVivo: '#FF6B00',
     acento: '#FFD4BA',
     fondo: '#EFE9E4',
     fondoSuave: '#F5F2F0',
@@ -106,6 +108,7 @@ export const ESTUDIO = {
   coloresOscuro: {
     primario: '#FF914D',
     primarioTenue: '#E68245',
+    primarioVivo: '#FF6B00',
     acento: '#2B231D',
     fondo: '#15110E',
     fondoSuave: '#1B1612',
@@ -141,6 +144,7 @@ export function paletaDe(tema) {
 const TOKENS = {
   primario: ['--primary', '--app-accent'],
   primarioTenue: ['--primary-dim'],
+  primarioVivo: ['--primary-strong'],
   acento: ['--accent'],
   fondo: ['--surface', '--app-bg'],
   fondoSuave: ['--surface-low'],
@@ -176,6 +180,41 @@ export function iniciarMarca() {
   const observador = new MutationObserver(sincronizar);
   observador.observe(raiz, { attributes: true, attributeFilter: ['data-theme'] });
   return () => observador.disconnect();
+}
+
+// ── Modo demo ────────────────────────────────────────────────────────────────
+// Las pantallas leen `ESTUDIO` directamente del módulo, no de un contexto de
+// React. Es lo correcto para la app real (la identidad no cambia nunca en
+// caliente), pero significa que una maqueta de venta no puede cambiarles el
+// nombre pasándoles props: hay que reemplazar la identidad ACTIVA.
+//
+// Por eso se muta el objeto en vez de crear otro: así los ~30 archivos que ya
+// importaron `ESTUDIO` ven el cambio sin tocar ni una línea de ellos. Se guarda
+// un respaldo y se restaura al salir de la demo; recargar también lo resetea.
+let respaldoEstudio = null;
+
+const CAMPOS_DE_IDENTIDAD = [
+  'nombre', 'nombreMayusculas', 'nombrePanel', 'giro', 'ciudad',
+  'colores', 'coloresOscuro', 'modulos',
+];
+
+export function activarEstudioDemo(cfg) {
+  if (!respaldoEstudio) {
+    respaldoEstudio = Object.fromEntries(
+      CAMPOS_DE_IDENTIDAD.map((k) => [k, ESTUDIO[k]]),
+    );
+  }
+  for (const campo of CAMPOS_DE_IDENTIDAD) {
+    if (cfg[campo] !== undefined) ESTUDIO[campo] = cfg[campo];
+  }
+  aplicarMarca(document?.documentElement?.getAttribute('data-theme') || 'light');
+}
+
+export function restaurarEstudio() {
+  if (!respaldoEstudio) return;
+  Object.assign(ESTUDIO, respaldoEstudio);
+  respaldoEstudio = null;
+  aplicarMarca(document?.documentElement?.getAttribute('data-theme') || 'light');
 }
 
 // Atajo para preguntar por un módulo sin cargar todo el objeto.

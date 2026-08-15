@@ -9,6 +9,7 @@ import { supabase } from './lib/supabase';
 // Code-splitting por ruta: cada página se descarga solo cuando se visita.
 // Esto reduce drásticamente el JS del primer load (antes todo iba en un bundle).
 const Landing = lazy(() => import('./pages/Landing'));
+const Demo = lazy(() => import('./pages/Demo'));
 const Agenda = lazy(() => import('./pages/Agenda'));
 const Evolucion = lazy(() => import('./pages/Evolucion'));
 const Nutricion = lazy(() => import('./pages/Nutricion'));
@@ -217,6 +218,9 @@ function App() {
           <Route path="/privacidad" element={<Privacidad />} />
           <Route path="/terminos" element={<Terminos />} />
           <Route path="/agenda" element={<Agenda />} />
+          {/* Maqueta de venta: la app con la marca de otro estudio y datos en
+              memoria. No toca Supabase ni pide cuenta. */}
+          <Route path="/demo/:estudio" element={<Demo />} />
           {moduloActivo('cafeteria') && <Route path="/cafeteria" element={<Cafeteria />} />}
           {/* Evento abierto al público: cualquiera aparta lugar sin cuenta, y el
               boleto se consulta con su código (link del correo). */}
