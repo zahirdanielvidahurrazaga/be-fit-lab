@@ -18,11 +18,16 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 - **Android 2.6.4 (versionCode 16)** — el 15 quedó consumido con la rechazada. `npm run build` + `npx cap sync android` hechos; **`pk_live` verificada** en `dist/` y en `android/app/src/main/assets/public/assets/`. Commit `2f5a217`.
 
 ⏭️ **LO QUE FALTA (lo hace el usuario, Claude no puede):**
-1. **Actualizar la declaración de Health Connect en Play Console** para que solo liste pasos, calorías, peso y grasa corporal. Google lo pide explícitamente en el paso 2 de "Cómo corregirlo": si el binario y la declaración no coinciden, rechazo otra vez.
+1. ~~Actualizar la declaración de Play Console~~ → **no hay nada que hacer a mano**: la lista sale del binario y las casillas ya están bien (ver el bloque de abajo).
 2. **Compilar el AAB en la PC de Windows** (ahí está el keystore) con `git pull` primero y **verificando el `.env` con `pk_live`**, y subirlo a **producción** (no a prueba interna: esa es la razón por la que las 6 usuarias de Android siguen congeladas).
 3. Reenviar a revisión.
 
-⚠️ **BUG LATENTE SIN TOCAR — `READ_BODY_FAT` está declarado Y removido.** Aparece en la lista de permisos pedidos *y* más abajo con `tools:node="remove"` (viene de antes de esta sesión). Si gana el `remove`, el **% de grasa de la báscula nunca ha funcionado en Android**. **No se tocó a propósito**: meter un permiso nuevo justo en una re-revisión invita a otro rechazo. Verificar en la PC de Windows leyendo el **manifest fusionado** (`android/app/build/intermediates/merged_manifests/release/AndroidManifest.xml`) y arreglarlo en una versión posterior.
+✅ **RESUELTO — `READ_BODY_FAT` sí llega al binario (falsa alarma).** Está declarado *y* más abajo con `tools:node="remove"`, y se sospechó que el `remove` ganaba y dejaba el % de grasa de la báscula sin funcionar en Android. **Play Console lo desmiente:** la pantalla *Apps de salud* lista los permisos **leídos del APK subido** y ahí aparece `READ_BODY_FAT`, junto con los otros 7 declarados y **ninguno** de los removidos. Conclusión: **cuando el mismo permiso está declarado y removido en el mismo manifest, gana la declaración.** No hay nada que arreglar; la contradicción es fea pero inocua.
+
+📋 **CÓMO FUNCIONA LA DECLARACIÓN DE PLAY (para no perder tiempo buscando):**
+- **La lista de permisos NO se edita a mano** — Google la extrae del binario subido. Se actualiza sola al subir el AAB nuevo, y con eso queda cumplido el paso 2 del "cómo corregirlo".
+- **Lo único editable son las casillas de "Funciones de la app".** Hoy están marcadas **Actividad y ejercicio** (pasos + calorías activas) y **Nutrición y control de peso** (peso + % grasa): **ambas correctas y se quedan** tras quitar los 3 permisos. Ojo: "Actividad y ejercicio" **no** exige `READ_EXERCISE`.
+- Tras subir la 2.6.4 la lista debe quedar exactamente en: `READ_STEPS`, `READ_ACTIVE_CALORIES_BURNED`, `WRITE_ACTIVE_CALORIES_BURNED`, `READ_WEIGHT`, `READ_BODY_FAT`.
 
 ## ✅ Sesión 2026-08-14 — 2 reportes de las dueñas: COBROS QUE NO SE CANCELAN (8 clientas, $8,400/mes) y el ENLACE DE CONTRASEÑA
 
