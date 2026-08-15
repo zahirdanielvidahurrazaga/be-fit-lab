@@ -52,9 +52,9 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Be Fit Lab usa tus datos de actividad para mostrarte tus calorías quemadas, pasos del día y progreso semanal directamente en la app.</string>
+	<string>Be Fit Lab lee tus pasos y calorías activas del día, y tu peso y porcentaje de grasa corporal si usas una báscula conectada, para mostrarte tu progreso dentro de la app.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>Be Fit Lab registra tus clases de pilates como entrenamientos en Apple Health para que tengas un historial completo de tu actividad.</string>
+	<string>Be Fit Lab guarda las calorías que quemas en tu clase de pilates para que queden en tu historial de Salud.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>Be Fit Lab agrega tus clases reservadas a tu calendario para que nunca olvides una sesión.</string>
 	<key>NSRemindersUsageDescription</key>
