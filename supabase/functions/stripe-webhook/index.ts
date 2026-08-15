@@ -11,6 +11,53 @@ function planDates() {
   return { plan_started_at: started.toISOString(), plan_expires_at: expires.toISOString() };
 }
 
+// Estados en los que una suscripción de Stripe TODAVÍA puede generar cobros.
+const SUB_COBRABLES = ['active', 'past_due', 'unpaid', 'trialing', 'paused'];
+
+// Al activar una membresía nueva, cancela las suscripciones ANTERIORES de la
+// misma clienta.
+//
+// EL BUG QUE ARREGLA: ni `stripe-checkout` ni `stripe-membership-intent` miraban
+// si ya existía una suscripción viva — cada recompra creaba otra. Como en `users`
+// solo cabe UN `stripe_subscription_id`, la anterior quedaba huérfana: seguía
+// cobrando cada mes y cancelar/pausar desde la app no la tocaba, porque la app
+// solo conoce la última. En agosto había 8 clientas con doble cobro vivo.
+//
+// ⚠️ LLAMARLA SIEMPRE DESPUÉS de guardar la nueva en `users`: la cancelación
+// dispara `customer.subscription.deleted`, cuyo handler busca por esa columna y
+// da de baja la membresía. Si todavía apuntara a la vieja, le borraría el plan
+// que la clienta acaba de pagar. Como Stripe no garantiza el orden de entrega de
+// los eventos, además marcamos `superseded_by` y ese handler ignora las que lo
+// traigan (el guard de verdad; el orden por sí solo no basta).
+async function cancelarSuscripcionesAnteriores(
+  stripe: Stripe,
+  customerId: string | null,
+  conservarSubId: string | null,
+): Promise<void> {
+  if (!customerId || !conservarSubId) return;
+  try {
+    const { data } = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 });
+    for (const sub of data) {
+      if (sub.id === conservarSubId) continue;
+      if (!SUB_COBRABLES.includes(sub.status)) continue;
+      try {
+        // Marcar ANTES de cancelar: si marcáramos después, el evento podría
+        // llegar sin la metadata y el handler daría de baja la membresía.
+        await stripe.subscriptions.update(sub.id, {
+          metadata: { ...(sub.metadata ?? {}), superseded_by: conservarSubId },
+        });
+        await stripe.subscriptions.cancel(sub.id);
+        console.log(`🧹 Suscripción anterior cancelada: ${sub.id} (reemplazada por ${conservarSubId})`);
+      } catch (e) {
+        // Que no tumbe la activación: la clienta ya pagó y su plan debe quedar.
+        console.error(`No se pudo cancelar la suscripción anterior ${sub.id}:`, e instanceof Error ? e.message : String(e));
+      }
+    }
+  } catch (e) {
+    console.error('No se pudieron listar las suscripciones anteriores:', e instanceof Error ? e.message : String(e));
+  }
+}
+
 // Avisa por push + in-app a todas las baristas que entró un pedido nuevo.
 async function notifyBaristas(supabase: any, summary: string, orderId: string) {
   const { data: baristas } = await supabase.from('users').select('id').eq('role', 'BARISTA');
@@ -162,6 +209,15 @@ serve(async (req) => {
 
       if (error) console.error('Error activando plan:', error);
       else console.log(`✅ Plan activado: ${plan_title} para ${supabase_user_id}`);
+
+      // Ya quedó guardada la nueva → dar de baja las anteriores (ver el helper).
+      if (!error) {
+        await cancelarSuscripcionesAnteriores(
+          stripe,
+          (session.customer as string) ?? null,
+          (session.subscription as string) ?? null,
+        );
+      }
     }
 
     // ── Cobros de suscripción (primer cobro nativo + renovaciones) ──────────
@@ -207,6 +263,15 @@ serve(async (req) => {
             ...planDates(),
           }).eq('id', supabase_user_id);
           console.log(`✅ Plan activado (nativo): ${plan_title} para ${supabase_user_id}`);
+
+          // Ya quedó guardada la nueva → dar de baja las anteriores.
+          // Solo en `subscription_create`: en una renovación (`subscription_cycle`)
+          // esto cancelaría a la clienta su propia suscripción buena.
+          await cancelarSuscripcionesAnteriores(
+            stripe,
+            ((invoice as any).customer as string) ?? null,
+            subscriptionId,
+          );
         }
       } else {
         // Renovación mensual → resetear clases. Buscamos por suscripción y, si esa
@@ -237,6 +302,14 @@ serve(async (req) => {
     // ── Suscripción cancelada ────────────────────────────────────────────────
     if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object as Stripe.Subscription;
+
+      // Suscripción vieja que dimos de baja al activar una nueva: NO es una baja
+      // de la clienta, es limpieza. Darla por buena aquí le borraría el plan que
+      // acaba de pagar. La metadata la marca `cancelarSuscripcionesAnteriores`.
+      if (subscription.metadata?.superseded_by) {
+        console.log(`↩️ Ignorada la baja de ${subscription.id}: reemplazada por ${subscription.metadata.superseded_by}`);
+        return new Response('ok');
+      }
 
       const { data: users } = await supabase
         .from('users')

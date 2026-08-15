@@ -54,9 +54,32 @@ function Login() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
   const [resetError, setResetError] = useState(null);
+  // Hora del último envío y espera para reenviar. Pedir un enlace nuevo INVALIDA
+  // el anterior al instante (Supabase solo deja vivo el último), y esa era la
+  // causa real de "le doy a restablecer y el link no me da acceso": la clienta
+  // no veía el correo, pedía otro, y luego abría el primero que encontraba
+  // —el viejo— y le salía "Enlace no válido". Por eso aquí se frena el reenvío,
+  // se avisa qué pasa al reenviar y se sella la hora para distinguir los correos.
+  const [resetSentAt, setResetSentAt] = useState(null);
+  const [resendIn, setResendIn] = useState(0);
+  const RESEND_WAIT_S = 60; // igual al mínimo que impone el servidor entre correos
 
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setInterval(() => setResendIn(s => (s <= 1 ? 0 : s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [resendIn]);
+
+  // /login?recuperar=1 → abrir directo el formulario. Lo usa el botón "Pedir un
+  // enlace nuevo" de la pantalla de enlace vencido, para que no tenga que volver
+  // a buscar "¿Olvidaste tu contraseña?" justo cuando ya se está frustrando.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('recuperar') === '1') {
+      setShowForgotPassword(true);
+    }
+  }, []);
+
+  const enviarEnlace = async () => {
     setResetLoading(true);
     setResetError(null);
 
@@ -68,9 +91,13 @@ function Login() {
       setResetError(error.message);
     } else {
       setResetSuccess(true);
+      setResetSentAt(new Date());
+      setResendIn(RESEND_WAIT_S);
     }
     setResetLoading(false);
   };
+
+  const handleResetPassword = (e) => { e.preventDefault(); enviarEnlace(); };
 
   // ==============================
   // LOGIN
@@ -140,13 +167,44 @@ function Login() {
                 <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(34,197,94,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
                   <CheckCircle2 size={32} color="#22C55E" />
                 </div>
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: '#1A1C1E', marginBottom: '0.5rem' }}>Correo enviado</h2>
-                <p style={{ color: '#4B5563', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '2rem' }}>
-                  Si existe una cuenta con ese correo, recibirás un enlace para restablecer tu contraseña. Revisa tu bandeja de entrada y spam.
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: '#1A1C1E', marginBottom: '0.5rem' }}>Te enviamos el enlace</h2>
+                <p style={{ color: '#4B5563', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1rem' }}>
+                  Si existe una cuenta con ese correo, ahí llegará tu enlace para crear una contraseña nueva. Revisa también la carpeta de spam.
                 </p>
-                <button onClick={() => { setShowForgotPassword(false); setResetSuccess(false); setResetEmail(''); }} className="glass-button-dark" style={{ width: '100%' }}>
+
+                {/* El aviso que evita el problema: solo el ÚLTIMO correo funciona. */}
+                <div style={{ background: 'rgba(255,145,77,0.12)', border: '1px solid rgba(255,145,77,0.35)', borderRadius: '12px', padding: '0.9rem 1rem', marginBottom: '1.2rem', textAlign: 'left' }}>
+                  <p style={{ color: '#8A4A16', fontSize: '0.86rem', lineHeight: 1.55, margin: 0, fontWeight: 600 }}>
+                    Abre el correo más reciente.
+                  </p>
+                  <p style={{ color: '#8A4A16', fontSize: '0.84rem', lineHeight: 1.55, margin: '4px 0 0' }}>
+                    Si pides el enlace otra vez, los anteriores dejan de servir. Por eso, si tienes
+                    varios correos nuestros, usa <strong>solo el último</strong>{resetSentAt ? <> (el de las {resetSentAt.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })})</> : null}.
+                  </p>
+                </div>
+
+                <button onClick={() => { setShowForgotPassword(false); setResetSuccess(false); setResetEmail(''); setResetSentAt(null); setResendIn(0); }} className="glass-button-dark" style={{ width: '100%' }}>
                   Volver al Login <ArrowRight size={20} />
                 </button>
+
+                <div style={{ marginTop: '1.1rem' }}>
+                  {resendIn > 0 ? (
+                    <p style={{ color: '#6B7280', fontSize: '0.82rem', margin: 0 }}>
+                      ¿No te llegó? Podrás pedir otro en {resendIn}s
+                    </p>
+                  ) : (
+                    <button
+                      onClick={enviarEnlace}
+                      disabled={resetLoading}
+                      style={{ background: 'none', border: 'none', padding: 0, color: 'var(--primary)', fontWeight: 600, fontSize: '0.86rem', cursor: resetLoading ? 'default' : 'pointer', textDecoration: 'underline' }}
+                    >
+                      {resetLoading ? 'Enviando…' : 'Enviarme otro enlace'}
+                    </button>
+                  )}
+                  {resetError && (
+                    <p style={{ color: '#EF4444', fontSize: '0.82rem', marginTop: '0.6rem' }}>{resetError}</p>
+                  )}
+                </div>
               </div>
             ) : (
               <>

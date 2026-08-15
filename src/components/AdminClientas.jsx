@@ -171,6 +171,145 @@ function ClientCard({ u, onRole, onBaja, onReactivar, onDelete, onManage, busy, 
 // Modal para gestionar las clases de UNA clienta:
 //  1) ajustar sus clases disponibles (classes_remaining) y
 //  2) reservarla / quitarla en clases del horario.
+// Cobro automático de la clienta, gestionable por la dueña.
+// Nació de un reporte real: las clientas cancelaban desde la app y les seguían
+// cobrando. La causa era que quedaban DOS suscripciones vivas y la app solo
+// conocía una; por eso aquí se listan todas y se puede cerrar la que sobra.
+function CobroAutomatico({ clientId }) {
+  const [estado, setEstado] = useState({ cargando: true });
+  const [ocupado, setOcupado] = useState(null);
+  const [aviso, setAviso] = useState(null);
+
+  const cargar = React.useCallback(async () => {
+    setEstado(e => ({ ...e, cargando: true }));
+    const { data, error } = await supabase.functions.invoke('admin-membership', {
+      body: { action: 'list', userId: clientId },
+    });
+    if (error || data?.error) {
+      setEstado({ cargando: false, error: data?.error || 'No se pudo consultar el cobro' });
+    } else {
+      setEstado({ cargando: false, ...data });
+    }
+  }, [clientId]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  const ejecutar = async (action, subscriptionId, confirmMsg) => {
+    if (confirmMsg && !confirm(confirmMsg)) return;
+    setOcupado(subscriptionId + action);
+    setAviso(null);
+    const { data, error } = await supabase.functions.invoke('admin-membership', {
+      body: { action, userId: clientId, subscriptionId },
+    });
+    setOcupado(null);
+    if (error || data?.error) { setAviso({ mal: true, texto: data?.error || 'No se pudo completar' }); return; }
+    setAviso({ mal: false, texto: data.resultado });
+    cargar();
+  };
+
+  const fecha = (ts) => ts
+    ? new Date(ts * 1000).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '—';
+
+  const titulo = (
+    <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)', margin: '0 0 10px' }}>
+      Cobro automático
+    </h3>
+  );
+  const caja = (contenido) => (
+    <>
+      {titulo}
+      <div style={{ background: 'rgba(0,0,0,0.025)', borderRadius: '14px', padding: '14px', marginBottom: '24px' }}>{contenido}</div>
+    </>
+  );
+
+  if (estado.cargando) return caja(<div style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>Consultando…</div>);
+  if (estado.error) return caja(<div style={{ fontSize: '0.85rem', color: '#ba1a1a' }}>{estado.error}</div>);
+  if (estado.sinCobroAutomatico) {
+    return caja(
+      <div style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>
+        No tiene cobro automático. Paga en efectivo o le diste de alta la membresía a mano,
+        así que no se le va a cobrar nada sola.
+      </div>,
+    );
+  }
+
+  return caja(
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {estado.duplicadas > 0 && (
+        <div style={{ background: 'rgba(186,26,26,0.08)', color: '#ba1a1a', borderRadius: '10px', padding: '10px 12px', fontSize: '0.8rem', fontWeight: 700, lineHeight: 1.45 }}>
+          Tiene {estado.duplicadas + 1} cobros abiertos al mismo tiempo. Solo uno debería estar
+          activo — cierra los que digan “sobra”.
+        </div>
+      )}
+
+      {estado.suscripciones.map(s => (
+        <div key={s.id} style={{ background: '#fff', borderRadius: '12px', padding: '12px', border: `1px solid ${s.esLaDeLaApp ? 'rgba(0,0,0,0.10)' : 'rgba(186,26,26,0.35)'}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ fontWeight: 800, fontSize: '0.95rem', color: INK }}>
+              ${s.monto.toLocaleString('es-MX')} <span style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>al mes</span>
+            </div>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', padding: '3px 8px', borderRadius: '99px', background: s.esLaDeLaApp ? 'rgba(22,163,74,0.12)' : 'rgba(186,26,26,0.12)', color: s.esLaDeLaApp ? '#16A34A' : '#ba1a1a' }}>
+              {s.esLaDeLaApp ? 'El bueno' : 'Sobra'}
+            </span>
+          </div>
+
+          <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', marginTop: '5px', lineHeight: 1.5 }}>
+            {s.pausada
+              ? 'Pausado — no se le está cobrando.'
+              : s.terminaAlVencer
+                ? `Se cancela el ${fecha(s.proximoCobro)} y ya no se le vuelve a cobrar.`
+                : `Siguiente cobro: ${fecha(s.proximoCobro)}.`}
+            {s.estado === 'past_due' && ' Su último cobro falló.'}
+          </div>
+
+          <div style={{ display: 'flex', gap: '6px', marginTop: '10px', flexWrap: 'wrap' }}>
+            {!s.esLaDeLaApp ? (
+              <button
+                onClick={() => ejecutar('cancel_now', s.id, `¿Cerrar este cobro de $${s.monto} al mes?\n\nEs un cobro duplicado: su membresía y sus clases NO se tocan.`)}
+                disabled={!!ocupado}
+                style={{ ...quickBtnRojo, opacity: ocupado ? 0.5 : 1 }}
+              >
+                {ocupado === s.id + 'cancel_now' ? '…' : 'Cerrar este cobro'}
+              </button>
+            ) : (
+              <>
+                {s.pausada ? (
+                  <button onClick={() => ejecutar('resume', s.id)} disabled={!!ocupado} style={{ ...quickBtnChico, opacity: ocupado ? 0.5 : 1 }}>
+                    {ocupado === s.id + 'resume' ? '…' : 'Reactivar cobro'}
+                  </button>
+                ) : (
+                  <button onClick={() => ejecutar('pause', s.id, '¿Pausar el cobro?\n\nNo se le cobrará la próxima renovación y conserva sus clases. Puedes reactivarlo cuando ella quiera.')} disabled={!!ocupado} style={{ ...quickBtnChico, opacity: ocupado ? 0.5 : 1 }}>
+                    {ocupado === s.id + 'pause' ? '…' : 'Pausar cobro'}
+                  </button>
+                )}
+                {s.terminaAlVencer ? (
+                  <button onClick={() => ejecutar('resume', s.id)} disabled={!!ocupado} style={{ ...quickBtnChico, opacity: ocupado ? 0.5 : 1 }}>
+                    {ocupado === s.id + 'resume' ? '…' : 'Que siga renovándose'}
+                  </button>
+                ) : (
+                  <button onClick={() => ejecutar('cancel', s.id, '¿Cancelar el cobro automático?\n\nConserva su acceso hasta que se le venza el plan, y ya no se le vuelve a cobrar.')} disabled={!!ocupado} style={{ ...quickBtnRojo, opacity: ocupado ? 0.5 : 1 }}>
+                    {ocupado === s.id + 'cancel' ? '…' : 'Cancelar cobro'}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      ))}
+
+      {aviso && (
+        <div style={{ fontSize: '0.79rem', fontWeight: 700, color: aviso.mal ? '#ba1a1a' : '#16A34A', lineHeight: 1.45 }}>
+          {aviso.mal ? '' : '✓ '}{aviso.texto}
+        </div>
+      )}
+    </div>,
+  );
+}
+
+const quickBtnChico = { border: 'none', borderRadius: '10px', padding: '8px 12px', fontWeight: 800, fontSize: '0.79rem', cursor: 'pointer', background: 'rgba(255,145,77,0.14)', color: PRIMARY };
+const quickBtnRojo = { border: 'none', borderRadius: '10px', padding: '8px 12px', fontWeight: 800, fontSize: '0.79rem', cursor: 'pointer', background: 'rgba(186,26,26,0.10)', color: '#ba1a1a' };
+
 function ManageClassesModal({ client, onClose, patch, applyLocal }) {
   const { globalClasses, fetchGlobalClasses, fetchAllUsers } = useAuth();
   const unlimited = isUnlimitedClient(client);
@@ -463,6 +602,9 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
                 : 'Cambia la fecha en que se le vence la membresía a la clienta. Vacío = sin vencimiento.'}
             </div>
           </div>
+
+          {/* SECCIÓN — Cobro automático (pausar/cancelar y cerrar duplicados) */}
+          <CobroAutomatico clientId={client.id} />
 
           {/* SECCIÓN 2 — Reservar en una clase */}
           <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)', margin: '0 0 10px' }}>Reservar en una clase</h3>

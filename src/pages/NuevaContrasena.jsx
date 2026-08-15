@@ -92,10 +92,31 @@ export default function NuevaContrasena() {
               <button onClick={() => navigate('/login')} className="glass-button-dark" style={{ width: '100%', marginTop: '1.4rem' }}>Iniciar sesión</button>
             </div>
           ) : hasSession === false ? (
+            // La causa #1 de llegar aquí no es que el enlace expire por tiempo (dura
+            // 1 h), sino que la clienta pidió OTRO enlace: Supabase invalida el
+            // anterior al instante. Antes el texto no lo decía y ella creía que la
+            // app estaba rota; ahora se le explica y se le da la salida en un paso.
             <div style={{ textAlign: 'center' }}>
-              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.7rem', color: '#1A1C1E', marginBottom: '0.5rem' }}>Enlace no válido</h1>
-              <p style={{ color: '#4B5563', lineHeight: 1.5 }}>El enlace de recuperación no es válido o ya expiró. Solicita uno nuevo desde "¿Olvidaste tu contraseña?".</p>
-              <button onClick={() => navigate('/login')} className="glass-button-dark" style={{ width: '100%', marginTop: '1.4rem' }}>Ir a iniciar sesión</button>
+              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.7rem', color: '#1A1C1E', marginBottom: '0.5rem' }}>Este enlace ya no sirve</h1>
+              <p style={{ color: '#4B5563', lineHeight: 1.55 }}>
+                Casi siempre pasa por una razón sencilla: <strong>pediste el enlace más de una vez</strong>,
+                y al llegar el nuevo el anterior dejó de funcionar.
+              </p>
+              <div style={{ background: 'rgba(255,145,77,0.12)', border: '1px solid rgba(255,145,77,0.35)', borderRadius: '12px', padding: '0.9rem 1rem', margin: '1rem 0 0', textAlign: 'left' }}>
+                <p style={{ color: '#8A4A16', fontSize: '0.88rem', lineHeight: 1.55, margin: 0 }}>
+                  Revisa tu correo y abre el <strong>más reciente</strong> que te mandamos.
+                  Si ya no lo tienes, pide uno nuevo aquí abajo y usa solo ese.
+                </p>
+              </div>
+              <p style={{ color: '#6B7280', fontSize: '0.82rem', lineHeight: 1.5, marginTop: '0.9rem' }}>
+                También caduca si pasó más de una hora desde que lo pediste.
+              </p>
+              <button onClick={() => navigate('/login?recuperar=1')} className="glass-button-dark" style={{ width: '100%', marginTop: '1.2rem' }}>
+                Pedir un enlace nuevo
+              </button>
+              <button onClick={() => navigate('/login')} style={{ width: '100%', marginTop: '0.7rem', background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 600, fontSize: '0.88rem', cursor: 'pointer', padding: '0.4rem' }}>
+                Volver a iniciar sesión
+              </button>
             </div>
           ) : (
             <>

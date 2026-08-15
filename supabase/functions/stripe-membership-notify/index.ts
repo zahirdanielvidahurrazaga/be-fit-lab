@@ -7,6 +7,42 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Estados en los que una suscripción de Stripe TODAVÍA puede generar cobros.
+const SUB_COBRABLES = ['active', 'past_due', 'unpaid', 'trialing', 'paused'];
+
+// Gemela de la del webhook (las edge functions aquí no comparten módulos).
+// Al activar una membresía nueva, cancela las ANTERIORES de la misma clienta:
+// cada recompra creaba otra suscripción y la vieja quedaba huérfana cobrando,
+// invisible para la app (en `users` solo cabe un `stripe_subscription_id`).
+// ⚠️ Llamarla DESPUÉS de guardar la nueva: la baja dispara
+// `customer.subscription.deleted`, y ese handler borra la membresía si la
+// columna todavía apunta a la vieja. `superseded_by` es lo que se lo impide.
+async function cancelarSuscripcionesAnteriores(
+  stripe: Stripe,
+  customerId: string | null,
+  conservarSubId: string | null,
+): Promise<void> {
+  if (!customerId || !conservarSubId) return;
+  try {
+    const { data } = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 });
+    for (const sub of data) {
+      if (sub.id === conservarSubId) continue;
+      if (!SUB_COBRABLES.includes(sub.status)) continue;
+      try {
+        await stripe.subscriptions.update(sub.id, {
+          metadata: { ...(sub.metadata ?? {}), superseded_by: conservarSubId },
+        });
+        await stripe.subscriptions.cancel(sub.id);
+        console.log(`🧹 Suscripción anterior cancelada: ${sub.id} (reemplazada por ${conservarSubId})`);
+      } catch (e) {
+        console.error(`No se pudo cancelar la suscripción anterior ${sub.id}:`, e instanceof Error ? e.message : String(e));
+      }
+    }
+  } catch (e) {
+    console.error('No se pudieron listar las suscripciones anteriores:', e instanceof Error ? e.message : String(e));
+  }
+}
+
 // Tras pagar la membresía en la hoja NATIVA, el cliente llama aquí para activar el
 // plan de inmediato (sin esperar al webhook). Verifica con Stripe que el pago/sub
 // esté OK antes de tocar la BD. Idempotente: volver a llamarlo no rompe nada.
@@ -63,6 +99,9 @@ serve(async (req) => {
       plan_expires_at: _expires.toISOString(),
     }).eq('id', supabase_user_id);
     if (error) throw error;
+
+    // Ya quedó guardada la nueva → dar de baja las anteriores (ver el helper).
+    await cancelarSuscripcionesAnteriores(stripe, (sub.customer as string) ?? null, subId);
 
     return Response.json({ activated: true }, { headers: corsHeaders });
   } catch (err: unknown) {
