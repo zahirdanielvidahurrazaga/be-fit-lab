@@ -46,8 +46,8 @@ function Privacidad() {
         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>3. Datos de Salud (Health Connect)</h2>
         <p>Con tu consentimiento explícito, Be Fit Lab utiliza <strong>Health Connect de Google</strong> para acceder a los siguientes datos de salud almacenados en tu dispositivo:</p>
         <ul style={{ paddingLeft: '1.5rem' }}>
-          <li><strong>Lectura:</strong> pasos diarios, calorías activas quemadas, frecuencia cardíaca, sesiones de ejercicio.</li>
-          <li><strong>Escritura:</strong> tus clases de pilates como sesiones de ejercicio, calorías quemadas durante la clase.</li>
+          <li><strong>Lectura:</strong> pasos diarios, calorías activas quemadas, y tu peso y porcentaje de grasa corporal (si usas una báscula que los envíe a Health Connect), para mostrarte tu evolución.</li>
+          <li><strong>Escritura:</strong> las calorías quemadas durante tu clase.</li>
         </ul>
         <p>Estos datos se procesan localmente en tu dispositivo y se muestran únicamente dentro de la app para visualización personal. <strong>Nunca compartimos, vendemos ni transferimos tus datos de salud a terceros, anunciantes ni servidores externos.</strong> Puedes revocar el acceso en cualquier momento desde la app de Health Connect o en Configuración → Salud y Forma física.</p>
 

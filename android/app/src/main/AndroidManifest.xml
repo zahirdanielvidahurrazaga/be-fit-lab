@@ -84,18 +84,30 @@
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
 
-    <!-- Health Connect: permisos que SÍ usamos -->
+    <!-- Health Connect: permisos que SÍ usamos.
+         Cada uno tiene que corresponder a algo que la app de verdad lee o
+         escribe (`src/hooks/useHealth.js`): Play rechaza la publicación si pides
+         más datos de los que justifican tus funciones, y así nos rechazaron la
+         2.6.3 el 7-ago ("Acceso excesivo a datos de la función declarada").
+         Antes de agregar uno aquí, comprueba que hay código que lo usa. -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
-    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
-    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
-    <uses-permission android:name="android.permission.health.WRITE_EXERCISE" />
     <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED" />
     <!-- Báscula (VeSync → Health Connect): peso y % de grasa -->
     <uses-permission android:name="android.permission.health.READ_WEIGHT" />
     <uses-permission android:name="android.permission.health.READ_BODY_FAT" />
 
-    <!-- Health Connect: removemos los que el plugin @capgo/capacitor-health declara pero NO usamos -->
+    <!-- Health Connect: removemos los que el plugin @capgo/capacitor-health declara pero NO usamos.
+         No basta con no declararlos: el plugin los trae en SU manifest y el
+         merge de Gradle los metería igual. -->
+    <!-- Rechazo de Play del 7-ago-2026: pedíamos ExerciseSession y HeartRate sin
+         usarlos para nada que la app ofrezca. READ/WRITE_EXERCISE no se leían ni
+         escribían en ningún lado (`logPilatesWorkout` guarda calorías, no una
+         sesión), y la frecuencia cardíaca solo pintaba un dato suelto en
+         Evolución, así que se quitó también la tarjeta. -->
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" tools:node="remove" />
     <uses-permission android:name="android.permission.health.WRITE_STEPS" tools:node="remove" />
     <uses-permission android:name="android.permission.health.READ_DISTANCE" tools:node="remove" />
     <uses-permission android:name="android.permission.health.WRITE_DISTANCE" tools:node="remove" />

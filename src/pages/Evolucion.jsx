@@ -554,7 +554,7 @@ function Evolucion() {
                     {Capacitor.getPlatform() === 'android' ? 'Conecta Health Connect' : 'Conecta Apple Health'}
                   </p>
                   <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: 0 }}>
-                    Toca para ver tus pasos, calorías y frecuencia cardíaca
+                    Toca para ver tus pasos y calorías del día
                   </p>
                 </div>
               ) : (
@@ -571,13 +571,6 @@ function Evolucion() {
                     value={healthLoading ? '—' : (healthData.calories ?? '—')}
                     unit="kcal"
                     icon={<Flame size={18} />}
-                    positive
-                  />
-                  <MetricRow
-                    label="Frec. cardíaca"
-                    value={healthLoading ? '—' : (healthData.heartRate ?? '—')}
-                    unit="bpm"
-                    icon={<Heart size={18} />}
                     positive
                   />
                 </div>

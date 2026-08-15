@@ -4,11 +4,17 @@ import { Capacitor } from '@capacitor/core';
 
 const isNative = () => Capacitor.isNativePlatform();
 
+// Solo pasos y calorías (+ peso y % de grasa de la báscula).
+// La frecuencia cardíaca se quitó el 15-ago-2026: Google Play rechazó la 2.6.3
+// por "acceso excesivo a datos de la función declarada" señalando HeartRate y
+// ExerciseSession. Pedir un permiso de Health Connect exige una función que lo
+// justifique, y el pulso solo pintaba un número suelto en Evolución.
+// Si algún día se vuelve a necesitar, hay que reponer el permiso en
+// AndroidManifest.xml Y justificarlo en la declaración de Play Console.
 export function useHealth() {
   const [healthData, setHealthData] = useState({
     steps: null,
     calories: null,
-    heartRate: null,
   });
   const [healthPermission, setHealthPermission] = useState(false);
   const [healthLoading, setHealthLoading] = useState(false);
@@ -22,7 +28,7 @@ export function useHealth() {
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
 
-      const [stepsRes, calRes, hrRes] = await Promise.allSettled([
+      const [stepsRes, calRes] = await Promise.allSettled([
         CapacitorHealth.queryAggregated({
           dataType: 'steps',
           startDate: startOfDay.toISOString(),
@@ -37,12 +43,6 @@ export function useHealth() {
           bucket: 'day',
           aggregation: 'sum',
         }),
-        CapacitorHealth.readSamples({
-          dataType: 'heartRate',
-          startDate: new Date(now.getTime() - 60 * 60 * 1000).toISOString(),
-          endDate: now.toISOString(),
-          limit: 1,
-        }),
       ]);
 
       setHealthData({
@@ -51,9 +51,6 @@ export function useHealth() {
           : null,
         calories: calRes.status === 'fulfilled' && calRes.value?.samples?.length
           ? Math.round(calRes.value.samples[0].value)
-          : null,
-        heartRate: hrRes.status === 'fulfilled' && hrRes.value?.samples?.length
-          ? Math.round(hrRes.value.samples[0].value)
           : null,
       });
     } catch (err) {
@@ -67,7 +64,7 @@ export function useHealth() {
     if (!isNative()) return false;
     try {
       const result = await CapacitorHealth.requestAuthorization({
-        read: ['steps', 'calories', 'heartRate', 'weight', 'bodyFat'],
+        read: ['steps', 'calories', 'weight', 'bodyFat'],
         write: ['calories'],
       });
       const granted = result?.readAuthorized?.length > 0;
