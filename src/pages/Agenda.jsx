@@ -16,6 +16,7 @@ import { hasNutritionAccess } from '../lib/plans';
 import { NextClassTicket } from '../components/NextClassTicket';
 import { ClassListSkeleton } from '../components/Skeleton';
 import ClassmatesList from '../components/ClassmatesList';
+import { ESTUDIO } from '../config/estudio';
 
 function Agenda() {
   const isNative = Capacitor.isNativePlatform();
@@ -162,7 +163,7 @@ function Agenda() {
                 borderRadius: '32px', overflow: 'hidden', position: 'relative', 
                 boxShadow: '0 20px 40px rgba(0,0,0,0.1)', height: '200px' 
               }}>
-                <img src="/assets/agenda_lifestyle.png" alt="Be Fit Lab" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src="/assets/agenda_lifestyle.png" alt={ESTUDIO.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)' }} />
                 <div style={{ position: 'absolute', bottom: '20px', left: '20px', right: '20px' }}>
                    {isNative ? (
@@ -508,7 +509,7 @@ function Agenda() {
 
                 <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0, paddingTop: '20px', paddingLeft: '20px', paddingRight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(255,139,66,0.18)' }}><img src="/logo2.png" alt="Be Fit Lab" style={{ height: '24px', width: 'auto', objectFit: 'contain', display: 'block' }} /></div>
+                    <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(255,139,66,0.18)' }}><img src="/logo2.png" alt={ESTUDIO.nombre} style={{ height: '24px', width: 'auto', objectFit: 'contain', display: 'block' }} /></div>
                   </div>
                   <QrCode size={20} color="var(--primary)" opacity={0.8} />
                 </div>

@@ -26,6 +26,7 @@ import AdminWeekTemplates from '../components/AdminWeekTemplates';
 import SearchableClientSelect from '../components/SearchableClientSelect';
 import { DEFAULT_CATEGORIES, PASTEL_PALETTE, resolveCatColor, categoryLabel } from '../lib/categories';
 import { Coffee, Bell, UserCog, Sparkles, Copy, Trash2, Tag, LayoutTemplate, MoreHorizontal, Dumbbell, CreditCard, ClipboardCheck, Cake, Scale, Camera } from 'lucide-react';
+import { ESTUDIO, moduloActivo } from '../config/estudio';
 
 const daysOfWeek = [
   { num: 1, label: 'Lunes' },
@@ -526,7 +527,7 @@ function Admin({ recepcion = false }) {
       <header className="ios-header mobile-only-header" style={{ background: 'var(--surface-lowest)', paddingBottom: '10px', borderBottom: '1px solid rgba(0,0,0,0.05)', position: 'relative', zIndex: 50 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <div>
-            <h1 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>{recepcion ? 'Be Fit Lab' : 'Gestión Lab'}</h1>
+            <h1 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>{recepcion ? ESTUDIO.nombre : 'Gestión Lab'}</h1>
             <p style={{ fontSize: '0.8rem', color: 'var(--primary)', margin: '4px 0 0', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{recepcion ? 'RECEPCIÓN' : 'CONTROL CENTER'}</p>
           </div>
           
@@ -554,30 +555,42 @@ function Admin({ recepcion = false }) {
                   <div onClick={() => { setActiveTab('asistencias'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <ClipboardCheck size={18} color="var(--primary)" /> Pase de lista
                   </div>
+                  {moduloActivo('insignias') && (
                   <div onClick={() => { setActiveTab('insignias'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Award size={18} color="var(--primary)" /> Insignias
                   </div>
+                  )}
+                  {moduloActivo('cumpleanos') && (
                   <div onClick={() => { setActiveTab('cumpleanos'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Cake size={18} color="var(--primary)" /> Cumpleaños
                   </div>
+                  )}
                   <div onClick={() => { setActiveTab('auditoria'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Scale size={18} color="var(--primary)" /> Auditoría
                   </div>
+                  {moduloActivo('nutricion') && (
                   <div onClick={() => { setActiveTab('nutricion'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Utensils size={18} color="var(--primary)" /> Comida
                   </div>
+                  )}
+                  {moduloActivo('fotosProgreso') && (
                   <div onClick={() => { setActiveTab('progreso'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Camera size={18} color="var(--primary)" /> Progreso
                   </div>
+                  )}
+                  {moduloActivo('cafeteria') && (
                   <div onClick={() => { setActiveTab('cafeteria'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Coffee size={18} color="var(--primary)" /> Cafetería
                   </div>
+                  )}
                   <div onClick={() => { setActiveTab('disciplinas'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Dumbbell size={18} color="var(--primary)" /> Disciplinas
                   </div>
+                  {moduloActivo('eventos') && (
                   <div onClick={() => { setActiveTab('eventos'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <Sparkles size={18} color="var(--primary)" /> Eventos
                   </div>
+                  )}
                   <div onClick={() => { setActiveTab('membresias'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
                     <CreditCard size={18} color="var(--primary)" /> Membresías
                   </div>
@@ -599,7 +612,7 @@ function Admin({ recepcion = false }) {
       {/* DESKTOP SIDEBAR PANEL */}
       <aside className="admin-desktop-sidebar">
         <div className="sidebar-brand">
-          <h1 className="sidebar-title">{recepcion ? 'Be Fit Lab' : 'Gestión Lab'}</h1>
+          <h1 className="sidebar-title">{recepcion ? ESTUDIO.nombre : 'Gestión Lab'}</h1>
           <p className="sidebar-subtitle">{recepcion ? 'RECEPCIÓN' : 'CONTROL CENTER'}</p>
         </div>
         <nav className="sidebar-nav">
@@ -628,26 +641,34 @@ function Admin({ recepcion = false }) {
             <ClipboardCheck size={20} />
             <span>Pase de lista</span>
           </div>
+          {moduloActivo('nutricion') && (
           <div onClick={() => setActiveTab('nutricion')} className={`sidebar-nav-item ${activeTab === 'nutricion' ? 'active' : ''}`}>
             <Utensils size={20} />
             <span>Nutrición</span>
           </div>
+          )}
+          {moduloActivo('fotosProgreso') && (
           <div onClick={() => setActiveTab('progreso')} className={`sidebar-nav-item ${activeTab === 'progreso' ? 'active' : ''}`}>
             <Camera size={20} />
             <span>Progreso</span>
           </div>
+          )}
+          {moduloActivo('cafeteria') && (
           <div onClick={() => setActiveTab('cafeteria')} className={`sidebar-nav-item ${activeTab === 'cafeteria' ? 'active' : ''}`}>
             <Coffee size={20} />
             <span>Cafetería</span>
           </div>
+          )}
           <div onClick={() => setActiveTab('disciplinas')} className={`sidebar-nav-item ${activeTab === 'disciplinas' ? 'active' : ''}`}>
             <Dumbbell size={20} />
             <span>Disciplinas</span>
           </div>
+          {moduloActivo('eventos') && (
           <div onClick={() => setActiveTab('eventos')} className={`sidebar-nav-item ${activeTab === 'eventos' ? 'active' : ''}`}>
             <Sparkles size={20} />
             <span>Eventos</span>
           </div>
+          )}
           <div onClick={() => setActiveTab('membresias')} className={`sidebar-nav-item ${activeTab === 'membresias' ? 'active' : ''}`}>
             <CreditCard size={20} />
             <span>Membresías</span>
@@ -656,14 +677,18 @@ function Admin({ recepcion = false }) {
             <Bell size={20} />
             <span>Enviar aviso</span>
           </div>
+          {moduloActivo('insignias') && (
           <div onClick={() => setActiveTab('insignias')} className={`sidebar-nav-item ${activeTab === 'insignias' ? 'active' : ''}`}>
             <Award size={20} />
             <span>Insignias</span>
           </div>
+          )}
+          {moduloActivo('cumpleanos') && (
           <div onClick={() => setActiveTab('cumpleanos')} className={`sidebar-nav-item ${activeTab === 'cumpleanos' ? 'active' : ''}`}>
             <Cake size={20} />
             <span>Cumpleaños</span>
           </div>
+          )}
           <div onClick={() => setActiveTab('auditoria')} className={`sidebar-nav-item ${activeTab === 'auditoria' ? 'active' : ''}`}>
             <Scale size={20} />
             <span>Auditoría</span>
@@ -1139,7 +1164,7 @@ function Admin({ recepcion = false }) {
                           <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>{inscDone.password}</div>
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
-                          <button onClick={() => navigator.clipboard?.writeText(`Acceso Be Fit Lab\nCorreo: ${inscDone.email}\nContraseña: ${inscDone.password}`)} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', background: 'var(--surface)', fontWeight: 700, cursor: 'pointer' }}>Copiar</button>
+                          <button onClick={() => navigator.clipboard?.writeText(`Acceso ${ESTUDIO.nombre}\nCorreo: ${inscDone.email}\nContraseña: ${inscDone.password}`)} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', background: 'var(--surface)', fontWeight: 700, cursor: 'pointer' }}>Copiar</button>
                           <button onClick={() => setInscDone(null)} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Inscribir otra</button>
                         </div>
                         <p style={{ margin: '12px 0 0', color: 'var(--on-surface-variant)', fontSize: '0.74rem' }}>La clienta puede cambiar su contraseña luego desde su perfil.</p>

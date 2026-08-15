@@ -5,6 +5,7 @@ import { Preferences } from '@capacitor/preferences';
 import { useAuth } from '../context/AuthContext';
 import { hasNutritionAccess } from '../lib/plans';
 import { User, Wallet, TrendingUp, Calendar, ChevronRight, ChevronLeft, Sparkles, Play, Utensils, Target, Award, Scale, Activity, QrCode, Coffee, Cake, Hand, Camera } from 'lucide-react';
+import { ESTUDIO } from '../config/estudio';
 
 // Marca el tour como visto en almacenamiento nativo (persiste entre lanzamientos)
 const markTourSeen = (userId) => {
@@ -19,7 +20,7 @@ const markTourSeen = (userId) => {
 // "Continuar" de rescate (ver `FALLBACK_MS`).
 const TOUR_STEPS = [
   {
-    icon: <img src="/favicon_peach.png" style={{ width: '65px', height: '65px', objectFit: 'contain' }} alt="Be Fit Lab" />,
+    icon: <img src="/favicon_peach.png" style={{ width: '65px', height: '65px', objectFit: 'contain' }} alt={ESTUDIO.nombre} />,
     title: '¡Te damos la bienvenida! 🎉',
     description: 'Te llevamos de la mano por tu nueva app. Vas a tocar tú misma cada cosa para que te quede clarísimo. ¿Listas?',
     selector: null,

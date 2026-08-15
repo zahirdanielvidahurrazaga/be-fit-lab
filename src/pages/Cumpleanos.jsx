@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { ESTUDIO } from '../config/estudio';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']; // lunes primero
@@ -259,7 +260,7 @@ export function BirthdayCalendar({ people: peopleProp = null, currentUserId = nu
                       <Avatar p={p} size={46} ring={mine ? '#FF914D' : 'var(--primary)'} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--on-surface)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.full_name || 'Be Fit Lab'}{mine ? ' (tú)' : ''}</span>
+                          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--on-surface)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.full_name || ESTUDIO.nombre}{mine ? ' (tú)' : ''}</span>
                           {isCoach && <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--primary)', background: 'rgba(255,145,77,0.12)', padding: '2px 7px', borderRadius: '8px', textTransform: 'uppercase' }}>Coach</span>}
                         </div>
                         {isBdayToday && <span style={{ fontSize: '0.78rem', color: '#C75D3A', fontWeight: 700 }}>¡Hoy! 🎉</span>}
@@ -352,7 +353,7 @@ function Cumpleanos() {
             <ChevronLeft size={22} color="var(--on-surface)" />
           </button>
           <div>
-            <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>Be Fit Lab</p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>{ESTUDIO.nombre}</p>
             <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Cumpleaños</h1>
           </div>
         </div>
@@ -464,7 +465,7 @@ function Cumpleanos() {
                       <Avatar p={p} size={46} ring={mine ? '#FF914D' : 'var(--primary)'} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--on-surface)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.full_name || 'Be Fit Lab'}{mine ? ' (tú)' : ''}</span>
+                          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--on-surface)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.full_name || ESTUDIO.nombre}{mine ? ' (tú)' : ''}</span>
                           {isCoach && <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--primary)', background: 'rgba(255,145,77,0.12)', padding: '2px 7px', borderRadius: '8px', textTransform: 'uppercase' }}>Coach</span>}
                         </div>
                         {isBdayToday && <span style={{ fontSize: '0.78rem', color: '#C75D3A', fontWeight: 700 }}>¡Hoy! 🎉</span>}

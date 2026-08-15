@@ -6,6 +6,7 @@ import { Lock, Mail, ArrowRight, ChevronLeft, CheckCircle2, AlertTriangle, Eye, 
 import { Capacitor } from '@capacitor/core';
 import { motion } from 'framer-motion';
 import { recoveryRedirect } from '../lib/authRedirect';
+import { ESTUDIO } from '../config/estudio';
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutos
@@ -385,10 +386,10 @@ function Login() {
               <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lleva tu entrenamiento a otro nivel</p>
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
                 <a
-                  href="https://apps.apple.com/mx/app/be-fit-lab/id6772008660"
+                  href={ESTUDIO.tiendas.appStore}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="Descargar Be Fit Lab en App Store"
+                  aria-label={`Descargar ${ESTUDIO.nombre} en App Store`}
                 >
                   <img
                     src="/assets/appstore.svg"
@@ -398,12 +399,20 @@ function Login() {
                     onMouseOut={(e) => e.currentTarget.style.transform='scale(1)'}
                   />
                 </a>
-                <img
-                  src="/assets/googleplay.svg"
-                  alt="Próximamente en Google Play"
-                  title="Próximamente en Google Play"
-                  style={{ height: '36px', width: '120px', objectFit: 'contain', cursor: 'not-allowed', opacity: 0.45, filter: 'grayscale(1)', transition: 'opacity 0.2s ease' }}
-                />
+                <a
+                  href={ESTUDIO.tiendas.playStore}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Descargar ${ESTUDIO.nombre} en Google Play`}
+                >
+                  <img
+                    src="/assets/googleplay.svg"
+                    alt="Disponible en Google Play"
+                    style={{ height: '36px', width: '120px', objectFit: 'contain', cursor: 'pointer', transition: 'transform 0.2s ease', display: 'block' }}
+                    onMouseOver={(e) => e.currentTarget.style.transform='scale(1.05)'}
+                    onMouseOut={(e) => e.currentTarget.style.transform='scale(1)'}
+                  />
+                </a>
               </div>
             </div>
           )}

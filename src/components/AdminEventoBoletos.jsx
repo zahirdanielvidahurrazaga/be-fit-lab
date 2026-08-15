@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { X, Users, Ticket, CheckCircle2, DollarSign, Link2, Copy, Check, Download, Mail, Trash2, Loader2, Search, UserPlus, Plus, Banknote } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { ESTUDIO } from '../config/estudio';
 
 // Panel de CONTROL de un evento: todo lo vendido en un solo lugar — socias e
 // invitados, contacto, quién invitó a quién, asistencia y dinero. Desde aquí la
@@ -66,7 +67,7 @@ export default function AdminEventoBoletos({ ev, onClose, onChange }) {
   }, [lista, ev.price]);
 
   // Con slug queda /evento/rodeo; sin él, cae al UUID.
-  const linkPublico = `https://befitlab.app/evento/${ev.slug || ev.id}`;
+  const linkPublico = `${ESTUDIO.enlaces.sitio}/evento/${ev.slug || ev.id}`;
 
   const copiar = async (texto, clave) => {
     try { await navigator.clipboard.writeText(texto); setCopiado(clave); setTimeout(() => setCopiado(''), 1800); }
@@ -289,7 +290,7 @@ export default function AdminEventoBoletos({ ev, onClose, onChange }) {
                 </div>
               </div>
               <div style={{ flexShrink: 0, display: 'flex', gap: '5px' }}>
-                <button onClick={() => copiar(`https://befitlab.app/boleto/${r.ticket_code}`, r.id)} title="Copiar link del boleto"
+                <button onClick={() => copiar(`${ESTUDIO.enlaces.sitio}/boleto/${r.ticket_code}`, r.id)} title="Copiar link del boleto"
                   style={{ width: '32px', height: '32px', borderRadius: '9px', border: 'none', background: 'rgba(0,0,0,0.05)', color: INK, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {copiado === r.id ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
                 </button>

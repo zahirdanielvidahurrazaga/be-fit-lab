@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
+import { ESTUDIO } from '../config/estudio';
 
 const isNative = () => Capacitor.isNativePlatform();
 
@@ -67,7 +68,7 @@ export async function scheduleClassReminder(reservation, dayOfWeek) {
       notifications: [{
         id: buildNotificationId(reservation.classId),
         title: 'Tu clase es en 1 hora',
-        body: `${reservation.title} con ${reservation.instructor || 'Be Fit Lab'} — ¡Prepárate!`,
+        body: `${reservation.title} con ${reservation.instructor || ESTUDIO.nombre} — ¡Prepárate!`,
         schedule: { at: reminderTime, allowWhileIdle: true },
         sound: 'default',
         iconColor: '#FF8B42',

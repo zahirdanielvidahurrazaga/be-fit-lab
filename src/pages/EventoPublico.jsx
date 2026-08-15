@@ -5,6 +5,7 @@ import { CalendarDays, MapPin, Ticket, Users, Plus, X, Loader2, CheckCircle2, Ar
 import { QRCodeCanvas } from 'qrcode.react';
 import { supabase, errorDeFuncion } from '../lib/supabase';
 import BrandSpheres from '../components/BrandSpheres';
+import { ESTUDIO } from '../config/estudio';
 
 // Página PÚBLICA de un evento: cualquiera puede apartar su lugar sin tener
 // cuenta ni membresía. El precio y el cupo los valida el servidor; aquí solo se
@@ -181,7 +182,7 @@ export default function EventoPublico() {
         <div>
           <h1 style={{ fontFamily: 'var(--font-display)', color: '#2D2928' }}>Este evento no existe</h1>
           <p style={{ color: '#6B615B' }}>Puede que el link esté incompleto o el evento se haya cerrado.</p>
-          <Link to="/" style={{ color: PRIMARY, fontWeight: 700 }}>Ir al sitio de Be Fit Lab →</Link>
+          <Link to="/" style={{ color: PRIMARY, fontWeight: 700 }}>Ir al sitio de {ESTUDIO.nombre} →</Link>
         </div>
       </div>
     );
@@ -203,7 +204,7 @@ export default function EventoPublico() {
               style={{ width: '100%', maxHeight: '58vh', objectFit: 'contain', borderRadius: '20px', display: 'block', marginBottom: '26px', boxShadow: '0 20px 50px rgba(139,90,60,0.24)' }} />
           )}
           <div style={{ marginBottom: '10px' }}>
-            <span style={{ fontSize: '0.66rem', fontWeight: 800, color: PRIMARY, textTransform: 'uppercase', letterSpacing: '0.14em' }}>Be Fit Lab · Evento</span>
+            <span style={{ fontSize: '0.66rem', fontWeight: 800, color: PRIMARY, textTransform: 'uppercase', letterSpacing: '0.14em' }}>{ESTUDIO.nombre} · Evento</span>
           </div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.1rem, 7vw, 3rem)', color: '#2D2928', margin: '0 0 14px', lineHeight: 1.05 }}>
             {ev.title}
@@ -277,7 +278,7 @@ export default function EventoPublico() {
                 <>
                   <Campo label="Tu nombre completo" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="Karime Pérez" autoComplete="name" />
                   <Campo label="Tu correo" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="karime@correo.com" type="email" autoComplete="email" hint="Aquí te llega el boleto" />
-                  <Campo label="Tu WhatsApp" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="221 266 4253" type="tel" autoComplete="tel" />
+                  <Campo label="Tu WhatsApp" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="221 123 4567" type="tel" autoComplete="tel" />
 
                   {/* Acompañantes */}
                   <div style={{ marginTop: '6px', marginBottom: '18px' }}>
@@ -344,7 +345,7 @@ export default function EventoPublico() {
         {/* ── Pie: ¿ya eres socia? ──────────────────────────────────── */}
         <div style={{ marginTop: '26px', textAlign: 'center' }}>
           <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', color: '#8A7F78', fontSize: '0.88rem', fontWeight: 600, textDecoration: 'none' }}>
-            Conoce Be Fit Lab <ArrowRight size={15} />
+            Conoce {ESTUDIO.nombre} <ArrowRight size={15} />
           </Link>
         </div>
       </div>

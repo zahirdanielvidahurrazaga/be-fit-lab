@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ESTUDIO } from '../config/estudio';
 
 function Ajustes() {
   const navigate = useNavigate();
@@ -347,7 +348,7 @@ function Ajustes() {
           <div style={{ textAlign: 'center', marginBottom: '100px' }}>
             <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: 0, fontWeight: 500 }}>
               <Info size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-              BE FIT LAB v1.0.0
+              {ESTUDIO.nombreMayusculas} v1.0.0
             </p>
           </div>
 

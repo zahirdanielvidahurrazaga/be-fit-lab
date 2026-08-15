@@ -1,9 +1,10 @@
 import { CapacitorCalendar } from '@ebarooni/capacitor-calendar';
 import { Capacitor } from '@capacitor/core';
+import { ESTUDIO } from '../config/estudio';
 
 const isNative = () => Capacitor.isNativePlatform();
 
-const STUDIO_LOCATION = 'Be Fit Lab — Estudio de Pilates';
+const STUDIO_LOCATION = `${ESTUDIO.nombre} — ${ESTUDIO.giro}`;
 const CLASS_DURATION_MS = 60 * 60 * 1000; // 1 hora
 
 export async function requestCalendarPermission() {
@@ -31,12 +32,12 @@ export async function addClassToCalendar(reservation, classDate) {
     const endDate = new Date(startDate.getTime() + CLASS_DURATION_MS);
 
     const { id } = await CapacitorCalendar.createEvent({
-      title: `${reservation.title} — Be Fit Lab`,
+      title: `${reservation.title} — ${ESTUDIO.nombre}`,
       location: STUDIO_LOCATION,
       startDate: startDate.getTime(),
       endDate: endDate.getTime(),
       isAllDay: false,
-      notes: `Instructor: ${reservation.instructor || 'Be Fit Lab'}\nLleva calcetines antiderrapantes. Tu código QR está listo en la app.`,
+      notes: `Instructor: ${reservation.instructor || ESTUDIO.nombre}\nLleva calcetines antiderrapantes. Tu código QR está listo en la app.`,
       alerts: [-60], // alerta 60 min antes (en minutos — el plugin multiplica x60 internamente)
     });
 

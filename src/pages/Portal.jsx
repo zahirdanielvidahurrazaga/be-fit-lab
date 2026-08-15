@@ -12,6 +12,7 @@ import { useScrollDetect } from '../hooks/useScrollDetect';
 import { Capacitor } from '@capacitor/core';
 import ProfileMenu from '../components/ProfileMenu';
 import { hasNutritionAccess } from '../lib/plans';
+import { ESTUDIO, moduloActivo } from '../config/estudio';
 
 function Portal() {
   const isNative = Capacitor.isNativePlatform();
@@ -236,15 +237,15 @@ function Portal() {
               <X size={16} />
             </div>
             <div>
-              <h3 style={{ margin: '0 0 5px', fontSize: '1.2rem', fontWeight: 800, fontFamily: 'var(--font-display)', letterSpacing: '0.02em' }}>La verdadera experiencia Be Fit Lab</h3>
+              <h3 style={{ margin: '0 0 5px', fontSize: '1.2rem', fontWeight: 800, fontFamily: 'var(--font-display)', letterSpacing: '0.02em' }}>La verdadera experiencia {ESTUDIO.nombre}</h3>
               <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 500, opacity: 0.9 }}>Descarga nuestra aplicación móvil exclusiva para socias. Reserva más rápido, usa tu código QR y sigue tu nutrición.</p>
             </div>
             <div style={{ display: 'flex', gap: '12px', marginTop: '5px' }}>
               <a
-                href="https://apps.apple.com/mx/app/be-fit-lab/id6772008660"
+                href={ESTUDIO.tiendas.appStore}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Descargar Be Fit Lab en App Store"
+                aria-label={`Descargar ${ESTUDIO.nombre} en App Store`}
               >
                 <img
                   src="/assets/appstore.svg"
@@ -254,12 +255,20 @@ function Portal() {
                   onMouseOut={(e) => e.currentTarget.style.transform='scale(1)'}
                 />
               </a>
-              <img
-                src="/assets/googleplay.svg"
-                alt="Próximamente en Google Play"
-                title="Próximamente en Google Play"
-                style={{ height: '42px', cursor: 'not-allowed', opacity: 0.45, filter: 'grayscale(1)', transition: 'opacity 0.2s ease' }}
-              />
+              <a
+                href={ESTUDIO.tiendas.playStore}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Descargar ${ESTUDIO.nombre} en Google Play`}
+              >
+                <img
+                  src="/assets/googleplay.svg"
+                  alt="Disponible en Google Play"
+                  style={{ height: '42px', cursor: 'pointer', transition: 'transform 0.2s ease', display: 'block' }}
+                  onMouseOver={(e) => e.currentTarget.style.transform='scale(1.05)'}
+                  onMouseOut={(e) => e.currentTarget.style.transform='scale(1)'}
+                />
+              </a>
             </div>
           </div>
         )}
@@ -326,10 +335,10 @@ function Portal() {
             <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '15px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Explora</h2>
             <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '6px', marginLeft: '-5px', paddingLeft: '5px', paddingRight: '5px' }}>
               {[
-                { to: '/cafeteria', img: '/fotos-hero/IMG_5410.JPG', Icon: Coffee, title: 'Coffee Lab', sub: 'Café & smoothies', overlay: 'linear-gradient(160deg, rgba(60,30,15,0.18) 0%, rgba(35,18,8,0.74) 100%)' },
-                { to: '/cumpleanos', img: '/fotos-hero/cumple.png', Icon: Cake, title: 'Cumpleaños', sub: 'Tu cuenta regresiva', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)' },
-                { to: '/eventos', img: '/fotos-hero/_DSC0470.jpg', Icon: Sparkles, title: 'Eventos', sub: 'Próximas experiencias', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)' },
-              ].map(c => (
+                { modulo: 'cafeteria', to: '/cafeteria', img: '/fotos-hero/IMG_5410.JPG', Icon: Coffee, title: 'Coffee Lab', sub: 'Café & smoothies', overlay: 'linear-gradient(160deg, rgba(60,30,15,0.18) 0%, rgba(35,18,8,0.74) 100%)' },
+                { modulo: 'cumpleanos', to: '/cumpleanos', img: '/fotos-hero/cumple.png', Icon: Cake, title: 'Cumpleaños', sub: 'Tu cuenta regresiva', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)' },
+                { modulo: 'eventos', to: '/eventos', img: '/fotos-hero/_DSC0470.jpg', Icon: Sparkles, title: 'Eventos', sub: 'Próximas experiencias', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)' },
+              ].filter(c => moduloActivo(c.modulo)).map(c => (
                 <motion.div key={c.to} data-tour={`explora-${c.to.slice(1)}`} onClick={() => navigate(c.to)} whileTap={{ scale: 0.97 }}
                   style={{ flex: '0 0 auto', width: '210px', height: '250px', borderRadius: '26px', cursor: 'pointer', position: 'relative', overflow: 'hidden', backgroundImage: `${c.overlay}, url('${c.img}')`, backgroundSize: 'cover', backgroundPosition: 'center', padding: '18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 14px 34px rgba(0,0,0,0.18)' }}>
                   <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: 'rgba(255,255,255,0.20)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -606,7 +615,7 @@ function Portal() {
 
               <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0, paddingTop: '20px', paddingLeft: '20px', paddingRight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(255,139,66,0.18)' }}><img src="/logo2.png" alt="Be Fit Lab" style={{ height: '24px', width: 'auto', objectFit: 'contain', display: 'block' }} /></div>
+                  <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(255,139,66,0.18)' }}><img src="/logo2.png" alt={ESTUDIO.nombre} style={{ height: '24px', width: 'auto', objectFit: 'contain', display: 'block' }} /></div>
                 </div>
                 <QrCode size={20} color="var(--primary)" opacity={0.8} />
               </div>
@@ -710,7 +719,7 @@ function Portal() {
         <button className="nav-qr-button" onClick={() => setShowQR(true)}>
           <QrCode size={24} strokeWidth={2.5} />
         </button>
-        {hasNutritionAccess(plan) && (
+        {moduloActivo('nutricion') && hasNutritionAccess(plan) && (
           <Link to="/nutricion" className="nav-item">
             <Utensils size={22} strokeWidth={2.5} />
             <span>Comida</span>
@@ -798,7 +807,7 @@ function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, c
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
               <MapPin size={13} color="var(--on-surface-variant)" style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>BE FIT LAB</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{ESTUDIO.nombreMayusculas}</span>
             </div>
           )}
           {canCancel ? (

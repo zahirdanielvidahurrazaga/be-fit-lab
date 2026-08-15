@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { Clock, Check, X, PartyPopper } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { ESTUDIO } from '../config/estudio';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Overlay GLOBAL de "se liberó un lugar" (lista de espera → oferta con confirmación).
@@ -73,7 +74,7 @@ export default function WaitlistOfferGate() {
   if (!current) return null;
 
   const coach = coaches?.find(c => c.id === current.coachId);
-  const coachName = coach?.full_name || current.instructor || 'Be Fit Lab';
+  const coachName = coach?.full_name || current.instructor || ESTUDIO.nombre;
   const photo = coach?.avatar_url || null;
   const initial = (coachName || 'B').trim().charAt(0).toUpperCase();
   const remaining = new Date(current.offerExpiresAt).getTime() - nowTs;

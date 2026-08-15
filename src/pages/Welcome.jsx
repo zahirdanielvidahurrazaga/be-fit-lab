@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { ESTUDIO } from '../config/estudio';
 
 function Welcome() {
   const navigate = useNavigate();
@@ -128,7 +129,7 @@ function Welcome() {
             >
               <img
                 src="/logo2.png"
-                alt="Be Fit Lab"
+                alt={ESTUDIO.nombre}
                 style={{ width: '280px', height: 'auto', display: 'block', margin: '0 auto' }}
               />
               <motion.div
@@ -173,7 +174,7 @@ function Welcome() {
                 letterSpacing: '5px', fontSize: '0.85rem', fontWeight: 400, margin: 0,
                 textTransform: 'uppercase'
               }}
-            >BE FIT LAB</motion.h1>
+            >{ESTUDIO.nombreMayusculas}</motion.h1>
 
             <motion.h2
               initial={{ opacity: 0, y: 15 }}
@@ -274,7 +275,7 @@ function Welcome() {
             <motion.h1
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.5 }}
               style={{ fontFamily: 'var(--font-display)', color: 'rgba(255,255,255,0.6)', letterSpacing: '5px', fontSize: '0.85rem', fontWeight: 400, margin: 0, textTransform: 'uppercase' }}
-            >BE FIT LAB</motion.h1>
+            >{ESTUDIO.nombreMayusculas}</motion.h1>
 
             <motion.h2
               initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.5 }}

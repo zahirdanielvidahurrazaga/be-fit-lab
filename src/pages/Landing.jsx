@@ -12,6 +12,7 @@ import { motion, AnimatePresence, useScroll, useTransform, useInView, useSpring 
 import useEmblaCarousel from 'embla-carousel-react';
 import PolaroidGallery from '../components/PolaroidGallery';
 import LandingEvento from '../components/LandingEvento';
+import { ESTUDIO } from '../config/estudio';
 
 // Link de react-router con animaciones de framer-motion (hover naranja + desplazamiento)
 const MotionLink = motion(Link);
@@ -120,9 +121,9 @@ const FAQ_ITEMS = [
   { q:'¿Los paquetes tienen fecha de vencimiento?', a:'Todos los paquetes tienen vigencia de 30 días a partir de su activación, sin importar el número de clases incluidas. No se hacen reembolsos.' },
   { q:'¿Puedo venir si soy principiante?',          a:'¡Claro! Todas nuestras clases contemplan niveles mixtos. Te recomendamos empezar con clases "Básico" y nuestras coaches te guiarán en todo momento.' },
   { q:'¿Con cuánta anticipación debo llegar?',      a:'Llega al menos 10 minutos antes. Las puertas se cierran al iniciar la clase por respeto a todas las participantes.' },
-  { q:'¿Cómo reservo mi lugar?',                    a:'A través de nuestra App (disponible en App Store) o iniciando sesión en este sitio. Las reservas abren 7 días antes de cada clase.' },
+  { q:'¿Cómo reservo mi lugar?',                    a:'A través de nuestra App (disponible en App Store y Google Play) o iniciando sesión en este sitio. Las reservas abren 7 días antes de cada clase.' },
 ];
-const WA_NUMBER = '522212664253'; // +52 221 266 4253
+const WA_NUMBER = ESTUDIO.contacto.whatsapp; // +52 221 266 4253
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -346,7 +347,7 @@ export default function Landing() {
             style={{ position:'fixed', top:'20px', right:'20px', zIndex:9999, ...glass, padding:'15px 20px', borderRadius:'18px', display:'flex', alignItems:'center', gap:'15px' }}>
             <CheckCircle2 size={22} color="var(--primary)"/>
             <div>
-              <h4 style={{ margin:'0 0 2px', fontSize:'0.95rem', fontFamily:'var(--font-display)' }}>¡Bienvenida a Be Fit Lab!</h4>
+              <h4 style={{ margin:'0 0 2px', fontSize:'0.95rem', fontFamily:'var(--font-display)' }}>¡Bienvenida a {ESTUDIO.nombre}!</h4>
               <p style={{ margin:0, fontSize:'0.8rem', color:'#6B7280' }}>Tu cuenta fue creada exitosamente.</p>
             </div>
             <button onClick={() => setShowToast(false)} style={{ background:'none', border:'none', cursor:'pointer', display:'flex' }}><X size={18}/></button>
@@ -367,7 +368,7 @@ export default function Landing() {
           transition:'background 0.4s ease, backdrop-filter 0.4s ease, box-shadow 0.4s ease',
         }}>
         <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.97 }} onClick={() => window.scrollTo({ top:0, behavior:'smooth' })} style={{ background:'none', border:'none', cursor:'pointer', padding:0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '70px' }}>
-          <img src="/logo2.png" alt="Be Fit Lab" style={{ height:'100%', width:'auto', objectFit: 'contain' }}/>
+          <img src="/logo2.png" alt={ESTUDIO.nombre} style={{ height:'100%', width:'auto', objectFit: 'contain' }}/>
         </motion.button>
 
         <div className="desktop-links" style={{ display:'flex', gap:'2rem', alignItems:'center' }}>
@@ -987,7 +988,7 @@ export default function Landing() {
             <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Encuéntranos</span>
             <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0 2.5rem', lineHeight:1.05, color:'var(--black)', letterSpacing:'-0.04em' }}>Ven a<br/><span style={{ color:'var(--primary)', fontFamily:"'Playfair Display', serif", fontStyle:'italic', fontWeight:500 }}>conocernos.</span></h2>
             <div style={{ display:'flex', flexDirection:'column', gap:'24px', marginBottom:'3rem' }}>
-              {[{icon:<MapPin size={24} color="var(--primary)"/>,label:'Dirección',val:<a href="https://maps.app.goo.gl/RFUhTHGG5cQuVoST8" target="_blank" rel="noopener noreferrer" style={{ color:'var(--on-surface-variant)', textDecoration:'none' }}>Blvrd 22 Sur 5123, Villa Carmel,<br/>72567 Heroica Puebla de Zaragoza, Pue.</a>},{icon:<Phone size={24} color="var(--primary)"/>,label:'Teléfono / WhatsApp',val:<a href="tel:+522212664253" style={{ color:'var(--on-surface-variant)', textDecoration:'none' }}>+52 221 266 4253</a>},{icon:<InstagramIcon size={24} color="var(--primary)"/>,label:'Instagram',val:<a href="https://instagram.com/befit.lab" target="_blank" rel="noopener noreferrer" style={{ color:'var(--primary)', fontWeight:700, textDecoration:'none' }}>@befit.lab</a>}].map(({icon,label,val}) => (
+              {[{icon:<MapPin size={24} color="var(--primary)"/>,label:'Dirección',val:<a href={ESTUDIO.contacto.mapaLink} target="_blank" rel="noopener noreferrer" style={{ color:'var(--on-surface-variant)', textDecoration:'none' }}>{ESTUDIO.contacto.direccion.map((l,i) => <React.Fragment key={l}>{i > 0 && <br/>}{l}</React.Fragment>)}</a>},{icon:<Phone size={24} color="var(--primary)"/>,label:'Teléfono / WhatsApp',val:<a href={`tel:${ESTUDIO.contacto.telefono.replace(/\s/g,'')}`} style={{ color:'var(--on-surface-variant)', textDecoration:'none' }}>{ESTUDIO.contacto.telefono}</a>},{icon:<InstagramIcon size={24} color="var(--primary)"/>,label:'Instagram',val:<a href={ESTUDIO.contacto.instagramUrl} target="_blank" rel="noopener noreferrer" style={{ color:'var(--primary)', fontWeight:700, textDecoration:'none' }}>{ESTUDIO.contacto.instagram}</a>}].map(({icon,label,val}) => (
                 <motion.div key={label} whileHover={{ x:6 }} transition={SPRING} style={{ display:'flex', gap:'20px', alignItems:'flex-start' }}>
                   <div style={{ background:'var(--surface)', width:'56px', height:'56px', borderRadius:'16px', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{icon}</div>
                   <div>
@@ -1008,7 +1009,7 @@ export default function Landing() {
             <div style={{ position:'relative' }}>
               <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3772.076391246044!2d-98.1957961!3d19.0163552!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85cfc1f60e34723f%3A0xe268a04e8e4ab501!2sBe%20Fit%20Lab!5e0!3m2!1ses!2smx!4v1780353480943!5m2!1ses!2smx"
                 width="100%" height="500" style={{ border:0, borderRadius:'32px', boxShadow:'0 30px 80px rgba(0,0,0,0.05)', display:'block' }}
-                allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Be Fit Lab — Puebla"/>
+                allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title={`${ESTUDIO.nombre} — ${ESTUDIO.ciudad}`}/>
               <motion.a whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }}
                 href="https://maps.app.goo.gl/RFUhTHGG5cQuVoST8" target="_blank" rel="noopener noreferrer"
                 style={{ position:'absolute', bottom:'20px', left:'50%', transform:'translateX(-50%)', display:'inline-flex', alignItems:'center', gap:'8px', background:'linear-gradient(135deg, rgba(255,145,77,0.92), rgba(230,130,69,0.94))', backdropFilter:'blur(14px) saturate(180%)', WebkitBackdropFilter:'blur(14px) saturate(180%)', border:'1px solid rgba(255,255,255,0.45)', color:'white', padding:'0.85rem 1.6rem', borderRadius:'40px', textDecoration:'none', fontWeight:700, fontSize:'0.95rem', boxShadow:'0 10px 28px rgba(255,145,77,0.4), inset 0 1px 0 rgba(255,255,255,0.5)' }}>
@@ -1028,7 +1029,7 @@ export default function Landing() {
         <div style={{ maxWidth:'1200px', margin:'0 auto', position:'relative', zIndex:1 }}>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:'4rem', marginBottom:'5rem' }}>
             <div>
-              <img src="/logo2.png" alt="Be Fit Lab" style={{ height:'48px', width:'auto', marginBottom:'22px', display:'block' }}/>
+              <img src="/logo2.png" alt={ESTUDIO.nombre} style={{ height:'48px', width:'auto', marginBottom:'22px', display:'block' }}/>
               <p style={{ color:'var(--on-surface-variant)', fontSize:'1rem', lineHeight:1.7, maxWidth:'280px' }}>The glutes specialists. Transformación real a través del movimiento consciente.</p>
               <div style={{ display:'flex', gap:'14px', marginTop:'30px' }}>
                 {[{href:'https://instagram.com/befit.lab', icon:<InstagramIcon size={20} color="var(--primary)"/>},{href:`https://wa.me/${WA_NUMBER}`, icon:<MessageCircle size={20} color="var(--primary)"/>}].map((s,i) => (
@@ -1058,7 +1059,7 @@ export default function Landing() {
             ))}
           </div>
           <div style={{ borderTop:'1px solid rgba(0,0,0,0.08)', paddingTop:'2.2rem', display:'flex', flexWrap:'wrap', justifyContent:'space-between', alignItems:'center', gap:'1rem' }}>
-            <p style={{ color:'var(--on-surface-variant)', fontSize:'0.88rem', margin:0 }}>© {new Date().getFullYear()} Be Fit Lab. Todos los derechos reservados.</p>
+            <p style={{ color:'var(--on-surface-variant)', fontSize:'0.88rem', margin:0 }}>© {new Date().getFullYear()} {ESTUDIO.nombre}. Todos los derechos reservados.</p>
             <p style={{ color:'var(--on-surface-variant)', fontSize:'0.88rem', margin:0 }}>Desarrollado por <motion.a href="https://zahirportafolio.pages.dev" target="_blank" rel="noopener noreferrer" whileHover={{ color:'#E68245' }} style={{ color:'var(--primary)', fontWeight:700, textDecoration:'none', transition:'color 0.2s' }}>Zahir Daniel Vidahurrazaga Marín</motion.a></p>
           </div>
         </div>
@@ -1117,7 +1118,7 @@ function AppShowcase() {
         style={{ maxWidth:'1200px', margin:'0 auto', display:'flex', flexWrap:'wrap', gap:'5rem', alignItems:'center', justifyContent:'center' }}>
         {/* Texto + features que cambian con la pantalla activa */}
         <motion.div variants={slideRight} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ flex:'1 1 460px' }}>
-          <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Be Fit Lab App</span>
+          <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>{ESTUDIO.nombre} App</span>
           <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0', lineHeight:1.05, color:'var(--black)', letterSpacing:'-0.04em' }}>Todo tu estudio,<br/><span style={{ color:'var(--primary)', fontFamily:"'Playfair Display', serif", fontStyle:'italic', fontWeight:500 }}>en la palma de tu mano.</span></h2>
           <p style={{ fontSize:'1.2rem', color:'var(--on-surface-variant)', lineHeight:1.6, marginBottom:'2.5rem', fontWeight:400, maxWidth:'480px' }}>Reserva, entrena y sigue tu evolución desde una sola App, diseñada exclusivamente para nuestras socias.</p>
 
@@ -1140,10 +1141,12 @@ function AppShowcase() {
           </div>
 
           <div style={{ display:'flex', flexWrap:'wrap', gap:'16px', alignItems:'center' }}>
-            <motion.a whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }} href="https://apps.apple.com/mx/app/be-fit-lab/id6772008660" target="_blank" rel="noopener noreferrer">
+            <motion.a whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }} href={ESTUDIO.tiendas.appStore} target="_blank" rel="noopener noreferrer">
               <img src="/assets/appstore.svg" alt="App Store" style={{ height:'54px', width:'auto', display:'block' }}/>
             </motion.a>
-            <img src="/assets/googleplay.svg" alt="Próximamente Google Play" style={{ height:'54px', width:'auto', opacity:0.3, filter:'grayscale(1)', cursor:'not-allowed' }}/>
+            <motion.a whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }} href={ESTUDIO.tiendas.playStore} target="_blank" rel="noopener noreferrer">
+              <img src="/assets/googleplay.svg" alt="Disponible en Google Play" style={{ height:'54px', width:'auto', display:'block' }}/>
+            </motion.a>
           </div>
         </motion.div>
 

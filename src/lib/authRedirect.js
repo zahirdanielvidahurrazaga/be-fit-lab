@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core';
+import { ESTUDIO } from '../config/estudio';
 
 // URLs de retorno para los correos de Supabase Auth.
 // - Registro: deep link befitlab:// en nativo → queremos que la confirmación
@@ -10,7 +11,7 @@ import { Capacitor } from '@capacitor/core';
 
 // Dominio web de producción. En nativo, window.location.origin es
 // capacitor://localhost (no sirve como destino del correo), así que lo fijamos.
-const WEB_ORIGIN = 'https://befitlab.app';
+const WEB_ORIGIN = ESTUDIO.enlaces.sitio;
 
 // En web usamos el origin actual (sirve para befitlab.app y *.pages.dev);
 // en nativo, el dominio de producción.

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, FileText } from 'lucide-react';
+import { ESTUDIO } from '../config/estudio';
 
 function Terminos() {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ function Terminos() {
         </button>
         <div>
           <h1 style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)', margin: 0, color: 'var(--black)' }}>Términos y Condiciones</h1>
-          <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: 0 }}>Be Fit Lab</p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: 0 }}>{ESTUDIO.nombre}</p>
         </div>
       </div>
 
@@ -39,13 +40,15 @@ function Terminos() {
         </div>
 
         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginBottom: '0.5rem' }}>1. Información General e Identificación</h2>
-        <p><strong>Be Fit Lab</strong> | Operador: Grupo Be Fit Lab S.A. de C.V.</p>
-        <p><strong>Nuestra única sucursal se encuentra en:</strong> Blvrd 22 Sur 5123, Villa Carmel 72567 Puebla, Puebla.</p>
-        <p><strong>Horarios de atención:</strong><br/>Lunes a Viernes: 8:00 AM - 12:00 PM y 5:00 PM - 9:00 PM<br/>Sábados: 8:30 AM - 12:00 PM</p>
-        <p><strong>Contacto oficial:</strong><br/>Email: befitlab1@gmail.com<br/>Instagram: @befit.lab<br/>Teléfono/WhatsApp: +52 221 266 4253</p>
+        <p><strong>{ESTUDIO.nombre}</strong> | Operador: {ESTUDIO.legal.razonSocial}</p>
+        <p><strong>Nos encontramos en:</strong> {ESTUDIO.contacto.direccion.join(' ')}</p>
+        <p><strong>Horarios de atención:</strong>{ESTUDIO.contacto.horarios.map((h) => (
+          <React.Fragment key={h}><br/>{h}</React.Fragment>
+        ))}</p>
+        <p><strong>Contacto oficial:</strong><br/>Email: {ESTUDIO.contacto.email}<br/>Instagram: {ESTUDIO.contacto.instagram}<br/>Teléfono/WhatsApp: {ESTUDIO.contacto.telefono}</p>
 
         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>2. Ámbito de Aplicación y Aceptación</h2>
-        <p>Este documento (&quot;Términos y Condiciones&quot;) regula el acceso, registro y uso de la plataforma digital (App y Web) así como la asistencia física a las instalaciones de Be Fit Lab. Al crear una cuenta y/o asistir a nuestras clases, declaras expresamente haber leído, entendido y aceptado este acuerdo en su totalidad.</p>
+        <p>Este documento (&quot;Términos y Condiciones&quot;) regula el acceso, registro y uso de la plataforma digital (App y Web) así como la asistencia física a las instalaciones de {ESTUDIO.nombre}. Al crear una cuenta y/o asistir a nuestras clases, declaras expresamente haber leído, entendido y aceptado este acuerdo en su totalidad.</p>
 
         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>3. Definiciones</h2>
         <ul style={{ paddingLeft: '1.5rem' }}>
@@ -56,18 +59,18 @@ function Terminos() {
         </ul>
 
         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>4. Registro, Acceso y Uso de la Plataforma</h2>
-        <p>El registro requiere proporcionar datos precisos, actuales y completos. El Usuario es el único responsable de mantener la confidencialidad de sus credenciales de acceso. Be Fit Lab no será responsable por el uso indebido de las cuentas derivadas del descuido del Usuario.</p>
+        <p>El registro requiere proporcionar datos precisos, actuales y completos. El Usuario es el único responsable de mantener la confidencialidad de sus credenciales de acceso. {ESTUDIO.nombre} no será responsable por el uso indebido de las cuentas derivadas del descuido del Usuario.</p>
 
         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>5. Normas de Conducta y Uso de las Instalaciones</h2>
         <p>Para garantizar una experiencia segura y armónica, se exige:</p>
         <ul style={{ paddingLeft: '1.5rem' }}>
           <li style={{ marginBottom: '8px' }}>Uso obligatorio de ropa deportiva adecuada y <strong>calcetines antiderrapantes</strong> (por motivos de higiene y seguridad).</li>
           <li style={{ marginBottom: '8px' }}>Puntualidad: Recomendamos llegar 5-10 minutos antes. <strong>Bajo ninguna circunstancia se permitirá el acceso a la clase una vez iniciada</strong>, sin excepciones. La clase se dará por perdida.</li>
-          <li style={{ marginBottom: '8px' }}>Queda estrictamente prohibida cualquier conducta de agresión física, verbal, discriminación o acoso hacia el personal u otros usuarios. Be Fit Lab se reserva el derecho de admisión y revocación permanente del acceso a las instalaciones y la plataforma (sin derecho a reembolso) en caso de infringir esta norma.</li>
+          <li style={{ marginBottom: '8px' }}>Queda estrictamente prohibida cualquier conducta de agresión física, verbal, discriminación o acoso hacia el personal u otros usuarios. {ESTUDIO.nombre} se reserva el derecho de admisión y revocación permanente del acceso a las instalaciones y la plataforma (sin derecho a reembolso) en caso de infringir esta norma.</li>
         </ul>
 
         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>6. Medidas Sanitarias</h2>
-        <p>El Usuario se compromete a no asistir a las instalaciones si presenta síntomas de enfermedades contagiosas. Be Fit Lab mantiene estrictos protocolos de limpieza y desinfección de equipos entre cada clase.</p>
+        <p>El Usuario se compromete a no asistir a las instalaciones si presenta síntomas de enfermedades contagiosas. {ESTUDIO.nombre} mantiene estrictos protocolos de limpieza y desinfección de equipos entre cada clase.</p>
 
         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>7. Derechos y Obligaciones del Usuario</h2>
         <p>El Usuario tiene derecho a recibir el servicio en los horarios publicados, siempre que cuente con créditos activos y haya realizado su reserva exitosamente. Es obligación del Usuario acatar las instrucciones de los coaches en todo momento para evitar lesiones.</p>
@@ -79,7 +82,7 @@ function Terminos() {
         <p>Toda cancelación de clase debe realizarse directamente a través de la aplicación con un mínimo de <strong>5 horas de anticipación</strong> al horario de inicio de dicha sesión. Si la cancelación se realiza fuera de este periodo, o en caso de inasistencia (No-Show), <strong>el crédito será descontado automáticamente de su membresía y no será reembolsado ni reprogramado</strong>.</p>
 
         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>10. Responsabilidad y Asunción de Riesgos</h2>
-        <p>La práctica de ejercicio físico conlleva riesgos inherentes. Al asistir a las clases, el Usuario declara estar en condiciones físicas y de salud aptas. Be Fit Lab, sus socios, instructores y empleados no se hacen responsables por accidentes, lesiones o eventos de salud derivados de la práctica deportiva, el uso del equipo, o por no seguir las indicaciones del coach.</p>
+        <p>La práctica de ejercicio físico conlleva riesgos inherentes. Al asistir a las clases, el Usuario declara estar en condiciones físicas y de salud aptas. {ESTUDIO.nombre}, sus socios, instructores y empleados no se hacen responsables por accidentes, lesiones o eventos de salud derivados de la práctica deportiva, el uso del equipo, o por no seguir las indicaciones del coach.</p>
 
         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>11. Protección de Datos y Privacidad</h2>
         <p>Tus datos son tratados con estricta confidencialidad. Para más detalles, consulta nuestro Aviso de Privacidad en la sección de Ajustes de la App.</p>
@@ -88,7 +91,7 @@ function Terminos() {
         <p>El Usuario puede solicitar la eliminación de su cuenta en cualquier momento desde la App (Configuración &gt; Eliminar Cuenta). La eliminación es irreversible y resultará en la pérdida de los créditos restantes sin derecho a reembolso.</p>
 
         <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid rgba(0,0,0,0.1)', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700, margin: 0 }}>Be Fit Lab © {new Date().getFullYear()} - Todos los derechos reservados.</p>
+          <p style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700, margin: 0 }}>{ESTUDIO.nombre} © {new Date().getFullYear()} - Todos los derechos reservados.</p>
         </div>
 
       </div>

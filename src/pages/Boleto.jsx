@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { CalendarDays, MapPin, CheckCircle2 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { supabase } from '../lib/supabase';
+import { ESTUDIO } from '../config/estudio';
 
 // Boleto de un invitado (el link del correo). No requiere sesión: lo resuelve el
 // RPC `get_ticket`, que solo devuelve los datos del boleto que ya trae en la mano.
@@ -36,8 +37,8 @@ export default function Boleto() {
       <div style={wrap}>
         <div style={{ textAlign: 'center', maxWidth: '340px' }}>
           <h1 style={{ fontFamily: 'var(--font-display)', color: '#2D2928', fontSize: '1.5rem' }}>No encontramos este boleto</h1>
-          <p style={{ color: '#6B615B', lineHeight: 1.6 }}>Revisa que el código esté completo. Si lo compraste y no aparece, escríbenos por WhatsApp al +52 221 266 4253.</p>
-          <Link to="/" style={{ color: PRIMARY, fontWeight: 700 }}>Ir a Be Fit Lab →</Link>
+          <p style={{ color: '#6B615B', lineHeight: 1.6 }}>Revisa que el código esté completo. Si lo compraste y no aparece, escríbenos por WhatsApp al {ESTUDIO.contacto.telefono}.</p>
+          <Link to="/" style={{ color: PRIMARY, fontWeight: 700 }}>Ir a {ESTUDIO.nombre} →</Link>
         </div>
       </div>
     );
@@ -49,9 +50,9 @@ export default function Boleto() {
         style={{ width: '100%', maxWidth: '380px', background: '#fff', borderRadius: '28px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.12)' }}>
         {/* Encabezado de marca */}
         <div style={{ background: `linear-gradient(135deg, ${PRIMARY}, ${MAUVE})`, padding: '26px 24px', textAlign: 'center' }}>
-          <img src={LOGO} alt="Be Fit Lab" width="38"
+          <img src={LOGO} alt={ESTUDIO.nombre} width="38"
             style={{ display: 'block', width: '38px', height: 'auto', margin: '0 auto 10px' }} />
-          <div style={{ fontSize: '0.64rem', fontWeight: 800, color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: '6px' }}>Be Fit Lab</div>
+          <div style={{ fontSize: '0.64rem', fontWeight: 800, color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: '6px' }}>{ESTUDIO.nombre}</div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: '#fff', margin: 0, lineHeight: 1.15 }}>{ticket.event_title}</h1>
         </div>
 

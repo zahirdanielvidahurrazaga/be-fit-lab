@@ -44,6 +44,25 @@ serve(async (req) => {
     const prodById = new Map((products ?? []).map((p) => [p.id, p]));
     const optById = new Map((options ?? []).map((o) => [o.id, o]));
 
+    // El canje de regalo NO se puede creer del cliente: venía como una bandera
+    // en el cuerpo de la petición y bastaba mandarla en true para llevarse el
+    // pedido gratis. Se consume aquí contra la BD, de forma atómica, y solo si
+    // de verdad tiene un regalo disponible.
+    let canjeAplicado = false;
+    if (isLoyaltyRedemption) {
+      if (!userId) {
+        return Response.json({ error: 'Un canje requiere sesión iniciada' }, { status: 400, headers: corsHeaders });
+      }
+      const { error: canjeErr } = await supabase.rpc('redeem_cafe_gift', { p_user_id: userId });
+      if (canjeErr) {
+        return Response.json(
+          { error: 'No tienes regalos disponibles para canjear' },
+          { status: 409, headers: corsHeaders },
+        );
+      }
+      canjeAplicado = true;
+    }
+
     let total = 0;
     const snapshot: any[] = [];
 
@@ -81,7 +100,7 @@ serve(async (req) => {
       gift_recipient_user_id: giftObj?.recipient_user_id || null,
       gift_message: giftObj?.message || null,
       no_straw: !!noStraw,
-      payment_intent_id: isLoyaltyRedemption ? 'LOYALTY_REDEMPTION' : 'CASH', 
+      payment_intent_id: canjeAplicado ? 'LOYALTY_REDEMPTION' : 'CASH',
     }).select('id').single();
     if (ordErr) throw ordErr;
 

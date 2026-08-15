@@ -3,9 +3,10 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { supabase } from '../lib/supabase';
+import { ESTUDIO } from '../config/estudio';
 
-// Enlace a la ficha de Be Fit Lab en el App Store (id numérico de la app).
-const STORE_URL = 'https://apps.apple.com/app/id6772008660';
+// Enlace a la ficha del estudio en el App Store (sale de la configuración).
+const STORE_URL = ESTUDIO.tiendas.appStore;
 
 // Compara dos versiones "1.7.3" numéricamente. <0 si a<b, 0 igual, >0 si a>b.
 function cmpVersion(a, b) {
@@ -86,7 +87,7 @@ export default function UpdateGate() {
         <div style={{ fontSize: '3.2rem', marginBottom: 18 }}>🌟</div>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 900, margin: '0 0 12px' }}>Actualización necesaria</h2>
         <p style={{ fontSize: '1rem', lineHeight: 1.5, opacity: 0.85, maxWidth: 340, margin: '0 0 28px' }}>
-          {cfg?.message || 'Publicamos una nueva versión con mejoras importantes. Actualiza para seguir usando Be Fit Lab.'}
+          {cfg?.message || `Publicamos una nueva versión con mejoras importantes. Actualiza para seguir usando ${ESTUDIO.nombre}.`}
         </p>
         <button onClick={openStore} style={{
           background: '#FF914D', color: '#fff', border: 'none', borderRadius: 16,

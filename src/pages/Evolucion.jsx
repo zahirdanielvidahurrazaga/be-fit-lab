@@ -13,6 +13,7 @@ import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks
 import ProfileMenu from '../components/ProfileMenu';
 import ProgressPhotos from '../components/ProgressPhotos';
 import BasculaBLE from '../components/BasculaBLE';
+import { ESTUDIO } from '../config/estudio';
 
 const isNative = Capacitor.isNativePlatform();
 
@@ -593,7 +594,7 @@ function Evolucion() {
               <div style={{ position: 'absolute', top: 0, left: '-100%', width: '50%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)', transform: 'skewX(-20deg)' }} />
               <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0, paddingTop: '20px', paddingLeft: '20px', paddingRight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(255,139,66,0.18)' }}><img src="/logo2.png" alt="Be Fit Lab" style={{ height: '24px', width: 'auto', objectFit: 'contain', display: 'block' }} /></div>
+                  <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(255,139,66,0.18)' }}><img src="/logo2.png" alt={ESTUDIO.nombre} style={{ height: '24px', width: 'auto', objectFit: 'contain', display: 'block' }} /></div>
                 </div>
                 <QrCode size={20} color="var(--primary)" opacity={0.8} />
               </div>

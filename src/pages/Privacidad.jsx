@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Shield } from 'lucide-react';
+import { ESTUDIO } from '../config/estudio';
 
 function Privacidad() {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ function Privacidad() {
         <p style={{ color: '#6B7280', fontSize: '0.8rem', marginBottom: '2rem' }}>Última actualización: Mayo 2026</p>
 
         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginBottom: '0.5rem' }}>1. Responsable del Tratamiento</h2>
-        <p><strong>Be Fit Lab</strong> (en adelante "el Responsable") con domicilio en la Ciudad de Puebla, México, es responsable del tratamiento de tus datos personales conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP).</p>
+        <p><strong>{ESTUDIO.nombre}</strong> (en adelante "el Responsable") con domicilio en {ESTUDIO.legal.domicilio}, es responsable del tratamiento de tus datos personales conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP).</p>
 
         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>2. Datos que Recopilamos</h2>
         <ul style={{ paddingLeft: '1.5rem' }}>
@@ -44,7 +45,7 @@ function Privacidad() {
         <p><strong>No recopilamos</strong> datos financieros, bancarios ni de tarjetas de crédito.</p>
 
         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1C1E', marginTop: '2rem', marginBottom: '0.5rem' }}>3. Datos de Salud (Health Connect)</h2>
-        <p>Con tu consentimiento explícito, Be Fit Lab utiliza <strong>Health Connect de Google</strong> para acceder a los siguientes datos de salud almacenados en tu dispositivo:</p>
+        <p>Con tu consentimiento explícito, {ESTUDIO.nombre} utiliza <strong>Health Connect de Google</strong> para acceder a los siguientes datos de salud almacenados en tu dispositivo:</p>
         <ul style={{ paddingLeft: '1.5rem' }}>
           <li><strong>Lectura:</strong> pasos diarios, calorías activas quemadas, y tu peso y porcentaje de grasa corporal (si usas una báscula que los envíe a Health Connect), para mostrarte tu evolución.</li>
           <li><strong>Escritura:</strong> las calorías quemadas durante tu clase.</li>
@@ -100,7 +101,7 @@ function Privacidad() {
         <p>Para cualquier consulta sobre esta política de privacidad, escríbenos a: <strong>contacto@befitlab.com</strong></p>
 
         <div style={{ marginTop: '3rem', padding: '20px', background: 'rgba(255,145,77,0.06)', borderRadius: '16px', border: '1px solid rgba(255,145,77,0.15)', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700, margin: 0 }}>Be Fit Lab © {new Date().getFullYear()} — Todos los derechos reservados.</p>
+          <p style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700, margin: 0 }}>{ESTUDIO.nombre} © {new Date().getFullYear()} — Todos los derechos reservados.</p>
         </div>
       </div>
     </div>

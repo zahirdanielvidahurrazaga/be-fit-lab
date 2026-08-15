@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { Stripe } from '@capacitor-community/stripe';
 import { Browser } from '@capacitor/browser';
+import { ESTUDIO } from '../config/estudio';
 
 function Planes() {
   const navigate = useNavigate();
@@ -135,7 +136,7 @@ function Planes() {
         planTitle: selectedPlan.title,
         userId: user.id,
         userEmail: user.email,
-        returnUrl: esNativo ? 'https://befitlab.app' : window.location.origin,
+        returnUrl: esNativo ? ESTUDIO.enlaces.sitio : window.location.origin,
       },
     });
     if (error) throw new Error(await errorDeFuncion(error, data, 'No se pudo iniciar el pago. Intenta de nuevo.'));
@@ -177,9 +178,9 @@ function Planes() {
         try {
           await Stripe.createPaymentSheet({
             paymentIntentClientSecret: data.clientSecret,
-            merchantDisplayName: 'Be Fit Lab',
+            merchantDisplayName: ESTUDIO.nombre,
             enableApplePay: isIOS,
-            applePayMerchantId: isIOS ? 'merchant.com.befitlab.app' : undefined,
+            applePayMerchantId: isIOS ? ESTUDIO.tiendas.applePayMerchantId : undefined,
             enableGooglePay: isAndroid,
             GooglePayIsTesting: false,
             countryCode: 'MX',
@@ -189,7 +190,7 @@ function Planes() {
           try {
             await Stripe.createPaymentSheet({
               paymentIntentClientSecret: data.clientSecret,
-              merchantDisplayName: 'Be Fit Lab',
+              merchantDisplayName: ESTUDIO.nombre,
             });
           } catch (e2) { console.error('Hoja simple:', e2); hojaLista = false; }
         }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Lock, Eye, EyeOff, CheckCircle2, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { ESTUDIO } from '../config/estudio';
 
 // Pantalla para fijar una nueva contraseña tras abrir el enlace de recuperación.
 // La sesión de recovery la establece: en web detectSessionInUrl; en nativo el
@@ -88,7 +89,7 @@ export default function NuevaContrasena() {
                 <CheckCircle2 size={34} color="#16a34a" />
               </div>
               <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.7rem', color: '#1A1C1E' }}>¡Contraseña actualizada!</h1>
-              <p style={{ color: '#4B5563', marginTop: '6px', lineHeight: 1.5 }}>Ya puedes iniciar sesión con tu nueva contraseña. Si lo hiciste desde el navegador, vuelve a la app Be Fit Lab.</p>
+              <p style={{ color: '#4B5563', marginTop: '6px', lineHeight: 1.5 }}>Ya puedes iniciar sesión con tu nueva contraseña. Si lo hiciste desde el navegador, vuelve a la app {ESTUDIO.nombre}.</p>
               <button onClick={() => navigate('/login')} className="glass-button-dark" style={{ width: '100%', marginTop: '1.4rem' }}>Iniciar sesión</button>
             </div>
           ) : hasSession === false ? (

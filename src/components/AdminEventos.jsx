@@ -4,6 +4,7 @@ import { Plus, Trash2, Pencil, Sparkles, ImagePlus, Loader2, Camera, X, Save, Ma
 import { supabase } from '../lib/supabase';
 import { uploadImage } from '../lib/cafeImage';
 import AdminEventoBoletos from './AdminEventoBoletos';
+import { ESTUDIO } from '../config/estudio';
 
 const PRIMARY = '#FF914D';
 const INK = '#1A1C1E';
@@ -176,9 +177,9 @@ export default function AdminEventos() {
               </div>
               <div style={{ marginBottom: '12px' }}><PhotoButton url={form.image_url} onUploaded={(u) => setForm(f => ({ ...f, image_url: u }))} /></div>
               <input placeholder="Título del evento" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={{ ...input, marginBottom: '8px' }} />
-              {/* Link corto para Instagram: befitlab.app/evento/<esto> */}
+              {/* Link corto para Instagram: <dominio del estudio>/evento/<esto> */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', padding: '9px 12px', borderRadius: '12px', background: 'rgba(255,145,77,0.08)' }}>
-                <span style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', whiteSpace: 'nowrap' }}>befitlab.app/evento/</span>
+                <span style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', whiteSpace: 'nowrap' }}>{ESTUDIO.enlaces.dominio}/evento/</span>
                 <input placeholder="rodeo" value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value })}
                   style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', outline: 'none', fontSize: '0.88rem', fontWeight: 700, color: PRIMARY, fontFamily: 'inherit' }} />
               </div>

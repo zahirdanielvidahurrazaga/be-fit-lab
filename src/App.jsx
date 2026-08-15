@@ -41,6 +41,7 @@ import NotificationSheet from './components/NotificationSheet';
 import BadgeUnlockOverlay from './components/BadgeUnlockOverlay';
 import UpdateGate from './components/UpdateGate';
 import WaitlistOfferGate from './components/WaitlistOfferGate';
+import { moduloActivo } from './config/estudio';
 import './index.css';
 
 // Overlay global de insignia desbloqueada: se muestra en CUALQUIER pantalla
@@ -216,19 +217,19 @@ function App() {
           <Route path="/privacidad" element={<Privacidad />} />
           <Route path="/terminos" element={<Terminos />} />
           <Route path="/agenda" element={<Agenda />} />
-          <Route path="/cafeteria" element={<Cafeteria />} />
+          {moduloActivo('cafeteria') && <Route path="/cafeteria" element={<Cafeteria />} />}
           {/* Evento abierto al público: cualquiera aparta lugar sin cuenta, y el
               boleto se consulta con su código (link del correo). */}
-          <Route path="/evento/:id" element={<EventoPublico />} />
-          <Route path="/boleto/:code" element={<Boleto />} />
+          {moduloActivo('eventos') && <Route path="/evento/:id" element={<EventoPublico />} />}
+          {moduloActivo('eventos') && <Route path="/boleto/:code" element={<Boleto />} />}
           
           {/* Rutas Privadas Clienta */}
           <Route path="/portal" element={<ProtectedRoute requireRole="CLIENT"><Portal /></ProtectedRoute>} />
-          <Route path="/nutricion" element={<ProtectedRoute requireRole="CLIENT" requireNutrition><Nutricion /></ProtectedRoute>} />
-          <Route path="/evolucion" element={<ProtectedRoute requireRole="CLIENT"><Evolucion /></ProtectedRoute>} />
+          {moduloActivo('nutricion') && <Route path="/nutricion" element={<ProtectedRoute requireRole="CLIENT" requireNutrition><Nutricion /></ProtectedRoute>} />}
+          {moduloActivo('evolucion') && <Route path="/evolucion" element={<ProtectedRoute requireRole="CLIENT"><Evolucion /></ProtectedRoute>} />}
           <Route path="/mi-cuenta" element={<ProtectedRoute requireRole={['CLIENT', 'COACH']}><MiCuenta /></ProtectedRoute>} />
-          <Route path="/cumpleanos" element={<ProtectedRoute requireRole={['CLIENT', 'COACH', 'ADMIN']}><Cumpleanos /></ProtectedRoute>} />
-          <Route path="/eventos" element={<ProtectedRoute requireRole={['CLIENT', 'COACH', 'ADMIN']}><Eventos /></ProtectedRoute>} />
+          {moduloActivo('cumpleanos') && <Route path="/cumpleanos" element={<ProtectedRoute requireRole={['CLIENT', 'COACH', 'ADMIN']}><Cumpleanos /></ProtectedRoute>} />}
+          {moduloActivo('eventos') && <Route path="/eventos" element={<ProtectedRoute requireRole={['CLIENT', 'COACH', 'ADMIN']}><Eventos /></ProtectedRoute>} />}
           <Route path="/ajustes" element={<ProtectedRoute requireRole={['CLIENT', 'COACH']}><Ajustes /></ProtectedRoute>} />
           
           {/* Rutas Privadas Coach */}
@@ -238,7 +239,8 @@ function App() {
           <Route path="/admin" element={<ProtectedRoute requireRole="ADMIN"><Admin /></ProtectedRoute>} />
 
           {/* Barista / Recepción */}
-          <Route path="/barista" element={<ProtectedRoute requireRole={['BARISTA', 'ADMIN']}><Barista /></ProtectedRoute>} />
+          {/* El rol BARISTA solo tiene sentido si el estudio tiene cafetería. */}
+          {moduloActivo('cafeteria') && <Route path="/barista" element={<ProtectedRoute requireRole={['BARISTA', 'ADMIN']}><Barista /></ProtectedRoute>} />}
           <Route path="/recepcion" element={<ProtectedRoute requireRole={['RECEPCION', 'ADMIN']}><Recepcion /></ProtectedRoute>} />
 
           {/* Cualquier otra dirección: antes quedaba la pantalla EN BLANCO */}

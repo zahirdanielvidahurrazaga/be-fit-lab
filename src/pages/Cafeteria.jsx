@@ -12,6 +12,7 @@ import CafeOrderTracking from '../components/CafeOrderTracking';
 import CafeOrderHistory from '../components/CafeOrderHistory';
 import { CafeMenuSkeleton } from '../components/Skeleton';
 import { resolveCafeImage } from '../lib/cafeImage';
+import { ESTUDIO } from '../config/estudio';
 
 // Los assets locales del catálogo (PNG/WebP con fondo blanco) necesitan multiply
 // para integrarse; las fotos subidas desde Admin son JPEG y van con blend normal.
@@ -298,16 +299,16 @@ function Cafeteria() {
         try {
           await Stripe.createPaymentSheet({ 
             paymentIntentClientSecret: data.clientSecret, 
-            merchantDisplayName: 'Be Fit Lab', 
+            merchantDisplayName: ESTUDIO.nombre, 
             enableApplePay: isIOS, 
-            applePayMerchantId: isIOS ? 'merchant.com.befitlab.app' : undefined, 
+            applePayMerchantId: isIOS ? ESTUDIO.tiendas.applePayMerchantId : undefined, 
             enableGooglePay: isAndroid,
             GooglePayIsTesting: false,
             countryCode: 'MX' 
           });
         } catch (e) {
           console.error('Error con Apple/Google Pay:', e);
-          await Stripe.createPaymentSheet({ paymentIntentClientSecret: data.clientSecret, merchantDisplayName: 'Be Fit Lab' });
+          await Stripe.createPaymentSheet({ paymentIntentClientSecret: data.clientSecret, merchantDisplayName: ESTUDIO.nombre });
         }
         const res = await Stripe.presentPaymentSheet();
         if (res?.paymentResult === 'paymentSheetCompleted') {

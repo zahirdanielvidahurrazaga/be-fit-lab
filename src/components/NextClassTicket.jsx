@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { QrCode, CalendarPlus, Check, Sparkles } from 'lucide-react';
 import { addClassToCalendar } from '../hooks/useCalendar';
 import { supabase } from '../lib/supabase';
+import { ESTUDIO } from '../config/estudio';
 
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const DAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
@@ -110,7 +111,7 @@ export function NextClassTicket({ myReservations, globalClasses, coaches, classe
     c.full_name === next.res.instructor ||
     c.email === next.res.instructor
   );
-  const coachName = coach?.full_name || next?.res?.instructor || 'Be Fit Lab';
+  const coachName = coach?.full_name || next?.res?.instructor || ESTUDIO.nombre;
   const title = next?.res?.title || next?.cls?.title || 'Tu clase';
   const dispChip = classesRemaining >= 9000 ? '∞ disponibles' : `${classesRemaining} disponibles`;
 
@@ -142,7 +143,7 @@ export function NextClassTicket({ myReservations, globalClasses, coaches, classe
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ ...cardShell, marginBottom: 25 }}>
         <TicketPhoto>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.8rem', letterSpacing: '0.18em', textShadow: '0 2px 8px rgba(0,0,0,0.35)' }}>BE FIT LAB</span>
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.8rem', letterSpacing: '0.18em', textShadow: '0 2px 8px rgba(0,0,0,0.35)' }}>{ESTUDIO.nombreMayusculas}</span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', padding: '5px 11px', borderRadius: 20, fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.12em' }}>
               PASE DE CLASE
             </span>
@@ -168,7 +169,7 @@ export function NextClassTicket({ myReservations, globalClasses, coaches, classe
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ ...cardShell, marginBottom: 25 }}>
       <TicketPhoto>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.8rem', letterSpacing: '0.18em', textShadow: '0 2px 8px rgba(0,0,0,0.35)' }}>BE FIT LAB</span>
+          <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.8rem', letterSpacing: '0.18em', textShadow: '0 2px 8px rgba(0,0,0,0.35)' }}>{ESTUDIO.nombreMayusculas}</span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', padding: '5px 11px', borderRadius: 20, fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.12em' }}>
             <Sparkles size={12} /> PASE DE CLASE
           </span>

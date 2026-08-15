@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Home, MessageCircle } from 'lucide-react';
+import { ESTUDIO } from '../config/estudio';
 
 // Pantalla para cualquier dirección que no existe. Antes de esto, una URL mal
 // escrita o cortada dejaba la pantalla EN BLANCO: quien recibía su boleto por
@@ -18,7 +19,7 @@ export default function NoEncontrado() {
         style={{ width: 'min(420px, 100%)', textAlign: 'center' }}>
 
         <div style={{ width: '78px', height: '78px', borderRadius: '26px', background: `linear-gradient(135deg, ${PRIMARY}, ${MAUVE})`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px', boxShadow: '0 14px 32px rgba(255,145,77,0.32)' }}>
-          <img src={LOGO} alt="Be Fit Lab" width="40" style={{ width: '40px', height: 'auto' }} />
+          <img src={LOGO} alt={ESTUDIO.nombre} width="40" style={{ width: '40px', height: 'auto' }} />
         </div>
 
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.7rem', color: '#2D2928', margin: '0 0 10px', lineHeight: 1.2 }}>

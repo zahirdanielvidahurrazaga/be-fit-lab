@@ -3,6 +3,7 @@ import { Coffee, LogOut, Gift, Clock, Leaf, CheckCircle2, RefreshCw, ChevronRigh
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { ESTUDIO } from '../config/estudio';
 
 const COLUMNS = [
   { key: 'paid', label: 'Nuevos', color: '#FF914D', tint: 'rgba(255,145,77,0.10)', next: 'preparing', action: 'Preparar' },
@@ -122,7 +123,7 @@ function Barista() {
             <Coffee size={24} color="#fff" />
           </div>
           <div style={{ flex: 1 }}>
-            <p style={{ margin: 0, fontSize: '0.72rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#A89A8E', fontWeight: 700 }}>Be Fit Lab · Cafetería</p>
+            <p style={{ margin: 0, fontSize: '0.72rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#A89A8E', fontWeight: 700 }}>{ESTUDIO.nombre} · Cafetería</p>
             <h1 style={{ margin: 0, fontSize: '1.5rem', fontFamily: 'var(--font-display)', color: '#2B211C' }}>Mostrador</h1>
           </div>
           <button onClick={fetchOrders} aria-label="Refrescar" style={{ width: '42px', height: '42px', borderRadius: '50%', border: '1px solid rgba(43,33,28,0.1)', background: '#fff', color: '#2B211C', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><RefreshCw size={18} /></button>
@@ -206,18 +207,16 @@ function BaristaLoyaltySearch() {
   const redeem = async (userId) => {
     if (!window.confirm('¿Seguro que quieres canjear un regalo sorpresa para esta clienta?')) return;
     const { error } = await supabase.rpc('redeem_cafe_gift', { p_user_id: userId });
-    if (!error) {
-      alert('¡Regalo canjeado con éxito!');
-      search();
-    } else {
-      // Fallback si no está la RPC (decrementar manualmente)
-      const userRes = results.find(u => u.id === userId);
-      if (userRes && userRes.loyalty.gifts_available > 0) {
-        await supabase.from('cafe_loyalty').update({ gifts_available: userRes.loyalty.gifts_available - 1 }).eq('user_id', userId);
-        alert('¡Regalo canjeado con éxito!');
-        search();
-      }
+    // El canje lo resuelve la BD en una sola operación atómica. Antes había aquí
+    // un respaldo que descontaba desde el navegador: RLS se lo bloqueaba a las
+    // baristas, nadie revisaba el error y aun así se anunciaba "¡canjeado!",
+    // así que el regalo nunca se consumía. Si falla, hay que decirlo.
+    if (error) {
+      alert(error.message || 'No se pudo canjear el regalo.');
+      return;
     }
+    alert('¡Regalo canjeado con éxito!');
+    search();
   };
 
   return (

@@ -5,6 +5,7 @@ import { User, Mail, Lock, ArrowRight, ChevronLeft, CheckCircle2, Eye, EyeOff, C
 import { Capacitor } from '@capacitor/core';
 import { motion } from 'framer-motion';
 import { signupRedirect } from '../lib/authRedirect';
+import { ESTUDIO } from '../config/estudio';
 
 function Register() {
   const [name, setName] = useState('');
@@ -329,7 +330,7 @@ function Register() {
                 style={{ marginTop: '3px', accentColor: 'var(--primary)', width: '18px', height: '18px', flexShrink: 0 }}
               />
               <span>
-                Acepto los <Link to="/terminos" target="_blank" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>Términos y Condiciones</Link> y la <Link to="/privacidad" target="_blank" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>Política de Privacidad</Link> de Be Fit Lab.
+                Acepto los <Link to="/terminos" target="_blank" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>Términos y Condiciones</Link> y la <Link to="/privacidad" target="_blank" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>Política de Privacidad</Link> de {ESTUDIO.nombre}.
               </span>
             </label>
 

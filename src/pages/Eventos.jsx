@@ -9,6 +9,7 @@ import { Browser } from '@capacitor/browser';
 import { supabase, errorDeFuncion } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { uploadImage } from '../lib/cafeImage';
+import { ESTUDIO } from '../config/estudio';
 
 const PRIMARY = '#FF914D';
 // Liquid glass (theme-aware vía --glass-bg/--glass-border de index.css)
@@ -258,7 +259,7 @@ function EventDetail({ ev, user, registered, onReg, processing, onBack, onInvita
   const delPhoto = async (p) => { if (confirm('¿Eliminar esta foto?')) { await supabase.from('event_photos').delete().eq('id', p.id); loadPhotos(); } };
 
   const share = async () => {
-    const text = `¡No te pierdas "${ev.title}" en Be Fit Lab!${ev.event_date ? ' ' + fmtFull(ev.event_date) : ''}`;
+    const text = `¡No te pierdas "${ev.title}" en ${ESTUDIO.nombre}!${ev.event_date ? ' ' + fmtFull(ev.event_date) : ''}`;
     if (navigator.share) { try { await navigator.share({ title: ev.title, text }); } catch (_) {} }
     else window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
@@ -462,7 +463,7 @@ export default function Eventos() {
   // lograba pagar un evento desde la app y el intento moría sin explicación).
   const pagarPorNavegador = async (ev, guests = []) => {
     localStorage.setItem('befit_payment_return', String(Date.now()));
-    const returnUrl = isNative ? 'https://befitlab.app' : window.location.origin;
+    const returnUrl = isNative ? ESTUDIO.enlaces.sitio : window.location.origin;
     const { data, error } = await supabase.functions.invoke('stripe-event-checkout', { body: { eventId: ev.id, userId: user.id, userEmail: user.email, guests, returnUrl } });
     if (error || data?.error) { payError(await errorDeFuncion(error, data, 'No se pudo procesar el pago.')); return false; }
     if (!data?.url) return false;
@@ -494,9 +495,9 @@ export default function Eventos() {
         try {
           await Stripe.createPaymentSheet({
             paymentIntentClientSecret: data.clientSecret,
-            merchantDisplayName: 'Be Fit Lab',
+            merchantDisplayName: ESTUDIO.nombre,
             enableApplePay: isIOS,
-            applePayMerchantId: isIOS ? 'merchant.com.befitlab.app' : undefined,
+            applePayMerchantId: isIOS ? ESTUDIO.tiendas.applePayMerchantId : undefined,
             enableGooglePay: isAndroid,
             GooglePayIsTesting: false,
             countryCode: 'MX',
@@ -504,7 +505,7 @@ export default function Eventos() {
         } catch (e) {
           console.error('Hoja con Apple/Google Pay:', e);
           try {
-            await Stripe.createPaymentSheet({ paymentIntentClientSecret: data.clientSecret, merchantDisplayName: 'Be Fit Lab' });
+            await Stripe.createPaymentSheet({ paymentIntentClientSecret: data.clientSecret, merchantDisplayName: ESTUDIO.nombre });
           } catch (e2) { console.error('Hoja simple:', e2); hojaLista = false; }
         }
 
@@ -592,7 +593,7 @@ export default function Eventos() {
               {next && (
                 <div style={{ background: '#2D2928', borderRadius: '28px', color: '#fff', position: 'relative', overflow: 'hidden', aspectRatio: '1 / 1', boxShadow: '0 24px 50px rgba(0,0,0,0.22)' }}>
                   {/* Foto de eventos de fondo */}
-                  <img src="/galeria/evento-4.webp" alt="Eventos Be Fit Lab" loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src="/galeria/evento-4.webp" alt={`Eventos ${ESTUDIO.nombre}`} loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                   {/* Overlay: oscuro arriba/abajo (texto + contador legibles), claro al centro (se ve la foto) */}
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(18,14,11,0.88) 0%, rgba(18,14,11,0.30) 36%, rgba(18,14,11,0.40) 60%, rgba(18,14,11,0.92) 100%)', pointerEvents: 'none' }} />
                   {/* Contenido: título arriba, cuenta regresiva abajo */}
