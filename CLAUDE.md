@@ -6,6 +6,54 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
+## 🏷️ Sesión 2026-08-15 (2ª) — LA MARCA YA ES CONFIGURABLE + se cerró un hueco de lealtad (todo DESPLEGADO)
+
+> **Contexto de negocio:** este repo va a ser la base para vender el sistema a otros estudios de pilates (proyecto aparte). Por eso todo lo que distinga a Be Fit Lab de cualquier otro estudio tiene que salir del código y vivir en un solo lugar. Commit `f8bc9c6`, 37 archivos, ya en `main` y desplegado.
+
+### 🔴 REGLA NUEVA: nada de datos del estudio escritos a mano
+
+**`src/config/estudio.js` es el único lugar donde va lo que cambia entre un cliente y otro.** Si vas a escribir "Be Fit Lab", una dirección, un teléfono, un color o un enlace de tienda dentro de un componente: **no lo hagas**, agrégalo a la config y léelo de ahí.
+
+Qué vive ahí: identidad (`nombre`, `nombreMayusculas`, `nombrePanel`, `giro`, `ciudad`), `legal` (razón social y domicilio, los usan Términos y Privacidad), `contacto` (teléfono, whatsapp, email, instagram + url, dirección en renglones, mapaLink, horarios), `enlaces` (sitio, dominio), `marca` (logo, icono, portada), `tiendas` (appleId, bundleId, appStore, playStore, **applePayMerchantId**), `colores` / `coloresOscuro`, y `modulos`.
+
+**Montar un estudio nuevo = editar ese archivo + reemplazar 3 imágenes en `public/` + apagar módulos.** Antes eran 25 archivos y adivinar.
+
+### Cómo funciona la paleta (y la trampa)
+
+`iniciarMarca()` se llama en `main.jsx` antes del primer render. Escribe los colores de la config **como estilos en línea sobre `<html>`**, que ganan por especificidad a `index.css`. Como hay **10 puntos distintos** que cambian `data-theme`, no se engancha a ninguno: usa un `MutationObserver` sobre ese atributo. Así ninguno se puede olvidar de avisar.
+
+> ⚠️ **En modo oscuro el acento NO es el claro aclarado.** `--accent` en oscuro es `#2B231D` (un café oscuro que hace de superficie elevada), y `--on-surface-variant` es `#B8ABA0`. Copiar ahí los valores del tema claro rompe el modo oscuro **sin lanzar un solo error**. Pasó al escribir la config y se detectó comparando los 16 tokens contra `index.css` uno por uno. Si tocas `coloresOscuro`, revisa contra el CSS.
+
+### Banderas de módulos
+
+`modulos` en la config: `cafeteria`, `nutricion`, `evolucion`, `fotosProgreso`, `insignias`, `eventos`, `cumpleanos`, `wallet`, `salud`. Ponerlas en `false` saca el módulo de las **rutas** (`App.jsx`), del **portal de la clienta** y del **sidebar y menú móvil de admin**. `cafeteria: false` se lleva además la ruta `/barista` completa, porque ese rol no tiene sentido sin cafetería. El código se queda en el repo; simplemente no se monta. Reservas, clases, planes, cobros y los roles de staff son el núcleo y no se apagan.
+
+### 🔒 Auditoría de seguridad — 1 hueco real, cerrado y aplicado a producción
+
+Se auditó antes de volver esto plantilla, porque **un hueco aquí se replicaría en cada estudio nuevo**. Casi todo salió limpio: sin secretos en el repo ni en el historial de git (las llaves del wallet están cubiertas por `.gitignore`; las dos llaves en `test_supabase.js` y `debug_badges.mjs` son la `anon`, pública por diseño), las 4 edge functions de admin validan el rol contra la BD del lado del servidor, **ningún precio viene del cliente** (membresías, cafetería y eventos leen el precio de la BD), `trg_enforce_user_guard` sigue vivo protegiendo saldo y roles, y no hay `dangerouslySetInnerHTML` ni `eval`.
+
+Lo que sí estaba mal, en `cafe_loyalty`:
+
+1. **🔴 La política `Users can update own loyalty`** (UPDATE, `auth.uid() = user_id`, sin WITH CHECK) dejaba a **cualquier clienta escribir lo que quisiera en su propia fila** desde la consola del navegador: `update({ gifts_available: 999 })` = cafés gratis infinitos. **Reproducido contra producción** dentro de una transacción. La app nunca escribía ahí desde el cliente (`Cafeteria.jsx` solo lee; los sellos los da `trigger_add_loyalty_stamp`, que es DEFINER) → era superficie de ataque pura. La de INSERT tenía el mismo hueco. **Las dos eliminadas.**
+2. **🔴 `cash-cafe-checkout` se creía la bandera `isLoyaltyRedemption`** que mandaba el cliente y solo la usaba de etiqueta: bastaba mandarla en `true` para llevarse el pedido gratis. Ahora **consume el regalo contra la BD** antes de honrarlo.
+3. **🟠 `redeem_cafe_gift` NO EXISTÍA.** `Barista.jsx` la llamaba, fallaba siempre y caía a un respaldo que descontaba desde el navegador — que RLS le bloqueaba a una BARISTA (solo ADMIN podía escribir). Como **nadie revisaba el error**, anunciaba *"¡Regalo canjeado con éxito!"* igual. **Ningún regalo se había consumido nunca.** Ahora la función existe, es **atómica** (el `and gifts_available > 0` va DENTRO del UPDATE, así dos canjes simultáneos no gastan el mismo regalo) y la acepta el mostrador (`is_staff()`) **o el servidor** (`request.jwt.claims->>'role' = 'service_role'`, porque en la edge function `auth.uid()` es nulo y la función es DEFINER).
+
+**SQL en `supabase/sql/security_cafe_loyalty.sql`** (gitignored por la regla `*.sql` → **solo existe en la Mac**). Probado **7/7 con ROLLBACK** y **YA APLICADO a producción**.
+
+### ⚠️ Dos cosas que se olvidan al desplegar
+
+- **El push a `main` NO despliega las edge functions.** Van aparte:
+  ```bash
+  export SUPABASE_ACCESS_TOKEN=$(security find-generic-password -s "Supabase CLI" -w)
+  supabase functions deploy cash-cafe-checkout --project-ref fifaowaiokauhuqklzwe
+  ```
+  (`cash-cafe-checkout` quedó en **v5**, ACTIVE.) Por poco se queda medio arreglo sin aplicar.
+- **Para verificar la web, la config queda horneada en el chunk `createLucideIcon-*.js`, NO en `index-*.js`** — Rollup la agrupa con lo compartido porque la importan ~30 archivos. Buscar el **texto del cambio**, nunca el nombre del bundle.
+
+### ⏭️ Lo que sigue
+
+**Modo demo**: ruta `/demo/<estudio>` que cargue una configuración, entre sin login con datos falsos en memoria (sin Supabase, se reinician al recargar) y traiga un botón para alternar «Ver como clienta» / «Ver como dueña». La primera demo debe ser de un **estudio ficticio** (link permanente, sin riesgo); las personalizadas van con URL que nadie adivine, `noindex` y un sello visible de que es una maqueta.
+
 ## 🤖 Sesión 2026-08-15 — PLAY RECHAZÓ LA 2.6.3 POR PERMISOS DE HEALTH CONNECT (arreglado; falta que el usuario reenvíe)
 
 **Motivo textual (aplicado el 7-ago):** *"Política de permisos de Salud conectada de Android: Acceso excesivo a datos de la función declarada"*, señalando **`CyclingPedalingCadence/ExerciseSession`** y **`HeartRate`**. Se revirtió a la versión anterior en Play.
