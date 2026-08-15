@@ -22,6 +22,13 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 2. **Compilar el AAB en la PC de Windows** (ahí está el keystore) con `git pull` primero y **verificando el `.env` con `pk_live`**, y subirlo a **producción** (no a prueba interna: esa es la razón por la que las 6 usuarias de Android siguen congeladas).
 3. Reenviar a revisión.
 
+### 🍎 iOS 1.9.4 (build 28) — PREPARADA, falta Archive + Upload
+Misma tanda que la 2.6.4 de Android. Lleva: enlace de contraseña, Cobro automático en ADMIN, y fuera la frecuencia cardíaca.
+- **`Info.plist`: los dos textos de Salud no describían lo que hace la app.** El de escritura decía *"registra tus clases como entrenamientos en Apple Health"* cuando `logPilatesWorkout` guarda **calorías**, no un workout — nunca fue cierto. El de lectura no mencionaba peso ni % de grasa, que sí se leen en `readBodyComposition`. **Apple revisa que estos textos correspondan a los datos que pides**, así que ahora dicen exactamente eso.
+- `npm run build` + `npx cap sync ios` hechos. **Verificado dentro de `ios/App/App/public/assets/`:** `pk_live` (cero `pk_test`), los textos nuevos presentes, y **`heartRate` ya no aparece**.
+- Xcode abierto (proyecto con SPM: `CapApp-SPM`; se abre el workspace vía `npx cap open ios`). **Falta Archive → Distribute → Upload.**
+- ✅ **`app_config.latest_ios_version` corregido a `1.9.3`** (2026-08-15): llevaba desde el 30-jul en `1.9.2` mientras la 1.9.3 estaba viva en el App Store desde el 2-ago, así que el banner de "actualiza la app" apuntaba a una versión vieja. ⏭️ **Cuando Apple apruebe la 1.9.4, ponerlo en `1.9.4`.** Verificar con `curl -s "https://itunes.apple.com/lookup?bundleId=com.befitlab.app&country=mx"`.
+
 ✅ **RESUELTO — `READ_BODY_FAT` sí llega al binario (falsa alarma).** Está declarado *y* más abajo con `tools:node="remove"`, y se sospechó que el `remove` ganaba y dejaba el % de grasa de la báscula sin funcionar en Android. **Play Console lo desmiente:** la pantalla *Apps de salud* lista los permisos **leídos del APK subido** y ahí aparece `READ_BODY_FAT`, junto con los otros 7 declarados y **ninguno** de los removidos. Conclusión: **cuando el mismo permiso está declarado y removido en el mismo manifest, gana la declaración.** No hay nada que arreglar; la contradicción es fea pero inocua.
 
 📋 **CÓMO FUNCIONA LA DECLARACIÓN DE PLAY (para no perder tiempo buscando):**
