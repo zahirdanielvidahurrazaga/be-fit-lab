@@ -6,6 +6,24 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
+## 🤖 Sesión 2026-08-15 — PLAY RECHAZÓ LA 2.6.3 POR PERMISOS DE HEALTH CONNECT (arreglado; falta que el usuario reenvíe)
+
+**Motivo textual (aplicado el 7-ago):** *"Política de permisos de Salud conectada de Android: Acceso excesivo a datos de la función declarada"*, señalando **`CyclingPedalingCadence/ExerciseSession`** y **`HeartRate`**. Se revirtió a la versión anterior en Play.
+
+- **`READ_EXERCISE` / `WRITE_EXERCISE` → FUERA.** No se usaban en **ningún** lado: `logPilatesWorkout` guarda **calorías**, no una sesión de ejercicio. Cero pérdida de funcionalidad.
+- **`READ_HEART_RATE` → FUERA.** Sí se leía, pero solo pintaba un dato suelto ("Frec. cardíaca") en Evolución, y encima solo de la última hora (sin reloj salía vacío). Se decidió **quitarlo en vez de apelar** (5-8 días y riesgo de otro rechazo). Se quitó también la tarjeta de la UI, el `readSamples` de `useHealth.js` y el `'heartRate'` de `requestAuthorization`.
+- **⚠️ NO BASTA CON BORRAR LA LÍNEA:** el plugin `@capgo/capacitor-health` declara esos permisos en **su** manifest y el merge de Gradle los volvería a meter → los tres van con **`tools:node="remove"`**.
+- **🔴 LA TRAMPA QUE HABRÍA COSTADO OTRO RECHAZO:** `src/pages/Privacidad.jsx` seguía diciendo que leíamos *"frecuencia cardíaca, sesiones de ejercicio"*. **Google lee esa política** (la URL está en el manifest: `health_permissions_privacy_policy_url` → `https://be-fit-lab.pages.dev/privacidad`), y una política que declara permisos que ya no pides es justo la inconsistencia que marcan. Reescrita para reflejar lo real. **Ya desplegada y verificada en vivo** (el chunk `Privacidad-*.js` de prod ya no menciona ninguno de los dos).
+- **Permisos que quedan pedidos**, todos con código que los usa: `READ_STEPS`, `READ_ACTIVE_CALORIES_BURNED`, `WRITE_ACTIVE_CALORIES_BURNED`, `READ_WEIGHT`, `READ_BODY_FAT`.
+- **Android 2.6.4 (versionCode 16)** — el 15 quedó consumido con la rechazada. `npm run build` + `npx cap sync android` hechos; **`pk_live` verificada** en `dist/` y en `android/app/src/main/assets/public/assets/`. Commit `2f5a217`.
+
+⏭️ **LO QUE FALTA (lo hace el usuario, Claude no puede):**
+1. **Actualizar la declaración de Health Connect en Play Console** para que solo liste pasos, calorías, peso y grasa corporal. Google lo pide explícitamente en el paso 2 de "Cómo corregirlo": si el binario y la declaración no coinciden, rechazo otra vez.
+2. **Compilar el AAB en la PC de Windows** (ahí está el keystore) con `git pull` primero y **verificando el `.env` con `pk_live`**, y subirlo a **producción** (no a prueba interna: esa es la razón por la que las 6 usuarias de Android siguen congeladas).
+3. Reenviar a revisión.
+
+⚠️ **BUG LATENTE SIN TOCAR — `READ_BODY_FAT` está declarado Y removido.** Aparece en la lista de permisos pedidos *y* más abajo con `tools:node="remove"` (viene de antes de esta sesión). Si gana el `remove`, el **% de grasa de la báscula nunca ha funcionado en Android**. **No se tocó a propósito**: meter un permiso nuevo justo en una re-revisión invita a otro rechazo. Verificar en la PC de Windows leyendo el **manifest fusionado** (`android/app/build/intermediates/merged_manifests/release/AndroidManifest.xml`) y arreglarlo en una versión posterior.
+
 ## ✅ Sesión 2026-08-14 — 2 reportes de las dueñas: COBROS QUE NO SE CANCELAN (8 clientas, $8,400/mes) y el ENLACE DE CONTRASEÑA
 
 **(1) 🔴 "CUANDO CANCELAN SU SUBSCRIPCION NO SE LAS CANCELA Y LES VUELVE A HACER EL COBRO, INCLUSO AUNQUE ELLAS CANCELEN."** Reporte de la dueña por WhatsApp, "ya van 3", y ya había reembolsado a 2 por su cuenta.
