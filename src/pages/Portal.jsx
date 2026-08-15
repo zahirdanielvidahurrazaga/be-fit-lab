@@ -17,7 +17,11 @@ import { ESTUDIO, moduloActivo } from '../config/estudio';
 function Portal() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, logout, classesRemaining, myReservations, waitlistPositions, cancelClass, acceptOffer, profileName, globalClasses, avatarUrl, setShowTour, coaches, badgeConfigs, classesLoaded, demoHistorial } = useAuth();
+  const { user, plan, logout, classesRemaining, myReservations, waitlistPositions, cancelClass, acceptOffer, profileName, globalClasses, avatarUrl, setShowTour, coaches, badgeConfigs, classesLoaded, demoHistorial, esDemo } = useAuth();
+  // En la maqueta de venta no se navega a rutas reales: sacaría a la prospecta
+  // de la demo y la dejaría en el sitio de Be Fit Lab. Los <Link> los atrapa
+  // Demo.jsx en captura; estos son los saltos por código.
+  const irA = (ruta) => { if (!esDemo) navigate(ruta); };
   
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
@@ -335,7 +339,7 @@ function Portal() {
                   </div>
                 </div>
                 <button 
-                  onClick={() => navigate('/planes')}
+                  onClick={() => irA('/planes')}
                   style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', transition: 'background 0.2s' }}
                 >
                   <ChevronRight size={16} />
@@ -479,7 +483,7 @@ function Portal() {
             </div>
 
             {/* Gráfica de barras: clases por día de la semana */}
-            <motion.div onClick={() => navigate('/evolucion')} whileTap={{ scale: 0.99 }} style={{ background: 'var(--app-surface-solid)', borderRadius: '22px', padding: '18px 16px 14px', boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)', cursor: 'pointer', marginBottom: '12px' }}>
+            <motion.div onClick={() => irA('/evolucion')} whileTap={{ scale: 0.99 }} style={{ background: 'var(--app-surface-solid)', borderRadius: '22px', padding: '18px 16px 14px', boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)', cursor: 'pointer', marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '7px' }}>
                 {weekStats.perDayTotal.map((tot, i) => {
                   const isToday = i === weekStats.todayIdx;
@@ -526,13 +530,13 @@ function Portal() {
 
             {/* 3 cards tappables con número animado */}
             <div style={{ display: 'flex', gap: '10px' }}>
-              <StatCard icon={<Activity size={16} />} value={weekStats.weekCount} label="clases" color="var(--primary)" onClick={() => navigate('/agenda')} />
+              <StatCard icon={<Activity size={16} />} value={weekStats.weekCount} label="clases" color="var(--primary)" onClick={() => irA('/agenda')} />
               {healthData.calories != null ? (
-                <StatCard icon={<Flame size={16} />} value={healthData.calories} label="kcal hoy" color="#FF6B6B" onClick={() => navigate('/evolucion')} />
+                <StatCard icon={<Flame size={16} />} value={healthData.calories} label="kcal hoy" color="#FF6B6B" onClick={() => irA('/evolucion')} />
               ) : (
-                <StatCard icon={<Flame size={16} />} value={weekStats.racha} label="racha" color="#FF6B6B" onClick={() => navigate('/evolucion')} />
+                <StatCard icon={<Flame size={16} />} value={weekStats.racha} label="racha" color="#FF6B6B" onClick={() => irA('/evolucion')} />
               )}
-              <StatCard icon={<Sparkles size={16} />} value={weekStats.points} label="puntos totales" color="var(--accent)" onClick={() => navigate('/evolucion')} />
+              <StatCard icon={<Sparkles size={16} />} value={weekStats.points} label="puntos totales" color="var(--accent)" onClick={() => irA('/evolucion')} />
             </div>
             <p style={{ fontSize: '0.66rem', color: 'var(--on-surface-variant)', textAlign: 'center', margin: '9px 0 0', fontWeight: 600 }}>Ganas 10 puntos por cada clase ✦</p>
           </motion.section>

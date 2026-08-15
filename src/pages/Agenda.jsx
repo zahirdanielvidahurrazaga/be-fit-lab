@@ -21,7 +21,9 @@ import { ESTUDIO } from '../config/estudio';
 function Agenda() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, classesRemaining, bookClass, globalClasses, updateReservationCalendarId, avatarUrl, coaches, badgeConfigs, myReservations, classesLoaded, planExpiresAt } = useAuth();
+  const { user, plan, classesRemaining, bookClass, globalClasses, updateReservationCalendarId, avatarUrl, coaches, badgeConfigs, myReservations, classesLoaded, planExpiresAt, esDemo } = useAuth();
+  // Ver el comentario de Portal: en la maqueta no se salta a rutas reales.
+  const irA = (ruta) => { if (!esDemo) navigate(ruta); };
   
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
@@ -88,7 +90,7 @@ function Agenda() {
     }
     if (planExpiresAt && new Date(planExpiresAt) < new Date()) {
       alert("Tu membresía venció. Renueva tu plan para reservar clases.");
-      navigate('/planes');
+      irA('/planes');
       return;
     }
     const result = await bookClass(modalData, autoClaim);
@@ -169,12 +171,12 @@ function Agenda() {
                    {isNative ? (
                      <>
                        <h3 style={{ color: 'white', fontSize: '1.4rem', marginBottom: '10px' }}>Exclusivo para Socias</h3>
-                       <button onClick={() => navigate('/login')} className="btn-primary" style={{ width: '100%', padding: '12px' }}>Inicia Sesión</button>
+                       <button onClick={() => irA('/login')} className="btn-primary" style={{ width: '100%', padding: '12px' }}>Inicia Sesión</button>
                      </>
                    ) : (
                      <>
                        <h3 style={{ color: 'white', fontSize: '1.4rem', marginBottom: '10px' }}>Inicia tu transformación</h3>
-                       <button onClick={() => navigate('/planes')} className="btn-primary" style={{ width: '100%', padding: '12px' }}>Ver Planes</button>
+                       <button onClick={() => irA('/planes')} className="btn-primary" style={{ width: '100%', padding: '12px' }}>Ver Planes</button>
                      </>
                    )}
                 </div>
