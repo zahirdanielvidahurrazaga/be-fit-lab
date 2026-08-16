@@ -242,7 +242,7 @@ function Coach() {
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
           style={{
             padding: '24px', borderRadius: '32px',
-            backgroundImage: `linear-gradient(145deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.66) 100%), url('/fotos-hero/IMG_5381.JPG')`,
+            backgroundImage: `linear-gradient(145deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.66) 100%), url('${ESTUDIO.portadas.coach}')`,
             backgroundSize: 'cover', backgroundPosition: 'center 40%',
             boxShadow: '0 20px 40px rgba(230, 114, 43, 0.25)',
             position: 'relative', overflow: 'hidden', minHeight: '180px'

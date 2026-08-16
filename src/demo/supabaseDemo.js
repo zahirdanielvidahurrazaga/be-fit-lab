@@ -46,8 +46,15 @@ const desdeSemilla = {
   // `users:user_id(...)` y con filas planas la lista de alumnas salía vacía.
   reservations: () => {
     const porId = new Map((SEMILLA?.clientas || []).map((c) => [c.id, c]));
+    const porClase = new Map((SEMILLA?.clases || []).map((c) => [c.id, c]));
     const conPersona = (r) => ({
       ...r,
+      classes: porClase.get(r.class_id)
+        ? { title: porClase.get(r.class_id).title,
+            instructor: porClase.get(r.class_id).instructor,
+            coach_id: porClase.get(r.class_id).coach_id,
+            category: porClase.get(r.class_id).category }
+        : null,
       users: porId.get(r.user_id)
         ? { id: r.user_id, full_name: porId.get(r.user_id).full_name,
             email: porId.get(r.user_id).email, avatar_url: null }
@@ -122,6 +129,12 @@ const DATOS = {
   ],
 };
 
+// Código de la maqueta para abrir Reportes. En producción se verifica contra la
+// base con verify_admin_code; aquí se acepta uno fijo y se enseña en pantalla,
+// porque si el candado no abre la prospecta nunca ve Reportes — que es de las
+// pantallas que más venden.
+export const CODIGO_DEMO = '1234';
+
 const RPCS = {
   // El panel de auditoría de saldos: sin descuadres, que es como debe verse un
   // estudio bien llevado.
@@ -172,8 +185,44 @@ const canalFalso = {
 // cobros de Stripe, pedidos en efectivo y `send-push`. Una prospecta jugando
 // con la maqueta podría crear cargos reales o mandarle notificaciones a las
 // baristas de Be Fit Lab. Aquí se simulan y no sale nada a la red.
+// Resumen financiero con la misma forma que devuelve admin-analytics, para que
+// la pestaña de Reportes tenga números en vez de salir en blanco.
+function analiticaFalsa(dias = 30) {
+  const serie = [];
+  let bruto = 0;
+  for (let i = dias - 1; i >= 0; i--) {
+    const f = new Date(hoy.getTime() - i * 86400000);
+    // Fin de semana más flojo, como en un estudio de verdad.
+    const finde = f.getDay() === 0 || f.getDay() === 6;
+    const monto = Math.round((finde ? 900 : 2600) + Math.sin(i / 3) * 700 + (i % 5) * 180);
+    bruto += monto;
+    serie.push({ date: f.toISOString().slice(0, 10), amount: monto });
+  }
+  const comisiones = Math.round(bruto * 0.036);
+  const cuenta = Math.round(dias * 2.4);
+  return {
+    currency: 'MXN', mode: 'demo',
+    gross: bruto, net: bruto - comisiones, fees: comisiones,
+    refunded: 0, count: cuenta,
+    byType: {
+      membresia: Math.round(bruto * 0.72),
+      cafeteria: Math.round(bruto * 0.19),
+      evento: Math.round(bruto * 0.09),
+    },
+    series: serie,
+    recent: serie.slice(-12).reverse().map((d, i) => ({
+      id: `demo-cargo-${i}`, amount: d.amount, created: new Date(d.date).getTime() / 1000,
+      description: i % 3 === 0 ? 'Cafetería' : 'Membresía', status: 'succeeded',
+    })),
+    avgTicket: Math.round(bruto / Math.max(cuenta, 1)),
+  };
+}
+
 const funcionesFalsas = {
-  invoke: async (nombre) => {
+  invoke: async (nombre, opciones) => {
+    if (nombre === 'admin-analytics') {
+      return { data: analiticaFalsa(opciones?.body?.days || 30), error: null };
+    }
     console.info(`[demo] se simuló la función "${nombre}" (no se llamó a nada real)`);
     return {
       data: { demo: true, message: 'Simulado en la demostración' },
@@ -196,7 +245,11 @@ export const supabaseDemo = {
       delete: () => consulta([]),
     };
   },
-  rpc(nombre) {
+  rpc(nombre, args) {
+    // El candado de Reportes espera exactamente `true`.
+    if (nombre === 'verify_admin_code') {
+      return consulta(String(args?.p_code || '').trim() === CODIGO_DEMO);
+    }
     return consulta(RPCS[nombre] ?? []);
   },
   channel() { return canalFalso; },

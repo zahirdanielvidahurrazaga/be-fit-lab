@@ -32,6 +32,9 @@ export const ESTUDIO = {
   nombreCafeteria: 'Coffee Lab',
   // Título de la sección de Comida. "Healthy Era" es un nombre de Be Fit Lab.
   nombreNutricion: 'Healthy Era',
+  // Prefijo de la contraseña temporal que genera el mostrador al inscribir a
+  // una clienta. Es marca: en otro estudio no puede decir "BeFit".
+  prefijoContrasena: 'BeFit',
   ciudad: 'Puebla',
 
   // ── Datos legales (Términos y Aviso de Privacidad) ─────────────────────────
@@ -91,6 +94,7 @@ export const ESTUDIO = {
     progreso: '/fotos-hero/IMG_5378.JPG',       // fotos de progreso
     evolucion: '/fotos-hero/IMG_5383.JPG',      // encabezado de Evolución
     meta: '/fotos-hero/meta.webp',              // meta del mes
+    coach: '/fotos-hero/IMG_5381.JPG',          // panel del día de la coach
     agenda: '/assets/agenda_lifestyle.png',     // portada de la agenda
     cafeteriaPromo: '/cafeteria/Promocional.webp',
     galeriaEventos: '/galeria/evento-4.webp',
@@ -223,7 +227,7 @@ let respaldoEstudio = null;
 
 const CAMPOS_DE_IDENTIDAD = [
   'nombre', 'nombreMayusculas', 'nombrePanel', 'giro', 'ciudad',
-  'colores', 'coloresOscuro', 'modulos', 'marca', 'portadas', 'nombreCafeteria', 'nombreNutricion',
+  'colores', 'coloresOscuro', 'modulos', 'marca', 'portadas', 'nombreCafeteria', 'nombreNutricion', 'prefijoContrasena',
   'tiendas',
 ];
 

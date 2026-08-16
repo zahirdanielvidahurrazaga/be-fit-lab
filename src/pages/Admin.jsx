@@ -71,7 +71,7 @@ function Admin({ recepcion = false }) {
   const [newBirth, setNewBirth] = useState('');
   const [newInscPlan, setNewInscPlan] = useState(''); // '' = sin plan
   const [newPayMethod, setNewPayMethod] = useState('efectivo');
-  const [tempPass, setTempPass] = useState(() => 'BeFit' + Math.floor(1000 + Math.random() * 9000));
+  const [tempPass, setTempPass] = useState(() => ESTUDIO.prefijoContrasena + Math.floor(1000 + Math.random() * 9000));
   const [inscribiendo, setInscribiendo] = useState(false);
   const [inscDone, setInscDone] = useState(null); // { email, password }
 
@@ -223,7 +223,7 @@ function Admin({ recepcion = false }) {
     fetchAllUsers?.();
     // Limpiar el formulario y preparar una nueva contraseña
     setNewName(''); setNewEmail(''); setNewPhone(''); setNewBirth(''); setNewInscPlan('');
-    setTempPass('BeFit' + Math.floor(1000 + Math.random() * 9000));
+    setTempPass(ESTUDIO.prefijoContrasena + Math.floor(1000 + Math.random() * 9000));
   };
 
   const handlePago = async () => {
@@ -1210,7 +1210,7 @@ function Admin({ recepcion = false }) {
                           <label style={labelStyle}>Contraseña temporal</label>
                           <div style={{ display: 'flex', gap: '8px' }}>
                             <input type="text" value={tempPass} onChange={(e) => setTempPass(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
-                            <button type="button" onClick={() => setTempPass('BeFit' + Math.floor(1000 + Math.random() * 9000))} style={{ padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', background: 'var(--surface)', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Generar</button>
+                            <button type="button" onClick={() => setTempPass(ESTUDIO.prefijoContrasena + Math.floor(1000 + Math.random() * 9000))} style={{ padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', background: 'var(--surface)', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Generar</button>
                           </div>
                         </div>
                         <button onClick={handleInscribir} disabled={inscribiendo} style={{ width: '100%', padding: '15px', borderRadius: '14px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '0.95rem', opacity: inscribiendo ? 0.7 : 1 }}>

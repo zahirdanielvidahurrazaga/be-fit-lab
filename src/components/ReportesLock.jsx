@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, Loader2, ArrowRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
+import { CODIGO_DEMO } from '../demo/supabaseDemo';
 
 // Candado de la pestaña Reportes: la cuenta de admin la usan varias personas del
 // mostrador y los números del negocio son solo de la dueña.
@@ -17,6 +19,7 @@ const PRIMARY = '#FF914D';
 const INK = '#1A1C1E';
 
 export default function ReportesLock({ children }) {
+  const { esDemo } = useAuth();
   const [abierto, setAbierto] = useState(false);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -56,6 +59,20 @@ export default function ReportesLock({ children }) {
         <p style={{ margin: '0 0 24px', color: 'var(--on-surface-variant)', fontSize: '0.95rem', lineHeight: 1.55 }}>
           Esta sección tiene los números del negocio. Escribe la clave para entrar.
         </p>
+
+        {/* En la maqueta de venta la clave se enseña: nadie va a adivinarla, y
+            si el candado no abre, la prospecta nunca ve Reportes.
+            Va detrás de la bandera de compilación para que ni el texto exista
+            en el build del estudio cliente. */}
+        {import.meta.env.VITE_DEMOS === 'true' && esDemo && (
+          <p style={{
+            margin: '-14px 0 22px', padding: '10px 14px', borderRadius: '12px',
+            background: 'var(--accent)', color: 'var(--on-surface)',
+            fontSize: '0.9rem', fontWeight: 600,
+          }}>
+            Clave de la demostración: <strong>{CODIGO_DEMO}</strong>
+          </p>
+        )}
 
         <form onSubmit={entrar}>
           <input ref={inputRef} type="password" value={code} autoComplete="off"

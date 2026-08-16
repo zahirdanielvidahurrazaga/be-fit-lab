@@ -70,9 +70,9 @@ function Interruptor({ rol, alCambiar }) {
       role="group"
       aria-label="Cambiar de vista en la demostración"
       style={{
-        margin: '8px auto',
+        margin: '10px auto 0',
         display: 'flex', gap: '3px', padding: '5px', borderRadius: '999px',
-        width: 'fit-content',
+        width: 'fit-content', pointerEvents: 'auto',
         background: 'rgba(20,20,20,0.9)', backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)', boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
         // Siete pestañas no caben en un teléfono: la tira se desplaza.
@@ -142,6 +142,10 @@ export default function Demo() {
 
     // La demo se ve siempre en claro: es como se enseña en una junta.
     document.documentElement.setAttribute('data-theme', 'light');
+    // El fondo va en el body, no en el contenedor: ver el comentario del
+    // minHeight más abajo.
+    const fondoPrevio = document.body.style.background;
+    document.body.style.background = 'var(--app-bg)';
     document.title = `${cfg.nombre} — demostración`;
 
     // Una maqueta con el nombre de un negocio real no debe indexarse nunca.
@@ -181,6 +185,7 @@ export default function Demo() {
       document.head.removeChild(meta);
       previos.forEach(([nodo, valor]) => nodo.setAttribute('content', valor ?? ''));
       datosNegocio.forEach((n) => { n.type = 'application/ld+json'; });
+      document.body.style.background = fondoPrevio;
       restaurarEstudio();
       desactivarSupabaseDemo();
     };
@@ -236,13 +241,20 @@ export default function Demo() {
         ref={encabezadoRef}
         style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9500,
-          background: '#141414',
+          // Transparente A PROPÓSITO: si aquí va un color sólido, el cristal de
+          // la barra queda sobre negro y se ve como un bloque, no como cristal.
+          background: 'transparent', pointerEvents: 'none',
         }}
       >
         {selloAbierto && (
           <div style={{
             position: 'relative', padding: '8px 40px 8px 14px', color: '#fff',
             fontSize: '0.74rem', fontWeight: 600, lineHeight: 1.35, textAlign: 'center',
+            background: 'rgba(20, 20, 20, 0.72)',
+            backdropFilter: 'blur(20px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            pointerEvents: 'auto',
           }}>
             Demostración con datos de ejemplo · preparada para <strong>{cfg.nombre}</strong> por Zahir Vidahurrázaga
             <button
@@ -265,7 +277,10 @@ export default function Demo() {
       <div
         onClickCapture={atraparNavegacion}
         style={{
-          minHeight: '100vh', background: 'var(--app-bg)',
+          // ⚠️ SIN minHeight: 100vh. El panel de administración arma su propio
+          // alto de pantalla, y al sumarle este contenedor el área de contenido
+          // COLAPSABA: el sidebar marcaba la pestaña pero no se veía nada. El
+          // fondo lo pinta el <body> (más abajo), no este div.
           paddingTop: `${altoEncabezado}px`,
         }}
       >

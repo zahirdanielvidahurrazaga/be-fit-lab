@@ -34,6 +34,7 @@ export const ESTUDIOS_DEMO = {
     giro: 'Pilates Reformer',
     nombreCafeteria: 'Café Vera',
     nombreNutricion: 'Vera Nutrición',
+    prefijoContrasena: 'Vera',
     ciudad: 'Puebla',
     // ⚠️ La paleta de una maqueta tiene que respetar la LUMINOSIDAD de la de
     // fábrica, no solo el tono: el CSS asume texto oscuro sobre --primary
@@ -89,6 +90,7 @@ export const ESTUDIOS_DEMO = {
       progreso: fondoDemo('#C2D2CB', '#71897E'),
       evolucion: fondoDemo('#BCCFC4', '#6B8577'),
       meta: fondoDemo('#DCD2C0', '#9C8B72'),
+      coach: fondoDemo('#B4C7BC', '#5D7A6C'),
       agenda: fondoDemo('#C9D8CF', '#7B948A'),
       cafeteriaPromo: fondoDemo('#CBBBA6', '#9E8469'),
       galeriaEventos: fondoDemo('#C6D2C0', '#8FA487'),
