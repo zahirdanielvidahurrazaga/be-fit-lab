@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Salad, ChevronLeft, ChevronRight, Flame, CheckCircle2, Circle, Utensils } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { ESTUDIO } from '../config/estudio';
 
 const PRIMARY = '#FF914D';
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -62,7 +63,7 @@ export default function ClientMealPlan({ userId, onOpenRecipe }) {
       {/* Header del plan (real, estilo premium oscuro) */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
         style={{ padding: '24px', borderRadius: '28px', backgroundColor: '#2A1B12', color: 'white', position: 'relative', overflow: 'hidden', minHeight: '150px', boxShadow: '0 18px 38px rgba(58,33,24,0.28)' }}>
-        <img src="/fotos-hero/_DSC3272.jpg" alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%' }} />
+        <img src={ESTUDIO.portadas.nutricion} alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg, rgba(40,26,18,0.92) 0%, rgba(40,26,18,0.66) 50%, rgba(58,33,24,0.32) 100%)', pointerEvents: 'none' }} />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>

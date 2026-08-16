@@ -33,6 +33,7 @@ export const ESTUDIOS_DEMO = {
     nombrePanel: 'Panel Vera',
     giro: 'Pilates Reformer',
     nombreCafeteria: 'Café Vera',
+    nombreNutricion: 'Vera Nutrición',
     ciudad: 'Puebla',
     // ⚠️ La paleta de una maqueta tiene que respetar la LUMINOSIDAD de la de
     // fábrica, no solo el tono: el CSS asume texto oscuro sobre --primary
@@ -75,10 +76,22 @@ export const ESTUDIOS_DEMO = {
     // ⚠️ Las portadas de "Explora" tienen que venir de aquí: las de fábrica son
     // FOTOGRAFÍA DE BE FIT LAB (hay un gorro con su logo bien visible) y
     // enseñarle a otra dueña la marca de su competencia hunde la venta.
+    // TODAS las fotos, no solo las tarjetas: la app usa fotografía del estudio
+    // en la tarjeta de membresía, el pase de clase, Comida, Evolución y la
+    // agenda. Heredarlas le enseñaría a la prospecta el estudio de Be Fit Lab.
     portadas: {
       cafeteria: fondoDemo('#D9C7B2', '#8A6F52'),
       cumpleanos: fondoDemo('#E0BFC6', '#9E6B78'),
       eventos: fondoDemo('#C6D2C0', '#6E8567'),
+      membresia: fondoDemo('#A9BFB1', '#4E6659'),
+      pase: fondoDemo('#B6CDBF', '#5E7A6C'),
+      nutricion: fondoDemo('#D6C9B4', '#8E7A5E'),
+      progreso: fondoDemo('#C2D2CB', '#71897E'),
+      evolucion: fondoDemo('#BCCFC4', '#6B8577'),
+      meta: fondoDemo('#DCD2C0', '#9C8B72'),
+      agenda: fondoDemo('#C9D8CF', '#7B948A'),
+      cafeteriaPromo: fondoDemo('#CBBBA6', '#9E8469'),
+      galeriaEventos: fondoDemo('#C6D2C0', '#8FA487'),
     },
     modulos: {
       cafeteria: true,

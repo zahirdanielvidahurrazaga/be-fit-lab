@@ -453,7 +453,7 @@ export default function ProgressPhotos({ userId }) {
         display: 'flex', alignItems: 'center', color: '#fff',
         boxShadow: '0 22px 46px rgba(58,33,24,0.30)', minHeight: '175px', backgroundColor: '#2a1d16'
       }}>
-        <img src="/fotos-hero/IMG_5378.JPG" alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 35%' }} />
+        <img src={ESTUDIO.portadas.progreso} alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 35%' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(110deg, rgba(26,17,12,0.88) 0%, rgba(40,26,18,0.62) 55%, rgba(58,33,24,0.28) 100%)', pointerEvents: 'none' }}></div>
 
         {/* Contenido texto */}

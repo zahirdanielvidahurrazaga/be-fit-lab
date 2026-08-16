@@ -30,6 +30,8 @@ export const ESTUDIO = {
   // Cómo se llama la cafetería del estudio. "Coffee Lab" es de Be Fit Lab;
   // otro estudio la llamará de otro modo o simplemente "Cafetería".
   nombreCafeteria: 'Coffee Lab',
+  // Título de la sección de Comida. "Healthy Era" es un nombre de Be Fit Lab.
+  nombreNutricion: 'Healthy Era',
   ciudad: 'Puebla',
 
   // ── Datos legales (Términos y Aviso de Privacidad) ─────────────────────────
@@ -75,12 +77,23 @@ export const ESTUDIO = {
     portadaAgenda: '/assets/agenda_lifestyle.png',
   },
 
-  // Fotos de las tarjetas de "Explora" en el portal. Son de este estudio, así
-  // que una maqueta de otro tiene que traer las suyas.
+  // Fotografía del estudio. TODA es de este negocio, así que una maqueta de
+  // otro tiene que traer la suya (o marcadores de posición generados).
   portadas: {
+    // Tarjetas de "Explora" en el portal
     cafeteria: '/fotos-hero/IMG_5410.JPG',
     cumpleanos: '/fotos-hero/cumple.png',
     eventos: '/fotos-hero/_DSC0470.jpg',
+    // Fondos grandes repartidos por la app
+    membresia: '/fotos-hero/_DSC0444.jpg',      // tarjeta de membresía en el portal
+    pase: '/fotos-hero/IMG_5401.JPG',           // pase de clase (NextClassTicket)
+    nutricion: '/fotos-hero/_DSC3272.jpg',      // encabezado de Comida
+    progreso: '/fotos-hero/IMG_5378.JPG',       // fotos de progreso
+    evolucion: '/fotos-hero/IMG_5383.JPG',      // encabezado de Evolución
+    meta: '/fotos-hero/meta.webp',              // meta del mes
+    agenda: '/assets/agenda_lifestyle.png',     // portada de la agenda
+    cafeteriaPromo: '/cafeteria/Promocional.webp',
+    galeriaEventos: '/galeria/evento-4.webp',
   },
 
   // ── Tiendas de aplicaciones ────────────────────────────────────────────────
@@ -202,11 +215,15 @@ export function iniciarMarca() {
 // Por eso se muta el objeto en vez de crear otro: así los ~30 archivos que ya
 // importaron `ESTUDIO` ven el cambio sin tocar ni una línea de ellos. Se guarda
 // un respaldo y se restaura al salir de la demo; recargar también lo resetea.
+// ⚠️ TRAMPA: una constante de MÓDULO que lea de ESTUDIO (const X = ESTUDIO.y)
+// se evalúa al importar el archivo, o sea ANTES de que esto corra, y se queda
+// con el valor de fábrica. Dentro de componentes hay que leer ESTUDIO en el
+// render, no en una constante de arriba. Ya pasó con la foto del pase de clase.
 let respaldoEstudio = null;
 
 const CAMPOS_DE_IDENTIDAD = [
   'nombre', 'nombreMayusculas', 'nombrePanel', 'giro', 'ciudad',
-  'colores', 'coloresOscuro', 'modulos', 'marca', 'portadas', 'nombreCafeteria',
+  'colores', 'coloresOscuro', 'modulos', 'marca', 'portadas', 'nombreCafeteria', 'nombreNutricion',
   'tiendas',
 ];
 

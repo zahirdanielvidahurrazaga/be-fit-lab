@@ -76,10 +76,12 @@ const clienteReal = createClient(finalUrl, finalKey, {
 // pública, así que una prospecta acabaría viendo el MENÚ Y LOS PRECIOS de Be Fit
 // Lab. Se intercepta el cliente solo para `from`, `rpc` y realtime.
 //
-// 🔴 `auth`, `storage` y `functions` NO se interceptan a propósito: si quien
-// enseña la demo tiene su sesión abierta, desviar auth se la rompería.
+// 🔴 `auth` y `storage` NO se interceptan a propósito: si quien enseña la demo
+// tiene su sesión abierta, desviar auth se la rompería.
 let clienteDemo = null;
-const INTERCEPTADO = ['from', 'rpc', 'channel', 'removeChannel', 'removeAllChannels'];
+// `functions` SÍ se intercepta: Cafetería y Eventos invocan cobros de Stripe y
+// avisos push, y una maqueta no debe poder disparar nada de eso de verdad.
+const INTERCEPTADO = ['from', 'rpc', 'channel', 'removeChannel', 'removeAllChannels', 'functions'];
 
 export function activarSupabaseDemo(stub) { clienteDemo = stub; }
 export function desactivarSupabaseDemo() { clienteDemo = null; }

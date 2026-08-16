@@ -305,7 +305,7 @@ function Portal() {
             transition={{ duration: 0.5 }}
             style={{ 
               padding: '24px', borderRadius: '32px', 
-              backgroundImage: `linear-gradient(145deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%), url('/fotos-hero/_DSC0444.jpg')`,
+              backgroundImage: `linear-gradient(145deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%), url('${ESTUDIO.portadas.membresia}')`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               border: 'none',

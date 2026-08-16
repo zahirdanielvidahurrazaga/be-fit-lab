@@ -166,7 +166,7 @@ function Agenda() {
                 borderRadius: '32px', overflow: 'hidden', position: 'relative', 
                 boxShadow: '0 20px 40px rgba(0,0,0,0.1)', height: '200px' 
               }}>
-                <img src="/assets/agenda_lifestyle.png" alt={ESTUDIO.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={ESTUDIO.portadas.agenda} alt={ESTUDIO.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)' }} />
                 <div style={{ position: 'absolute', bottom: '20px', left: '20px', right: '20px' }}>
                    {isNative ? (

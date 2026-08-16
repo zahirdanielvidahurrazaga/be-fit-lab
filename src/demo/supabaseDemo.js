@@ -115,7 +115,23 @@ const canalFalso = {
   unsubscribe() { return Promise.resolve('ok'); },
 };
 
+// Las edge functions NO se pueden dejar pasar: Cafetería y Eventos invocan
+// cobros de Stripe, pedidos en efectivo y `send-push`. Una prospecta jugando
+// con la maqueta podría crear cargos reales o mandarle notificaciones a las
+// baristas de Be Fit Lab. Aquí se simulan y no sale nada a la red.
+const funcionesFalsas = {
+  invoke: async (nombre) => {
+    console.info(`[demo] se simuló la función "${nombre}" (no se llamó a nada real)`);
+    return {
+      data: { demo: true, message: 'Simulado en la demostración' },
+      error: null,
+    };
+  },
+};
+
 export const supabaseDemo = {
+  functions: funcionesFalsas,
+
   from(tabla) {
     const filas = DATOS[tabla] ?? [];
     return {

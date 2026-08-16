@@ -106,7 +106,7 @@ function Nutricion() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
           <div>
             <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 3px', fontWeight: 600 }}>Plan Nutricional</p>
-            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--on-surface)' }}>Healthy Era</h1>
+            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--on-surface)' }}>{ESTUDIO.nombreNutricion}</h1>
           </div>
           <ProfileMenu />
         </div>
@@ -332,7 +332,7 @@ function Nutricion() {
       {!mealPlanAccess && (
         <div style={{ padding: '0 16px', maxWidth: '600px', margin: '0 auto 18px', width: '100%' }}>
           <div style={{ padding: '22px', borderRadius: '24px', backgroundColor: '#2A1B12', color: '#fff', position: 'relative', overflow: 'hidden', boxShadow: '0 18px 38px rgba(58,33,24,0.28)' }}>
-            <img src="/fotos-hero/_DSC3272.jpg" alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 18%' }} />
+            <img src={ESTUDIO.portadas.nutricion} alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 18%' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg, rgba(40,26,18,0.94) 0%, rgba(40,26,18,0.72) 50%, rgba(58,33,24,0.38) 100%)', pointerEvents: 'none' }} />
             <div style={{ position: 'relative', zIndex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>

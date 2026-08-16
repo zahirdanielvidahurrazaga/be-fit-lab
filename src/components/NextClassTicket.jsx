@@ -8,7 +8,10 @@ import { ESTUDIO } from '../config/estudio';
 
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const DAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
-const TICKET_PHOTO = '/fotos-hero/IMG_5401.JPG';
+// Se lee DENTRO del componente, no aquí arriba: una constante de módulo se
+// evalúa al importar, antes de que el modo demo reemplace la identidad activa,
+// y el pase se quedaba con la foto de Be Fit Lab.
+const ticketPhoto = () => ESTUDIO.portadas.pase;
 
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
 
@@ -66,7 +69,7 @@ function TicketPhoto({ children }) {
   return (
     <div style={{
       height: PHOTO_H,
-      backgroundImage: `linear-gradient(150deg, rgba(58,32,22,0.30) 0%, rgba(38,22,16,0.78) 100%), url('${TICKET_PHOTO}')`,
+      backgroundImage: `linear-gradient(150deg, rgba(58,32,22,0.30) 0%, rgba(38,22,16,0.78) 100%), url('${ticketPhoto()}')`,
       backgroundSize: 'cover',
       backgroundPosition: 'center 15%',
       borderRadius: '28px 28px 0 0',

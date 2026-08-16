@@ -596,7 +596,7 @@ export default function Eventos() {
               {next && (
                 <div style={{ background: '#2D2928', borderRadius: '28px', color: '#fff', position: 'relative', overflow: 'hidden', aspectRatio: '1 / 1', boxShadow: '0 24px 50px rgba(0,0,0,0.22)' }}>
                   {/* Foto de eventos de fondo */}
-                  <img src="/galeria/evento-4.webp" alt={`Eventos ${ESTUDIO.nombre}`} loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={ESTUDIO.portadas.galeriaEventos} alt={`Eventos ${ESTUDIO.nombre}`} loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                   {/* Overlay: oscuro arriba/abajo (texto + contador legibles), claro al centro (se ve la foto) */}
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(18,14,11,0.88) 0%, rgba(18,14,11,0.30) 36%, rgba(18,14,11,0.40) 60%, rgba(18,14,11,0.92) 100%)', pointerEvents: 'none' }} />
                   {/* Contenido: título arriba, cuenta regresiva abajo */}

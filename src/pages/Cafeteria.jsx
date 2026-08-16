@@ -410,7 +410,7 @@ function Cafeteria() {
               {(() => {
                 // Portada activa. Si Admin todavía no subió ninguna, se cae a la
                 // que venía empaquetada, para que la sección nunca quede vacía.
-                const cover = covers[coverIndex] || { image_url: '/cafeteria/Promocional.webp', eyebrow: 'Temporada', title: 'Recién hecho\npara ti', cta: 'Pedir Ahora' };
+                const cover = covers[coverIndex] || { image_url: ESTUDIO.portadas.cafeteriaPromo, eyebrow: 'Temporada', title: 'Recién hecho\npara ti', cta: 'Pedir Ahora' };
                 return (
                   <div style={{ position: 'relative', width: '100%', aspectRatio: '4/5', borderRadius: '28px', overflow: 'hidden', background: '#DCD4C7', cursor: 'pointer' }} onClick={() => setActiveTab('order')}>
                     <AnimatePresence mode="wait">
