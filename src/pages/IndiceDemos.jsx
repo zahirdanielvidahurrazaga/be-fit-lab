@@ -120,6 +120,10 @@ export default function IndiceDemos() {
     poner('meta[name="twitter:description"]', resumen);
     poner('meta[name="twitter:image"]', '');
     poner('meta[name="keywords"]', '');
+    poner('meta[property="og:site_name"]', AUTOR);
+    // Los datos estructurados de index.html son de Be Fit Lab: fuera aquí.
+    document.head.querySelectorAll('script[type="application/ld+json"]')
+      .forEach((n) => { n.type = 'application/ld+json-demo-desactivado'; });
   }, []);
 
   return (

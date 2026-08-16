@@ -30,6 +30,42 @@ export const PRODUCTOS_CAFE = [
   { id: 'demo-p6', name: 'Agua de pepino y menta', description: 'Sin azúcar añadida', price: 38, category: 'Bebidas', available: true, image_url: fondo('#CFE0D6', '#9BBCA9'), sort_order: 6 },
 ];
 
+// El panel de administración consulta la base por su cuenta en sus 13
+// sub-pestañas. Estas filas las alimenta la misma semilla que el resto de la
+// maqueta, para que el panel no salga vacío en una junta.
+let SEMILLA = null;
+export function sembrarDesde(datos) { SEMILLA = datos; }
+
+const desdeSemilla = {
+  users: () => [
+    ...(SEMILLA?.clientas || []),
+    ...(SEMILLA?.coaches || []),
+  ],
+  classes: () => SEMILLA?.clases || [],
+  // ⚠️ Las filas llevan `users` ANIDADO: las pantallas piden el join
+  // `users:user_id(...)` y con filas planas la lista de alumnas salía vacía.
+  reservations: () => {
+    const porId = new Map((SEMILLA?.clientas || []).map((c) => [c.id, c]));
+    const conPersona = (r) => ({
+      ...r,
+      users: porId.get(r.user_id)
+        ? { id: r.user_id, full_name: porId.get(r.user_id).full_name,
+            email: porId.get(r.user_id).email, avatar_url: null }
+        : { id: r.user_id, full_name: SEMILLA?.yo?.full_name || 'Clienta',
+            email: SEMILLA?.yo?.email || '', avatar_url: null },
+    });
+    return [
+      ...(SEMILLA?.reservas || []).map((r) => conPersona({
+        id: r.id, class_id: r.classId, user_id: SEMILLA?.yo?.id,
+        status: r.status, checked_in: r.checkedIn, created_at: new Date().toISOString(),
+      })),
+      ...(SEMILLA?.reservasDeOtras || []).map(conPersona),
+    ];
+  },
+  sales: () => SEMILLA?.ventas || [],
+  class_credit_ledger: () => SEMILLA?.movimientos || [],
+};
+
 const DATOS = {
   cafe_products: PRODUCTOS_CAFE,
 
@@ -55,6 +91,15 @@ const DATOS = {
   cafe_loyalty: [{ user_id: 'demo-yo', stamps: 7, gifts_available: 1, total_stamps_earned: 19 }],
 
   cafe_orders: [
+    // Dos en curso: la pantalla de la barra sin pedidos no enseña nada.
+    { id: 'demo-o-a', user_id: 'demo-cliente-2', status: 'paid', total: 146,
+      created_at: new Date(hoy.getTime() - 4 * 60000).toISOString(),
+      client_name: 'Ximena Vega', pickup_time: null, is_gift: false,
+      items: [{ name: 'Matcha latte', qty: 1 }, { name: 'Pan de plátano', qty: 1 }] },
+    { id: 'demo-o-b', user_id: 'demo-cliente-6', status: 'preparing', total: 85,
+      created_at: new Date(hoy.getTime() - 11 * 60000).toISOString(),
+      client_name: 'Mariana Ibarra', pickup_time: null, is_gift: false,
+      items: [{ name: 'Smoothie de frutos rojos', qty: 1 }] },
     { id: 'demo-o-1', user_id: 'demo-yo', status: 'delivered', total: 68, created_at: new Date(hoy.getTime() - 3 * 86400000).toISOString(), items: [{ name: 'Latte de vainilla', qty: 1 }] },
     { id: 'demo-o-2', user_id: 'demo-yo', status: 'delivered', total: 163, created_at: new Date(hoy.getTime() - 9 * 86400000).toISOString(), items: [{ name: 'Bowl de açaí', qty: 1 }, { name: 'Pan de plátano', qty: 1 }] },
   ],
@@ -78,6 +123,14 @@ const DATOS = {
 };
 
 const RPCS = {
+  // El panel de auditoría de saldos: sin descuadres, que es como debe verse un
+  // estudio bien llevado.
+  admin_audit_saldos: [],
+  admin_set_saldo: null,
+  admin_book_class: null,
+  admin_cancel_class: null,
+  admin_issue_event_ticket: null,
+
   get_birthdays: [
     { user_id: 'demo-cliente-1', full_name: 'Valeria Torres', birthday: enDias(2), avatar_url: null },
     { user_id: 'demo-cliente-5', full_name: 'Paulina Cárdenas', birthday: enDias(9), avatar_url: null },
@@ -133,7 +186,7 @@ export const supabaseDemo = {
   functions: funcionesFalsas,
 
   from(tabla) {
-    const filas = DATOS[tabla] ?? [];
+    const filas = desdeSemilla[tabla] ? desdeSemilla[tabla]() : (DATOS[tabla] ?? []);
     return {
       select: () => consulta(filas),
       // Las escrituras no hacen nada: la maqueta se reinicia al recargar.

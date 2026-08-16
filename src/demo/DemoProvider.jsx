@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { generarDatosDemo } from './datosDemo';
-import { PRODUCTOS_CAFE } from './supabaseDemo';
+import { PRODUCTOS_CAFE, sembrarDesde } from './supabaseDemo';
 
 // Fuera del componente a propósito: identidad estable en cada render, para que
 // los efectos que dependan de estas listas no se disparen en bucle.
@@ -20,8 +20,23 @@ const SIN_FAVORITOS = new Set();
 // demo donde los botones no hacen nada no vende. Al recargar vuelve a empezar.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function DemoProvider({ cfg, children }) {
-  const semilla = useMemo(() => generarDatosDemo(cfg), [cfg]);
+// Qué rol ve la app en cada modo de la maqueta.
+const ROL_DE = {
+  clienta: 'CLIENT',
+  recepcion: 'RECEPCION',
+  coach: 'COACH',
+  barista: 'BARISTA',
+  admin: 'ADMIN',
+};
+
+export default function DemoProvider({ cfg, rol = 'clienta', children }) {
+  const semilla = useMemo(() => {
+    const datos = generarDatosDemo(cfg);
+    // El cliente falso de Supabase sirve las tablas del panel desde esta misma
+    // semilla, para que clientas, clases y ventas cuadren en todas las vistas.
+    sembrarDesde(datos);
+    return datos;
+  }, [cfg]);
 
   const [clases, setClases] = useState(semilla.clases);
   const [reservas, setReservas] = useState(semilla.reservas);
@@ -43,12 +58,12 @@ export default function DemoProvider({ cfg, children }) {
 
     // Clase llena: se forma en lista de espera, y NO se le descuenta nada —
     // igual que en el sistema real, donde el cobro ocurre al aceptar el lugar.
-    if (clase.ocupados >= clase.spots) {
+    if (clase.spots <= 0) {
       setEnEspera((p) => ({ ...p, [classId]: Object.keys(p).length + 1 }));
       return { waitlisted: true, position: Object.keys(enEspera).length + 1 };
     }
 
-    setClases((prev) => prev.map((c) => (c.id === classId ? { ...c, ocupados: c.ocupados + 1 } : c)));
+    setClases((prev) => prev.map((c) => (c.id === classId ? { ...c, ocupados: c.ocupados + 1, spots: Math.max(0, c.spots - 1) } : c)));
     setRestantes((n) => n - 1);
     setReservas((prev) => [...prev, {
       id: `demo-reserva-${classId}`,
@@ -74,7 +89,9 @@ export default function DemoProvider({ cfg, children }) {
     const reserva = reservas.find((r) => r.classId === classId || r.id === classId);
     if (!reserva) return { error: 'Reserva no encontrada' };
     setClases((prev) => prev.map((c) => (
-      c.id === reserva.classId ? { ...c, ocupados: Math.max(0, c.ocupados - 1) } : c
+      c.id === reserva.classId
+        ? { ...c, ocupados: Math.max(0, c.ocupados - 1), spots: Math.min(c.max_spots, c.spots + 1) }
+        : c
     )));
     setReservas((prev) => prev.filter((r) => r.id !== reserva.id));
     setRestantes((n) => n + 1);
@@ -96,10 +113,12 @@ export default function DemoProvider({ cfg, children }) {
   const nada = useCallback(async () => ({ success: true }), []);
 
   const valor = useMemo(() => ({
-    // Sesión simulada
-    user: semilla.yo,
-    role: 'CLIENT',
-    profileName: semilla.yo.full_name,
+    // Sesión simulada. El rol lo decide la barra de la maqueta: así una dueña
+    // puede ver su propio panel, el mostrador y la pantalla de la barista sin
+    // salir de la demo ni tener cuentas.
+    user: rol === 'clienta' ? semilla.yo : semilla.staff[rol],
+    role: ROL_DE[rol] || 'CLIENT',
+    profileName: (rol === 'clienta' ? semilla.yo : semilla.staff[rol]).full_name,
     avatarUrl: null,
     loading: false,
 
@@ -149,6 +168,21 @@ export default function DemoProvider({ cfg, children }) {
     favoriteRecipeIds: SIN_FAVORITOS,
     showTour: false,
     setShowTour: () => {},
+    // Lo que pide el panel de administración
+    classTemplates: VACIO,
+    saveTemplate: nada, deleteTemplate: nada, applyTemplate: nada,
+    addCategory: nada, updateCategory: nada, deleteCategory: nada,
+    addClass: nada, deleteClass: nada, updateClass: nada,
+    addMultipleClasses: nada, updateClassSpots: nada,
+    addRecipe: nada, deleteRecipe: nada,
+    assignCustomBadge: nada, removeCustomBadge: nada,
+    createBadgeConfig: nada, updateBadgeConfig: nada, deleteBadgeConfig: nada,
+    createPlan: nada, updatePlan: nada, deletePlan: nada,
+    activatePlan: nada, checkInClient: nada, checkInReservation: nada,
+    fetchAllUsers: nada, fetchGlobalClasses: nada, fetchClassesByDayOfWeek: nada,
+    sendNotification: nada, fetchNotifications: nada, markNotificationsRead: nada,
+    plans: semilla.planes, allPlans: semilla.planes,
+
     monthlyGoal: 12,
     updateMonthlyGoal: nada,
     toggleRecipeFavorite: nada,
@@ -163,7 +197,7 @@ export default function DemoProvider({ cfg, children }) {
 
     // Bandera para que cualquier pantalla pueda saber que está en modo demo
     esDemo: true,
-  }), [semilla, clases, reservas, restantes, enEspera, bookClass, cancelClass, fetchClassReservations, nada]);
+  }), [semilla, rol, clases, reservas, restantes, enEspera, bookClass, cancelClass, fetchClassReservations, nada]);
 
   return <AuthContext.Provider value={valor}>{children}</AuthContext.Provider>;
 }

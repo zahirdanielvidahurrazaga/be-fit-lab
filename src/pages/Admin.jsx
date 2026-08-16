@@ -527,7 +527,7 @@ function Admin({ recepcion = false }) {
       <header className="ios-header mobile-only-header" style={{ background: 'var(--surface-lowest)', paddingBottom: '10px', borderBottom: '1px solid rgba(0,0,0,0.05)', position: 'relative', zIndex: 50 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <div>
-            <h1 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>{recepcion ? ESTUDIO.nombre : 'Gestión Lab'}</h1>
+            <h1 style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>{recepcion ? ESTUDIO.nombre : ESTUDIO.nombrePanel}</h1>
             <p style={{ fontSize: '0.8rem', color: 'var(--primary)', margin: '4px 0 0', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{recepcion ? 'RECEPCIÓN' : 'CONTROL CENTER'}</p>
           </div>
           
@@ -612,7 +612,7 @@ function Admin({ recepcion = false }) {
       {/* DESKTOP SIDEBAR PANEL */}
       <aside className="admin-desktop-sidebar">
         <div className="sidebar-brand">
-          <h1 className="sidebar-title">{recepcion ? ESTUDIO.nombre : 'Gestión Lab'}</h1>
+          <h1 className="sidebar-title">{recepcion ? ESTUDIO.nombre : ESTUDIO.nombrePanel}</h1>
           <p className="sidebar-subtitle">{recepcion ? 'RECEPCIÓN' : 'CONTROL CENTER'}</p>
         </div>
         <nav className="sidebar-nav">

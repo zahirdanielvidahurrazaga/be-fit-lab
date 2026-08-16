@@ -89,8 +89,11 @@ export function generarDatosDemo(cfg) {
     const fecha = new Date(hoy);
     fecha.setDate(hoy.getDate() + dia);
     const diaSemana = fecha.getDay();
-    if (diaSemana === 0) continue;                       // domingo cerrado
-    const horarios = diaSemana === 6 ? cfg.horarios.slice(0, 3) : cfg.horarios;
+    // Sábado y domingo con horario corto en lugar de cerrado: si la maqueta se
+    // abre en fin de semana, las pantallas de coach y mostrador salían vacías.
+    const horarios = diaSemana === 0 ? cfg.horarios.slice(0, 2)
+                   : diaSemana === 6 ? cfg.horarios.slice(0, 3)
+                   : cfg.horarios;
 
     horarios.forEach((hora, h) => {
       const disciplina = cfg.disciplinas[(dia + h) % cfg.disciplinas.length];
@@ -111,7 +114,10 @@ export function generarDatosDemo(cfg) {
         date: iso(fecha),
         day_of_week: diaSemana,
         time: hora,
-        spots: cfg.lugares,
+        // ⚠️ En esta app `spots` son los lugares DISPONIBLES (baja al reservar)
+        // y `max_spots` la capacidad. Llenar los dos con la capacidad hacía que
+        // "alumnas hoy" —que se calcula max_spots - spots— diera siempre 0.
+        spots: cfg.lugares - ocupados,
         max_spots: cfg.lugares,
         ocupados,
         category: disciplina.titulo,
@@ -127,11 +133,11 @@ export function generarDatosDemo(cfg) {
   const manana = iso(new Date(hoy.getTime() + 86400000));
   const claseLlena = clases.find((c) => c.date === manana && c.time === '18:10')
     || clases.find((c) => c.date === manana);
-  if (claseLlena) claseLlena.ocupados = claseLlena.spots;
+  if (claseLlena) { claseLlena.ocupados = claseLlena.max_spots; claseLlena.spots = 0; }
 
   // ── Reservas de la clienta que abre la demo ────────────────────────────────
   const proximas = clases
-    .filter((c) => c.date >= iso(hoy) && c.ocupados < c.spots)
+    .filter((c) => c.date >= iso(hoy) && c.spots > 0)
     .slice(0, 3);
 
   // ⚠️ La forma tiene que ser la MISMA que arma AuthContext (camelCase, con
@@ -155,6 +161,21 @@ export function generarDatosDemo(cfg) {
     calendarEventId: null,
   }));
 
+  // Reservas de OTRAS clientas repartidas por las clases, para que el panel de
+  // la coach y el pase de lista muestren gente y no un cero.
+  const reservasDeOtras = [];
+  clases.forEach((c, i) => {
+    const cuantas = Math.min(c.ocupados, clientas.length);
+    for (let k = 0; k < cuantas; k++) {
+      const cl = clientas[(i + k) % clientas.length];
+      reservasDeOtras.push({
+        id: `demo-res-${c.id}-${k}`, class_id: c.id, user_id: cl.id,
+        status: 'confirmed', checked_in: c.date < iso(hoy),
+        created_at: new Date().toISOString(),
+      });
+    }
+  });
+
   // ── Historial de asistencias (alimenta la gráfica "Tu semana") ─────────────
   const historial = [];
   for (let i = 1; i <= 18; i++) {
@@ -164,7 +185,55 @@ export function generarDatosDemo(cfg) {
     historial.push({ created_at: f.toISOString(), classes: { date: iso(f) } });
   }
 
+  const staff = {
+    recepcion: { id: 'demo-recepcion', full_name: 'Mostrador', role: 'RECEPCION',
+                 email: 'mostrador@ejemplo.mx',
+                 user_metadata: { full_name: 'Mostrador', avatar_url: null } },
+    // La coach de la maqueta es quien da la PRIMERA CLASE DE HOY: si se elige
+    // una fija, cualquier día que no le toque su panel sale en cero y parece
+    // que el sistema no sirve.
+    coach: (() => {
+      const hoyISO = iso(hoy);
+      const suya = clases.find((c) => c.date === hoyISO) || clases[0];
+      const quien = coaches.find((k) => k.id === suya?.coach_id) || coaches[0];
+      return { id: quien?.id || 'demo-coach-0', full_name: quien?.full_name || 'Coach',
+               role: 'COACH', email: 'coach@ejemplo.mx',
+               user_metadata: { full_name: quien?.full_name || 'Coach', avatar_url: null } };
+    })(),
+    barista:   { id: 'demo-barista', full_name: 'Barra', role: 'BARISTA',
+                 email: 'barra@ejemplo.mx',
+                 user_metadata: { full_name: 'Barra', avatar_url: null } },
+    admin:     { id: 'demo-admin', full_name: 'Dirección', role: 'ADMIN',
+                 email: 'direccion@ejemplo.mx',
+                 user_metadata: { full_name: 'Dirección', avatar_url: null } },
+  };
+
+  // Paquetes del estudio, para el panel de membresías y el cobro en mostrador.
+  const planes = [
+    { id: 'demo-pl1', name: 'Paquete 4',  title: '4 clases',  price: 980,  amount: 980,  classes: 4,  active: true, sort_order: 1 },
+    { id: 'demo-pl2', name: 'Paquete 8',  title: '8 clases',  price: 1700, amount: 1700, classes: 8,  active: true, sort_order: 2 },
+    { id: 'demo-pl3', name: 'Paquete 12', title: '12 clases', price: 2300, amount: 2300, classes: 12, active: true, nutrition: true, sort_order: 3 },
+    { id: 'demo-pl4', name: 'Ilimitado',  title: 'Ilimitado', price: 2999, amount: 2999, classes: 9999, unlimited: true, active: true, nutrition: true, mealPlan: true, sort_order: 4 },
+  ];
+
+  // Ventas recientes, para Reportes y el corte del mostrador.
+  const ventas = clientas.slice(0, 9).map((c, i) => {
+    const plan = planes[i % planes.length];
+    const f = new Date(hoy);
+    f.setDate(hoy.getDate() - (i * 2));
+    return {
+      id: `demo-venta-${i}`, user_id: c.id, client_name: c.full_name,
+      client_email: c.email, plan_name: plan.name, amount: plan.price,
+      method: i % 3 === 0 ? 'efectivo' : 'tarjeta',
+      voided: false, created_at: f.toISOString(),
+    };
+  });
+
   return {
+    staff,
+    planes,
+    ventas,
+    reservasDeOtras,
     yo: {
       id: 'demo-yo',
       full_name: `${cfg.clienta.nombre} ${APELLIDOS[0]}`,

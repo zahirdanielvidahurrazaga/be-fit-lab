@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef, useLayoutEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
-import { Smartphone, CalendarDays, TrendingUp, Utensils, Coffee, Sparkles, Cake, X } from 'lucide-react';
+import { Smartphone, ScanLine, Dumbbell, Coffee, LayoutDashboard, X } from 'lucide-react';
 import { estudioDemo } from '../demo/estudiosDemo';
 import { activarEstudioDemo, restaurarEstudio } from '../config/estudio';
 import DemoProvider from '../demo/DemoProvider';
@@ -11,6 +11,10 @@ import Nutricion from './Nutricion';
 import Cafeteria from './Cafeteria';
 import Eventos from './Eventos';
 import Cumpleanos from './Cumpleanos';
+import Coach from './Coach';
+import Recepcion from './Recepcion';
+import Barista from './Barista';
+import Admin from './Admin';
 import { supabaseDemo } from '../demo/supabaseDemo';
 import { EVENTO_NAVEGAR } from '../demo/navegacionDemo';
 import { activarSupabaseDemo, desactivarSupabaseDemo } from '../lib/supabase';
@@ -36,29 +40,31 @@ import { activarSupabaseDemo, desactivarSupabaseDemo } from '../lib/supabase';
 // pasan, porque no sacan de la demo: abren otra pestaña.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const VISTAS = [
-  { id: 'clienta', etiqueta: 'Inicio', Icon: Smartphone },
-  { id: 'agenda', etiqueta: 'Reservar', Icon: CalendarDays },
-  { id: 'metas', etiqueta: 'Progreso', Icon: TrendingUp },
-  { id: 'comida', etiqueta: 'Comida', Icon: Utensils },
-  { id: 'cafe', etiqueta: 'Cafetería', Icon: Coffee },
-  { id: 'eventos', etiqueta: 'Eventos', Icon: Sparkles },
-  { id: 'cumples', etiqueta: 'Cumpleaños', Icon: Cake },
+// La barra cambia de ROL, no de pantalla: antes repetía la navegación que la
+// app ya tiene abajo. Así una dueña ve su panel, el mostrador, la vista de la
+// coach y la de la barista sin salir de la maqueta ni necesitar cuentas.
+const ROLES = [
+  { id: 'clienta',   etiqueta: 'Tu clienta',  Icon: Smartphone },
+  { id: 'recepcion', etiqueta: 'Mostrador',   Icon: ScanLine },
+  { id: 'coach',     etiqueta: 'Coach',       Icon: Dumbbell },
+  { id: 'barista',   etiqueta: 'Barra',       Icon: Coffee },
+  { id: 'admin',     etiqueta: 'Dirección',   Icon: LayoutDashboard },
 ];
 
 // Qué ruta interna abre cada vista. Se usa al atrapar los clics de la barra de
 // navegación, para traducirlos en vez de dejar que saquen de la maqueta.
+// Qué pantalla de la clienta abre cada ruta interna.
 const RUTAS = {
-  '/portal': 'clienta',
+  '/portal': 'portal',
   '/agenda': 'agenda',
-  '/evolucion': 'metas',
-  '/nutricion': 'comida',
-  '/cafeteria': 'cafe',
+  '/evolucion': 'evolucion',
+  '/nutricion': 'nutricion',
+  '/cafeteria': 'cafeteria',
   '/eventos': 'eventos',
-  '/cumpleanos': 'cumples',
+  '/cumpleanos': 'cumpleanos',
 };
 
-function Interruptor({ vista, alCambiar }) {
+function Interruptor({ rol, alCambiar }) {
   return (
     <div
       role="group"
@@ -73,8 +79,8 @@ function Interruptor({ vista, alCambiar }) {
         maxWidth: 'calc(100vw - 24px)', overflowX: 'auto', scrollbarWidth: 'none',
       }}
     >
-      {VISTAS.map((v) => {
-        const activa = vista === v.id;
+      {ROLES.map((v) => {
+        const activa = rol === v.id;
         return (
           <button
             key={v.id}
@@ -106,7 +112,10 @@ export default function Demo() {
   const { estudio } = useParams();
   const cfg = useMemo(() => estudioDemo(estudio), [estudio]);
   const [selloAbierto, setSelloAbierto] = useState(true);
-  const [vista, setVista] = useState('clienta');
+  const [rol, setRol] = useState('clienta');
+  // Solo aplica dentro del rol de clienta: la barra de abajo de la app cambia
+  // esto, y ya no se duplica arriba.
+  const [vista, setVista] = useState('portal');
   // El sello se parte en 2 o 3 renglones en pantallas angostas, así que la
   // altura del encabezado NO se puede adivinar con un número fijo: se mide.
   const encabezadoRef = useRef(null);
@@ -160,10 +169,18 @@ export default function Demo() {
     ponerMeta('meta[name="twitter:description"]', resumen);
     ponerMeta('meta[name="twitter:image"]', cfg.marca?.logo || '');
     ponerMeta('meta[name="keywords"]', '');
+    ponerMeta('meta[property="og:site_name"]', cfg.nombre);
+
+    // index.html trae datos estructurados que declaran a Be Fit Lab como
+    // negocio local, con su dirección y teléfono. En una maqueta de otro
+    // estudio eso no debe existir: se desactiva mientras está abierta.
+    const datosNegocio = [...document.head.querySelectorAll('script[type="application/ld+json"]')];
+    datosNegocio.forEach((n) => { n.type = 'application/ld+json-demo-desactivado'; });
 
     return () => {
       document.head.removeChild(meta);
       previos.forEach(([nodo, valor]) => nodo.setAttribute('content', valor ?? ''));
+      datosNegocio.forEach((n) => { n.type = 'application/ld+json'; });
       restaurarEstudio();
       desactivarSupabaseDemo();
     };
@@ -194,9 +211,9 @@ export default function Demo() {
       const destino = String(e.detail ?? '');
       const vistaDestino = Object.entries(RUTAS)
         .find(([ruta]) => destino.startsWith(ruta))?.[1];
-      // navigate(-1), /registro, /planes y demás: se regresa al portal, que es
+      // navigate(-1), /registro, /planes y demás: se regresa al inicio, que es
       // lo que espera quien le picó a "cerrar".
-      setVista(vistaDestino || 'clienta');
+      setVista(vistaDestino || 'portal');
     };
     window.addEventListener(EVENTO_NAVEGAR, alNavegar);
     return () => window.removeEventListener(EVENTO_NAVEGAR, alNavegar);
@@ -212,7 +229,7 @@ export default function Demo() {
   if (!cfg) return <Navigate to="/" replace />;
 
   return (
-    <DemoProvider cfg={cfg}>
+    <DemoProvider cfg={cfg} rol={rol}>
       {/* Sello e interruptor viven juntos en un bloque fijo, y el contenido se
           baja exactamente lo que ese bloque mide. */}
       <div
@@ -242,7 +259,7 @@ export default function Demo() {
             </button>
           </div>
         )}
-        <Interruptor vista={vista} alCambiar={setVista} />
+        <Interruptor rol={rol} alCambiar={(r) => { setRol(r); setVista('portal'); }} />
       </div>
 
       <div
@@ -252,13 +269,21 @@ export default function Demo() {
           paddingTop: `${altoEncabezado}px`,
         }}
       >
-        {vista === 'clienta' && <Portal />}
-        {vista === 'agenda' && <Agenda />}
-        {vista === 'metas' && <Evolucion />}
-        {vista === 'comida' && <Nutricion />}
-        {vista === 'cafe' && <Cafeteria />}
-        {vista === 'eventos' && <Eventos />}
-        {vista === 'cumples' && <Cumpleanos />}
+        {rol === 'clienta' && (
+          <>
+            {vista === 'portal' && <Portal />}
+            {vista === 'agenda' && <Agenda />}
+            {vista === 'evolucion' && <Evolucion />}
+            {vista === 'nutricion' && <Nutricion />}
+            {vista === 'cafeteria' && <Cafeteria />}
+            {vista === 'eventos' && <Eventos />}
+            {vista === 'cumpleanos' && <Cumpleanos />}
+          </>
+        )}
+        {rol === 'recepcion' && <Recepcion />}
+        {rol === 'coach' && <Coach />}
+        {rol === 'barista' && <Barista />}
+        {rol === 'admin' && <Admin />}
       </div>
 
     </DemoProvider>
