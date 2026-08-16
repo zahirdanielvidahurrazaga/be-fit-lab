@@ -26,7 +26,19 @@ const PALETAS = {
     texto: '#f5f5f7', fuerte: '#ffffff', tenue: '#86868b',
     azul: '#0a84ff', azulHover: '#409cff',
     degradadoTitulo: 'linear-gradient(135deg, #ffffff 0%, #a5a5ac 100%)',
-    sombraTarjeta: 'none',
+    // Cristal y esferas: es lo que hace que el portafolio no se vea plano.
+    cristal: 'rgba(45, 45, 45, 0.6)',
+    cristalBorde: 'rgba(255, 255, 255, 0.1)',
+    sheenTop: 'rgba(255, 255, 255, 0.16)',
+    sheenBottom: 'rgba(255, 255, 255, 0.05)',
+    sheenTopHover: 'rgba(255, 255, 255, 0.24)',
+    sheenBottomHover: 'rgba(255, 255, 255, 0.09)',
+    sombraTarjeta: '0 12px 34px rgba(0, 0, 0, 0.3)',
+    sombraHover: '0 24px 60px rgba(0, 0, 0, 0.45)',
+    glowAzul: 'rgba(10, 132, 255, 0.55)',
+    glowMorado: 'rgba(191, 90, 242, 0.5)',
+    glowIndigo: 'rgba(94, 92, 230, 0.2)',
+    glowOpacidad: 0.75,
   },
   light: {
     fondo: '#ffffff', tarjeta: '#ffffff',
@@ -34,7 +46,18 @@ const PALETAS = {
     texto: '#1d1d1f', fuerte: '#000000', tenue: '#6e6e73',
     azul: '#0071e3', azulHover: '#0056b3',
     degradadoTitulo: 'linear-gradient(135deg, #1d1d1f 0%, #6e6e73 100%)',
-    sombraTarjeta: '0 4px 14px rgba(0,0,0,0.06)',
+    cristal: 'rgba(255, 255, 255, 0.6)',
+    cristalBorde: 'rgba(0, 0, 0, 0.08)',
+    sheenTop: 'rgba(255, 255, 255, 0.85)',
+    sheenBottom: 'rgba(255, 255, 255, 0.35)',
+    sheenTopHover: 'rgba(255, 255, 255, 0.95)',
+    sheenBottomHover: 'rgba(255, 255, 255, 0.5)',
+    sombraTarjeta: '0 12px 34px rgba(0, 0, 0, 0.09)',
+    sombraHover: '0 24px 60px rgba(0, 0, 0, 0.13)',
+    glowAzul: 'rgba(10, 132, 255, 0.46)',
+    glowMorado: 'rgba(191, 90, 242, 0.42)',
+    glowIndigo: 'rgba(94, 92, 230, 0.2)',
+    glowOpacidad: 0.85,
   },
 };
 
@@ -51,23 +74,6 @@ function temaInicial() {
 
 const FUENTE = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', "
   + "Roboto, Helvetica, Arial, sans-serif";
-
-// La marca, tal cual el favicon.svg del portafolio: la Z es un trazo, no texto,
-// para que se vea igual aunque el sistema no tenga SF Pro.
-function MarcaZ({ size = 30 }) {
-  return (
-    <svg viewBox="0 0 512 512" width={size} height={size} aria-hidden="true" style={{ display: 'block' }}>
-      <defs>
-        <linearGradient id="zg-demos" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#0A84FF" />
-          <stop offset="1" stopColor="#0052CC" />
-        </linearGradient>
-      </defs>
-      <rect width="512" height="512" rx="115" fill="url(#zg-demos)" />
-      <path fill="#fff" d="M171.85 365V335.24L282.74 185.52V184.62H174.42V147H337.05V176.69L226.62 326.48V327.38H340.15V365Z" />
-    </svg>
-  );
-}
 
 export default function IndiceDemos() {
   const maquetas = Object.entries(ESTUDIOS_DEMO);
@@ -114,39 +120,92 @@ export default function IndiceDemos() {
     <div style={{ minHeight: '100vh', background: C.fondo, fontFamily: FUENTE }}>
       {/* Los :hover y el degradado sobre texto no se pueden en estilos en línea. */}
       <style>{`
+        /* Las dos esferas del hero del portafolio: radial-gradient enorme con
+           blur(120px) paseándose lento. Es lo que le quita lo plano. */
+        .demos-esfera {
+          position: fixed; top: 0; left: 0; border-radius: 50%;
+          filter: blur(120px); opacity: ${C.glowOpacidad};
+          pointer-events: none; will-change: transform; z-index: 0;
+        }
+        .demos-esfera-a {
+          width: 620px; height: 620px; margin: -310px;
+          background: radial-gradient(circle, ${C.glowAzul} 0%, ${C.glowIndigo} 55%, transparent 72%);
+          animation: demosRoamA 26s ease-in-out infinite;
+        }
+        .demos-esfera-b {
+          width: 680px; height: 680px; margin: -340px;
+          background: radial-gradient(circle, ${C.glowMorado} 0%, ${C.glowIndigo} 55%, transparent 72%);
+          animation: demosRoamB 30s ease-in-out infinite;
+        }
+        @keyframes demosRoamA {
+          0%   { transform: translate(18vw, 28vh); }
+          25%  { transform: translate(72vw, 16vh); }
+          50%  { transform: translate(86vw, 72vh); }
+          75%  { transform: translate(34vw, 82vh); }
+          100% { transform: translate(18vw, 28vh); }
+        }
+        @keyframes demosRoamB {
+          0%   { transform: translate(82vw, 76vh); }
+          25%  { transform: translate(28vw, 84vh); }
+          50%  { transform: translate(16vw, 24vh); }
+          75%  { transform: translate(76vw, 30vh); }
+          100% { transform: translate(82vw, 76vh); }
+        }
         .demos-titulo {
           background: ${C.degradadoTitulo};
           -webkit-background-clip: text;
           background-clip: text;
           color: transparent;
         }
-        .demos-tarjeta { transition: border-color .25s ease, transform .25s ease, box-shadow .25s ease; }
+        .demos-tarjeta {
+          position: relative; overflow: hidden;
+          background: ${C.cristal};
+          backdrop-filter: blur(20px) saturate(180%);
+          -webkit-backdrop-filter: blur(20px) saturate(180%);
+          border: 1px solid ${C.cristalBorde};
+          box-shadow: ${C.sombraTarjeta};
+          transition: border-color .3s ease, transform .3s ease, box-shadow .3s ease;
+        }
+        /* El brillo de arriba: lo que hace que el cristal parezca cristal. */
+        .demos-tarjeta::before {
+          content: ''; position: absolute; inset: 0; border-radius: inherit;
+          background: linear-gradient(180deg, ${C.sheenTop} 0%, ${C.sheenBottom} 40%, transparent 70%);
+          pointer-events: none; transition: background .3s ease;
+        }
         .demos-tarjeta:hover {
           border-color: ${C.azul};
-          transform: translateY(-2px);
+          transform: translateY(-3px);
+          box-shadow: ${C.sombraHover};
         }
+        .demos-tarjeta:hover::before {
+          background: linear-gradient(180deg, ${C.sheenTopHover} 0%, ${C.sheenBottomHover} 40%, transparent 70%);
+        }
+        .demos-tarjeta > * { position: relative; z-index: 1; }
         .demos-tarjeta:focus-visible { outline: 2px solid ${C.azul}; outline-offset: 3px; }
         .demos-flecha { transition: transform .25s ease, background .25s ease; }
         .demos-tarjeta:hover .demos-flecha { transform: translateX(3px); background: ${C.azulHover}; }
         @media (prefers-reduced-motion: reduce) {
           .demos-tarjeta, .demos-flecha { transition: none; }
           .demos-tarjeta:hover { transform: none; }
+          .demos-esfera-a { animation: none; transform: translate(25vw, 30vh); }
+          .demos-esfera-b { animation: none; transform: translate(78vw, 70vh); }
         }
       `}</style>
 
+      <div className="demos-esfera demos-esfera-a" aria-hidden="true" />
+      <div className="demos-esfera demos-esfera-b" aria-hidden="true" />
+
       <div style={{
+        position: 'relative', zIndex: 1,
         maxWidth: '820px', margin: '0 auto',
         padding: 'clamp(28px, 6vw, 76px) clamp(20px, 6vw, 40px) clamp(56px, 9vw, 100px)',
         display: 'flex', flexDirection: 'column', gap: 'clamp(38px, 6vw, 56px)',
       }}>
 
-        {/* Marca */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
-          <MarcaZ />
-          <span style={{ fontSize: '15px', fontWeight: 600, color: C.texto, letterSpacing: '-0.01em' }}>
-            {AUTOR}
-          </span>
-        </div>
+        {/* Marca. Sin el tile de la Z: al lado del nombre repetía lo mismo. */}
+        <span style={{ fontSize: '15px', fontWeight: 600, color: C.texto, letterSpacing: '-0.01em' }}>
+          {AUTOR}
+        </span>
 
         {/* Encabezado */}
         <header style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -176,7 +235,6 @@ export default function IndiceDemos() {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 gap: '18px', padding: 'clamp(18px, 3vw, 24px)', borderRadius: '18px',
-                background: C.tarjeta, border: `1px solid ${C.borde}`, boxShadow: C.sombraTarjeta,
                 textDecoration: 'none', color: 'inherit',
               }}
             >
@@ -196,6 +254,7 @@ export default function IndiceDemos() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: '36px', height: '36px', flexShrink: 0, borderRadius: '999px',
                 background: C.azul, color: '#fff',
+                boxShadow: `0 8px 26px ${C.azul}47`,
               }}>
                 <ArrowRight size={18} strokeWidth={2.5} />
               </span>
