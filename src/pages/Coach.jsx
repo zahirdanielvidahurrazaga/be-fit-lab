@@ -410,7 +410,7 @@ function Coach() {
                 <div style={{ position: 'absolute', top: 0, left: '-100%', width: '50%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)', transform: 'skewX(-20deg)' }} />
                 <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0, paddingTop: '20px', paddingLeft: '20px', paddingRight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(255,139,66,0.18)' }}><img src="/logo2.png" alt={ESTUDIO.nombre} style={{ height: '24px', width: 'auto', objectFit: 'contain', display: 'block' }} /></div>
+                    <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(255,139,66,0.18)' }}><img src={ESTUDIO.marca.logo} alt={ESTUDIO.nombre} style={{ height: '24px', width: 'auto', objectFit: 'contain', display: 'block' }} /></div>
                   </div>
                   <QrCode size={20} color="var(--primary)" opacity={0.8} />
                 </div>
@@ -427,7 +427,7 @@ function Coach() {
                 </div>
               </div>
               <div className="sheet-user-info" style={{ marginTop: '10px' }}>
-                <div className="user-name">{user?.user_metadata?.full_name || 'Coach Be Fit'}</div>
+                <div className="user-name">{user?.user_metadata?.full_name || `Coach ${ESTUDIO.nombre}`}</div>
                 <div>{user?.email}</div>
               </div>
             </motion.div>

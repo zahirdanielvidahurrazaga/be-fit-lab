@@ -197,7 +197,7 @@ const StoryCard = React.forwardRef(({ mode, week, dayData, rangeLabel, theme = '
 
       {/* Footer con logo grande */}
       <div style={{ position: 'relative', textAlign: 'center', marginTop: 16 }}>
-        <img src="/logo2.png" alt="" crossOrigin="anonymous" style={{ height: 104, objectFit: 'contain', filter: T.logoInvert ? 'brightness(0) invert(1)' : 'none' }} />
+        <img src={ESTUDIO.marca.logo} alt="" crossOrigin="anonymous" style={{ height: 104, objectFit: 'contain', filter: T.logoInvert ? 'brightness(0) invert(1)' : 'none' }} />
         <div style={{ fontSize: 26, fontWeight: 700, color: T.accent, marginTop: 2 }}>{ESTUDIO.contacto.instagram}</div>
       </div>
     </div>

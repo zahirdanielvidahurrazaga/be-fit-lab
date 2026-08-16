@@ -33,6 +33,34 @@ function aleatorio(semilla) {
 
 const iso = (d) => d.toISOString().slice(0, 10);
 
+// Recetas de ejemplo. Sin esto la pestaña de Comida sale vacía y esa pantalla
+// no vende nada. Las imágenes son degradados en SVG, no archivos: así ninguna
+// maqueta depende de fotos de otro estudio.
+const fondo = (a, b) => 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="260">`
+  + `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">`
+  + `<stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/>`
+  + `</linearGradient></defs><rect width="400" height="260" fill="url(#g)"/></svg>`);
+
+const RECETAS = [
+  { id: 'demo-r1', title: 'Bowl de yogur griego y frutos rojos', time: 'Desayuno', kcal: 320, time_prep: '10 min',
+    img: fondo('#E8D9C5', '#C9B79C'),
+    ingredients: ['1 taza de yogur griego natural', '1/2 taza de frutos rojos', '2 cdas de granola', '1 cdita de miel', 'Semillas de chía'],
+    steps: ['Sirve el yogur en un tazón hondo.', 'Acomoda encima los frutos rojos.', 'Agrega la granola y las semillas.', 'Termina con un hilo de miel.'] },
+  { id: 'demo-r2', title: 'Ensalada tibia de quinoa y aguacate', time: 'Comida', kcal: 480, time_prep: '25 min',
+    img: fondo('#CBD9C8', '#9FB49B'),
+    ingredients: ['1 taza de quinoa cocida', '1 aguacate en cubos', 'Espinaca baby', 'Jitomate cherry', 'Limón, aceite de oliva y sal'],
+    steps: ['Cuece la quinoa y déjala entibiar.', 'Mezcla con la espinaca y el jitomate.', 'Agrega el aguacate al final para que no se deshaga.', 'Aliña con limón, aceite y sal.'] },
+  { id: 'demo-r3', title: 'Salmón al horno con espárragos', time: 'Cena', kcal: 410, time_prep: '30 min',
+    img: fondo('#E3C9BC', '#BE9A87'),
+    ingredients: ['1 filete de salmón', 'Un manojo de espárragos', 'Ajo picado', 'Limón', 'Aceite de oliva'],
+    steps: ['Precalienta el horno a 200 °C.', 'Acomoda el salmón y los espárragos en una charola.', 'Baña con aceite, ajo y limón.', 'Hornea 18 minutos.'] },
+  { id: 'demo-r4', title: 'Smoothie verde post-clase', time: 'Snack', kcal: 210, time_prep: '5 min',
+    img: fondo('#D3E0D0', '#A7BFA3'),
+    ingredients: ['1 taza de espinaca', '1 plátano congelado', '1/2 taza de piña', 'Agua de coco', 'Proteína de vainilla'],
+    steps: ['Pon todo en la licuadora.', 'Licúa hasta que quede terso.', 'Sirve inmediatamente.'] },
+];
+
 export function generarDatosDemo(cfg) {
   const rnd = aleatorio(20260815);
   const hoy = new Date();
@@ -148,6 +176,7 @@ export function generarDatosDemo(cfg) {
     clases,
     reservas,
     historial,
+    recetas: RECETAS,
     claseLlenaId: claseLlena?.id || null,
     clasesRestantes: cfg.clienta.clasesRestantes,
     plan: cfg.clienta.plan,

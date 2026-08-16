@@ -368,7 +368,7 @@ export default function Landing() {
           transition:'background 0.4s ease, backdrop-filter 0.4s ease, box-shadow 0.4s ease',
         }}>
         <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.97 }} onClick={() => window.scrollTo({ top:0, behavior:'smooth' })} style={{ background:'none', border:'none', cursor:'pointer', padding:0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '70px' }}>
-          <img src="/logo2.png" alt={ESTUDIO.nombre} style={{ height:'100%', width:'auto', objectFit: 'contain' }}/>
+          <img src={ESTUDIO.marca.logo} alt={ESTUDIO.nombre} style={{ height:'100%', width:'auto', objectFit: 'contain' }}/>
         </motion.button>
 
         <div className="desktop-links" style={{ display:'flex', gap:'2rem', alignItems:'center' }}>
@@ -1029,7 +1029,7 @@ export default function Landing() {
         <div style={{ maxWidth:'1200px', margin:'0 auto', position:'relative', zIndex:1 }}>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:'4rem', marginBottom:'5rem' }}>
             <div>
-              <img src="/logo2.png" alt={ESTUDIO.nombre} style={{ height:'48px', width:'auto', marginBottom:'22px', display:'block' }}/>
+              <img src={ESTUDIO.marca.logo} alt={ESTUDIO.nombre} style={{ height:'48px', width:'auto', marginBottom:'22px', display:'block' }}/>
               <p style={{ color:'var(--on-surface-variant)', fontSize:'1rem', lineHeight:1.7, maxWidth:'280px' }}>The glutes specialists. Transformación real a través del movimiento consciente.</p>
               <div style={{ display:'flex', gap:'14px', marginTop:'30px' }}>
                 {[{href:'https://instagram.com/befit.lab', icon:<InstagramIcon size={20} color="var(--primary)"/>},{href:`https://wa.me/${WA_NUMBER}`, icon:<MessageCircle size={20} color="var(--primary)"/>}].map((s,i) => (

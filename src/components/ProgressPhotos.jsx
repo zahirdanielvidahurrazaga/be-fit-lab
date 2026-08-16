@@ -81,7 +81,7 @@ function FlipCard({ label, url, session, angleKey, onDeleteIndividual }) {
         
         {/* Portada (Logo) */}
         <div onClick={() => setFlipped(true)} style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', borderRadius: '14px', overflow: 'hidden', background: 'var(--surface-lowest)', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '14px', boxShadow: '0 8px 32px rgba(0,0,0,0.05)', cursor: 'pointer' }}>
-          <img src="/logo2.png" alt={ESTUDIO.nombre} style={{ width: '65%', objectFit: 'contain', opacity: 0.85, filter: 'drop-shadow(0 4px 12px rgba(255,145,77,0.2))' }} />
+          <img src={ESTUDIO.marca.logo} alt={ESTUDIO.nombre} style={{ width: '65%', objectFit: 'contain', opacity: 0.85, filter: 'drop-shadow(0 4px 12px rgba(255,145,77,0.2))' }} />
           <span style={{ position: 'absolute', bottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontSize: '0.64rem', fontWeight: 700, color: 'var(--on-surface-variant)' }}><Lock size={11} /> {label}</span>
         </div>
 

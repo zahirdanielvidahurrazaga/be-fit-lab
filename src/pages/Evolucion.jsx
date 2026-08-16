@@ -594,7 +594,7 @@ function Evolucion() {
               <div style={{ position: 'absolute', top: 0, left: '-100%', width: '50%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)', transform: 'skewX(-20deg)' }} />
               <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0, paddingTop: '20px', paddingLeft: '20px', paddingRight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(255,139,66,0.18)' }}><img src="/logo2.png" alt={ESTUDIO.nombre} style={{ height: '24px', width: 'auto', objectFit: 'contain', display: 'block' }} /></div>
+                  <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(255,139,66,0.18)' }}><img src={ESTUDIO.marca.logo} alt={ESTUDIO.nombre} style={{ height: '24px', width: 'auto', objectFit: 'contain', display: 'block' }} /></div>
                 </div>
                 <QrCode size={20} color="var(--primary)" opacity={0.8} />
               </div>
@@ -611,7 +611,7 @@ function Evolucion() {
               </div>
             </div>
             <div className="sheet-user-info" style={{ marginTop: '10px', textAlign: 'center' }}>
-              <div className="user-name" style={{ fontWeight: 800 }}>{user?.user_metadata?.full_name || 'Miembro Be Fit'}</div>
+              <div className="user-name" style={{ fontWeight: 800 }}>{user?.user_metadata?.full_name || `Miembro ${ESTUDIO.nombre}`}</div>
               <div style={{ color: 'var(--on-surface-variant)' }}>{user?.email}</div>
             </div>
 
@@ -751,8 +751,8 @@ function Evolucion() {
                     case 'DIFFERENT_COACHES': return `Entrena con ${selectedBadge.rule_value} coaches diferentes.`;
                     case 'WEEKLY_CLASSES': return `Asiste a ${selectedBadge.rule_value} clases en una sola semana.`;
                     case 'PROFILE_COMPLETE': return `Completa tu perfil agregando tu nombre y foto.`;
-                    case 'MANUAL': return `Insignia especial otorgada por el equipo Be Fit.`;
-                    default: return `Participa en la comunidad Be Fit.`;
+                    case 'MANUAL': return `Insignia especial otorgada por el equipo de ${ESTUDIO.nombre}.`;
+                    default: return `Participa en la comunidad de ${ESTUDIO.nombre}.`;
                   }
                 })()}
               </p>

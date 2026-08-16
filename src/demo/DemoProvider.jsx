@@ -2,6 +2,10 @@ import { useState, useMemo, useCallback } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { generarDatosDemo } from './datosDemo';
 
+// Fuera del componente a propósito: identidad estable en cada render, para que
+// los efectos que dependan de estas listas no se disparen en bucle.
+const VACIO = [];
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PROVEEDOR DE LA DEMO
 //
@@ -123,25 +127,34 @@ export default function DemoProvider({ cfg, children }) {
     demoHistorial: semilla.historial,
 
     // Lo que la demo no necesita, pero que la app pide al renderizar
-    badgeConfigs: [],
-    customBadges: [],
-    badgeQueue: [],
+    badgeConfigs: VACIO,
+    customBadges: VACIO,
+    badgeQueue: VACIO,
     dismissBadge: () => {},
-    notifications: [],
+    notifications: VACIO,
     unreadCount: 0,
     notifOpen: false,
     setNotifOpen: () => {},
-    recipes: [],
+    recipes: semilla.recetas,
     recipesLoaded: true,
-    cafeProducts: [],
+    cafeProducts: VACIO,
     cafeProductsLoaded: true,
-    disciplines: [],
+    disciplines: VACIO,
     disciplinesLoaded: true,
-    categories: [],
-    favoriteRecipeIds: [],
+    categories: VACIO,
+    favoriteRecipeIds: VACIO,
     showTour: false,
     setShowTour: () => {},
     monthlyGoal: 12,
+    updateMonthlyGoal: nada,
+    toggleRecipeFavorite: nada,
+    logFood: nada,
+    removeFoodLog: nada,
+    updateCalorieGoal: nada,
+    todayLog: VACIO,
+    todayConsumed: 0,
+    calorieGoal: 1800,
+    planCalories: 1800,
     logout: () => { window.location.href = '/'; },
 
     // Bandera para que cualquier pantalla pueda saber que está en modo demo

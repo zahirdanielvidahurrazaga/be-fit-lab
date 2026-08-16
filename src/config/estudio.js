@@ -195,8 +195,19 @@ let respaldoEstudio = null;
 
 const CAMPOS_DE_IDENTIDAD = [
   'nombre', 'nombreMayusculas', 'nombrePanel', 'giro', 'ciudad',
-  'colores', 'coloresOscuro', 'modulos',
+  'colores', 'coloresOscuro', 'modulos', 'marca',
 ];
+
+// Logotipo tipográfico como SVG en línea. Sirve para las maquetas de venta, que
+// no tienen archivo de logo: se dibuja el nombre del estudio y ya. Devuelve un
+// data URI, así que entra en cualquier <img src> sin tocar quien lo usa.
+export function logoDeTexto(nombre, color = '#111111') {
+  const texto = String(nombre).replace(/[<>&]/g, '');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="260" height="48">`
+    + `<text x="0" y="33" font-family="Helvetica,Arial,sans-serif" font-size="26"`
+    + ` font-weight="700" letter-spacing="0.5" fill="${color}">${texto}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
 
 export function activarEstudioDemo(cfg) {
   if (!respaldoEstudio) {

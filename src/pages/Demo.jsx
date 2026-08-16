@@ -1,11 +1,13 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
-import { Smartphone, CalendarDays, X } from 'lucide-react';
+import { Smartphone, CalendarDays, TrendingUp, Utensils, X } from 'lucide-react';
 import { estudioDemo } from '../demo/estudiosDemo';
 import { activarEstudioDemo, restaurarEstudio } from '../config/estudio';
 import DemoProvider from '../demo/DemoProvider';
 import Portal from './Portal';
 import Agenda from './Agenda';
+import Evolucion from './Evolucion';
+import Nutricion from './Nutricion';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAQUETA DE VENTA
@@ -29,9 +31,20 @@ import Agenda from './Agenda';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const VISTAS = [
-  { id: 'clienta', etiqueta: 'Como tu clienta', Icon: Smartphone },
-  { id: 'agenda', etiqueta: 'Reservar clase', Icon: CalendarDays },
+  { id: 'clienta', etiqueta: 'Inicio', Icon: Smartphone },
+  { id: 'agenda', etiqueta: 'Reservar', Icon: CalendarDays },
+  { id: 'metas', etiqueta: 'Progreso', Icon: TrendingUp },
+  { id: 'comida', etiqueta: 'Comida', Icon: Utensils },
 ];
+
+// Qué ruta interna abre cada vista. Se usa al atrapar los clics de la barra de
+// navegación, para traducirlos en vez de dejar que saquen de la maqueta.
+const RUTAS = {
+  '/portal': 'clienta',
+  '/agenda': 'agenda',
+  '/evolucion': 'metas',
+  '/nutricion': 'comida',
+};
 
 function Interruptor({ arriba, vista, alCambiar }) {
   return (
@@ -118,10 +131,11 @@ export default function Demo() {
     if (!destino.startsWith('/')) return;
     e.preventDefault();
     e.stopPropagation();
-    if (destino.startsWith('/agenda')) setVista('agenda');
-    else if (destino.startsWith('/portal')) setVista('clienta');
-    // Cualquier otra ruta (planes, nutrición, cafetería, términos…) no existe
-    // en la maqueta: se ignora en vez de sacar a la prospecta.
+    const vistaDestino = Object.entries(RUTAS)
+      .find(([ruta]) => destino.startsWith(ruta))?.[1];
+    // Lo que no tiene vista en la maqueta (planes, cafetería, términos…) se
+    // ignora en vez de sacar a la prospecta al sitio real.
+    if (vistaDestino) setVista(vistaDestino);
   };
 
   if (!cfg) return <Navigate to="/" replace />;
@@ -136,7 +150,10 @@ export default function Demo() {
           paddingTop: selloAbierto ? '96px' : '62px',
         }}
       >
-        {vista === 'clienta' ? <Portal /> : <Agenda />}
+        {vista === 'clienta' && <Portal />}
+        {vista === 'agenda' && <Agenda />}
+        {vista === 'metas' && <Evolucion />}
+        {vista === 'comida' && <Nutricion />}
       </div>
 
       <Interruptor arriba={selloAbierto ? '48px' : '14px'} vista={vista} alCambiar={setVista} />

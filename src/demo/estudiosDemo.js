@@ -13,6 +13,8 @@
 // el sello de "maqueta preparada por…" y la página se marque como noindex.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { logoDeTexto } from '../config/estudio';
+
 export const ESTUDIOS_DEMO = {
 
   // La demo permanente y sin riesgo: estudio inventado. Es la que se puede
@@ -24,15 +26,20 @@ export const ESTUDIOS_DEMO = {
     nombrePanel: 'Panel Vera',
     giro: 'Pilates Reformer',
     ciudad: 'Puebla',
+    // ⚠️ La paleta de una maqueta tiene que respetar la LUMINOSIDAD de la de
+    // fábrica, no solo el tono: el CSS asume texto oscuro sobre --primary
+    // (en Be Fit Lab es un naranja claro). Un verde oscuro deja los textos de
+    // las tarjetas de clase ilegibles, aunque el color por sí solo se vea bien.
     colores: {
-      primario: '#5B7B6F',
-      primarioTenue: '#4A6659',
-      primarioVivo: '#3F5A4E',
-      acento: '#D9E2DB',
+      primario: '#8FB5A1',
+      primarioTenue: '#7CA491',
+      primarioVivo: '#6D9583',
+      acento: '#DCE8E1',
       fondo: '#F0EDE7',
       fondoSuave: '#F7F5F1',
       textoTenue: '#5F5A52',
     },
+    marca: { logo: logoDeTexto('Estudio Vera', '#5B7B6F') },
     coloresOscuro: {
       primario: '#7FA394',
       primarioTenue: '#6B8D7E',
@@ -63,7 +70,7 @@ export const ESTUDIOS_DEMO = {
       cafeteria: false,
       eventos: false,
       cumpleanos: false,
-      nutricion: false,
+      nutricion: true,
       evolucion: true,
       fotosProgreso: true,
       insignias: true,

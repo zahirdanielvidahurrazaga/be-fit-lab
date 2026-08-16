@@ -128,7 +128,7 @@ function Welcome() {
               style={{ textAlign: 'center' }}
             >
               <img
-                src="/logo2.png"
+                src={ESTUDIO.marca.logo}
                 alt={ESTUDIO.nombre}
                 style={{ width: '280px', height: 'auto', display: 'block', margin: '0 auto' }}
               />
