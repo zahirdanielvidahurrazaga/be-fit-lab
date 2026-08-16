@@ -52,6 +52,10 @@ export const AuthProvider = ({ children }) => {
   const [cafeProductsLoaded, setCafeProductsLoaded] = useState(false);
   const [disciplinesLoaded, setDisciplinesLoaded] = useState(false);
   const [myReservations, setMyReservations] = useState([]);
+  // ¿El canal de realtime está conectado? Si lo está, no hace falta sondear.
+  const realtimeVivoRef = useRef(false);
+  // Cuánta historia de clases necesita quien está usando la app ahora mismo.
+  const alcanceRef = useRef('publico');
   const [waitlistPositions, setWaitlistPositions] = useState({}); // { classId: posición }
   const [allUsers, setAllUsers] = useState([]);
   const [coaches, setCoaches] = useState([]);
@@ -248,11 +252,10 @@ export const AuthProvider = ({ children }) => {
       if (now - lastRefresh < THROTTLE_MS) return;
       lastRefresh = now;
 
-      // 1. Re-cargar datos públicos (clases/recetas) SIEMPRE, incluso sin sesión.
-      // Así el calendario del sitio web se actualiza al volver a la pestaña aunque
-      // realtime se haya caído (antes esto solo pasaba con sesión iniciada).
-      fetchGlobalClasses();
-      fetchRecipes();
+      // 1. Re-cargar las clases SIEMPRE, incluso sin sesión, para que el
+      // calendario del sitio se actualice al volver a la pestaña aunque
+      // realtime se haya caído. Las recetas ya no: solo las ve quien entra.
+      fetchGlobalClasses(alcanceRef.current);
 
       // 2. Leer la sesión vigente. autoRefreshToken renueva el token si expiró.
       // NO cerramos sesión aquí ante una sesión ausente/errores transitorios
@@ -275,27 +278,37 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const channel = supabase.channel('public:classes:all')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, () => {
-        fetchGlobalClasses();
+        fetchGlobalClasses(alcanceRef.current);
       })
       .subscribe((status) => {
-        // Al (re)conectar el socket sincronizamos clases y recetas. Cubre el
-        // arranque en frío y las reconexiones tras perder red / volver del fondo,
-        // que antes dejaban el calendario vacío hasta recargar la página.
+        // Al (re)conectar el socket sincronizamos clases. Cubre el arranque en
+        // frío y las reconexiones tras perder red / volver del fondo, que antes
+        // dejaban el calendario vacío hasta recargar la página.
+        realtimeVivoRef.current = status === 'SUBSCRIBED';
         if (status === 'SUBSCRIBED') {
-          fetchGlobalClasses();
-          fetchRecipes();
+          fetchGlobalClasses(alcanceRef.current);
         }
       });
     return () => supabase.removeChannel(channel);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Respaldo anti "calendario vacío": si realtime se cae o un evento no llega,
-  // refrescamos las clases cada 60 s mientras la pestaña esté visible. Así el
-  // sitio se auto-sana sin que el usuario tenga que recargar la página.
+  // refrescamos las clases para que el sitio se auto-sane sin recargar.
+  //
+  // 🔴 ESTO COSTABA CASI TODO EL EGRESS. Antes corría CADA 60 SEGUNDOS y sin
+  // filtro: 319 KB por minuto y por pestaña abierta, o sea ~19 MB por hora y
+  // por persona con la app abierta. Con eso solo se iba el presupuesto entero
+  // del plan gratuito.
+  //
+  // Ahora el respaldo solo actúa cuando de verdad hace falta: si el canal de
+  // realtime está conectado, él avisa de los cambios y no hay nada que sondear.
+  // Se sondea únicamente con el canal caído, y cada 5 minutos.
   useEffect(() => {
     const id = setInterval(() => {
-      if (document.visibilityState === 'visible') fetchGlobalClasses();
-    }, 60_000);
+      if (document.visibilityState !== 'visible') return;
+      if (realtimeVivoRef.current) return;   // realtime ya nos mantiene al día
+      fetchGlobalClasses(alcanceRef.current);
+    }, 5 * 60_000);
     return () => clearInterval(id);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -406,14 +419,13 @@ export const AuthProvider = ({ children }) => {
       }
     });
 
-    // Cargar datos globales públicos (disponibles sin sesión)
-    fetchGlobalClasses();
-    fetchRecipes();
-    fetchCafeProducts();
+    // Datos que el SITIO PÚBLICO sí usa (Landing lee clases, coaches,
+    // insignias y planes). Lo demás se pedía también sin sesión y nadie lo
+    // miraba: recetas y menú de cafetería son de clienta con sesión, y las
+    // plantillas y categorías son del panel de administración.
+    fetchGlobalClasses('publico');
     fetchBadgeConfigs();
     fetchCoaches();
-    fetchCategories();
-    fetchTemplates();
     fetchPlans();
 
     return () => subscription.unsubscribe();
@@ -533,15 +545,33 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const fetchGlobalClasses = async () => {
+  // Columnas que la app usa de verdad. `class_date` y `day_of_week` no se leen
+  // en ningún lado y `created_at` tampoco: pedirlas era peso muerto en cada
+  // carga. `select('*')` traía las 20.
+  const COLUMNAS_CLASE = 'id,title,instructor,day,time,level,spots,max_spots,color,'
+    + 'date,category,description,coach_id,category_color,is_special,special_label,special_color';
+
+  // Cuántos días hacia atrás necesita cada quien. Una visitante anónima del
+  // sitio solo va a reservar clases futuras; una clienta necesita unos días de
+  // historia para su resumen; el staff toma lista de fechas pasadas.
+  const DIAS_ATRAS = { publico: 0, cliente: 10, staff: 60 };
+
+  const fetchGlobalClasses = async (alcance = 'publico') => {
     try {
+      const dias = DIAS_ATRAS[alcance] ?? 0;
+      const desde = new Date();
+      desde.setDate(desde.getDate() - dias);
+      const desdeISO = desde.toISOString().slice(0, 10);
+
       const { data, error } = await supabase
         .from('classes')
-        .select('*')
+        .select(COLUMNAS_CLASE)
+        // Las clases sin fecha son plantillas recurrentes: van siempre.
+        .or(`date.is.null,date.gte.${desdeISO}`)
         .order('date', { ascending: true, nullsFirst: false })
         .order('day', { ascending: true })
         .order('time', { ascending: true });
-        
+
       if (data) {
         setGlobalClasses(data);
       }
@@ -695,7 +725,7 @@ export const AuthProvider = ({ children }) => {
       const { error } = await supabase.from('class_categories').update({ name: name.trim(), color }).eq('id', id);
       if (error) return { success: false, error };
       await supabase.from('classes').update({ category: name.trim(), category_color: color }).eq('category', oldName);
-      await Promise.all([fetchCategories(), fetchGlobalClasses()]);
+      await Promise.all([fetchCategories(), fetchGlobalClasses(alcanceRef.current)]);
       return { success: true };
     } catch (err) { return { success: false, error: err }; }
   };
@@ -982,7 +1012,15 @@ export const AuthProvider = ({ children }) => {
         setMembershipStatus('INACTIVE');
         setClassesRemaining(0);
       } else if (userData) {
-        setRole((userData.role || 'CLIENT').toUpperCase());
+        const rol = (userData.role || 'CLIENT').toUpperCase();
+        setRole(rol);
+        // El staff toma lista de fechas pasadas; una clienta solo necesita unos
+        // días de historia. Se recarga una vez, al saber quién es.
+        const alcance = ['ADMIN', 'COACH', 'RECEPCION', 'BARISTA'].includes(rol) ? 'staff' : 'cliente';
+        if (alcanceRef.current !== alcance) {
+          alcanceRef.current = alcance;
+          fetchGlobalClasses(alcance);
+        }
         setPlan(userData.membership_plan);
         setMembershipStatus(userData.membership_status || 'INACTIVE');
         setPlanStartedAt(userData.plan_started_at || null);
@@ -1104,7 +1142,7 @@ export const AuthProvider = ({ children }) => {
   // así que no es fiable como única fuente. Esto se dispara una vez por login
   // desde fetchUserData (después de que el query a `users` ya pasó RLS).
   const loadSharedData = () => {
-    fetchGlobalClasses();
+    fetchGlobalClasses(alcanceRef.current);
     fetchRecipes();
     fetchCafeProducts();
     fetchBadgeConfigs();
@@ -1263,7 +1301,7 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error("Error reservando clase:", err);
       // Rollback
-      fetchGlobalClasses();
+      fetchGlobalClasses(alcanceRef.current);
       fetchUserData(user);
       return false;
     }
@@ -1330,7 +1368,7 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (err) {
       console.error("Error cancelando reserva:", err);
-      fetchGlobalClasses();
+      fetchGlobalClasses(alcanceRef.current);
       fetchUserData(user);
       return { success: false, reason: 'error' };
     }
