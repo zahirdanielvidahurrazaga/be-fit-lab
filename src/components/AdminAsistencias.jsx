@@ -45,16 +45,42 @@ function SummaryCard({ label, value, color }) {
 export default function AdminAsistencias() {
   const { globalClasses } = useAuth();
   const [date, setDate] = useState(localToday());
+  // Clases del día traídas a propósito cuando la fecha elegida cae fuera de la
+  // ventana que carga el contexto. Sin esto, abrir una fecha vieja mostraba el
+  // pase de lista VACÍO: el contexto solo trae ~60 días de historia para no
+  // reventar el egress, y este selector no tiene tope hacia atrás.
+  // Guarda la fecha junto con las filas: así nunca se pinta el día equivocado
+  // si la respuesta llega tarde.
+  const [clasesDelDia, setClasesDelDia] = useState(null);
   const [rosters, setRosters] = useState({}); // class_id -> [{ id, name, avatar, checkedIn }]
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
   const [onlyAttended, setOnlyAttended] = useState(false);
 
   const dow = new Date(date + 'T12:00:00').getDay();
-  const dayClasses = useMemo(() => (globalClasses || [])
-    .filter(c => c.date === date || (!c.date && c.day === dow))
-    .sort((a, b) => timeToMin(a.time) - timeToMin(b.time)),
+
+  const enContexto = useMemo(() => (globalClasses || [])
+    .filter(c => c.date === date || (!c.date && c.day === dow)),
     [globalClasses, date, dow]);
+
+  // Si el día elegido no aparece en lo que ya tiene el contexto, se piden esas
+  // clases directamente. Es una consulta de un solo día, no pesa nada.
+  useEffect(() => {
+    if (enContexto.length > 0) return;   // el contexto ya lo tiene
+    let vivo = true;
+    supabase
+      .from('classes')
+      .select('id,title,instructor,time,level,spots,max_spots,color,date,day,category,category_color,coach_id,is_special,special_label,special_color')
+      .eq('date', date)
+      .then(({ data }) => { if (vivo) setClasesDelDia({ fecha: date, filas: data || [] }); });
+    return () => { vivo = false; };
+  }, [date, enContexto.length]);
+
+  const dayClasses = useMemo(() => {
+    const traidas = clasesDelDia?.fecha === date ? clasesDelDia.filas : [];
+    return [...(enContexto.length > 0 ? enContexto : traidas)]
+      .sort((a, b) => timeToMin(a.time) - timeToMin(b.time));
+  }, [enContexto, clasesDelDia, date]);
 
   // Reservas + check-in de las clases del día (con datos de la alumna).
   useEffect(() => {

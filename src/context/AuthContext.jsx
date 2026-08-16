@@ -300,15 +300,24 @@ export const AuthProvider = ({ children }) => {
   // por persona con la app abierta. Con eso solo se iba el presupuesto entero
   // del plan gratuito.
   //
-  // Ahora el respaldo solo actúa cuando de verdad hace falta: si el canal de
-  // realtime está conectado, él avisa de los cambios y no hay nada que sondear.
-  // Se sondea únicamente con el canal caído, y cada 5 minutos.
+  // Ahora el respaldo tiene dos velocidades:
+  //   · Canal caído  → cada 5 min, que es cuando de verdad hace falta.
+  //   · Canal arriba → cada 20 min de todos modos. Un canal puede reportarse
+  //     SUBSCRIBED y aun así dejar de entregar eventos; si el respaldo
+  //     dependiera solo del estado del canal, ese caso no se corregiría nunca.
+  //
+  // Costo: antes eran 319 KB cada minuto (~19 MB/hora por pestaña). Ahora, en
+  // el caso normal, 65 KB cada 20 min ≈ 195 KB/hora. Un 1% de lo anterior,
+  // conservando la red de seguridad.
   useEffect(() => {
+    let ultimo = 0;
     const id = setInterval(() => {
       if (document.visibilityState !== 'visible') return;
-      if (realtimeVivoRef.current) return;   // realtime ya nos mantiene al día
+      const espera = realtimeVivoRef.current ? 20 * 60_000 : 5 * 60_000;
+      if (Date.now() - ultimo < espera) return;
+      ultimo = Date.now();
       fetchGlobalClasses(alcanceRef.current);
-    }, 5 * 60_000);
+    }, 60_000);
     return () => clearInterval(id);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
