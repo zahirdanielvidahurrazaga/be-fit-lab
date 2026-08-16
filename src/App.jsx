@@ -9,7 +9,14 @@ import { supabase } from './lib/supabase';
 // Code-splitting por ruta: cada página se descarga solo cuando se visita.
 // Esto reduce drásticamente el JS del primer load (antes todo iba en un bundle).
 const Landing = lazy(() => import('./pages/Landing'));
-const Demo = lazy(() => import('./pages/Demo'));
+
+// ── Maquetas de venta ────────────────────────────────────────────────────────
+// Solo se compilan cuando VITE_DEMOS=true. El despliegue del estudio cliente va
+// SIN esa variable, así que su app no carga ni un byte de código de demo y la
+// ruta /demo ni siquiera existe ahí. Como la condición es una constante que
+// Vite resuelve al compilar, el bundler elimina el import dinámico completo.
+const DEMOS_ACTIVAS = import.meta.env.VITE_DEMOS === 'true';
+const Demo = DEMOS_ACTIVAS ? lazy(() => import('./pages/Demo')) : null;
 const Agenda = lazy(() => import('./pages/Agenda'));
 const Evolucion = lazy(() => import('./pages/Evolucion'));
 const Nutricion = lazy(() => import('./pages/Nutricion'));
@@ -219,8 +226,9 @@ function App() {
           <Route path="/terminos" element={<Terminos />} />
           <Route path="/agenda" element={<Agenda />} />
           {/* Maqueta de venta: la app con la marca de otro estudio y datos en
-              memoria. No toca Supabase ni pide cuenta. */}
-          <Route path="/demo/:estudio" element={<Demo />} />
+              memoria. No toca Supabase ni pide cuenta. Solo existe en el
+              despliegue de demos (VITE_DEMOS=true). */}
+          {DEMOS_ACTIVAS && <Route path="/demo/:estudio" element={<Demo />} />}
           {moduloActivo('cafeteria') && <Route path="/cafeteria" element={<Cafeteria />} />}
           {/* Evento abierto al público: cualquiera aparta lugar sin cuenta, y el
               boleto se consulta con su código (link del correo). */}

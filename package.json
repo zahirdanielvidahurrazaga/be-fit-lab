@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:demos": "vite --mode demos",
+    "build:demos": "vite build --mode demos"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.2.0",
