@@ -13,15 +13,14 @@ import { Capacitor } from '@capacitor/core';
 import ProfileMenu from '../components/ProfileMenu';
 import { hasNutritionAccess } from '../lib/plans';
 import { ESTUDIO, moduloActivo } from '../config/estudio';
+import { crearIrA } from '../demo/navegacionDemo';
 
 function Portal() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
   const { user, plan, logout, classesRemaining, myReservations, waitlistPositions, cancelClass, acceptOffer, profileName, globalClasses, avatarUrl, setShowTour, coaches, badgeConfigs, classesLoaded, demoHistorial, esDemo } = useAuth();
-  // En la maqueta de venta no se navega a rutas reales: sacaría a la prospecta
-  // de la demo y la dejaría en el sitio de Be Fit Lab. Los <Link> los atrapa
-  // Demo.jsx en captura; estos son los saltos por código.
-  const irA = (ruta) => { if (!esDemo) navigate(ruta); };
+  // Dentro de la maqueta, navegar a una ruta real sacaría a la prospecta.
+  const irA = crearIrA(navigate, esDemo);
   
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
@@ -360,7 +359,7 @@ function Portal() {
             <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '15px', fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Explora</h2>
             <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '6px', marginLeft: '-5px', paddingLeft: '5px', paddingRight: '5px' }}>
               {tarjetasExplora.map(c => (
-                <motion.div key={c.to} data-tour={`explora-${c.to.slice(1)}`} onClick={() => navigate(c.to)} whileTap={{ scale: 0.97 }}
+                <motion.div key={c.to} data-tour={`explora-${c.to.slice(1)}`} onClick={() => irA(c.to)} whileTap={{ scale: 0.97 }}
                   style={{ flex: '0 0 auto', width: '210px', height: '250px', borderRadius: '26px', cursor: 'pointer', position: 'relative', overflow: 'hidden', backgroundImage: `${c.overlay}, url('${c.img}')`, backgroundSize: 'cover', backgroundPosition: 'center', padding: '18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 14px 34px rgba(0,0,0,0.18)' }}>
                   <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: 'rgba(255,255,255,0.20)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <c.Icon size={24} color="#fff" strokeWidth={2} />

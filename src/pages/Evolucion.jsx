@@ -14,6 +14,7 @@ import ProfileMenu from '../components/ProfileMenu';
 import ProgressPhotos from '../components/ProgressPhotos';
 import BasculaBLE from '../components/BasculaBLE';
 import { ESTUDIO } from '../config/estudio';
+import { crearIrA } from '../demo/navegacionDemo';
 
 const isNative = Capacitor.isNativePlatform();
 
@@ -23,7 +24,9 @@ const badgeItem = { hidden: { opacity: 0, y: 18, scale: 0.8 }, visible: { opacit
 
 function Evolucion() {
   const navigate = useNavigate();
-  const { user, plan, classesRemaining, avatarUrl, customBadges, badgeConfigs, profileName, monthlyGoal, updateMonthlyGoal } = useAuth();
+  const { user, plan, classesRemaining, avatarUrl, customBadges, badgeConfigs, profileName, monthlyGoal, updateMonthlyGoal, esDemo} = useAuth();
+  // Dentro de la maqueta, navegar a una ruta real sacaría a la prospecta.
+  const irA = crearIrA(navigate, esDemo);
   const [showQR, setShowQR] = useState(false);
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);

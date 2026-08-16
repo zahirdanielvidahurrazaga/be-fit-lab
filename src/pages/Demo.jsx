@@ -12,6 +12,7 @@ import Cafeteria from './Cafeteria';
 import Eventos from './Eventos';
 import Cumpleanos from './Cumpleanos';
 import { supabaseDemo } from '../demo/supabaseDemo';
+import { EVENTO_NAVEGAR } from '../demo/navegacionDemo';
 import { activarSupabaseDemo, desactivarSupabaseDemo } from '../lib/supabase';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -185,6 +186,21 @@ export default function Demo() {
     // ignora en vez de sacar a la prospecta al sitio real.
     if (vistaDestino) setVista(vistaDestino);
   };
+
+  // Las pantallas que navegan por código (cerrar la cafetería, volver desde
+  // eventos) avisan por aquí en vez de salirse de la maqueta.
+  useEffect(() => {
+    const alNavegar = (e) => {
+      const destino = String(e.detail ?? '');
+      const vistaDestino = Object.entries(RUTAS)
+        .find(([ruta]) => destino.startsWith(ruta))?.[1];
+      // navigate(-1), /registro, /planes y demás: se regresa al portal, que es
+      // lo que espera quien le picó a "cerrar".
+      setVista(vistaDestino || 'clienta');
+    };
+    window.addEventListener(EVENTO_NAVEGAR, alNavegar);
+    return () => window.removeEventListener(EVENTO_NAVEGAR, alNavegar);
+  }, []);
 
   useLayoutEffect(() => {
     const medir = () => setAltoEncabezado(encabezadoRef.current?.offsetHeight ?? 56);

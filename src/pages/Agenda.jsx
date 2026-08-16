@@ -17,13 +17,14 @@ import { NextClassTicket } from '../components/NextClassTicket';
 import { ClassListSkeleton } from '../components/Skeleton';
 import ClassmatesList from '../components/ClassmatesList';
 import { ESTUDIO } from '../config/estudio';
+import { crearIrA } from '../demo/navegacionDemo';
 
 function Agenda() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
   const { user, plan, classesRemaining, bookClass, globalClasses, updateReservationCalendarId, avatarUrl, coaches, badgeConfigs, myReservations, classesLoaded, planExpiresAt, esDemo } = useAuth();
-  // Ver el comentario de Portal: en la maqueta no se salta a rutas reales.
-  const irA = (ruta) => { if (!esDemo) navigate(ruta); };
+  // Dentro de la maqueta, navegar a una ruta real sacaría a la prospecta.
+  const irA = crearIrA(navigate, esDemo);
   
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
@@ -63,7 +64,7 @@ function Agenda() {
   // validaciones para reservar se hacen al tocar "Reservar".
   const handleReserveClick = (classObj, dateStr) => {
     if (!user) {
-      navigate(isNative ? '/login' : '/planes');
+      irA(isNative ? '/login' : '/planes');
       return;
     }
     const dt = classDateTime(dateStr, classObj?.time);

@@ -10,6 +10,7 @@ import { supabase, errorDeFuncion } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { uploadImage } from '../lib/cafeImage';
 import { ESTUDIO } from '../config/estudio';
+import { crearIrA } from '../demo/navegacionDemo';
 
 const PRIMARY = '#FF914D';
 // Liquid glass (theme-aware vía --glass-bg/--glass-border de index.css)
@@ -422,7 +423,9 @@ function EventCard({ ev, registered, onOpen }) {
 
 export default function Eventos() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, esDemo} = useAuth();
+  // Dentro de la maqueta, navegar a una ruta real sacaría a la prospecta.
+  const irA = crearIrA(navigate, esDemo);
   const [events, setEvents] = useState(null);
   const [regs, setRegs] = useState(new Set());
   const [selected, setSelected] = useState(null);
@@ -566,7 +569,7 @@ export default function Eventos() {
   return (
     <div className="mobile-app-container" style={{ background: 'var(--app-bg)', minHeight: '100vh' }}>
       <header className="ios-header" style={{ background: 'transparent', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <button onClick={() => { if (selected) setSelected(null); else if (window.history.length > 1) navigate(-1); else navigate('/portal'); }} aria-label="Volver"
+        <button onClick={() => { if (selected) setSelected(null); else if (window.history.length > 1) irA(-1); else irA('/portal'); }} aria-label="Volver"
           style={{ width: '40px', height: '40px', borderRadius: '50%', ...glass, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, color: 'var(--on-surface)' }}>
           <ChevronLeft size={20} />
         </button>

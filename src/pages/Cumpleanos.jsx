@@ -6,6 +6,7 @@ import { Capacitor } from '@capacitor/core';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ESTUDIO } from '../config/estudio';
+import { crearIrA } from '../demo/navegacionDemo';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']; // lunes primero
@@ -280,7 +281,9 @@ export function BirthdayCalendar({ people: peopleProp = null, currentUserId = nu
 function Cumpleanos() {
   const navigate = useNavigate();
   const isNative = Capacitor.isNativePlatform();
-  const { user } = useAuth();
+  const { user, esDemo} = useAuth();
+  // Dentro de la maqueta, navegar a una ruta real sacaría a la prospecta.
+  const irA = crearIrA(navigate, esDemo);
 
   const [people, setPeople] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -348,7 +351,7 @@ function Cumpleanos() {
     <div className="mobile-app-container" style={{ background: 'var(--app-bg)', minHeight: '100vh' }}>
       <header className="ios-header" style={{ paddingBottom: '5px', background: 'transparent' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
-          <button onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/portal'); }} aria-label="Volver"
+          <button onClick={() => { if (window.history.length > 1) irA(-1); else irA('/portal'); }} aria-label="Volver"
             style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: 'var(--surface-lowest)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
             <ChevronLeft size={22} color="var(--on-surface)" />
           </button>
@@ -372,7 +375,7 @@ function Cumpleanos() {
               <Cake size={40} color="#FF914D" style={{ marginBottom: '12px' }} />
               <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--black)' }}>¿Cuándo es tu cumple?</h2>
               <p style={{ margin: '0 0 18px', fontSize: '0.9rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>Agrégalo en tu perfil y te preparamos una sorpresa 🎉</p>
-              <button onClick={() => navigate('/mi-cuenta')} style={{ background: '#FF914D', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '16px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 20px rgba(255,145,77,0.35)' }}>Agregar mi cumpleaños</button>
+              <button onClick={() => irA('/mi-cuenta')} style={{ background: '#FF914D', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '16px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 20px rgba(255,145,77,0.35)' }}>Agregar mi cumpleaños</button>
             </div>
           ) : countdown?.isToday ? (
             <div style={collageCard}>

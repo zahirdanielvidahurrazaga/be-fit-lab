@@ -13,6 +13,7 @@ import CalorieTracker from '../components/CalorieTracker';
 import { RecipeGridSkeleton } from '../components/Skeleton';
 import { hasMealPlanAccess } from '../lib/plans';
 import { ESTUDIO } from '../config/estudio';
+import { crearIrA } from '../demo/navegacionDemo';
 
 // Tipos de comida (mismo orden que en el panel de admin) para filtrar recetas
 const MEAL_TIMES = ['Desayuno', 'Snack AM', 'Comida', 'Snack PM', 'Cena'];
@@ -20,7 +21,9 @@ const MEAL_TIMES = ['Desayuno', 'Snack AM', 'Comida', 'Snack PM', 'Cena'];
 function Nutricion() {
   const navigate = useNavigate();
   const { user, plan, recipes, recipesLoaded, classesRemaining, avatarUrl,
-    favoriteRecipeIds, toggleRecipeFavorite, logFood } = useAuth();
+    favoriteRecipeIds, toggleRecipeFavorite, logFood, esDemo} = useAuth();
+  // Dentro de la maqueta, navegar a una ruta real sacaría a la prospecta.
+  const irA = crearIrA(navigate, esDemo);
   // Plan alimenticio personalizado solo para Fit y Premium; los demás ven recetas.
   const mealPlanAccess = hasMealPlanAccess(plan);
   const [showRecipe, setShowRecipe] = useState(false);
@@ -340,7 +343,7 @@ function Nutricion() {
               <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.72)', lineHeight: 1.5, margin: '0 0 16px' }}>
                 Mejora tu membresía para que tu coach te diseñe un plan a la medida, mes con mes.
               </p>
-              <button onClick={() => navigate('/planes')} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '12px 18px', borderRadius: '14px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer', boxShadow: '0 10px 24px rgba(255,145,77,0.35)' }}>
+              <button onClick={() => irA('/planes')} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '12px 18px', borderRadius: '14px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer', boxShadow: '0 10px 24px rgba(255,145,77,0.35)' }}>
                 Ver planes <ChevronRight size={17} />
               </button>
             </div>

@@ -13,6 +13,7 @@ import CafeOrderHistory from '../components/CafeOrderHistory';
 import { CafeMenuSkeleton } from '../components/Skeleton';
 import { resolveCafeImage } from '../lib/cafeImage';
 import { ESTUDIO } from '../config/estudio';
+import { crearIrA } from '../demo/navegacionDemo';
 
 // Los assets locales del catálogo (PNG/WebP con fondo blanco) necesitan multiply
 // para integrarse; las fotos subidas desde Admin son JPEG y van con blend normal.
@@ -38,7 +39,9 @@ const CafeImage = ({ src, alt }) => {
 
 function Cafeteria() {
   const navigate = useNavigate();
-  const { user, cafeProducts, cafeProductsLoaded } = useAuth();
+  const { user, cafeProducts, cafeProductsLoaded, esDemo} = useAuth();
+  // Dentro de la maqueta, navegar a una ruta real sacaría a la prospecta.
+  const irA = crearIrA(navigate, esDemo);
   const isNative = Capacitor.isNativePlatform();
 
   const getGreeting = () => {
@@ -368,7 +371,7 @@ function Cafeteria() {
             {/* Header del Home (Rediseñado - Saludo Arriba a la Derecha) */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
               <div style={{ paddingTop: '6px' }}>
-                <button onClick={() => navigate(user ? '/portal' : '/')} style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#fff', border: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,0,0,0.04)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform='scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
+                <button onClick={() => irA(user ? '/portal' : '/')} style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#fff', border: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,0,0,0.04)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform='scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
                   <ChevronLeft size={22} color="#2B211C" />
                 </button>
               </div>
@@ -623,7 +626,7 @@ function Cafeteria() {
                   </div>
                   <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', color: '#fff', marginBottom: '12px', letterSpacing: '-0.02em' }}>Coffee Lab Rewards</h1>
                   <p style={{ color: 'rgba(255,255,255,0.6)', margin: '0 auto 30px', fontSize: '0.95rem', maxWidth: '300px', lineHeight: 1.5 }}>Únete y recibe un regalo sorpresa cada 12 compras.</p>
-                  <button onClick={() => { localStorage.setItem('befit_redirect_after_auth', '/cafeteria'); navigate('/registro'); }} style={{ padding: '16px 36px', borderRadius: '100px', background: '#FF914D', color: '#fff', fontWeight: 800, fontSize: '1rem', border: 'none', cursor: 'pointer', boxShadow: '0 10px 25px rgba(255,145,77,0.4)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform='scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
+                  <button onClick={() => { localStorage.setItem('befit_redirect_after_auth', '/cafeteria'); irA('/registro'); }} style={{ padding: '16px 36px', borderRadius: '100px', background: '#FF914D', color: '#fff', fontWeight: 800, fontSize: '1rem', border: 'none', cursor: 'pointer', boxShadow: '0 10px 25px rgba(255,145,77,0.4)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform='scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
                     Crear cuenta
                   </button>
                 </div>
@@ -737,10 +740,10 @@ function Cafeteria() {
               </div>
               <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.55rem', margin: '0 0 8px', color: '#1A1C1E' }}>Crea tu cuenta para pedir</h2>
               <p style={{ margin: '0 0 24px', fontSize: '0.95rem', color: '#6B7280', lineHeight: 1.5 }}>Es gratis y rápido — no necesitas membresía. Así puedes seguir tu pedido en vivo y recibir avisos cuando esté listo.</p>
-              <button onClick={() => { localStorage.setItem('befit_redirect_after_auth', '/cafeteria'); localStorage.setItem('befit_cafe_resume', '1'); navigate('/registro'); }} style={{ width: '100%', padding: '15px', borderRadius: '16px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 25px rgba(255,145,77,0.35)', marginBottom: '10px' }}>
+              <button onClick={() => { localStorage.setItem('befit_redirect_after_auth', '/cafeteria'); localStorage.setItem('befit_cafe_resume', '1'); irA('/registro'); }} style={{ width: '100%', padding: '15px', borderRadius: '16px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 25px rgba(255,145,77,0.35)', marginBottom: '10px' }}>
                 Registrarme
               </button>
-              <button onClick={() => { localStorage.setItem('befit_redirect_after_auth', '/cafeteria'); localStorage.setItem('befit_cafe_resume', '1'); navigate('/login'); }} style={{ width: '100%', padding: '13px', borderRadius: '16px', border: '1.5px solid rgba(0,0,0,0.12)', background: '#fff', color: '#1A1C1E', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>
+              <button onClick={() => { localStorage.setItem('befit_redirect_after_auth', '/cafeteria'); localStorage.setItem('befit_cafe_resume', '1'); irA('/login'); }} style={{ width: '100%', padding: '13px', borderRadius: '16px', border: '1.5px solid rgba(0,0,0,0.12)', background: '#fff', color: '#1A1C1E', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>
                 Ya tengo cuenta
               </button>
             </motion.div>
