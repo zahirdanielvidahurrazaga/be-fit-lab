@@ -151,7 +151,7 @@ export default function Demo() {
       previos.push([nodo, nodo.getAttribute('content')]);
       nodo.setAttribute('content', valor);
     };
-    const resumen = `Demostración de la app de ${cfg.nombre}, preparada por Zahir Vidahurrazaga.`;
+    const resumen = `Demostración de la app de ${cfg.nombre}, preparada por Zahir Vidahurrázaga.`;
     ponerMeta('meta[name="description"]', resumen);
     ponerMeta('meta[property="og:title"]', `${cfg.nombre} — demostración`);
     ponerMeta('meta[property="og:description"]', resumen);
@@ -227,7 +227,7 @@ export default function Demo() {
             position: 'relative', padding: '8px 40px 8px 14px', color: '#fff',
             fontSize: '0.74rem', fontWeight: 600, lineHeight: 1.35, textAlign: 'center',
           }}>
-            Demostración con datos de ejemplo · preparada para <strong>{cfg.nombre}</strong> por Zahir Vidahurrazaga
+            Demostración con datos de ejemplo · preparada para <strong>{cfg.nombre}</strong> por Zahir Vidahurrázaga
             <button
               type="button"
               onClick={() => setSelloAbierto(false)}
