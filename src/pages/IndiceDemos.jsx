@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import { ESTUDIOS_DEMO } from '../demo/estudiosDemo';
+import { SECTORES, TOTAL_DEMOS, destinoDe } from '../demo/catalogo';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PORTADA DEL DESPLIEGUE DE MAQUETAS
@@ -9,6 +9,13 @@ import { ESTUDIOS_DEMO } from '../demo/estudiosDemo';
 // Solo existe cuando VITE_DEMOS=true. Ocupa la raíz de ese dominio para que, si
 // una prospecta borra el path del link que le mandaste, NO aterrice en el sitio
 // de Be Fit Lab —la marca de su competencia— sino en algo tuyo.
+//
+// Es el centro de TODAS las demos, por sector, no solo las de pilates. Lo que
+// se muestra sale de `catalogo.js`; aquí no hay nada escrito a mano.
+//
+// ⚠️ Esta página es para quien llega en frío o pide "ver ejemplos". El link que
+// le mandas a una prospecta debe ir DIRECTO a su maqueta: un menú donde tiene
+// que elegir convierte peor que ver su propio negocio de entrada.
 //
 // El estilo es el MISMO del portafolio (github.com/zahirdanielvidahurrazaga/
 // Portafolio): negro Apple, azul #0A84FF, SF Pro y el tile con la Z. Una
@@ -76,7 +83,6 @@ const FUENTE = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI',
   + "Roboto, Helvetica, Arial, sans-serif";
 
 export default function IndiceDemos() {
-  const maquetas = Object.entries(ESTUDIOS_DEMO);
   const [tema, setTema] = useState(temaInicial);
   const C = PALETAS[tema];
 
@@ -102,15 +108,15 @@ export default function IndiceDemos() {
   // reemplazan, o la pestaña y la vista previa al compartir el link saldrían
   // con el nombre y la foto de un estudio que no es el tuyo.
   useEffect(() => {
-    document.title = `${AUTOR} — apps para estudios de pilates y gimnasios`;
-    const resumen = 'Reservas, lista de espera automática, check-in con QR y '
-      + 'cobros. Cada estudio tiene su app, con su marca.';
+    document.title = `${AUTOR} — demostraciones`;
+    const resumen = 'Apps y sitios web a la medida para negocios. Recorre las '
+      + 'demostraciones con datos de ejemplo, sin registrarte.';
     const poner = (sel, valor) => document.head.querySelector(sel)?.setAttribute('content', valor);
     poner('meta[name="description"]', resumen);
-    poner('meta[property="og:title"]', `${AUTOR} — apps para estudios`);
+    poner('meta[property="og:title"]', `${AUTOR} — demostraciones`);
     poner('meta[property="og:description"]', resumen);
     poner('meta[property="og:image"]', '');
-    poner('meta[name="twitter:title"]', `${AUTOR} — apps para estudios`);
+    poner('meta[name="twitter:title"]', `${AUTOR} — demostraciones`);
     poner('meta[name="twitter:description"]', resumen);
     poner('meta[name="twitter:image"]', '');
     poner('meta[name="keywords"]', '');
@@ -213,54 +219,81 @@ export default function IndiceDemos() {
             margin: 0, fontSize: 'clamp(32px, 6vw, 54px)', fontWeight: 700,
             letterSpacing: '-0.03em', lineHeight: 1.06, textWrap: 'balance',
           }}>
-            Apps para estudios de pilates y gimnasios
+            Apps, sitios web y software a la medida
           </h1>
           <p style={{
             margin: 0, maxWidth: '56ch', fontSize: 'clamp(16px, 2.2vw, 19px)',
             lineHeight: 1.55, color: C.tenue, fontWeight: 400,
           }}>
-            Reservas, lista de espera que llena las clases sola, check-in con QR y
-            cobros. Cada estudio tiene su propia app, con su marca y en su propia
-            cuenta de las tiendas. Aquí puedes recorrer una demostración completa.
+            Cada negocio recibe lo suyo: su marca, su forma de trabajar y su
+            propia cuenta en las tiendas. Aquí puedes recorrer{' '}
+            {TOTAL_DEMOS === 1 ? 'una demostración completa' : `${TOTAL_DEMOS} demostraciones completas`}{' '}
+            con datos de ejemplo, sin registrarte.
           </p>
         </header>
 
-        {/* Maquetas */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {maquetas.map(([clave, cfg]) => (
-            <Link
-              key={clave}
-              to={`/demo/${clave}`}
-              className="demos-tarjeta"
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                gap: '18px', padding: 'clamp(18px, 3vw, 24px)', borderRadius: '18px',
-                textDecoration: 'none', color: 'inherit',
-              }}
-            >
-              <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: 0 }}>
-                <span style={{
-                  fontSize: 'clamp(17px, 2.4vw, 20px)', fontWeight: 600,
-                  color: C.fuerte, letterSpacing: '-0.015em',
-                }}>
-                  {cfg.nombre}
-                </span>
-                <span style={{ fontSize: '14.5px', color: C.tenue, lineHeight: 1.45 }}>
-                  {cfg.giro} · {cfg.ciudad}
-                  {cfg.esReal ? '' : ' · estudio de ejemplo'}
-                </span>
-              </span>
-              <span className="demos-flecha" aria-hidden="true" style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: '36px', height: '36px', flexShrink: 0, borderRadius: '999px',
-                background: C.azul, color: '#fff',
-                boxShadow: `0 8px 26px ${C.azul}47`,
+        {/* Demos agrupadas por sector. Todo sale de catalogo.js. */}
+        {SECTORES.map((sector) => (
+          <section key={sector.id} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <h2 style={{
+                margin: 0, fontSize: 'clamp(19px, 2.6vw, 23px)', fontWeight: 600,
+                color: C.fuerte, letterSpacing: '-0.018em',
               }}>
-                <ArrowRight size={18} strokeWidth={2.5} />
-              </span>
-            </Link>
-          ))}
-        </div>
+                {sector.titulo}
+              </h2>
+              <p style={{ margin: 0, fontSize: '15px', lineHeight: 1.5, color: C.tenue, maxWidth: '58ch' }}>
+                {sector.descripcion}
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {sector.demos.map((demo) => {
+                const destino = destinoDe(demo);
+                const externa = demo.tipo === 'externa';
+                const contenido = (
+                  <>
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: 0 }}>
+                      <span style={{
+                        fontSize: 'clamp(17px, 2.4vw, 20px)', fontWeight: 600,
+                        color: C.fuerte, letterSpacing: '-0.015em',
+                      }}>
+                        {demo.nombre}
+                      </span>
+                      <span style={{ fontSize: '14.5px', color: C.tenue, lineHeight: 1.45 }}>
+                        {demo.detalle}{demo.nota ? ` · ${demo.nota}` : ''}
+                      </span>
+                    </span>
+                    <span className="demos-flecha" aria-hidden="true" style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: '36px', height: '36px', flexShrink: 0, borderRadius: '999px',
+                      background: C.azul, color: '#fff',
+                      boxShadow: `0 8px 26px ${C.azul}47`,
+                    }}>
+                      <ArrowRight size={18} strokeWidth={2.5} />
+                    </span>
+                  </>
+                );
+                const estilo = {
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  gap: '18px', padding: 'clamp(18px, 3vw, 24px)', borderRadius: '18px',
+                  textDecoration: 'none', color: 'inherit',
+                };
+                // Las externas viven en otro despliegue: <a> normal, no <Link>.
+                return externa ? (
+                  <a key={demo.nombre} href={destino} target="_blank" rel="noopener noreferrer"
+                     className="demos-tarjeta" style={estilo}>
+                    {contenido}
+                  </a>
+                ) : (
+                  <Link key={demo.nombre} to={destino} className="demos-tarjeta" style={estilo}>
+                    {contenido}
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        ))}
 
         <p style={{
           margin: 0, paddingTop: '26px', borderTop: `1px solid ${C.bordeSuave}`,
