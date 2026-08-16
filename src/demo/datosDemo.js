@@ -170,6 +170,12 @@ export function generarDatosDemo(cfg) {
       full_name: `${cfg.clienta.nombre} ${APELLIDOS[0]}`,
       email: `${cfg.clienta.nombre.toLowerCase()}@ejemplo.mx`,
       role: 'CLIENT',
+      // Varias pantallas (Cafetería entre ellas) saludan leyendo de aquí y no
+      // de profileName: sin esto sale "Buenas tardes, Cliente".
+      user_metadata: {
+        full_name: `${cfg.clienta.nombre} ${APELLIDOS[0]}`,
+        avatar_url: null,
+      },
     },
     clientas,
     coaches,

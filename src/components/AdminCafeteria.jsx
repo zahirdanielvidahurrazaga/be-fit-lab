@@ -5,10 +5,11 @@ import { useAuth } from '../context/AuthContext';
 import AdminCafeOptions from './AdminCafeOptions';
 import AdminCafeCovers from './AdminCafeCovers';
 import { uploadCafeImage, resolveCafeImage } from '../lib/cafeImage';
+import { ESTUDIO } from '../config/estudio';
 
 const CATEGORIES = [
   { value: 'coffee', label: 'Ice Coffee' },
-  { value: 'smoothie', label: 'Coffee Lab & Smoothies' },
+  { value: 'smoothie', label: `${ESTUDIO.nombreCafeteria} & Smoothies` },
   { value: 'temporada', label: 'Bebidas de Temporada' },
 ];
 

@@ -58,7 +58,7 @@ const nativeStorage = {
 // se cerraba la sesión sola. `processLock` es el lock EN MEMORIA que Supabase
 // recomienda para móvil: serializa las operaciones en una cola de promesas
 // (sin navigator.locks, así no se cuelga). En web mantenemos el lock por defecto.
-export const supabase = createClient(finalUrl, finalKey, {
+const clienteReal = createClient(finalUrl, finalKey, {
   auth: {
     storage: isNative ? nativeStorage : window.localStorage,
     persistSession: true,
@@ -69,6 +69,28 @@ export const supabase = createClient(finalUrl, finalKey, {
     ...(isNative ? { lock: processLock } : {}),
   },
 })
+
+// ── Modo demo ────────────────────────────────────────────────────────────────
+// Las maquetas de venta (/demo/...) no deben tocar la base real: Cafetería hace
+// 19 consultas directas y Eventos 14, y varias de esas tablas tienen lectura
+// pública, así que una prospecta acabaría viendo el MENÚ Y LOS PRECIOS de Be Fit
+// Lab. Se intercepta el cliente solo para `from`, `rpc` y realtime.
+//
+// 🔴 `auth`, `storage` y `functions` NO se interceptan a propósito: si quien
+// enseña la demo tiene su sesión abierta, desviar auth se la rompería.
+let clienteDemo = null;
+const INTERCEPTADO = ['from', 'rpc', 'channel', 'removeChannel', 'removeAllChannels'];
+
+export function activarSupabaseDemo(stub) { clienteDemo = stub; }
+export function desactivarSupabaseDemo() { clienteDemo = null; }
+
+export const supabase = new Proxy(clienteReal, {
+  get(destino, prop) {
+    const fuente = (clienteDemo && INTERCEPTADO.includes(prop)) ? clienteDemo : destino;
+    const valor = fuente[prop];
+    return typeof valor === 'function' ? valor.bind(fuente) : valor;
+  },
+});
 
 // Patrón recomendado por Supabase para móvil: pausar el auto-refresh del token
 // cuando la app pasa a SEGUNDO PLANO y reanudarlo al VOLVER. Si un refresh queda
@@ -81,8 +103,8 @@ export const supabase = createClient(finalUrl, finalKey, {
 // expirado se renueva al instante (serializado por processLock).
 if (isNative) {
   CapApp.addListener('appStateChange', ({ isActive }) => {
-    if (isActive) supabase.auth.startAutoRefresh();
-    else supabase.auth.stopAutoRefresh();
+    if (isActive) clienteReal.auth.startAutoRefresh();
+    else clienteReal.auth.stopAutoRefresh();
   });
 }
 

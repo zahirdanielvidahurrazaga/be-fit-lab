@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef, useLayoutEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
-import { Smartphone, CalendarDays, TrendingUp, Utensils, X } from 'lucide-react';
+import { Smartphone, CalendarDays, TrendingUp, Utensils, Coffee, Sparkles, Cake, X } from 'lucide-react';
 import { estudioDemo } from '../demo/estudiosDemo';
 import { activarEstudioDemo, restaurarEstudio } from '../config/estudio';
 import DemoProvider from '../demo/DemoProvider';
@@ -8,6 +8,11 @@ import Portal from './Portal';
 import Agenda from './Agenda';
 import Evolucion from './Evolucion';
 import Nutricion from './Nutricion';
+import Cafeteria from './Cafeteria';
+import Eventos from './Eventos';
+import Cumpleanos from './Cumpleanos';
+import { supabaseDemo } from '../demo/supabaseDemo';
+import { activarSupabaseDemo, desactivarSupabaseDemo } from '../lib/supabase';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAQUETA DE VENTA
@@ -35,6 +40,9 @@ const VISTAS = [
   { id: 'agenda', etiqueta: 'Reservar', Icon: CalendarDays },
   { id: 'metas', etiqueta: 'Progreso', Icon: TrendingUp },
   { id: 'comida', etiqueta: 'Comida', Icon: Utensils },
+  { id: 'cafe', etiqueta: 'Cafetería', Icon: Coffee },
+  { id: 'eventos', etiqueta: 'Eventos', Icon: Sparkles },
+  { id: 'cumples', etiqueta: 'Cumpleaños', Icon: Cake },
 ];
 
 // Qué ruta interna abre cada vista. Se usa al atrapar los clics de la barra de
@@ -44,20 +52,24 @@ const RUTAS = {
   '/agenda': 'agenda',
   '/evolucion': 'metas',
   '/nutricion': 'comida',
+  '/cafeteria': 'cafe',
+  '/eventos': 'eventos',
+  '/cumpleanos': 'cumples',
 };
 
-function Interruptor({ arriba, vista, alCambiar }) {
+function Interruptor({ vista, alCambiar }) {
   return (
     <div
       role="group"
       aria-label="Cambiar de vista en la demostración"
       style={{
-        position: 'fixed', top: arriba, left: '50%', transform: 'translateX(-50%)',
-        transition: 'top .2s ease',
-        display: 'flex', gap: '4px', padding: '5px', borderRadius: '999px',
-        background: 'rgba(20,20,20,0.88)', backdropFilter: 'blur(12px)',
+        margin: '8px auto',
+        display: 'flex', gap: '3px', padding: '5px', borderRadius: '999px',
+        width: 'fit-content',
+        background: 'rgba(20,20,20,0.9)', backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)', boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
-        zIndex: 9000,
+        // Siete pestañas no caben en un teléfono: la tira se desplaza.
+        maxWidth: 'calc(100vw - 24px)', overflowX: 'auto', scrollbarWidth: 'none',
       }}
     >
       {VISTAS.map((v) => {
@@ -68,17 +80,20 @@ function Interruptor({ arriba, vista, alCambiar }) {
             type="button"
             onClick={() => alCambiar(v.id)}
             aria-pressed={activa}
+            title={v.etiqueta}
             style={{
-              display: 'flex', alignItems: 'center', gap: '7px',
-              padding: '9px 15px', borderRadius: '999px', border: 'none',
-              cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700,
+              display: 'flex', alignItems: 'center', gap: activa ? '6px' : '0',
+              padding: activa ? '8px 14px' : '8px 11px', borderRadius: '999px',
+              border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700,
               background: activa ? '#fff' : 'transparent',
-              color: activa ? '#141414' : 'rgba(255,255,255,0.75)',
-              transition: 'background .18s ease, color .18s ease',
+              color: activa ? '#141414' : 'rgba(255,255,255,0.72)',
+              transition: 'background .18s ease, color .18s ease, padding .18s ease',
+              flexShrink: 0, whiteSpace: 'nowrap',
             }}
           >
-            <v.Icon size={15} strokeWidth={2.5} />
-            {v.etiqueta}
+            <v.Icon size={16} strokeWidth={2.5} />
+            {/* El texto solo en la activa: así las siete caben en un teléfono. */}
+            {activa && v.etiqueta}
           </button>
         );
       })}
@@ -91,11 +106,21 @@ export default function Demo() {
   const cfg = useMemo(() => estudioDemo(estudio), [estudio]);
   const [selloAbierto, setSelloAbierto] = useState(true);
   const [vista, setVista] = useState('clienta');
+  // El sello se parte en 2 o 3 renglones en pantallas angostas, así que la
+  // altura del encabezado NO se puede adivinar con un número fijo: se mide.
+  const encabezadoRef = useRef(null);
+  const [altoEncabezado, setAltoEncabezado] = useState(56);
 
   // Se reemplaza la identidad activa DURANTE el render, no en un efecto: los
   // efectos corren después de que los hijos ya se pintaron, y Portal alcanzaría
   // a dibujarse una vez con el nombre y los colores de Be Fit Lab.
-  useMemo(() => { if (cfg) activarEstudioDemo(cfg); }, [cfg]);
+  useMemo(() => {
+    if (!cfg) return;
+    activarEstudioDemo(cfg);
+    // Antes del primer render: si Cafetería o Eventos alcanzan a consultar la
+    // base real, le enseñan a la prospecta el menú y los precios de Be Fit Lab.
+    activarSupabaseDemo(supabaseDemo);
+  }, [cfg]);
 
   useEffect(() => {
     if (!cfg) return;
@@ -103,6 +128,7 @@ export default function Demo() {
     // Se reactiva aquí además del useMemo de arriba: en desarrollo StrictMode
     // monta, limpia y vuelve a montar, y la limpieza restaura la marca de casa.
     activarEstudioDemo(cfg);
+    activarSupabaseDemo(supabaseDemo);
 
     // La demo se ve siempre en claro: es como se enseña en una junta.
     document.documentElement.setAttribute('data-theme', 'light');
@@ -114,9 +140,31 @@ export default function Demo() {
     meta.content = 'noindex, nofollow';
     document.head.appendChild(meta);
 
+    // Las etiquetas de index.html son de Be Fit Lab. Si el link de la maqueta se
+    // comparte por WhatsApp —que es justo como se va a mandar— la vista previa
+    // saldría con el nombre, la descripción y la foto de la competencia.
+    const previos = [];
+    const ponerMeta = (selector, valor) => {
+      const nodo = document.head.querySelector(selector);
+      if (!nodo) return;
+      previos.push([nodo, nodo.getAttribute('content')]);
+      nodo.setAttribute('content', valor);
+    };
+    const resumen = `Demostración de la app de ${cfg.nombre}, preparada por Zahir Vidahurrazaga.`;
+    ponerMeta('meta[name="description"]', resumen);
+    ponerMeta('meta[property="og:title"]', `${cfg.nombre} — demostración`);
+    ponerMeta('meta[property="og:description"]', resumen);
+    ponerMeta('meta[property="og:image"]', cfg.marca?.logo || '');
+    ponerMeta('meta[name="twitter:title"]', `${cfg.nombre} — demostración`);
+    ponerMeta('meta[name="twitter:description"]', resumen);
+    ponerMeta('meta[name="twitter:image"]', cfg.marca?.logo || '');
+    ponerMeta('meta[name="keywords"]', '');
+
     return () => {
       document.head.removeChild(meta);
+      previos.forEach(([nodo, valor]) => nodo.setAttribute('content', valor ?? ''));
       restaurarEstudio();
+      desactivarSupabaseDemo();
     };
   }, [cfg]);
 
@@ -138,53 +186,65 @@ export default function Demo() {
     if (vistaDestino) setVista(vistaDestino);
   };
 
+  useLayoutEffect(() => {
+    const medir = () => setAltoEncabezado(encabezadoRef.current?.offsetHeight ?? 56);
+    medir();
+    window.addEventListener('resize', medir);
+    return () => window.removeEventListener('resize', medir);
+  }, [selloAbierto, cfg]);
+
   if (!cfg) return <Navigate to="/" replace />;
 
   return (
     <DemoProvider cfg={cfg}>
-      {/* El sello y el interruptor son fijos: la app se baja lo que miden. */}
+      {/* Sello e interruptor viven juntos en un bloque fijo, y el contenido se
+          baja exactamente lo que ese bloque mide. */}
+      <div
+        ref={encabezadoRef}
+        style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9500,
+          background: '#141414',
+        }}
+      >
+        {selloAbierto && (
+          <div style={{
+            position: 'relative', padding: '8px 40px 8px 14px', color: '#fff',
+            fontSize: '0.74rem', fontWeight: 600, lineHeight: 1.35, textAlign: 'center',
+          }}>
+            Demostración con datos de ejemplo · preparada para <strong>{cfg.nombre}</strong> por Zahir Vidahurrazaga
+            <button
+              type="button"
+              onClick={() => setSelloAbierto(false)}
+              aria-label="Ocultar el aviso de demostración"
+              style={{
+                position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)',
+                cursor: 'pointer', padding: '4px', display: 'flex',
+              }}
+            >
+              <X size={15} />
+            </button>
+          </div>
+        )}
+        <Interruptor vista={vista} alCambiar={setVista} />
+      </div>
+
       <div
         onClickCapture={atraparNavegacion}
         style={{
           minHeight: '100vh', background: 'var(--app-bg)',
-          paddingTop: selloAbierto ? '96px' : '62px',
+          paddingTop: `${altoEncabezado}px`,
         }}
       >
         {vista === 'clienta' && <Portal />}
         {vista === 'agenda' && <Agenda />}
         {vista === 'metas' && <Evolucion />}
         {vista === 'comida' && <Nutricion />}
+        {vista === 'cafe' && <Cafeteria />}
+        {vista === 'eventos' && <Eventos />}
+        {vista === 'cumples' && <Cumpleanos />}
       </div>
 
-      <Interruptor arriba={selloAbierto ? '48px' : '14px'} vista={vista} alCambiar={setVista} />
-
-      {selloAbierto && (
-        <div
-          style={{
-            position: 'fixed', top: 0, left: 0, right: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-            padding: '8px 44px 8px 16px', background: '#141414', color: '#fff',
-            fontSize: '0.74rem', fontWeight: 600, letterSpacing: '0.01em',
-            zIndex: 9500, textAlign: 'center',
-          }}
-        >
-          <span>
-            Demostración con datos de ejemplo · preparada para <strong>{cfg.nombre}</strong> por Zahir Vidahurrazaga
-          </span>
-          <button
-            type="button"
-            onClick={() => setSelloAbierto(false)}
-            aria-label="Ocultar el aviso de demostración"
-            style={{
-              position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-              background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)',
-              cursor: 'pointer', padding: '4px', display: 'flex',
-            }}
-          >
-            <X size={15} />
-          </button>
-        </div>
-      )}
     </DemoProvider>
   );
 }

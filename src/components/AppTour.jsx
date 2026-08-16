@@ -33,7 +33,7 @@ const TOUR_STEPS = [
   },
   {
     icon: <Coffee size={38} color="var(--primary)" />,
-    title: 'Coffee Lab ☕',
+    title: `${ESTUDIO.nombreCafeteria} ☕`,
     description: 'Pide café, smoothies y snacks desde la app y págalos con un toque. ¡Pásalos a recoger!',
     selector: '[data-tour="explora-cafeteria"]',
   },

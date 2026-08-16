@@ -1,10 +1,14 @@
 import { useState, useMemo, useCallback } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { generarDatosDemo } from './datosDemo';
+import { PRODUCTOS_CAFE } from './supabaseDemo';
 
 // Fuera del componente a propósito: identidad estable en cada render, para que
 // los efectos que dependan de estas listas no se disparen en bucle.
 const VACIO = [];
+// ⚠️ favoriteRecipeIds es un Set en AuthContext, no un arreglo: Nutrición hace
+// .has() y pasarle [] tumbaba React entero al abrir la pestaña de Comida.
+const SIN_FAVORITOS = new Set();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PROVEEDOR DE LA DEMO
@@ -137,12 +141,12 @@ export default function DemoProvider({ cfg, children }) {
     setNotifOpen: () => {},
     recipes: semilla.recetas,
     recipesLoaded: true,
-    cafeProducts: VACIO,
+    cafeProducts: PRODUCTOS_CAFE,
     cafeProductsLoaded: true,
     disciplines: VACIO,
     disciplinesLoaded: true,
     categories: VACIO,
-    favoriteRecipeIds: VACIO,
+    favoriteRecipeIds: SIN_FAVORITOS,
     showTour: false,
     setShowTour: () => {},
     monthlyGoal: 12,

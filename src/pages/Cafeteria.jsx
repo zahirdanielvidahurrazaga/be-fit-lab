@@ -117,7 +117,7 @@ function Cafeteria() {
   const TABS = [
     { key: 'temporada', label: 'Especiales', items: temporadaItems },
     { key: 'coffee', label: 'Ice Coffee', items: coffeeItems },
-    { key: 'smoothie', label: 'Coffee Lab', items: smoothieItems },
+    { key: 'smoothie', label: ESTUDIO.nombreCafeteria, items: smoothieItems },
   ];
   const visibleTabs = TABS.filter(t => t.items.length > 0);
   const [activeCat, setActiveCat] = useState('temporada');
@@ -394,7 +394,7 @@ function Cafeteria() {
                   <Coffee size={20} color="#FF914D" style={{ position: 'relative', zIndex: 1 }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#2B211C', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Coffee Lab Rewards</div>
+                  <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#2B211C', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>{ESTUDIO.nombreCafeteria} Rewards</div>
                   <div style={{ color: '#7D7068', fontSize: '0.95rem' }}>{Math.min(100, Math.round(((loyalty?.stamps || 0) / 12) * 100))} de 100 puntos para tu regalo.</div>
                 </div>
                 <ChevronRight size={20} color="#CCC0B6" />
@@ -463,7 +463,7 @@ function Cafeteria() {
               {[
                 { id: 'temporada', label: 'Especiales' },
                 { id: 'coffee', label: 'Ice Coffee' },
-                { id: 'smoothie', label: 'Coffee Lab' }
+                { id: 'smoothie', label: ESTUDIO.nombreCafeteria }
               ].map(cat => {
                 const active = activeCat === cat.id;
                 return (

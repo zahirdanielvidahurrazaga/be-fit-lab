@@ -151,9 +151,9 @@ function Portal() {
   // para poder ocultar el encabezado también cuando no queda ninguna — si no,
   // queda un título "Explora" suelto sobre un hueco.
   const tarjetasExplora = [
-    { modulo: 'cafeteria', to: '/cafeteria', img: '/fotos-hero/IMG_5410.JPG', Icon: Coffee, title: 'Coffee Lab', sub: 'Café & smoothies', overlay: 'linear-gradient(160deg, rgba(60,30,15,0.18) 0%, rgba(35,18,8,0.74) 100%)' },
-    { modulo: 'cumpleanos', to: '/cumpleanos', img: '/fotos-hero/cumple.png', Icon: Cake, title: 'Cumpleaños', sub: 'Tu cuenta regresiva', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)' },
-    { modulo: 'eventos', to: '/eventos', img: '/fotos-hero/_DSC0470.jpg', Icon: Sparkles, title: 'Eventos', sub: 'Próximas experiencias', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)' },
+    { modulo: 'cafeteria', to: '/cafeteria', img: ESTUDIO.portadas.cafeteria, Icon: Coffee, title: ESTUDIO.nombreCafeteria, sub: 'Café & smoothies', overlay: 'linear-gradient(160deg, rgba(60,30,15,0.18) 0%, rgba(35,18,8,0.74) 100%)' },
+    { modulo: 'cumpleanos', to: '/cumpleanos', img: ESTUDIO.portadas.cumpleanos, Icon: Cake, title: 'Cumpleaños', sub: 'Tu cuenta regresiva', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)' },
+    { modulo: 'eventos', to: '/eventos', img: ESTUDIO.portadas.eventos, Icon: Sparkles, title: 'Eventos', sub: 'Próximas experiencias', overlay: 'linear-gradient(160deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)' },
   ].filter(c => moduloActivo(c.modulo));
 
   const rawName = profileName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Cliente';
@@ -252,7 +252,10 @@ function Portal() {
       <main className="dashboard-main" style={{ paddingTop: '10px' }}>
         
         {/* APP DOWNLOAD BANNER */}
-        {!isNative && showAppBanner && (
+        {/* Sin app publicada no hay nada que descargar: el estudio todavía no
+            tiene ficha en las tiendas y heredar la de fábrica mandaría a la
+            clienta a bajar la app de otro negocio. */}
+        {!isNative && showAppBanner && ESTUDIO.tiendas.appStore && (
           <div style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: '24px', padding: '20px', marginBottom: '20px', color: 'var(--black)', position: 'relative', boxShadow: '0 10px 25px rgba(238,186,137,0.3)', display: 'flex', flexDirection: 'column', gap: '15px' }}>
             <div onClick={() => setShowAppBanner(false)} style={{ position: 'absolute', top: '15px', right: '15px', cursor: 'pointer', background: 'rgba(0,0,0,0.1)', borderRadius: '50%', padding: '4px' }}>
               <X size={16} />

@@ -27,6 +27,9 @@ export const ESTUDIO = {
   // clientas, así que puede ser distinto del nombre comercial.
   nombrePanel: 'Gestión Lab',
   giro: 'Estudio de Pilates',
+  // Cómo se llama la cafetería del estudio. "Coffee Lab" es de Be Fit Lab;
+  // otro estudio la llamará de otro modo o simplemente "Cafetería".
+  nombreCafeteria: 'Coffee Lab',
   ciudad: 'Puebla',
 
   // ── Datos legales (Términos y Aviso de Privacidad) ─────────────────────────
@@ -70,6 +73,14 @@ export const ESTUDIO = {
     logo: '/logo2.png',
     icono: '/favicon_peach.png',
     portadaAgenda: '/assets/agenda_lifestyle.png',
+  },
+
+  // Fotos de las tarjetas de "Explora" en el portal. Son de este estudio, así
+  // que una maqueta de otro tiene que traer las suyas.
+  portadas: {
+    cafeteria: '/fotos-hero/IMG_5410.JPG',
+    cumpleanos: '/fotos-hero/cumple.png',
+    eventos: '/fotos-hero/_DSC0470.jpg',
   },
 
   // ── Tiendas de aplicaciones ────────────────────────────────────────────────
@@ -195,7 +206,8 @@ let respaldoEstudio = null;
 
 const CAMPOS_DE_IDENTIDAD = [
   'nombre', 'nombreMayusculas', 'nombrePanel', 'giro', 'ciudad',
-  'colores', 'coloresOscuro', 'modulos', 'marca',
+  'colores', 'coloresOscuro', 'modulos', 'marca', 'portadas', 'nombreCafeteria',
+  'tiendas',
 ];
 
 // Logotipo tipográfico como SVG en línea. Sirve para las maquetas de venta, que
