@@ -23,7 +23,9 @@ const fmtDia = (d) => d
   ? new Date(`${d}T12:00:00`).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })
   : null;
 
-export default function MisClasesMovimientos({ abierto, onCerrar, saldoActual }) {
+// `userId` solo lo usa el panel de admin para ver la pantalla de una clienta;
+// el servidor exige rol de staff para aceptarlo. Sin él, cada quien ve lo suyo.
+export default function MisClasesMovimientos({ abierto, onCerrar, saldoActual, userId = null, nombre = null }) {
   const [movs, setMovs] = useState(null);
   const [error, setError] = useState(null);
 
@@ -31,12 +33,12 @@ export default function MisClasesMovimientos({ abierto, onCerrar, saldoActual })
     if (!abierto) return;
     let vivo = true;
     setMovs(null); setError(null);
-    supabase.rpc('mis_movimientos_de_clases', { p_limite: 60 }).then(({ data, error }) => {
+    supabase.rpc('mis_movimientos_de_clases', { p_limite: 60, p_user_id: userId }).then(({ data, error }) => {
       if (!vivo) return;
       if (error) setError(error.message); else setMovs(data || []);
     });
     return () => { vivo = false; };
-  }, [abierto]);
+  }, [abierto, userId]);
 
   return (
     <AnimatePresence>
@@ -61,7 +63,7 @@ export default function MisClasesMovimientos({ abierto, onCerrar, saldoActual })
             <div style={{ padding: '18px 20px 12px', borderBottom: '1px solid var(--fill-subtle, rgba(0,0,0,0.07))' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                 <h2 style={{ margin: 0, fontSize: '1.15rem', fontFamily: 'var(--font-display)', color: 'var(--on-surface)' }}>
-                  ¿A dónde se fueron mis clases?
+                  {nombre ? `Lo que ve ${nombre}` : '¿A dónde se fueron mis clases?'}
                 </h2>
                 <button onClick={onCerrar} aria-label="Cerrar"
                   style={{ border: 'none', background: 'var(--fill-subtle, rgba(0,0,0,0.06))', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--on-surface)', flexShrink: 0 }}>
@@ -71,9 +73,10 @@ export default function MisClasesMovimientos({ abierto, onCerrar, saldoActual })
               <p style={{ margin: '10px 0 0', fontSize: '0.8rem', lineHeight: 1.5, color: 'var(--on-surface-variant)', display: 'flex', gap: '7px' }}>
                 <Info size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
                 <span>
-                  Tu clase se descuenta <b>cuando reservas</b>, no el día que asistes.
-                  Por eso, si apartas varias de una vez, el saldo baja ese día y luego
-                  ya no se mueve aunque vayas a clase.
+                  {nombre ? 'Esta es la pantalla exacta que ella abre en su app. ' : ''}
+                  {nombre ? 'La' : 'Tu'} clase se descuenta <b>cuando {nombre ? 'reserva' : 'reservas'}</b>, no el día que {nombre ? 'asiste' : 'asistes'}.
+                  Por eso, si {nombre ? 'aparta' : 'apartas'} varias de una vez, el saldo baja ese día y luego
+                  ya no se mueve aunque {nombre ? 'vaya' : 'vayas'} a clase.
                 </span>
               </p>
             </div>
@@ -121,8 +124,8 @@ export default function MisClasesMovimientos({ abierto, onCerrar, saldoActual })
 
               {movs?.length > 0 && Number.isFinite(saldoActual) && (
                 <p style={{ marginTop: '16px', fontSize: '0.78rem', color: 'var(--on-surface-variant)', textAlign: 'center' }}>
-                  Hoy tienes <b style={{ color: 'var(--on-surface)' }}>{saldoActual >= 9000 ? 'clases ilimitadas' : `${saldoActual} clases`}</b>.
-                  Si algo no te cuadra, enséñale esta pantalla a recepción.
+                  {nombre ? 'Hoy tiene' : 'Hoy tienes'} <b style={{ color: 'var(--on-surface)' }}>{saldoActual >= 9000 ? 'clases ilimitadas' : `${saldoActual} clases`}</b>.
+                  {nombre ? '' : ' Si algo no te cuadra, enséñale esta pantalla a recepción.'}
                 </p>
               )}
             </div>

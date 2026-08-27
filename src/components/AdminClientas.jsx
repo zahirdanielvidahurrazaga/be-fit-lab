@@ -2,6 +2,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Cake, Crown, UserX, UserCheck, Shield, Coffee, Dumbbell, ChevronDown, ChevronLeft, ChevronRight, Phone, QrCode, Trash2, CalendarPlus, Plus, Minus, X, Check, Camera } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import HistorialClienta from './HistorialClienta';
+import MisClasesMovimientos from './MisClasesMovimientos';
 import { supabase } from '../lib/supabase';
 import { todayLocalStr } from '../lib/dates';
 import { isPlanExpired, formatPlanDate } from '../lib/membership';
@@ -331,6 +333,9 @@ const quickBtnRojo = { border: 'none', borderRadius: '10px', padding: '8px 12px'
 
 function ManageClassesModal({ client, onClose, patch, applyLocal }) {
   const { globalClasses, fetchGlobalClasses, fetchAllUsers } = useAuth();
+  // "Ver lo que ve ella": abre la pantalla EXACTA de la clienta. La mitad de
+  // estas discusiones son "es que la app me dice otra cosa".
+  const [verComoElla, setVerComoElla] = useState(false);
   const unlimited = isUnlimitedClient(client);
   // El saldo YA NO se escribe al instante: se ajusta en pantalla y se guarda con
   // motivo (RPC admin_set_saldo) para que todo ajuste quede explicado en el
@@ -625,6 +630,11 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
           {/* SECCIÓN — Cobro automático (pausar/cancelar y cerrar duplicados) */}
           <CobroAutomatico clientId={client.id} />
 
+          {/* SECCIÓN — Historial completo. Va ANTES de reservar y DESPUÉS del
+              saldo a propósito: es el contexto que faltaba junto al control que
+              modifica ese saldo. */}
+          <HistorialClienta client={client} onVerComoElla={() => setVerComoElla(true)} />
+
           {/* SECCIÓN 2 — Reservar en una clase */}
           <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)', margin: '0 0 10px' }}>Reservar en una clase</h3>
           {noClasses && (
@@ -682,6 +692,14 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
           )}
         </div>
       </motion.div>
+
+      <MisClasesMovimientos
+        abierto={verComoElla}
+        onCerrar={() => setVerComoElla(false)}
+        saldoActual={client.classes_remaining ?? 0}
+        userId={client.id}
+        nombre={(client.full_name || '').split(' ')[0] || 'la clienta'}
+      />
     </motion.div>
   );
 }

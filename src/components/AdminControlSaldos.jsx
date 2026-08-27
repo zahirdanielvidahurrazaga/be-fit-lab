@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import SearchableClientSelect from './SearchableClientSelect';
-import { RefreshCw, ScrollText, Scale, Receipt, Users, Ban, Undo2, AlertTriangle, ArrowRight, Pencil, X } from 'lucide-react';
+import { RefreshCw, ScrollText, Scale, Receipt, Users, Ban, Undo2, AlertTriangle, ArrowRight, Pencil, X, CheckCircle2, ChevronDown } from 'lucide-react';
 
 // Pestaña "Auditoría" del admin — control de saldos y ventas.
 // Se alimenta del libro mayor class_credit_ledger (BD lo llena sola con cada
@@ -62,6 +62,7 @@ export default function AdminControlSaldos() {
 
   // ── Movimientos (ledger) ──────────────────────────────────────────────────
   const [ledgerUserId, setLedgerUserId] = useState('');
+  const [verMovimientos, setVerMovimientos] = useState(false); // consulta, cerrada por defecto
   const [ledger, setLedger] = useState([]);
   const [ledgerLoading, setLedgerLoading] = useState(false);
 
@@ -245,11 +246,51 @@ export default function AdminControlSaldos() {
     fetchAllUsers?.();
   };
 
+  // Cuántas cosas piden acción de verdad. Auditoría es una BANDEJA DE
+  // PENDIENTES, no un explorador de datos: su estado normal es "todo cuadra".
+  // Cuando se mezclaron las dos cosas, la dueña leyó 37 renglones de ruido como
+  // 37 tareas y "corrigió" 53 clases que estaban bien cobradas.
+  // Las ya anuladas siguen en la lista (para poder restaurarlas) pero NO cuentan
+  // como pendiente: ya se atendieron.
+  const ventasPendientes = (ventasSospechosas || []).filter(v => !v.voided).length;
+  const pendientes = (descuadres?.length || 0) + ventasPendientes + (gruposDuplicados?.length || 0);
+  const cargando = descuadres === null;
+
+  // El número se desglosa a propósito. Un total suelto ("15 cosas") no dice si
+  // hay que corregir saldos o revisar cobros, y esa ambigüedad es la que hizo
+  // que se "arreglara" a bulto lo que solo había que mirar.
+  const desglose = [
+    descuadres?.length ? `${plural(descuadres.length, 'clase con el cobro descuadrado', 'clases con el cobro descuadrado')}` : null,
+    ventasPendientes ? `${plural(ventasPendientes, 'venta por revisar', 'ventas por revisar')}` : null,
+    gruposDuplicados?.length ? `${plural(gruposDuplicados.length, 'posible cuenta duplicada', 'posibles cuentas duplicadas')}` : null,
+  ].filter(Boolean);
+
   return (
     <section>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
         <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: 0, color: 'var(--black)' }}>Auditoría</h2>
-        <span style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>Control de saldos, ventas y cuentas</span>
+        <span style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>Solo lo que necesita tu atención</span>
+      </div>
+
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '16px 18px', marginBottom: '18px',
+        borderRadius: '18px',
+        background: cargando ? 'rgba(0,0,0,0.03)' : pendientes === 0 ? 'rgba(5,150,105,0.08)' : 'rgba(234,122,59,0.08)',
+        border: `1px solid ${cargando ? 'rgba(0,0,0,0.06)' : pendientes === 0 ? 'rgba(5,150,105,0.22)' : 'rgba(234,122,59,0.25)'}`,
+      }}>
+        {!cargando && (pendientes === 0
+          ? <CheckCircle2 size={22} color="#059669" style={{ flexShrink: 0, marginTop: '1px' }} />
+          : <AlertTriangle size={22} color="#EA7A3B" style={{ flexShrink: 0, marginTop: '1px' }} />)}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>
+            {cargando ? 'Revisando…' : pendientes === 0 ? 'Todo cuadra ✓' : desglose.join(' · ')}
+          </div>
+          <p style={{ margin: '5px 0 0', fontSize: '0.82rem', lineHeight: 1.5, color: 'var(--on-surface-variant)' }}>
+            {cargando ? 'Un momento.' : pendientes === 0
+              ? <>No hay nada que corregir. Si una clienta te reclama su saldo, <b>búscala en Clientas → Clases</b>: ahí está su historial completo y la explicación de su saldo.</>
+              : <>Cada renglón de abajo es un <b>hecho concreto</b>, no una estimación: la clase o el cobro exacto. Lo que no aparezca aquí, está bien. Y <b>revisar puede terminar en "déjalo como está"</b> — no todo lo listado hay que cambiarlo.</>}
+          </p>
+        </div>
       </div>
 
       {/* ── 1. DESCUADRES ── */}
@@ -346,8 +387,24 @@ export default function AdminControlSaldos() {
         )}
       </div>
 
-      {/* ── 2. MOVIMIENTOS (ledger) ── */}
+      {/* ── 2. MOVIMIENTOS (ledger) — CONSULTA, no pendientes ──
+          Colapsado a propósito: es la parte de "explorar datos", y mezclarla con
+          la de "arreglar cosas" es lo que enseñó a leer cualquier número como
+          una tarea. El historial por clienta ahora vive en su ficha. */}
       <div style={card}>
+        <button onClick={() => setVerMovimientos(v => !v)}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', border: 'none', background: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
+          <ScrollText size={18} color="var(--on-surface-variant)" />
+          <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--on-surface-variant)', fontFamily: 'var(--font-display)' }}>
+            Movimientos de todo el estudio
+          </span>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', background: 'rgba(0,0,0,0.05)', borderRadius: '999px', padding: '3px 9px' }}>consulta</span>
+          <ChevronDown size={16} color="var(--on-surface-variant)" style={{ marginLeft: 'auto', transform: verMovimientos ? 'rotate(180deg)' : 'none', transition: 'transform .18s' }} />
+        </button>
+        <p style={{ ...hint, margin: '10px 0 0' }}>
+          Esto <b>no son pendientes</b>. Para el historial de UNA clienta, ábrela en <b>Clientas → Clases</b>.
+        </p>
+      <div style={{ display: verMovimientos ? 'block' : 'none', marginTop: '16px', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '16px' }}>
         <h3 style={h3}><ScrollText size={18} color={PRIMARY} /> Movimientos de saldo
           <button onClick={fetchLedger} disabled={ledgerLoading} style={{ marginLeft: 'auto', border: 'none', background: 'rgba(0,0,0,0.05)', borderRadius: '10px', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 700, color: 'var(--black)' }}>
             <RefreshCw size={13} style={ledgerLoading ? { animation: 'spin 1s linear infinite' } : {}} /> Actualizar
@@ -401,6 +458,7 @@ export default function AdminControlSaldos() {
             </table>
           </div>
         )}
+      </div>
       </div>
 
       {/* ── 3. VENTAS SOSPECHOSAS ── */}
