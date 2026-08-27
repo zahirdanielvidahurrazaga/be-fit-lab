@@ -6,6 +6,71 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
+## 🔴 Sesión 2026-08-27 — EL DETECTOR DE DESCUADRES MENTÍA (raíz del reclamo que se repite) + 3 pedidos más
+
+**Reporte de la dueña (WhatsApp):** *"otra chica nos volvió a comentar que no se le están descontando las clases. Se llama Andrea Pérez. Hoy se las descontamos manual… imagínate, no sé si haya otras igual y no me avisan"*. Es la enésima vez, así que se atacó de raíz. Todo aplicado a prod y desplegado (commit `60ee869`).
+
+### 🎯 LA RAÍZ: la herramienta de auditoría fabricaba los descuadres que la dueña "corregía"
+
+**El sistema descuenta bien. Nunca dejó de hacerlo.** Lo que fallaba era `admin_audit_saldos()`, construida el 14-jul:
+
+```
+descontadas = clases_del_plan − saldo_actual
+descuadre   = reservas_desde_plan_started_at − descontadas
+```
+
+Esa fórmula **da por hecho que el saldo solo baja por reservas y solo arranca en el número del plan**. Se rompe con todo lo que el estudio hace a diario: efectivo acreditado a mano **por otra cantidad que la del plan**, cortesías, reposiciones, cambio de plan a media vigencia, y renovaciones (`plan_started_at` no se mueve al acreditar a mano, así que las reservas se acumulan entre ciclos).
+
+**La prueba que lo cierra:** a **Ingrid González** le dijo *"12 reservas desde el inicio del plan y solo **−3** descontadas"* — un número de descuentos **negativo**, aritméticamente imposible. Sale de `12 − 15` porque tenía 15 clases acreditadas en efectivo sobre un plan de 12. Sus 22 reservas están **todas** cobradas en el ledger. La dueña le vació el saldo **dos veces** (−15 el 29-jul, un día después de que pagara en efectivo; −12 el 5-ago).
+
+**Escala medida el 27-ago:** marcaba **37 clientas**, de las cuales **28 son falsas comprobadas**. Se le creyó **15 veces** y se quitaron **53 clases** que estaban bien cobradas.
+
+### ✅ Evidencia dura de que NO hay bug de descuento (se verificó ANTES de tocar nada)
+
+1. **El libro mayor reconcilia al 100%:** 179 clientas con historial, **0 desincronizadas** (el último `balance_after` == `classes_remaining` en todas). Ningún cambio de saldo se escapa del registro.
+2. **Toda reserva de agosto tiene su cobro.** Las 134 sin descuento son de **Plan Premium (ilimitado)**, donde no se descuenta por diseño. ⚠️ Filtrar ilimitadas por `classes_remaining >= 9999` **NO sirve** (Lili Ferrao es Premium con saldo 0) — hay que unir contra `membership_plans.unlimited`.
+3. **Las 13 reservas de julio que parecían sin cobrar son promociones de lista de espera del código viejo** — verificado 13/13: **sí se cobraron**, solo que `promote_waitlist_for_class` no guardaba `promoted_at`, así que no había con qué aparearlas.
+
+### 🧩 Por qué la clienta lo percibe así (esto es lo que hay que explicarle a la dueña)
+
+**El cobro es AL RESERVAR, no al asistir.** Andrea reservó **6 clases de un jalón** el 20-ago a las 00:57: su saldo cayó 20→14 en un minuto y se quedó quieto toda la semana mientras iba a esas 6 clases. Desde su lado, *"tomé 6 clases y mi saldo nunca bajó"* — y tenía razón en lo que veía. La app nunca le mostró a qué clase fue cada descuento.
+
+⚠️ **Andrea NO estaba en deuda, estaba +5 a favor:** los `+5 / +5 / −2` que la dueña le puso el 20 y 21-ago le dieron más de lo que el `−3` de hoy le quitó. Su saldo correcto era 14 y tiene 19. **Por eso no entró en la restitución.**
+
+### 🗄️ Lo que se construyó (SQL en `supabase/sql/`, gitignored → solo en la Mac)
+
+- **`saldos_trazabilidad_clase.sql`** — columna **`class_credit_ledger.class_id`** + GUC nuevo **`befit.credit_class`** (mismo patrón consumir-una-vez que `befit.credit_source`), declarado en los 6 caminos que mueven saldo. **Relleno del historial: 1,909 cobros amarrados a su reserva real.** El apareo es por **vecino mutuo más cercano dentro de 3 s** (`rn_l = 1 and rn_r = 1`): el cobro y la reserva nacen en la misma transacción con ~5-40 ms de diferencia (el ledger usa `clock_timestamp()`, `reservations` usa `now()`), y el vecino mutuo evita que seis reservas del mismo minuto se crucen. ⚠️ **Las devoluciones viejas se dejaron SIN clase a propósito**: al cancelar se BORRA la reserva, así que su cobro ya no tiene con qué aparearse y adivinar amarraría la devolución a una clase que la clienta todavía tiene reservada.
+- **`saldos_auditoria_honesta.sql`** — `admin_audit_saldos()` reescrita. Ya no adivina: compara **cada reserva contra SU cobro** por `class_id`. Solo reporta dos hechos verificables (`reserva_sin_cobro` / `cobro_sin_reserva`), cada uno **con la clase y el día**, y propone corregir **una clase** —la de ese renglón—, nunca un saldo recalculado. Tabla nueva **`audit_config.trazable_desde`**: lo anterior al corte **no se audita** (antes no se guardaba a qué clase iba cada cobro, así que cualquier cifra sería inventada). **Probada 13/13 con ROLLBACK**, incluyendo que sí detecta una reserva metida sin cobrar y un cobro sin reserva.
+- **`lista_espera_preguntar_siempre.sql`** — ver abajo.
+- **`ventas_duplicadas_guard.sql`** — trigger BEFORE INSERT que bloquea la misma venta (misma clienta, plan y monto) dentro de **2 minutos**. **Probado 5/5.**
+- **`cliente_mis_movimientos.sql`** — RPC `mis_movimientos_de_clases()`. **Se expone por RPC y no abriendo RLS** sobre el ledger porque ahí viven `actor_name` (quién hizo el cambio) y `note` (notas internas del estudio).
+- **`saldos_restitucion.sql`** — **25 clases devueltas a 11 clientas**, fuente `restitucion_auditoria`.
+
+### 🎨 Front
+
+- **`MisClasesMovimientos.jsx` (NUEVO)** — hoja "**¿A dónde se fueron mis clases?**", enlace bajo el saldo en el Portal. Cada movimiento con su clase y día. **Es la cura de fondo**: mientras la clienta no pueda ver esto, va a seguir reclamando y la dueña va a seguir "corrigiendo" saldos a mano.
+- **`AdminControlSaldos.jsx`** — la sección de descuadres reescrita para la forma nueva del RPC. Se eliminó `esperado()` (la fórmula rota) y el botón *"Dejar el saldo en N"*, que era el que hacía el daño.
+- **`Admin.jsx`** — antes de activar el plan revisa si ya hubo un cobro igual en los últimos 10 min y **exige una confirmación explícita**. 🔴 El orden importa: `activatePlan` **REEMPLAZA el saldo** y eso ya no se deshace solo, así que la revisión va ANTES. Además el error de registro de venta **ya no se traga en silencio** (antes el plan quedaba activo, la venta no se registraba y al corte le faltaba dinero sin que nadie se enterara).
+- **`AdminClientas.jsx`** — filtro **"Se inscribieron en"** con el conteo por mes (respuesta a *"¿cuántas chicas y quiénes se inscribieron en agosto?"*). El mes se calcula en hora de México, no del navegador.
+
+### 💳 Cobros dobles — no era Stripe
+
+6 ventas duplicadas en agosto, **todas capturadas a mano desde el mostrador**, separadas **14-29 segundos** (una a 82 s). Las 45 ventas del mes se registraron a mano y **en agosto no se disparó ni una renovación automática**. El candado `charging` y el `confirm()` del front no las paran porque **son dos pasadas completas seguidas**, no un doble clic. No duplican clases (la reactivación entra en delta 0) pero **sí duplican el dinero en el reporte**. Las 6 salen en Auditoría → ventas por revisar; **anularlas es decisión de la dueña, no se tocaron**.
+Sobre su pregunta de la renovación: **76 clientas tienen suscripción de Stripe y renueva al mes de la compra, nunca "cuando se acaban las clases"**.
+
+### ⏳ Lista de espera: preguntar antes de apartar
+
+Reporte: *"en la parte donde les avisan si hay cupo en una clase, les reserva antes de avisarles si confirman o no"*. Tenía razón: `auto_claim` venía en **true por defecto** (1345 de 1347). Ahora se **ofrece siempre** y el cobro ocurre **al aceptar**. Se quitó la rama que auto-confirmaba "cuando ya no queda ventana útil": si la clase está encima, el lugar se queda libre en vez de cobrarle a alguien sin preguntar.
+
+🔴 **`book_class_secure` IGNORA a propósito el `p_auto_claim` que recibe.** Las apps ya instaladas (iOS/Android tardan semanas en actualizarse) **siguen mandando `true`**, que es justo la queja. Quien quiera el automático lo prende después con `set_waitlist_auto_claim`, que es un acto explícito. El front nuevo lo llama justo tras formarse si la clienta eligió esa opción. **Probado: una app vieja pidiendo automático se ignora; el opt-in explícito sí se respeta.**
+
+### ⏭️ Lo que sigue
+
+- **La dueña anula las 6 ventas duplicadas** desde Auditoría (2 son de tarjeta: America $1,850 y Naomi $1,050 — ésas sí pudieron ser cobros reales dobles, revisar en Stripe antes de anular).
+- **Avisarle a las 11 clientas** que se les repusieron sus clases.
+- **Explicarle a la dueña que el cobro es al reservar**, y que la pantalla nueva de la clienta contesta sola el reclamo.
+- La auditoría marcará 0 por un tiempo: es correcto, solo audita de `trazable_desde` (27-ago 17:02) en adelante.
+
 ## 🏷️ Sesión 2026-08-15 (2ª) — LA MARCA YA ES CONFIGURABLE + se cerró un hueco de lealtad (todo DESPLEGADO)
 
 > **Contexto de negocio:** este repo va a ser la base para vender el sistema a otros estudios de pilates (proyecto aparte). Por eso todo lo que distinga a Be Fit Lab de cualquier otro estudio tiene que salir del código y vivir en un solo lugar. Commit `f8bc9c6`, 37 archivos, ya en `main` y desplegado.
