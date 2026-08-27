@@ -68,6 +68,25 @@ const fmtBday = (d) => {
 
 const FILTERS = [['all', 'Todas'], ['active', 'Activas'], ['inactive', 'Sin plan'], ['staff', 'Staff']];
 
+// 'YYYY-MM' del alta, en hora de México (no del navegador: la dueña puede
+// abrir esto desde cualquier lado y una alta del día 1 no debe caer en el mes
+// anterior).
+const mesDeAlta = (iso) => {
+  if (!iso) return null;
+  const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit' })
+    .formatToParts(new Date(iso));
+  const y = p.find(x => x.type === 'year')?.value;
+  const m = p.find(x => x.type === 'month')?.value;
+  return y && m ? `${y}-${m}` : null;
+};
+
+const nombreMes = (ym) => {
+  const [y, m] = ym.split('-');
+  const d = new Date(Number(y), Number(m) - 1, 15);
+  const s = d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+
 // Liquid glass pill
 function Pill({ active, onClick, children }) {
   return (
@@ -672,6 +691,9 @@ export default function AdminClientas() {
   const [users, setUsers] = useState(null); // TODOS los usuarios (no solo clientas)
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
+  // Pedido de la dueña: "quiero ver cuántas chicas y quiénes se inscribieron en
+  // agosto". '' = todos los meses; si no, 'YYYY-MM' sobre created_at.
+  const [mesAlta, setMesAlta] = useState('');
   const [planFilter, setPlanFilter] = useState('all');
   const [busy, setBusy] = useState(false);
   const [managing, setManaging] = useState(null); // clienta cuyo modal de clases está abierto
@@ -763,10 +785,22 @@ export default function AdminClientas() {
     else if (filter === 'inactive') arr = arr.filter(u => u.membership_status !== 'ACTIVE' && u.role === 'CLIENT');
     else if (filter === 'staff') arr = arr.filter(u => ['COACH', 'BARISTA', 'RECEPCION', 'ADMIN'].includes(u.role));
     if (planFilter !== 'all') arr = arr.filter(u => (u.membership_plan || '') === planFilter && u.membership_status === 'ACTIVE');
+    if (mesAlta) arr = arr.filter(u => mesDeAlta(u.created_at) === mesAlta);
     const s = q.trim().toLowerCase();
     if (s) arr = arr.filter(u => (u.full_name || '').toLowerCase().includes(s) || (u.email || '').toLowerCase().includes(s));
     return arr;
-  }, [users, filter, planFilter, q]);
+  }, [users, filter, planFilter, q, mesAlta]);
+
+  // Meses con altas, del más reciente al más viejo (solo clientas).
+  const mesesConAltas = useMemo(() => {
+    const cuenta = new Map();
+    for (const u of users || []) {
+      if (u.role !== 'CLIENT') continue;
+      const m = mesDeAlta(u.created_at);
+      if (m) cuenta.set(m, (cuenta.get(m) || 0) + 1);
+    }
+    return [...cuenta.entries()].sort((a, b) => b[0].localeCompare(a[0])).slice(0, 12);
+  }, [users]);
 
   const counts = useMemo(() => {
     const all = users || [];
@@ -798,11 +832,30 @@ export default function AdminClientas() {
         ))}
       </div>
       {plans.length > 0 && (
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '18px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '10px', alignItems: 'center' }}>
           <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, marginRight: '2px' }}>Membresía:</span>
           <Pill active={planFilter === 'all'} onClick={() => setPlanFilter('all')}>Todas</Pill>
           {plans.map(p => <Pill key={p} active={planFilter === p} onClick={() => setPlanFilter(p)}>{p}</Pill>)}
         </div>
+      )}
+
+      {/* "¿Cuántas chicas y quiénes se inscribieron en agosto?" — el número va en
+          la pastilla y la lista de abajo se filtra a esas mismas personas. */}
+      {mesesConAltas.length > 0 && (
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '18px', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, marginRight: '2px' }}>Se inscribieron en:</span>
+          <Pill active={mesAlta === ''} onClick={() => setMesAlta('')}>Cualquier mes</Pill>
+          {mesesConAltas.map(([ym, n]) => (
+            <Pill key={ym} active={mesAlta === ym} onClick={() => setMesAlta(ym)}>{nombreMes(ym)} · {n}</Pill>
+          ))}
+        </div>
+      )}
+
+      {mesAlta && (
+        <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', margin: '-8px 0 16px' }}>
+          <b style={{ color: INK }}>{list.length}</b> {list.length === 1 ? 'persona se dio de alta' : 'personas se dieron de alta'} en <b style={{ color: INK }}>{nombreMes(mesAlta)}</b>
+          {(filter !== 'all' || planFilter !== 'all' || q.trim()) && ' (con los filtros de arriba aplicados)'}.
+        </p>
       )}
 
       {users === null ? (

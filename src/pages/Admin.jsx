@@ -251,14 +251,46 @@ function Admin({ recepcion = false }) {
 
     setCharging(true);
     try {
+      // ¿Ya se cobró esto hace un momento? En agosto hubo 6 ventas duplicadas,
+      // separadas entre 14 y 29 segundos: son dos pasadas completas seguidas
+      // (el candado `charging` y el confirm de arriba no las detienen porque
+      // cada una es un flujo entero). Se revisa ANTES de activar el plan,
+      // porque activarlo REEMPLAZA el saldo y eso ya no se deshace solo.
+      const desde = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      const { data: recientes } = await supabase.from('sales')
+        .select('created_at, plan_name, amount')
+        .eq('user_id', selectedAlumnaId).eq('plan_name', planDetails.name)
+        .eq('voided', false).gte('created_at', desde)
+        .order('created_at', { ascending: false }).limit(1);
+
+      if (recientes?.length) {
+        const hace = Math.max(1, Math.round((Date.now() - new Date(recientes[0].created_at)) / 1000));
+        const cuando = hace < 90 ? `hace ${hace} segundos` : `hace ${Math.round(hace / 60)} minutos`;
+        const ok = confirm(
+          `⚠️ YA LE COBRASTE ${planDetails.name} a ${quien} ${cuando}.\n\n` +
+          `Si le vuelves a cobrar:\n` +
+          `· se registra un segundo pago de $${planDetails.amount} en el reporte\n` +
+          `· su saldo se REEMPLAZA otra vez por ${planDetails.classes} clases\n\n` +
+          `¿De verdad es un pago DISTINTO?`
+        );
+        if (!ok) { setCharging(false); return; }
+      }
+
       await activatePlan(planDetails.name, planDetails.classes, selectedAlumnaId);
       // Registrar la venta de mostrador (para el dashboard financiero)
-      try {
-        await supabase.from('sales').insert({
-          user_id: selectedAlumnaId, sold_by: user.id, plan_name: planDetails.name,
-          amount: planDetails.amount || 0, method: selectedPayMethod,
-        });
-      } catch (e) { /* no bloquear el cobro si falla el registro */ }
+      const { error: ventaError } = await supabase.from('sales').insert({
+        user_id: selectedAlumnaId, sold_by: user.id, plan_name: planDetails.name,
+        amount: planDetails.amount || 0, method: selectedPayMethod,
+      });
+      // Antes esto se tragaba en silencio: el plan quedaba activo y la venta no
+      // se registraba, así que al reporte le faltaba dinero y nadie se enteraba.
+      if (ventaError) {
+        alert(
+          /VENTA_DUPLICADA/.test(ventaError.message || '')
+            ? `El plan de ${quien} SÍ quedó activo, pero no se registró la venta porque el sistema la detectó como cobro repetido.\n\nSi era un pago distinto, regístralo de nuevo en un minuto.`
+            : `El plan de ${quien} SÍ quedó activo, pero NO se pudo registrar la venta en el reporte:\n\n${ventaError.message}\n\nAvísale a Zahir para que no falte ese dinero en el corte.`
+        );
+      }
 
       setShowPaySuccess(true);
       setTimeout(() => {

@@ -1120,7 +1120,7 @@ export const AuthProvider = ({ children }) => {
           checkedIn: r.checked_in,
           status: r.status || 'confirmed', // 'confirmed' | 'waitlist' | 'offered'
           offerExpiresAt: r.offer_expires_at ?? null, // deadline para confirmar (status 'offered')
-          autoClaim: r.auto_claim !== false,          // en espera: ¿entro solita al liberarse?
+          autoClaim: r.auto_claim === true,           // en espera: ¿entro solita al liberarse?
           promotedAt: r.promoted_at ?? null,          // el sistema le dio el lugar (no lo eligió ella)
           calendarEventId: r.calendar_event_id ?? null
         }));
@@ -1254,13 +1254,18 @@ export const AuthProvider = ({ children }) => {
   // Devuelve 'confirmed' | 'waitlist' si se anotó, o false si no se pudo.
   // Si la clase está llena, el RPC la mete a LISTA DE ESPERA (sin descontar
   // clase). `autoClaim` es la decisión que toma la clienta AL FORMARSE, no
-  // después: true (default) = al liberarse un lugar queda inscrita directo;
-  // false = se le ofrece con plazo para confirmar.
+  // después: false (default) = se le ofrece con plazo para confirmar;
+  // true = al liberarse un lugar queda inscrita directo y se le cobra.
   //
   // Se pregunta aquí, y no al liberarse el lugar, porque el aviso posterior
   // viaja por un canal que falla: el 29-jul una clienta perdió su lugar dos
   // veces seguidas porque no tiene dispositivo registrado para push.
-  const bookClass = async (classObj, autoClaim = true) => {
+  //
+  // El default es FALSE desde el 27-ago: la dueña reportó que el sistema
+  // apartaba y cobraba antes de preguntar. El servidor además IGNORA el
+  // p_auto_claim que manda el RPC (las apps viejas siguen mandando true), así
+  // que el automático se prende aparte, con set_waitlist_auto_claim.
+  const bookClass = async (classObj, autoClaim = false) => {
     if (!user) return false;
     // Se exige saldo incluso para entrar a la espera (así al promoverla siempre
     // habrá una clase que descontar). El servidor lo re-valida de forma autoritativa.
@@ -1270,11 +1275,20 @@ export const AuthProvider = ({ children }) => {
       // DB Updates via secure RPC — el servidor decide confirmada vs. espera.
       const { data: bookStatus, error: rpcError } = await supabase.rpc('book_class_secure', {
         p_class_id: classObj.id,
-        p_auto_claim: autoClaim !== false,
+        p_auto_claim: autoClaim === true,
       });
       if (rpcError) throw rpcError;
 
       const waitlisted = bookStatus === 'waitlist';
+
+      // El servidor siempre la forma en modo "pregúntame". Si ELLA eligió el
+      // automático, se prende aquí con un acto explícito. Si esto falla, se
+      // queda en el modo seguro (le preguntan) y no pasa nada grave.
+      if (waitlisted && autoClaim === true) {
+        try {
+          await supabase.rpc('set_waitlist_auto_claim', { p_class_id: classObj.id, p_auto: true });
+        } catch (e) { console.warn('No se pudo prender el automático de espera:', e); }
+      }
 
       // Optimistic UI Update según el resultado real del servidor.
       // La lista de espera NO descuenta clase ni ocupa lugar.
@@ -1293,7 +1307,7 @@ export const AuthProvider = ({ children }) => {
         color: classObj.color,
         checkedIn: false,
         status: waitlisted ? 'waitlist' : 'confirmed',
-        autoClaim: autoClaim !== false,
+        autoClaim: autoClaim === true,
         promotedAt: null,
         calendarEventId: null,
       }]);

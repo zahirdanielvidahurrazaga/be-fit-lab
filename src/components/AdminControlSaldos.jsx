@@ -36,7 +36,13 @@ const fmtFecha = (iso) => {
          d.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' });
 };
 
-const fmtDia = (iso) => iso ? new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : '—';
+// Ojo: una fecha SIN hora ('2026-08-29') la parsea el navegador como medianoche
+// UTC y en México se pinta el día anterior. Se le pega mediodía local.
+const fmtDia = (iso) => {
+  if (!iso) return '—';
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T12:00:00`) : new Date(iso);
+  return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+};
 
 const plural = (n, sing, plur) => `${n} ${n === 1 ? sing : plur}`;
 
@@ -86,34 +92,32 @@ export default function AdminControlSaldos() {
 
   useEffect(() => { fetchDescuadres(); }, [fetchDescuadres]);
 
-  // Fecha en que empezó a grabar el libro mayor. Todo descuadre de un plan
-  // ANTERIOR a esta fecha no tiene movimientos que lo expliquen (no existían):
-  // se marca aparte para que nadie pierda el tiempo buscando en «Movimientos».
-  const [ledgerStart, setLedgerStart] = useState(null);
+  // Fecha desde la que el rastro clase↔cobro está completo. Antes de eso no se
+  // guardaba a qué clase iba cada descuento, así que NO se audita: cualquier
+  // cifra sería inventada (que es justo lo que hacía la versión anterior).
+  const [trazableDesde, setTrazableDesde] = useState(null);
   useEffect(() => {
-    supabase.from('class_credit_ledger').select('created_at')
-      .order('created_at', { ascending: true }).limit(1)
-      .then(({ data }) => setLedgerStart(data?.[0]?.created_at || null));
+    supabase.from('audit_config').select('trazable_desde').eq('id', 1).maybeSingle()
+      .then(({ data }) => setTrazableDesde(data?.trazable_desde || null));
   }, []);
 
-  // Saldo que debería tener = clases del plan − reservas hechas desde que empezó.
-  const esperado = (d) => Math.max(0, (d.plan_clases || 0) - Number(d.reservas || 0));
-
-  // Primero las que le SOBRAN clases (ahí el estudio pierde dinero), de mayor a menor.
+  // Primero lo que le cuesta dinero al estudio (clases no cobradas), y dentro
+  // de cada grupo, la clase más reciente arriba.
   const descOrdenados = useMemo(() => {
     if (!descuadres) return null;
-    return [...descuadres].sort((a, b) => (b.diferencia > 0) - (a.diferencia > 0) || Math.abs(b.diferencia) - Math.abs(a.diferencia));
+    return [...descuadres].sort((a, b) =>
+      (a.tipo === 'reserva_sin_cobro' ? 0 : 1) - (b.tipo === 'reserva_sin_cobro' ? 0 : 1)
+      || String(b.fecha_clase || '').localeCompare(String(a.fecha_clase || '')));
   }, [descuadres]);
 
   const resumenDesc = useMemo(() => {
     if (!descuadres?.length) return null;
-    const sobran = descuadres.filter(d => d.diferencia > 0);
-    const faltan = descuadres.filter(d => d.diferencia < 0);
+    const sinCobro = descuadres.filter(d => d.tipo === 'reserva_sin_cobro');
+    const deMas = descuadres.filter(d => d.tipo === 'cobro_sin_reserva');
     return {
-      sobran: sobran.length,
-      faltan: faltan.length,
-      regaladas: sobran.reduce((s, d) => s + Number(d.diferencia), 0),
-      debidas: faltan.reduce((s, d) => s + Math.abs(Number(d.diferencia)), 0),
+      sinCobro: sinCobro.length,
+      deMas: deMas.length,
+      personas: new Set(descuadres.map(d => d.user_id)).size,
     };
   }, [descuadres]);
 
@@ -256,19 +260,27 @@ export default function AdminControlSaldos() {
           </button>
         </h3>
         <p style={hint}>
-          Aquí aparece cada clienta cuyo <b>saldo de clases no coincide con las clases que ha reservado</b>.
-          Solo hay dos casos:
+          Cada renglón es <b>una clase concreta</b> donde el cobro no cuadra con la reserva.
+          No es un cálculo ni una estimación: es el movimiento que falta o que sobra.
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
           <div style={leyenda('rgba(220,38,38,0.07)', 'rgba(220,38,38,0.18)')}>
-            <span style={chip('rgba(220,38,38,0.1)', '#DC2626')}>Le sobran clases</span>
-            <span style={leyendaTxt}>Reservó más clases de las que se le descontaron: <b>el estudio se las está regalando</b>. Hay que bajarle el saldo.</span>
+            <span style={chip('rgba(220,38,38,0.1)', '#DC2626')}>No se le descontó</span>
+            <span style={leyendaTxt}>Tiene lugar en la clase y nunca se le cobró: <b>el estudio se la está regalando</b>.</span>
           </div>
           <div style={leyenda('rgba(234,122,59,0.07)', 'rgba(234,122,59,0.2)')}>
-            <span style={chip('rgba(234,122,59,0.12)', '#EA7A3B')}>Le faltan clases</span>
-            <span style={leyendaTxt}>Se le descontaron clases que no usó: <b>el estudio se las debe</b>. Hay que subirle el saldo.</span>
+            <span style={chip('rgba(234,122,59,0.12)', '#EA7A3B')}>Se le descontó de más</span>
+            <span style={leyendaTxt}>Se le cobró la clase y ya no tiene lugar en ella: <b>el estudio se la debe</b>.</span>
           </div>
         </div>
+        <p style={{ ...hint, display: 'flex', gap: '7px', alignItems: 'flex-start', marginBottom: '14px' }}>
+          <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '2px', color: '#EA7A3B' }} />
+          <span>
+            <b>Ojo:</b> aquí ya no aparecen los pagos en efectivo, las cortesías ni las reposiciones.
+            Esas son decisiones tuyas, no errores{trazableDesde ? <> — y solo se revisa lo que pasó del <b>{fmtDia(trazableDesde)}</b> en adelante,
+            que es desde cuando se guarda a qué clase fue cada descuento</> : null}.
+          </span>
+        </p>
 
         {descuadres === null ? <p style={hint}>Cargando…</p> : descuadres.length === 0 ? (
           <p style={{ ...hint, color: '#059669', fontWeight: 700, margin: 0 }}>Todo cuadra ✓</p>
@@ -276,36 +288,32 @@ export default function AdminControlSaldos() {
           <>
             {resumenDesc && (
               <p style={{ ...hint, marginBottom: '12px' }}>
-                <b>{plural(descuadres.length, 'clienta', 'clientas')}</b> por revisar:{' '}
-                {resumenDesc.sobran > 0 && <>a <b>{resumenDesc.sobran}</b> le sobran clases (<b>{plural(resumenDesc.regaladas, 'clase regalada', 'clases regaladas')}</b> en total)</>}
-                {resumenDesc.sobran > 0 && resumenDesc.faltan > 0 && ' · '}
-                {resumenDesc.faltan > 0 && <>a <b>{resumenDesc.faltan}</b> le faltan (<b>{plural(resumenDesc.debidas, 'clase que se debe', 'clases que se deben')}</b>)</>}.
+                <b>{plural(descuadres.length, 'clase', 'clases')}</b> por revisar
+                en <b>{plural(resumenDesc.personas, 'clienta', 'clientas')}</b>:{' '}
+                {resumenDesc.sinCobro > 0 && <><b>{resumenDesc.sinCobro}</b> sin descontar</>}
+                {resumenDesc.sinCobro > 0 && resumenDesc.deMas > 0 && ' · '}
+                {resumenDesc.deMas > 0 && <><b>{resumenDesc.deMas}</b> descontadas de más</>}.
               </p>
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {descOrdenados.map(d => {
-                const sobran = d.diferencia > 0;
-                const n = Math.abs(Number(d.diferencia));
-                const debeTener = esperado(d);
-                // Plan anterior al libro mayor → sus movimientos no existen.
-                const heredado = ledgerStart && d.inicio && new Date(d.inicio) < new Date(ledgerStart);
-                const acento = sobran ? '#DC2626' : '#EA7A3B';
+                const sinCobro = d.tipo === 'reserva_sin_cobro';
+                const acento = sinCobro ? '#DC2626' : '#EA7A3B';
+                const motivo = sinCobro
+                  ? `Cobro de la clase "${d.clase}" del ${fmtDia(d.fecha_clase)}, que había quedado sin descontar`
+                  : `Devolución de la clase "${d.clase}" del ${fmtDia(d.fecha_clase)}, que se cobró sin que tuviera lugar`;
                 return (
-                  <div key={d.user_id} style={{ border: '1px solid rgba(0,0,0,0.08)', borderLeft: `4px solid ${acento}`, borderRadius: '14px', padding: '13px 15px', background: 'rgba(0,0,0,0.015)' }}>
+                  <div key={`${d.user_id}-${d.class_id}-${d.tipo}`} style={{ border: '1px solid rgba(0,0,0,0.08)', borderLeft: `4px solid ${acento}`, borderRadius: '14px', padding: '13px 15px', background: 'rgba(0,0,0,0.015)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '9px', flexWrap: 'wrap', marginBottom: '7px' }}>
                       <b style={{ fontSize: '0.95rem', color: 'var(--black)' }}>{d.nombre || d.email}</b>
-                      <span style={chip(sobran ? 'rgba(220,38,38,0.1)' : 'rgba(234,122,59,0.12)', acento)}>
-                        {sobran ? `Le sobran ${plural(n, 'clase', 'clases')}` : `Le faltan ${plural(n, 'clase', 'clases')}`}
+                      <span style={chip(sinCobro ? 'rgba(220,38,38,0.1)' : 'rgba(234,122,59,0.12)', acento)}>
+                        {sinCobro ? 'No se le descontó' : 'Se le descontó de más'}
                       </span>
                     </div>
 
                     <p style={{ fontSize: '0.86rem', color: 'var(--black)', margin: '0 0 9px', lineHeight: 1.5 }}>
-                      Desde que empezó su plan ({fmtDia(d.inicio)}) reservó <b>{plural(Number(d.reservas), 'clase', 'clases')}</b>,
-                      pero se le descontaron <b>{d.descontadas}</b>.{' '}
-                      {sobran
-                        ? <>Por eso <b>el estudio le está regalando {plural(n, 'clase', 'clases')}</b>.</>
-                        : <>Por eso <b>el estudio le debe {plural(n, 'clase', 'clases')}</b>.</>}
+                      {d.detalle}
                     </p>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '9px' }}>
@@ -314,24 +322,17 @@ export default function AdminControlSaldos() {
                       </span>
                       <ArrowRight size={13} color="var(--on-surface-variant)" />
                       <span style={{ fontSize: '0.82rem', fontWeight: 700, color: acento }}>
-                        debería tener {plural(debeTener, 'clase', 'clases')}
+                        quedaría en {plural(d.saldo_sugerido, 'clase', 'clases')}
                       </span>
                       <span style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)' }}>
-                        · {(d.plan || '').replace('Plan ', '')} de {d.plan_clases} clases
+                        · {(d.plan || '').replace('Plan ', '') || 'sin plan'}
                       </span>
                     </div>
 
-                    {heredado && (
-                      <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', margin: '0 0 9px', lineHeight: 1.45, display: 'flex', gap: '6px' }}>
-                        <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: '1px' }} />
-                        <span>Su plan empezó <b>antes</b> de que existiera el registro de movimientos ({fmtDia(ledgerStart)}), así que <b>este descuadre no se puede rastrear</b>: viene de antes. Corrígelo y de aquí en adelante ya queda todo registrado.</span>
-                      </p>
-                    )}
-
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                      <button onClick={() => openFix(d.user_id, d.nombre || d.email, d.saldo, debeTener, `Corrección por auditoría: ${d.reservas} reservas desde el inicio del plan y solo ${d.descontadas} descontadas`)}
+                      <button onClick={() => openFix(d.user_id, d.nombre || d.email, d.saldo, d.saldo_sugerido, motivo)}
                         style={{ display: 'flex', alignItems: 'center', gap: '5px', border: 'none', borderRadius: '10px', padding: '7px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, background: 'rgba(255,145,77,0.14)', color: PRIMARY }}>
-                        <Pencil size={13} /> Dejar el saldo en {debeTener}
+                        <Pencil size={13} /> {sinCobro ? 'Descontarle esa clase' : 'Devolverle esa clase'}
                       </button>
                       <button onClick={() => setLedgerUserId(d.user_id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--on-surface-variant)', fontWeight: 700, fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
                         Ver sus movimientos <ArrowRight size={12} />

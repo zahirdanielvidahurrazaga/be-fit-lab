@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { Capacitor } from '@capacitor/core';
 import ProfileMenu from '../components/ProfileMenu';
+import MisClasesMovimientos from '../components/MisClasesMovimientos';
 import { hasNutritionAccess } from '../lib/plans';
 import { ESTUDIO, moduloActivo } from '../config/estudio';
 import { crearIrA } from '../demo/navegacionDemo';
@@ -49,6 +50,7 @@ function Portal() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [showQR, setShowQR] = useState(false);
+  const [verMovimientos, setVerMovimientos] = useState(false);
   // Filtro de "Próximas clases": 'hoy' (solo las de hoy) | 'todas'. Arranca en
   // "Hoy" si tienes clase hoy (para no confundirte con las de otros días).
   const [classFilter, setClassFilter] = useState('todas');
@@ -347,6 +349,17 @@ function Portal() {
                   <ChevronRight size={16} />
                 </button>
               </div>
+
+              {/* La pregunta que más llega a recepción. Que se la conteste la app. */}
+              {classesRemaining < 9000 && (
+                <button
+                  onClick={() => setVerMovimientos(true)}
+                  style={{ display: 'block', marginTop: '12px', background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                           fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.92)', textDecoration: 'underline', textUnderlineOffset: '3px' }}
+                >
+                  ¿A dónde se fueron mis clases?
+                </button>
+              )}
             </div>
           </motion.div>
 
@@ -600,6 +613,12 @@ function Portal() {
         </div>
       )}
 
+      <MisClasesMovimientos
+        abierto={verMovimientos}
+        onCerrar={() => setVerMovimientos(false)}
+        saldoActual={classesRemaining}
+      />
+
       {/* QR BOTTOM SHEET */}
       {showQR && (
         <>
@@ -756,7 +775,7 @@ function Portal() {
 }
 
 /* TICKET-STYLE CLASS CARD */
-function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, countdown, dateLabel, canCancel, status = 'confirmed', waitlistPosition, autoClaim = true, offerExpiresAt, onAccept, onClick }) {
+function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, countdown, dateLabel, canCancel, status = 'confirmed', waitlistPosition, autoClaim = false, offerExpiresAt, onAccept, onClick }) {
   const isWaitlisted = status === 'waitlist';
   const isOffered = status === 'offered';
   // Foto real de la coach de esta clase (coach_id → nombre → email). Sin fallbacks

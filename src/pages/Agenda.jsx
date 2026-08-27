@@ -32,7 +32,9 @@ function Agenda() {
   const [waitlisted, setWaitlisted] = useState(false); // la reserva quedó en lista de espera
   // Decisión que se toma AL FORMARSE (no cuando se libera el lugar, que es
   // cuando el aviso puede no llegar). true = entro solita y se me cobra.
-  const [autoClaim, setAutoClaim] = useState(true);
+  // Arranca en FALSE: la dueña reportó que se apartaba y cobraba sin preguntar,
+  // y un cobro sorpresa es peor que un lugar perdido. El automático se elige.
+  const [autoClaim, setAutoClaim] = useState(false);
   const [addedToCalendar, setAddedToCalendar] = useState(false);
   const [calendarError, setCalendarError] = useState(null);
   const [showCoachDetail, setShowCoachDetail] = useState(false);
@@ -425,15 +427,15 @@ function Agenda() {
                             Si se libera un lugar…
                           </div>
                           {[
-                            { v: true,  t: 'Apártamelo automáticamente', s: 'Quedas inscrita al momento y se descuenta 1 clase. Si ya no puedes, cancelas y te la devolvemos.' },
-                            { v: false, t: 'Prefiero que me pregunten',  s: 'Te avisamos y tienes un plazo para confirmar. Si no alcanzas, pasa a la siguiente.' },
+                            { v: false, t: 'Pregúntame antes', s: 'Te avisamos y tienes un plazo para confirmar. No se te descuenta nada hasta que aceptes.' },
+                            { v: true,  t: 'Apártamelo sin preguntarme', s: 'Quedas inscrita al momento y se descuenta 1 clase. Si ya no puedes, cancelas y te la devolvemos.' },
                           ].map(o => (
                             <button
                               key={String(o.v)}
                               onClick={() => setAutoClaim(o.v)}
                               style={{
                                 display: 'flex', alignItems: 'flex-start', gap: '10px', width: '100%',
-                                textAlign: 'left', padding: '10px', marginBottom: o.v ? '6px' : 0,
+                                textAlign: 'left', padding: '10px', marginBottom: o.v === false ? '6px' : 0,
                                 border: `1.5px solid ${autoClaim === o.v ? 'var(--primary)' : 'transparent'}`,
                                 background: autoClaim === o.v ? 'rgba(255,145,77,0.08)' : 'transparent',
                                 borderRadius: '12px', cursor: 'pointer',
