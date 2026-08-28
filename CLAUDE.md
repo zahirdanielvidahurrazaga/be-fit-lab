@@ -96,6 +96,18 @@ Reporte del usuario: *"la siento muy atascada de información"* y *"no me gusta 
 
 ⚠️ **Y un TDZ que el build tampoco ve:** `const filtrosActivos = ...planFilter...` quedó una línea ANTES de `const [planFilter]` → `ReferenceError` que tumba la pestaña. Vite compila feliz. Ojo al orden al agregar derivados de estado.
 
+### 📱 Binarios de esta tanda — iOS 1.9.5 (29) · Android 2.6.5 (vc 17)
+
+Se **saltan la 1.9.4(28) y la 2.6.4(vc16)**: se prepararon el 15-ago y desde la Mac no hay forma de comprobar si alcanzaron a subirse. El App Store sigue sirviendo la **1.9.3** (publicada 2-ago), así que lo más probable es que no — pero reusar un build number ya subido es la causa #1 de rechazos y saltarlo no cuesta nada.
+
+**Qué llega a las apps** (lo demás de esta sesión es panel de admin, y eso viaja por web): la pantalla **"¿A dónde se fueron mis clases?"** y la **lista de espera que pregunta antes de apartar**.
+
+✅ `npm run build` + `npx cap sync ios` + `npx cap sync android` hechos. **`pk_live` verificada** en `dist/` y **dentro de los assets nativos de ambas** (`ios/App/App/public/assets/`, `android/app/src/main/assets/public/assets/`), cero `pk_test`. Confirmados también los textos nuevos en los dos bundles. **Xcode abierto → falta Archive → Distribute → Upload.** El AAB va en la PC de Windows (`git pull` primero, y **verificar el `.env` de esa PC**: en julio tenía `pk_test` y salieron APKs que no podían cobrar).
+
+⏭️ **Cuando Apple apruebe:** `update public.app_config set latest_ios_version='1.9.5', updated_at=now() where id=1;` — hoy dice `1.9.3`. Verificar con `curl -s "https://itunes.apple.com/lookup?bundleId=com.befitlab.app&country=mx"`.
+
+⚠️ **Recordatorio del 27-ago:** la cuenta `zahirteamironman@gmail.com` se puso **ADMIN** para que el usuario probara. Era CLIENT con Plan Fit y 10 clases. Regresarla a `CLIENT` cuando termine.
+
 ### ⏭️ Lo que sigue
 
 - **La dueña anula las 6 ventas duplicadas** desde Auditoría (2 son de tarjeta: America $1,850 y Naomi $1,050 — ésas sí pudieron ser cobros reales dobles, revisar en Stripe antes de anular).
