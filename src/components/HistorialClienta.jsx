@@ -49,13 +49,43 @@ const MOTIVOS = {
 };
 
 // Categorías para la frase que explica el saldo.
-const COMPRA = ['activacion_plan', 'stripe_sistema', 'alta_con_plan'];
+export const COMPRA = ['activacion_plan', 'stripe_sistema', 'alta_con_plan'];
 const USO = ['reserva', 'reserva_admin', 'promocion_espera', 'aceptacion_espera'];
 const DEVUELTO = ['cancelacion', 'cancelacion_admin'];
 const AJUSTE = ['ajuste_manual', 'restitucion_auditoria'];
 const CADUCADO = ['vencimiento_membresia', 'baja_membresia'];
 
-export default function HistorialClienta({ client, onVerComoElla }) {
+// Se exporta porque la pestaña Resumen muestra la MISMA frase: si el cálculo
+// viviera dos veces, un día dirían cosas distintas sobre el mismo saldo.
+export function resumirSaldo(rows, saldoActual) {
+  if (!rows) return null;
+  const movs = rows.filter(r => r.tipo === 'movimiento'); // del más nuevo al más viejo
+  const idx = movs.findIndex(m => COMPRA.includes(m.fuente));
+  if (idx === -1) return null; // sin un alta de plan que anclar, no se inventa una frase
+
+  const ancla = movs[idx];
+  const posteriores = movs.slice(0, idx); // lo que pasó DESPUÉS de recibir las clases
+  const sum = (fuentes) => posteriores
+    .filter(m => fuentes.includes(m.fuente))
+    .reduce((s, m) => s + (m.delta || 0), 0);
+
+  const r = {
+    comprado: ancla.saldo_despues ?? 0,
+    usado: -sum(USO),
+    devuelto: sum(DEVUELTO),
+    ajustes: sum(AJUSTE),
+    caducado: -sum(CADUCADO),
+    desdeCuando: ancla.cuando,
+  };
+
+  // Si la cuenta no cierra, NO se muestra. Un número que no cuadra fue
+  // exactamente lo que rompió los saldos de 11 clientas en julio y agosto.
+  const cierra = r.comprado - r.usado + r.devuelto + r.ajustes - r.caducado;
+  if (cierra !== (saldoActual ?? 0)) return null;
+  return r;
+}
+
+export default function HistorialClienta({ client, onVerComoElla, rowsExternas, alRecargar }) {
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
   const [soloSaldo, setSoloSaldo] = useState(false);
@@ -70,7 +100,12 @@ export default function HistorialClienta({ client, onVerComoElla }) {
     setRecargando(false);
   };
 
-  useEffect(() => { cargar(); /* eslint-disable-next-line */ }, [client.id]);
+  // Si el padre ya trajo el historial, se reutiliza: la ficha lo pide UNA vez
+  // y lo comparten el Resumen y esta pestaña.
+  useEffect(() => {
+    if (rowsExternas) { setRows(rowsExternas); setError(null); return; }
+    cargar(); /* eslint-disable-next-line */
+  }, [client.id, rowsExternas]);
 
   // ── La frase que explica el saldo de hoy ──────────────────────────────────
   // Es lo que cierra la discusión sin leer un solo renglón.
@@ -82,34 +117,7 @@ export default function HistorialClienta({ client, onVerComoElla }) {
   // compra y la frase decía "0 clases del plan". Se ancla en el MOVIMIENTO que
   // dio las clases y se arranca de su `saldo_despues`, que es el saldo corrido
   // real: así la cuenta cierra por construcción.
-  const resumen = useMemo(() => {
-    if (!rows) return null;
-    const movs = rows.filter(r => r.tipo === 'movimiento'); // vienen del más nuevo al más viejo
-    const idx = movs.findIndex(m => COMPRA.includes(m.fuente));
-    if (idx === -1) return null; // sin un alta de plan que anclar, no se inventa una frase
-
-    const ancla = movs[idx];
-    const posteriores = movs.slice(0, idx); // lo que pasó DESPUÉS de recibir las clases
-
-    const sum = (fuentes) => posteriores
-      .filter(m => fuentes.includes(m.fuente))
-      .reduce((s, m) => s + (m.delta || 0), 0);
-
-    const r = {
-      comprado: ancla.saldo_despues ?? 0,
-      usado: -sum(USO),
-      devuelto: sum(DEVUELTO),
-      ajustes: sum(AJUSTE),
-      caducado: -sum(CADUCADO),
-      desdeCuando: ancla.cuando,
-    };
-
-    // Si la cuenta no cierra, NO se muestra. Un número que no cuadra fue
-    // exactamente lo que rompió los saldos de 11 clientas en julio y agosto.
-    const cierra = r.comprado - r.usado + r.devuelto + r.ajustes - r.caducado;
-    if (cierra !== (client.classes_remaining ?? 0)) return null;
-    return r;
-  }, [rows, client.classes_remaining]);
+  const resumen = useMemo(() => resumirSaldo(rows, client.classes_remaining), [rows, client.classes_remaining]);
 
   const visibles = useMemo(() => {
     if (!rows) return null;
@@ -130,7 +138,7 @@ export default function HistorialClienta({ client, onVerComoElla }) {
             style={btnSec}>
             <Eye size={13} /> Ver lo que ve ella
           </button>
-          <button onClick={cargar} style={btnSec}>
+          <button onClick={() => (alRecargar ? alRecargar() : cargar())} style={btnSec}>
             <RefreshCw size={13} style={recargando ? { animation: 'spin 1s linear infinite' } : {}} /> Actualizar
           </button>
         </div>

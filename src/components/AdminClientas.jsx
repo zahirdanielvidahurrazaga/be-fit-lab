@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Cake, Crown, UserX, UserCheck, Shield, Coffee, Dumbbell, ChevronDown, ChevronLeft, ChevronRight, Phone, QrCode, Trash2, CalendarPlus, Plus, Minus, X, Check, Camera, MoreHorizontal, SlidersHorizontal } from 'lucide-react';
+import { Search, Cake, Crown, UserX, UserCheck, Shield, Coffee, Dumbbell, ChevronDown, ChevronLeft, ChevronRight, Phone, QrCode, Trash2, CalendarPlus, Plus, Minus, X, Check, Camera, MoreHorizontal, SlidersHorizontal, ArrowDownWideNarrow, ArrowLeft, MessageCircle, Mail, Banknote, TrendingUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import HistorialClienta from './HistorialClienta';
+import HistorialClienta, { resumirSaldo } from './HistorialClienta';
 import MisClasesMovimientos from './MisClasesMovimientos';
 import { supabase } from '../lib/supabase';
+import { cobrarPlanAClienta } from '../lib/cobrarPlan';
 import { todayLocalStr } from '../lib/dates';
 import { isPlanExpired, formatPlanDate } from '../lib/membership';
 import { uploadAvatar } from '../lib/avatar';
@@ -54,6 +55,28 @@ const INK = '#1A1C1E';
 
 const plural = (n, sing, plur) => `${n} ${n === 1 ? sing : plur}`;
 
+const h3Ficha = {
+  fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em',
+  color: 'var(--on-surface-variant)', margin: '0 0 10px',
+};
+
+const selectFicha = {
+  border: '1px solid rgba(0,0,0,0.12)', borderRadius: '11px', padding: '10px',
+  background: '#fff', fontSize: '0.85rem', fontWeight: 600, color: INK, cursor: 'pointer', minWidth: 0,
+};
+
+const enlaceContacto = {
+  display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none',
+  background: 'rgba(0,0,0,0.04)', color: INK, borderRadius: '10px', padding: '8px 11px',
+  fontSize: '0.8rem', fontWeight: 700,
+};
+
+const btnCuenta = {
+  display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(0,0,0,0.12)',
+  background: '#fff', borderRadius: '10px', padding: '8px 12px', fontWeight: 700,
+  fontSize: '0.78rem', cursor: 'pointer', color: 'var(--on-surface-variant)',
+};
+
 const chipQuitable = {
   display: 'inline-flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(255,145,77,0.4)',
   background: 'rgba(255,145,77,0.1)', color: PRIMARY, borderRadius: '999px', padding: '5px 11px',
@@ -81,7 +104,18 @@ const fmtBday = (d) => {
   return `${parseInt(day, 10)} ${meses[parseInt(m, 10) - 1]}`;
 };
 
-const FILTERS = [['all', 'Todas'], ['active', 'Activas'], ['inactive', 'Sin plan'], ['staff', 'Staff']];
+// "Por renovar" y "Sin clases" no son estados: son las dos LISTAS DE TRABAJO
+// del estudio (a quién llamar para que renueve, y quién ya puede comprar otro
+// paquete). Ordenar 198 nombres alfabéticamente no contesta ninguna de las dos.
+// "Por renovar" incluye a las que vencen dentro de la ventana Y a las que ya
+// vencieron pero siguen ACTIVE: a todas hay que hacerles la misma llamada, y
+// llamarle "Por vencer" a alguien que venció en julio sería mentir.
+const DIAS_POR_VENCER = 7;
+const FILTERS = [
+  ['all', 'Todas'], ['active', 'Activas'],
+  ['porvencer', 'Por renovar'], ['sinclases', 'Sin clases'],
+  ['inactive', 'Sin plan'], ['staff', 'Staff'],
+];
 
 // 'YYYY-MM' del alta, en hora de México (no del navegador: la dueña puede
 // abrir esto desde cualquier lado y una alta del día 1 no debe caer en el mes
@@ -127,7 +161,7 @@ function Pill({ active, onClick, children }) {
 //
 // Y "Eliminar" ya no vive a un clic en las 197 filas — es la acción más
 // destructiva del sistema y estaba con el mismo peso visual que "Clases".
-function ClientRow({ u, onRole, onBaja, onReactivar, onDelete, onManage, busy, currentUserId }) {
+function ClientRow({ u, onRole, onBaja, onReactivar, onDelete, onManage, busy, currentUserId, seleccionada, compacta }) {
   const [menu, setMenu] = useState(false);
   const rm = roleMeta(u.role);
   const active = u.membership_status === 'ACTIVE';
@@ -148,14 +182,16 @@ function ClientRow({ u, onRole, onBaja, onReactivar, onDelete, onManage, busy, c
   return (
     <div
       onClick={() => isClient && onManage(u)}
-      className="fila-clienta"
+      className={`fila-clienta${compacta ? ' es-compacta' : ''}`}
       style={{
         display: 'flex', alignItems: 'center', gap: '12px', padding: '11px 14px',
-        borderBottom: '1px solid rgba(0,0,0,0.06)', background: '#fff',
+        borderBottom: '1px solid rgba(0,0,0,0.06)',
+        background: seleccionada ? 'rgba(255,145,77,0.09)' : '#fff',
+        boxShadow: seleccionada ? `inset 3px 0 0 ${PRIMARY}` : 'none',
         cursor: isClient ? 'pointer' : 'default',
       }}
-      onMouseEnter={e => { if (isClient) e.currentTarget.style.background = 'rgba(255,145,77,0.04)'; }}
-      onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
+      onMouseEnter={e => { if (isClient && !seleccionada) e.currentTarget.style.background = 'rgba(255,145,77,0.04)'; }}
+      onMouseLeave={e => { if (!seleccionada) e.currentTarget.style.background = '#fff'; }}
     >
       {u.avatar_url
         ? <img src={u.avatar_url} alt="" style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
@@ -176,8 +212,12 @@ function ClientRow({ u, onRole, onBaja, onReactivar, onDelete, onManage, busy, c
       </div>
 
       {/* Estado — una línea, color solo si hay algo que atender */}
-      {/* La alineación vive en index.css (.fc-estado): en línea ganaría siempre
-          y en móvil el estado se quedaría pegado a la derecha. */}
+      {/* Solo si hay algo que decir. En modo compacto este bloque se lleva un
+          renglón entero, así que en las filas de staff (que no tienen plan ni
+          vencimiento) dejaba un hueco grande con el "···" colgando abajo.
+          La alineación vive en index.css: en línea ganaría siempre y en móvil
+          el estado se quedaría pegado a la derecha. */}
+      {(estado || vigencia) && (
       <div className="fc-estado" style={{ flex: '1 1 150px', minWidth: 0 }}>
         {estado && (
           <div style={{ fontSize: '0.82rem', fontWeight: estado.alerta ? 800 : 600, color: estado.alerta ? '#EA7A3B' : INK, lineHeight: 1.3 }}>
@@ -190,6 +230,7 @@ function ClientRow({ u, onRole, onBaja, onReactivar, onDelete, onManage, busy, c
           </div>
         )}
       </div>
+      )}
 
       {/* Acciones — detrás del menú, no en la cara de las 197 filas */}
       <div style={{ position: 'relative', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
@@ -386,8 +427,25 @@ function CobroAutomatico({ clientId }) {
 const quickBtnChico = { border: 'none', borderRadius: '10px', padding: '8px 12px', fontWeight: 800, fontSize: '0.79rem', cursor: 'pointer', background: 'rgba(255,145,77,0.14)', color: PRIMARY };
 const quickBtnRojo = { border: 'none', borderRadius: '10px', padding: '8px 12px', fontWeight: 800, fontSize: '0.79rem', cursor: 'pointer', background: 'rgba(186,26,26,0.10)', color: '#ba1a1a' };
 
-function ManageClassesModal({ client, onClose, patch, applyLocal }) {
-  const { globalClasses, fetchGlobalClasses, fetchAllUsers } = useAuth();
+function FichaClienta({ client, onClose, patch, applyLocal, onRole, onBaja, onReactivar, onDelete, currentUserId }) {
+  const { globalClasses, fetchGlobalClasses, fetchAllUsers, allPlans, activatePlan, user } = useAuth();
+
+  // El historial se pide UNA vez por ficha y lo comparten el Resumen (la frase
+  // que explica el saldo) y la pestaña Historial.
+  const [historial, setHistorial] = useState(null);
+  const cargarHistorial = React.useCallback(async () => {
+    const { data } = await supabase.rpc('admin_historial_clienta', { p_user_id: client.id, p_limite: 300 });
+    setHistorial(data || []);
+  }, [client.id]);
+  useEffect(() => { cargarHistorial(); }, [cargarHistorial]);
+  const comoVa = useMemo(() => resumirSaldo(historial, client.classes_remaining), [historial, client.classes_remaining]);
+
+  // Cobrar desde aquí: antes había que salirse a Ventas y BUSCARLA otra vez.
+  const planesActivos = (allPlans || []).filter(p => p.active !== false);
+  const [planCobro, setPlanCobro] = useState('');
+  const [metodoCobro, setMetodoCobro] = useState('efectivo');
+  const [cobrando, setCobrando] = useState(false);
+  const planElegido = planesActivos.find(p => p.name === planCobro);
   // "Ver lo que ve ella": abre la pantalla EXACTA de la clienta. La mitad de
   // estas discusiones son "es que la app me dice otra cosa".
   const [verComoElla, setVerComoElla] = useState(false);
@@ -551,17 +609,24 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
   const noClasses = !unlimited && (parseInt(credits, 10) || 0) <= 0;
   const quickBtn = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', border: 'none', borderRadius: '10px', padding: '8px 12px', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', background: 'rgba(255,145,77,0.12)', color: PRIMARY };
 
+  // PANEL, no modal. Como modal tapaba la lista y obligaba a cerrar para pasar a
+  // la siguiente clienta; aquí la lista se queda al lado y se puede ir saltando.
+  // En pantallas angostas `.col-ficha` (index.css) lo pone a pantalla completa.
   return (
     <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: 'env(safe-area-inset-top) 0 0' }}
+      initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }}
+      transition={{ duration: 0.16 }}
+      className="ficha-panel"
+      style={{ background: 'var(--app-surface-solid, #fff)', border: '1px solid rgba(0,0,0,0.07)', borderRadius: '18px', display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: 'calc(100vh - 40px)', position: 'sticky', top: '16px' }}
     >
-      <motion.div
-        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        onClick={e => e.stopPropagation()}
-        style={{ background: 'var(--app-surface-solid, #fff)', width: '100%', maxWidth: '560px', maxHeight: '90vh', borderRadius: '24px 24px 0 0', display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
+      <>
+        {/* En móvil el panel tapa la lista (index.css), así que ahí necesita su
+            propia salida: sin esto la dueña queda encerrada en la ficha. */}
+        <button onClick={onClose} className="ficha-volver"
+          style={{ display: 'none', alignItems: 'center', gap: '6px', border: 'none', background: 'rgba(0,0,0,0.04)', width: '100%', padding: '11px 18px', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem', color: 'var(--on-surface-variant)', textAlign: 'left' }}>
+          <ArrowLeft size={16} /> Volver a la lista
+        </button>
+
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '18px 18px 14px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
           {/* Avatar con botón de cámara para ponerle/cambiar la foto a la clienta */}
@@ -614,6 +679,92 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
 
         <div style={{ overflowY: 'auto', padding: '18px' }}>
           <div style={{ display: tab === 'resumen' ? 'block' : 'none' }}>
+
+          {/* ── CÓMO VA — lo primero es el CONTEXTO, no el control que cambia
+              el saldo. Ese control, puesto arriba y en grande, es el que se usó
+              15 veces a ciegas y quitó 53 clases bien cobradas. ── */}
+          <h3 style={h3Ficha}>Cómo va</h3>
+          <div style={{ background: 'rgba(255,145,77,0.07)', border: '1px solid rgba(255,145,77,0.2)', borderRadius: '14px', padding: '13px 15px', marginBottom: '22px' }}>
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: INK, marginBottom: comoVa || unlimited ? '6px' : 0 }}>
+              {client.membership_plan || (client.membership_status === 'ACTIVE' ? 'Activa' : 'Sin plan')}
+              {' · '}
+              {unlimited ? 'clases ilimitadas' : plural(client.classes_remaining ?? 0, 'clase', 'clases')}
+              {client.plan_expires_at && (
+                <span style={{ fontWeight: 700, color: isPlanExpired(client.plan_expires_at) ? '#DC2626' : 'var(--on-surface-variant)' }}>
+                  {' · '}{isPlanExpired(client.plan_expires_at) ? 'VENCIDO' : 'vence'} {formatPlanDate(client.plan_expires_at, true)}
+                </span>
+              )}
+            </div>
+            {comoVa && !unlimited && (
+              <p style={{ margin: 0, fontSize: '0.82rem', lineHeight: 1.55, color: 'var(--on-surface-variant)' }}>
+                Quedó con <b style={{ color: INK }}>{comoVa.comprado}</b>
+                {comoVa.usado > 0 && <> · usó <b style={{ color: INK }}>{comoVa.usado}</b></>}
+                {comoVa.devuelto > 0 && <> · canceló <b style={{ color: INK }}>{comoVa.devuelto}</b></>}
+                {comoVa.ajustes !== 0 && <> · el estudio le ajustó <b style={{ color: INK }}>{comoVa.ajustes > 0 ? `+${comoVa.ajustes}` : comoVa.ajustes}</b></>}
+                {comoVa.caducado > 0 && <> · caducaron <b style={{ color: INK }}>{comoVa.caducado}</b></>}
+                {' → hoy tiene '}<b style={{ color: PRIMARY }}>{client.classes_remaining ?? 0}</b>.
+              </p>
+            )}
+            {historial === null && <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--on-surface-variant)' }}>Revisando su historial…</p>}
+          </div>
+
+          {/* ── COBRAR — antes había que salirse a Ventas y BUSCARLA otra vez.
+              Ese salto es donde nacieron las 6 ventas duplicadas de agosto. ── */}
+          <h3 style={h3Ficha}>Cobrar un plan</h3>
+          <div style={{ background: 'rgba(0,0,0,0.025)', borderRadius: '14px', padding: '14px', marginBottom: '22px' }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+              <select value={planCobro} onChange={e => setPlanCobro(e.target.value)} style={{ ...selectFicha, flex: '2 1 150px' }}>
+                <option value="">Elige el plan…</option>
+                {planesActivos.map(p => <option key={p.name} value={p.name}>{p.name} — ${p.price_mxn ?? p.amount}</option>)}
+              </select>
+              <select value={metodoCobro} onChange={e => setMetodoCobro(e.target.value)} style={{ ...selectFicha, flex: '1 1 110px' }}>
+                <option value="efectivo">Efectivo</option>
+                <option value="tarjeta">Tarjeta</option>
+                <option value="transferencia">Transferencia</option>
+              </select>
+            </div>
+            <button
+              disabled={!planElegido || cobrando}
+              onClick={async () => {
+                if (!planElegido || cobrando) return;
+                setCobrando(true);
+                try {
+                  const { ok } = await cobrarPlanAClienta({
+                    clienta: client,
+                    plan: { name: planElegido.name, amount: planElegido.price_mxn ?? planElegido.amount, classes: planElegido.classes },
+                    metodo: metodoCobro, vendedorId: user?.id, activatePlan,
+                  });
+                  if (ok) { setPlanCobro(''); fetchAllUsers?.(); cargarHistorial(); }
+                } finally { setCobrando(false); }
+              }}
+              style={{ width: '100%', border: 'none', borderRadius: '12px', padding: '12px', fontWeight: 800, fontSize: '0.9rem',
+                       cursor: (!planElegido || cobrando) ? 'not-allowed' : 'pointer',
+                       background: (!planElegido || cobrando) ? 'rgba(0,0,0,0.06)' : PRIMARY,
+                       color: (!planElegido || cobrando) ? 'var(--on-surface-variant)' : '#fff' }}>
+              {cobrando ? 'Cobrando…' : planElegido ? `Cobrar $${(planElegido.price_mxn ?? planElegido.amount).toLocaleString('es-MX')}` : 'Cobrar'}
+            </button>
+            <p style={{ margin: '9px 0 0', fontSize: '0.73rem', color: 'var(--on-surface-variant)', lineHeight: 1.45 }}>
+              Cobrar <b>reemplaza</b> su saldo por el del plan, no lo suma. Te avisa antes si ya le cobraste esto mismo hace poco.
+            </p>
+          </div>
+
+          {/* ── CONTACTO ── */}
+          <h3 style={h3Ficha}>Contacto</h3>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '22px' }}>
+            {client.phone ? (
+              <a href={`https://wa.me/52${String(client.phone).replace(/\D/g, '').slice(-10)}`} target="_blank" rel="noreferrer" style={enlaceContacto}>
+                <MessageCircle size={14} /> {client.phone}
+              </a>
+            ) : <span style={{ ...enlaceContacto, opacity: 0.55 }}><Phone size={14} /> Sin teléfono</span>}
+            {client.email && (
+              <a href={`mailto:${client.email}`} style={enlaceContacto}><Mail size={14} /> {client.email}</a>
+            )}
+            {client.birth_date && (
+              <span style={enlaceContacto}><Cake size={14} /> {fmtBday(client.birth_date)}</span>
+            )}
+          </div>
+
+          <h3 style={h3Ficha}>Ajustes de la membresía</h3>
           {/* SECCIÓN 1 — Clases disponibles */}
           <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)', margin: '0 0 10px' }}>Clases disponibles</h3>
           {unlimited ? (
@@ -704,13 +855,41 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
           {/* SECCIÓN — Cobro automático (pausar/cancelar y cerrar duplicados) */}
           <CobroAutomatico clientId={client.id} />
 
+          {/* ── CUENTA — hasta el fondo A PROPÓSITO: es lo único de la ficha
+              que no se deshace. Arriba va lo que se hace a diario. ── */}
+          <h3 style={{ ...h3Ficha, color: '#ba1a1a' }}>Cuenta</h3>
+          <div style={{ background: 'rgba(186,26,26,0.04)', border: '1px solid rgba(186,26,26,0.15)', borderRadius: '14px', padding: '14px', marginBottom: '24px' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--on-surface-variant)', marginBottom: '8px' }}>Rol en el sistema</div>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
+              {ROLES.map(r => (
+                <button key={r.value} onClick={() => r.value !== client.role && onRole?.(client, r.value)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '5px', border: `1px solid ${r.value === client.role ? PRIMARY : 'rgba(0,0,0,0.12)'}`,
+                           background: r.value === client.role ? 'rgba(255,145,77,0.12)' : '#fff',
+                           color: r.value === client.role ? PRIMARY : 'var(--on-surface-variant)',
+                           borderRadius: '10px', padding: '6px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer' }}>
+                  <r.Icon size={13} /> {r.label}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {client.role === 'CLIENT' && (client.membership_status === 'ACTIVE'
+                ? <button onClick={() => onBaja?.(client)} style={btnCuenta}><UserX size={14} /> Dar de baja</button>
+                : <button onClick={() => onReactivar?.(client)} style={{ ...btnCuenta, color: '#16A34A' }}><UserCheck size={14} /> Reactivar plan</button>)}
+              {client.id !== currentUserId && (
+                <button onClick={() => onDelete?.(client)} style={{ ...btnCuenta, color: '#ba1a1a', marginLeft: 'auto' }}>
+                  <Trash2 size={14} /> Eliminar cuenta
+                </button>
+              )}
+            </div>
+          </div>
+
           </div>
 
           {/* Historial: el contexto que faltaba junto al control que modifica
               el saldo. Se monta solo al abrir la pestaña para no pedirle a la
               BD el historial de cada clienta que se asome a su ficha. */}
           <div style={{ display: tab === 'historial' ? 'block' : 'none' }}>
-            {tab === 'historial' && <HistorialClienta client={client} onVerComoElla={() => setVerComoElla(true)} />}
+            {tab === 'historial' && <HistorialClienta client={client} onVerComoElla={() => setVerComoElla(true)} rowsExternas={historial} alRecargar={cargarHistorial} />}
           </div>
 
           <div style={{ display: tab === 'reservas' ? 'block' : 'none' }}>
@@ -771,7 +950,7 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
           )}
           </div>
         </div>
-      </motion.div>
+      </>
 
       <MisClasesMovimientos
         abierto={verComoElla}
@@ -793,6 +972,7 @@ export default function AdminClientas() {
   // agosto". '' = todos los meses; si no, 'YYYY-MM' sobre created_at.
   const [mesAlta, setMesAlta] = useState('');
   const [verFiltros, setVerFiltros] = useState(false);
+  const [orden, setOrden] = useState('nombre');
   const [planFilter, setPlanFilter] = useState('all');
   // Va DESPUÉS de planFilter: leerlo antes de su declaración es un
   // ReferenceError de TDZ que tumba la pestaña completa y que el build no ve.
@@ -877,6 +1057,9 @@ export default function AdminClientas() {
       return;
     }
     setUsers(prev => (prev || []).filter(x => x.id !== u.id)); // quitar de la lista
+    // Si su ficha estaba abierta hay que cerrarla: el panel cae al objeto viejo
+    // cuando ya no está en la lista y se quedaría mostrando a alguien borrado.
+    setManaging(prev => (prev?.id === u.id ? null : prev));
     fetchAllUsers?.();
     if (data?.warning) alert(data.warning);
   };
@@ -886,12 +1069,51 @@ export default function AdminClientas() {
     if (filter === 'active') arr = arr.filter(u => u.membership_status === 'ACTIVE' && u.role === 'CLIENT');
     else if (filter === 'inactive') arr = arr.filter(u => u.membership_status !== 'ACTIVE' && u.role === 'CLIENT');
     else if (filter === 'staff') arr = arr.filter(u => ['COACH', 'BARISTA', 'RECEPCION', 'ADMIN'].includes(u.role));
+    else if (filter === 'porvencer') {
+      const limite = Date.now() + DIAS_POR_VENCER * 86400000;
+      arr = arr.filter(u => u.role === 'CLIENT' && u.membership_status === 'ACTIVE' && u.plan_expires_at
+        && new Date(u.plan_expires_at).getTime() <= limite);
+    } else if (filter === 'sinclases') {
+      arr = arr.filter(u => u.role === 'CLIENT' && u.membership_status === 'ACTIVE'
+        && !isUnlimitedClient(u) && (u.classes_remaining ?? 0) <= 0);
+    }
     if (planFilter !== 'all') arr = arr.filter(u => (u.membership_plan || '') === planFilter && u.membership_status === 'ACTIVE');
     if (mesAlta) arr = arr.filter(u => mesDeAlta(u.created_at) === mesAlta);
     const s = q.trim().toLowerCase();
     if (s) arr = arr.filter(u => (u.full_name || '').toLowerCase().includes(s) || (u.email || '').toLowerCase().includes(s));
+
+    // Ordenar. Las que no aplican al criterio se van al final en vez de
+    // colarse arriba: quien no tiene vencimiento no es "la más urgente".
+    const alFinal = Number.MAX_SAFE_INTEGER;
+    const porNombre = (a, b) => (a.full_name || a.email || '').localeCompare(b.full_name || b.email || '', 'es');
+    arr = [...arr].sort((a, b) => {
+      if (orden === 'vence') {
+        // Tres grupos: primero lo que está POR vencer (de hoy hacia adelante),
+        // luego lo ya vencido (lo más reciente arriba) y al final quien no
+        // tiene fecha. Ordenar por fecha a secas subía hasta arriba a las que
+        // vencieron hace meses y ya no vuelven, tapando a las que vencen
+        // mañana, que son las que todavía se pueden salvar.
+        const ahora = Date.now();
+        const info = (u) => {
+          if (!u.plan_expires_at) return { grupo: 2, t: 0 };
+          const t = new Date(u.plan_expires_at).getTime();
+          return t >= ahora ? { grupo: 0, t } : { grupo: 1, t: -t };
+        };
+        const ia = info(a), ib = info(b);
+        return ia.grupo - ib.grupo || ia.t - ib.t || porNombre(a, b);
+      }
+      if (orden === 'saldo') {
+        const sa = isUnlimitedClient(a) ? alFinal : (a.classes_remaining ?? alFinal);
+        const sb = isUnlimitedClient(b) ? alFinal : (b.classes_remaining ?? alFinal);
+        return sa - sb || porNombre(a, b);
+      }
+      if (orden === 'alta') {
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0) || porNombre(a, b);
+      }
+      return porNombre(a, b);
+    });
     return arr;
-  }, [users, filter, planFilter, q, mesAlta]);
+  }, [users, filter, planFilter, q, mesAlta, orden]);
 
   // Meses con altas, del más reciente al más viejo (solo clientas).
   const mesesConAltas = useMemo(() => {
@@ -902,6 +1124,15 @@ export default function AdminClientas() {
       if (m) cuenta.set(m, (cuenta.get(m) || 0) + 1);
     }
     return [...cuenta.entries()].sort((a, b) => b[0].localeCompare(a[0])).slice(0, 12);
+  }, [users]);
+
+  const conteoTrabajo = useMemo(() => {
+    const limite = Date.now() + DIAS_POR_VENCER * 86400000;
+    const cl = (users || []).filter(u => u.role === 'CLIENT' && u.membership_status === 'ACTIVE');
+    return {
+      porvencer: cl.filter(u => u.plan_expires_at && new Date(u.plan_expires_at).getTime() <= limite).length,
+      sinclases: cl.filter(u => !isUnlimitedClient(u) && (u.classes_remaining ?? 0) <= 0).length,
+    };
   }, [users]);
 
   const counts = useMemo(() => {
@@ -922,6 +1153,12 @@ export default function AdminClientas() {
         <span style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{counts.clients} clientas · {counts.active} activas · {counts.staff} staff</span>
       </div>
 
+      {/* Maestro-detalle: la lista a la izquierda, la ficha al lado. Antes la
+          ficha era un modal centrado que TAPABA la lista y obligaba a cerrarla
+          para pasar a la siguiente clienta. */}
+      <div className="clientas-split" style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+      <div className="col-lista" style={{ flex: managing ? '0 0 400px' : '1 1 auto', minWidth: 0 }}>
+
       {/* Buscar + filtros. Los secundarios (membresía y mes de alta) van
           PLEGADOS: antes eran 3 filas de pastillas siempre visibles, ~180 px de
           adorno antes del primer dato, cuando lo que la dueña hace casi siempre
@@ -940,9 +1177,20 @@ export default function AdminClientas() {
 
       {/* Estado de la membresía: es lo único que se consulta a diario. */}
       <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '12px' }}>
-        {FILTERS.map(([id, label]) => (
-          <Pill key={id} active={filter === id} onClick={() => setFilter(id)}>{label}</Pill>
-        ))}
+        {FILTERS.map(([id, label]) => {
+          const n = conteoTrabajo[id];
+          return (
+            <Pill key={id} active={filter === id} onClick={() => {
+              setFilter(id);
+              // Una lista de trabajo sin el orden que la hace útil no sirve de
+              // nada: se elige solo, y se puede cambiar después.
+              if (id === 'porvencer') setOrden('vence');
+              if (id === 'sinclases') setOrden('saldo');
+            }}>
+              {label}{n ? ` · ${n}` : ''}
+            </Pill>
+          );
+        })}
       </div>
 
       {/* Lo que esté filtrado se ve como pastilla quitable, aunque el panel esté
@@ -983,10 +1231,20 @@ export default function AdminClientas() {
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>
           {users === null ? '' : <>{plural(list.length, 'persona', 'personas')}{mesAlta ? <> que se dieron de alta en <b style={{ color: INK }}>{nombreMes(mesAlta)}</b></> : null}</>}
         </span>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>
+          <ArrowDownWideNarrow size={14} />
+          <select value={orden} onChange={e => setOrden(e.target.value)}
+            style={{ border: '1px solid rgba(0,0,0,0.1)', borderRadius: '10px', padding: '6px 8px', background: '#fff', fontSize: '0.78rem', fontWeight: 700, color: INK, cursor: 'pointer' }}>
+            <option value="nombre">Nombre (A–Z)</option>
+            <option value="vence">Vence primero</option>
+            <option value="saldo">Menos clases</option>
+            <option value="alta">Se inscribió al último</option>
+          </select>
+        </label>
       </div>
 
       {users === null ? (
@@ -999,22 +1257,31 @@ export default function AdminClientas() {
       ) : (
         <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', overflow: 'hidden' }}>
           {list.map(u => (
-            <ClientRow key={u.id} u={u} onRole={onRole} onBaja={onBaja} onReactivar={onReactivar} onDelete={onDelete} onManage={setManaging} busy={busy} currentUserId={user?.id} />
+            <ClientRow key={u.id} u={u} onRole={onRole} onBaja={onBaja} onReactivar={onReactivar} onDelete={onDelete}
+              onManage={setManaging} busy={busy} currentUserId={user?.id}
+              seleccionada={managing?.id === u.id} compacta={!!managing} />
           ))}
         </div>
       )}
 
+      </div>
+
       <AnimatePresence>
         {managing && (
-          <ManageClassesModal
-            key={managing.id}
-            client={(users || []).find(u => u.id === managing.id) || managing}
-            onClose={() => setManaging(null)}
-            patch={patch}
-            applyLocal={applyLocal}
-          />
+          <div className="col-ficha" style={{ flex: '1 1 auto', minWidth: 0 }}>
+            <FichaClienta
+              key={managing.id}
+              client={(users || []).find(u => u.id === managing.id) || managing}
+              onClose={() => setManaging(null)}
+              patch={patch}
+              applyLocal={applyLocal}
+              onRole={onRole} onBaja={onBaja} onReactivar={onReactivar} onDelete={onDelete}
+              currentUserId={user?.id}
+            />
+          </div>
         )}
       </AnimatePresence>
+      </div>
     </section>
   );
 }

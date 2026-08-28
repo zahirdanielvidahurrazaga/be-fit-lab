@@ -27,6 +27,7 @@ import SearchableClientSelect from '../components/SearchableClientSelect';
 import { DEFAULT_CATEGORIES, PASTEL_PALETTE, resolveCatColor, categoryLabel } from '../lib/categories';
 import { Coffee, Bell, UserCog, Sparkles, Copy, Trash2, Tag, LayoutTemplate, MoreHorizontal, Dumbbell, CreditCard, ClipboardCheck, Cake, Scale, Camera } from 'lucide-react';
 import { ESTUDIO, moduloActivo } from '../config/estudio';
+import { cobrarPlanAClienta } from '../lib/cobrarPlan';
 
 const daysOfWeek = [
   { num: 1, label: 'Lunes' },
@@ -228,69 +229,23 @@ function Admin({ recepcion = false }) {
 
   const handlePago = async () => {
     if (!selectedAlumnaId || charging) return; // candado: un cobro a la vez
-
-    // Plan canónico desde la fuente única (src/lib/plans)
     const planDetails = PLAN_BY_NAME[selectedPlan];
     if (!planDetails) return;
 
-    // Confirmación con nombre: el cobro a la alumna equivocada (o a una cuenta
-    // duplicada) fue la causa real del "pagó y no se le activó el plan".
-    const alumna = (allUsers || []).find(u => u.id === selectedAlumnaId);
-    const quien = alumna?.full_name || alumna?.email || 'la alumna seleccionada';
-    let msg = `Cobrar ${planDetails.name} ($${planDetails.amount}) en ${selectedPayMethod} a:\n\n${quien}\n${alumna?.email || ''}`;
-
-    // Si ya tiene plan vigente con saldo, el cobro PISA su saldo → avisar.
-    const vigente = alumna?.membership_status === 'ACTIVE' && (alumna?.classes_remaining ?? 0) > 0
-      && (!alumna?.plan_expires_at || new Date(alumna.plan_expires_at) > new Date());
-    if (vigente) {
-      const saldo = alumna.classes_remaining >= 9000 ? 'ilimitadas' : `${alumna.classes_remaining}`;
-      msg += `\n\nOJO: ya tiene ${alumna.membership_plan || 'un plan'} ACTIVO con ${saldo} clases sin usar.`
-           + `\nAl cobrar, su saldo se REEMPLAZA por ${planDetails.classes} (no se suman).`;
-    }
-    if (!confirm(msg)) return;
-
     setCharging(true);
     try {
-      // ¿Ya se cobró esto hace un momento? En agosto hubo 6 ventas duplicadas,
-      // separadas entre 14 y 29 segundos: son dos pasadas completas seguidas
-      // (el candado `charging` y el confirm de arriba no las detienen porque
-      // cada una es un flujo entero). Se revisa ANTES de activar el plan,
-      // porque activarlo REEMPLAZA el saldo y eso ya no se deshace solo.
-      const desde = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-      const { data: recientes } = await supabase.from('sales')
-        .select('created_at, plan_name, amount')
-        .eq('user_id', selectedAlumnaId).eq('plan_name', planDetails.name)
-        .eq('voided', false).gte('created_at', desde)
-        .order('created_at', { ascending: false }).limit(1);
-
-      if (recientes?.length) {
-        const hace = Math.max(1, Math.round((Date.now() - new Date(recientes[0].created_at)) / 1000));
-        const cuando = hace < 90 ? `hace ${hace} segundos` : `hace ${Math.round(hace / 60)} minutos`;
-        const ok = confirm(
-          `⚠️ YA LE COBRASTE ${planDetails.name} a ${quien} ${cuando}.\n\n` +
-          `Si le vuelves a cobrar:\n` +
-          `· se registra un segundo pago de $${planDetails.amount} en el reporte\n` +
-          `· su saldo se REEMPLAZA otra vez por ${planDetails.classes} clases\n\n` +
-          `¿De verdad es un pago DISTINTO?`
-        );
-        if (!ok) { setCharging(false); return; }
-      }
-
-      await activatePlan(planDetails.name, planDetails.classes, selectedAlumnaId);
-      // Registrar la venta de mostrador (para el dashboard financiero)
-      const { error: ventaError } = await supabase.from('sales').insert({
-        user_id: selectedAlumnaId, sold_by: user.id, plan_name: planDetails.name,
-        amount: planDetails.amount || 0, method: selectedPayMethod,
+      // Toda la lógica (confirmaciones, aviso de saldo que se pisa, candado
+      // anti-duplicado y registro de la venta) vive en src/lib/cobrarPlan.js,
+      // porque desde el 27-ago también se cobra desde la ficha de la clienta y
+      // tener dos copias sería pedir que una pierda los candados.
+      const { ok } = await cobrarPlanAClienta({
+        clienta: (allUsers || []).find(u => u.id === selectedAlumnaId),
+        plan: planDetails,
+        metodo: selectedPayMethod,
+        vendedorId: user.id,
+        activatePlan,
       });
-      // Antes esto se tragaba en silencio: el plan quedaba activo y la venta no
-      // se registraba, así que al reporte le faltaba dinero y nadie se enteraba.
-      if (ventaError) {
-        alert(
-          /VENTA_DUPLICADA/.test(ventaError.message || '')
-            ? `El plan de ${quien} SÍ quedó activo, pero no se registró la venta porque el sistema la detectó como cobro repetido.\n\nSi era un pago distinto, regístralo de nuevo en un minuto.`
-            : `El plan de ${quien} SÍ quedó activo, pero NO se pudo registrar la venta en el reporte:\n\n${ventaError.message}\n\nAvísale a Zahir para que no falte ese dinero en el corte.`
-        );
-      }
+      if (!ok) { setCharging(false); return; }
 
       setShowPaySuccess(true);
       setTimeout(() => {

@@ -1747,3 +1747,29 @@ h1, h2, h3, h4, h5 {
     padding-left: 50px; /* alinea bajo el nombre, no bajo el avatar */
   }
 }
+
+/* Ficha de la clienta como PANEL al lado de la lista (no modal centrado). */
+.clientas-split .col-ficha { align-self: stretch; }
+
+/* Con el panel abierto la columna de la lista queda angosta aunque la ventana
+   sea ancha, así que la media query de viewport no basta: el estado se apila
+   por CLASE, no por ancho de pantalla. */
+.fila-clienta.es-compacta { flex-wrap: wrap; row-gap: 2px; }
+.fila-clienta.es-compacta .fc-id { flex: 1 1 auto; }
+.fila-clienta.es-compacta .fc-estado {
+  flex: 1 0 100%;
+  text-align: left;
+  padding-left: 50px;
+}
+
+/* En pantallas angostas el panel manda: ocupa todo y la lista se esconde. */
+@media (max-width: 900px) {
+  .clientas-split { display: block !important; }
+  .clientas-split:has(.col-ficha) .col-lista { display: none; }
+  .clientas-split .col-ficha .ficha-panel { max-height: none; position: static; }
+}
+
+/* El botón de volver solo existe donde el panel tapa la lista. */
+@media (max-width: 900px) {
+  .ficha-panel .ficha-volver { display: flex !important; }
+}
