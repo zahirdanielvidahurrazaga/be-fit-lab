@@ -1732,3 +1732,18 @@ h1, h2, h3, h4, h5 {
     background-position: center bottom;
   }
 }
+
+/* Lista de clientas (admin). En pantallas angostas el estado no cabe junto al
+   nombre y salía cortado ("Activa · 10 clas…"), que con planes reales
+   ("Plan Esencial · 0 clases") se comía media frase. Baja a su propio renglón. */
+.fila-clienta .fc-estado { text-align: right; }
+
+@media (max-width: 720px) {
+  .fila-clienta { flex-wrap: wrap; row-gap: 2px; }
+  .fila-clienta .fc-id { flex: 1 1 auto; }
+  .fila-clienta .fc-estado {
+    flex: 1 0 100%;
+    text-align: left;
+    padding-left: 50px; /* alinea bajo el nombre, no bajo el avatar */
+  }
+}

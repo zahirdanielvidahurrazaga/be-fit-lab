@@ -223,6 +223,25 @@ const funcionesFalsas = {
     if (nombre === 'admin-analytics') {
       return { data: analiticaFalsa(opciones?.body?.days || 30), error: null };
     }
+    // El panel de la dueña abre la ficha de una clienta y consulta su cobro
+    // automático. Devolver la forma genérica dejaba la pantalla en blanco, así
+    // que aquí se simula una suscripción con la misma forma que la real.
+    if (nombre === 'admin-membership') {
+      if (opciones?.body?.action !== 'list') {
+        return { data: { resultado: 'Simulado en la demostración' }, error: null };
+      }
+      return {
+        data: {
+          duplicadas: 0,
+          suscripciones: [{
+            id: 'sub_demo', monto: 1300, estado: 'active',
+            esLaDeLaApp: true, pausada: false, terminaAlVencer: false,
+            proximoCobro: Math.floor((hoy.getTime() + 21 * 86400000) / 1000),
+          }],
+        },
+        error: null,
+      };
+    }
     console.info(`[demo] se simuló la función "${nombre}" (no se llamó a nada real)`);
     return {
       data: { demo: true, message: 'Simulado en la demostración' },

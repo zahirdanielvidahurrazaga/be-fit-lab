@@ -78,6 +78,24 @@ Reporte: *"en la parte donde les avisan si hay cupo en una clase, les reserva an
 
 ⚠️ **Hoy hay 14 ventas huérfanas** (cuentas borradas, arrastradas desde junio) que salen como pendientes. Son reales, no ruido — pero conviene decirle a la dueña que *revisar puede terminar en "déjalo como está"*; ya lo dice el copy.
 
+### 🧹 3ª parte — Clientas deja de estar atascada (commit pendiente)
+
+Reporte del usuario: *"la siento muy atascada de información"* y *"no me gusta cómo se despliega, sin un orden y teniendo que clickear en Clases, algo cero intuitivo"*. Las dos con razón.
+
+**Qué estaba mal, concreto:** 3 filas de pastillas de filtro siempre visibles (~180 px de adorno antes del primer dato, cuando lo que se hace casi siempre es escribir un nombre) · **5 chips de 5 colores por tarjeta** (plan verde, clases naranja, vence azul, cumpleaños rosa, teléfono gris) todos con el mismo peso, así que ninguno destacaba · cumpleaños y teléfono, que son datos de ficha y no de escaneo, hacían que cada tarjeta midiera distinto y la cuadrícula se viera rota · **"Eliminar" en rojo en las 197 tarjetas**, a un clic, con el mismo peso visual que "Clases" · el selector de rol ocupando la esquina de cada tarjeta para 16 staff de 197 · y un botón que decía **"Clases"** pero abría saldo + vencimiento + cobro + historial + reservas en un scroll único.
+
+**Lo que quedó:**
+- **`ClientRow`** sustituye a `ClientCard`: un renglón por persona, **el estado en UNA línea** (`Plan Fit · 18 clases` / `vence 21 sep`) y **color SOLO cuando hay algo que atender** (vencido, 0 clases, sin plan). Toda la fila abre la ficha. Las acciones (dar de baja, reactivar, rol, eliminar) se fueron a un menú `···`. El rol solo se anuncia cuando NO es clienta.
+- **Filtros plegados** tras un botón con contador; lo que esté filtrado se ve como pastilla quitable aunque el panel esté cerrado (si no, se filtra sin darse cuenta y la lista "miente").
+- **La ficha con pestañas Resumen · Historial · Reservas.** El Historial se monta solo al abrir su pestaña, para no pedirle a la BD el historial de cada clienta que se asome.
+- En `index.css`, `.fila-clienta`/`.fc-estado`: en ≤720 px el estado baja a su propio renglón. ⚠️ La alineación **tiene que vivir en el CSS**, no en línea: el estilo en línea gana siempre y en móvil el estado se quedaba pegado a la derecha, cortado (`"Activa · 10 clas…"`).
+
+**🔴 BUG PREEXISTENTE ENCONTRADO Y ARREGLADO — `CobroAutomatico` tumbaba TODA la pestaña Clientas.** `estado.suscripciones.map(...)` sin guardia: si `admin-membership` devolvía cualquier forma inesperada (sin `error` y sin `suscripciones`), la pantalla entera se iba a **blanco**, porque no hay error boundary. Se descubrió al abrir una ficha en la maqueta (donde el `invoke` falso devuelve `{demo:true}`), pero **en producción lo dispara igual cualquier respuesta rara de la edge function**. Ahora se valida la forma y se muestra "No se pudo leer el cobro automático de esta clienta". Además `supabaseDemo.js` ya simula `admin-membership` con la forma correcta.
+
+⚠️ **Cómo se probó esto sin credenciales:** con la **maqueta** (`VITE_DEMOS=true npx vite`, `/demo/vera`), que entra sin login, más Chrome headless por CDP (script en el scratchpad: navega, hace clic por texto, captura y **lee la consola**). El build pasaba en verde con la pantalla en blanco: sin mirar la consola no se veía. Vale la pena repetir esa receta al tocar admin.
+
+⚠️ **Y un TDZ que el build tampoco ve:** `const filtrosActivos = ...planFilter...` quedó una línea ANTES de `const [planFilter]` → `ReferenceError` que tumba la pestaña. Vite compila feliz. Ojo al orden al agregar derivados de estado.
+
 ### ⏭️ Lo que sigue
 
 - **La dueña anula las 6 ventas duplicadas** desde Auditoría (2 son de tarjeta: America $1,850 y Naomi $1,050 — ésas sí pudieron ser cobros reales dobles, revisar en Stripe antes de anular).

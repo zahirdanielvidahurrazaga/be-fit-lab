@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Cake, Crown, UserX, UserCheck, Shield, Coffee, Dumbbell, ChevronDown, ChevronLeft, ChevronRight, Phone, QrCode, Trash2, CalendarPlus, Plus, Minus, X, Check, Camera } from 'lucide-react';
+import { Search, Cake, Crown, UserX, UserCheck, Shield, Coffee, Dumbbell, ChevronDown, ChevronLeft, ChevronRight, Phone, QrCode, Trash2, CalendarPlus, Plus, Minus, X, Check, Camera, MoreHorizontal, SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import HistorialClienta from './HistorialClienta';
 import MisClasesMovimientos from './MisClasesMovimientos';
@@ -51,6 +51,19 @@ const bookErrMsg = (raw = '') => {
 
 const PRIMARY = '#FF914D';
 const INK = '#1A1C1E';
+
+const plural = (n, sing, plur) => `${n} ${n === 1 ? sing : plur}`;
+
+const chipQuitable = {
+  display: 'inline-flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(255,145,77,0.4)',
+  background: 'rgba(255,145,77,0.1)', color: PRIMARY, borderRadius: '999px', padding: '5px 11px',
+  fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer',
+};
+
+const etiquetaFiltro = {
+  fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em',
+  color: 'var(--on-surface-variant)', marginBottom: '8px',
+};
 
 const ROLES = [
   { value: 'CLIENT', label: 'Clienta', Icon: Dumbbell },
@@ -104,88 +117,123 @@ function Pill({ active, onClick, children }) {
   );
 }
 
-function ClientCard({ u, onRole, onBaja, onReactivar, onDelete, onManage, busy, currentUserId }) {
-  const [openRole, setOpenRole] = useState(false);
+// Un RENGLÓN por persona, no una tarjeta.
+//
+// La versión de tarjetas metía 5 chips de 5 colores + 3 botones en cada una de
+// las 197 personas: todo pesaba igual, así que nada destacaba, y las alturas
+// distintas (según tuviera teléfono o cumpleaños) rompían la cuadrícula.
+// Aquí el estado va en UNA línea y el color aparece SOLO cuando hay problema.
+// Cumpleaños y teléfono se fueron a la ficha: no son datos de escaneo.
+//
+// Y "Eliminar" ya no vive a un clic en las 197 filas — es la acción más
+// destructiva del sistema y estaba con el mismo peso visual que "Clases".
+function ClientRow({ u, onRole, onBaja, onReactivar, onDelete, onManage, busy, currentUserId }) {
+  const [menu, setMenu] = useState(false);
   const rm = roleMeta(u.role);
   const active = u.membership_status === 'ACTIVE';
   const isClient = u.role === 'CLIENT';
-  const canDelete = u.id !== currentUserId; // no permitir auto-eliminarse
+  const canDelete = u.id !== currentUserId;
+  const vencido = u.plan_expires_at && isPlanExpired(u.plan_expires_at);
+  const sinClases = active && !isUnlimitedClient(u) && (u.classes_remaining ?? 0) <= 0;
+
+  // El estado en una sola frase. Gris salvo que haya algo que atender.
+  const estado = !isClient ? null
+    : !active ? { txt: 'Sin plan', alerta: true }
+    : { txt: `${u.membership_plan || 'Activa'} · ${isUnlimitedClient(u) ? 'ilimitadas' : plural(u.classes_remaining ?? 0, 'clase', 'clases')}`, alerta: sinClases };
+
+  const vigencia = isClient && active && u.plan_expires_at
+    ? { txt: `${vencido ? 'VENCIDO' : 'vence'} ${formatPlanDate(u.plan_expires_at, true)}`, alerta: vencido }
+    : null;
+
   return (
-    <div style={{ background: '#fff', borderRadius: '18px', border: '1px solid rgba(0,0,0,0.05)', padding: '14px' }}>
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-        {u.avatar_url
-          ? <img src={u.avatar_url} alt="" style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-          : <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,145,77,0.14)', color: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, flexShrink: 0 }}>{(u.full_name || u.email || '?').charAt(0).toUpperCase()}</div>}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, color: INK, fontSize: '0.96rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.full_name || 'Sin nombre'}</div>
-          <div style={{ fontSize: '0.77rem', color: 'var(--on-surface-variant)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
-        </div>
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <button onClick={() => setOpenRole(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: u.role === 'CLIENT' ? 'rgba(0,0,0,0.05)' : 'rgba(255,145,77,0.12)', color: u.role === 'CLIENT' ? 'var(--on-surface-variant)' : PRIMARY, border: 'none', borderRadius: '10px', padding: '7px 10px', fontWeight: 800, fontSize: '0.72rem', cursor: 'pointer' }}>
-            <rm.Icon size={13} /> {rm.label} <ChevronDown size={12} />
-          </button>
-          {openRole && (
-            <>
-              <div onClick={() => setOpenRole(false)} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
-              <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 11, background: 'white', borderRadius: '12px', boxShadow: '0 12px 30px rgba(0,0,0,0.18)', border: '1px solid rgba(0,0,0,0.05)', overflow: 'hidden', minWidth: '150px' }}>
-                {ROLES.map(r => (
-                  <button key={r.value} onClick={() => { setOpenRole(false); if (r.value !== u.role) onRole(u, r.value); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '10px 12px', border: 'none', background: r.value === u.role ? 'rgba(255,145,77,0.08)' : 'white', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem', color: r.value === u.role ? PRIMARY : INK, textAlign: 'left' }}>
-                    <r.Icon size={15} /> {r.label}
-                  </button>
-                ))}
-              </div>
-            </>
+    <div
+      onClick={() => isClient && onManage(u)}
+      className="fila-clienta"
+      style={{
+        display: 'flex', alignItems: 'center', gap: '12px', padding: '11px 14px',
+        borderBottom: '1px solid rgba(0,0,0,0.06)', background: '#fff',
+        cursor: isClient ? 'pointer' : 'default',
+      }}
+      onMouseEnter={e => { if (isClient) e.currentTarget.style.background = 'rgba(255,145,77,0.04)'; }}
+      onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
+    >
+      {u.avatar_url
+        ? <img src={u.avatar_url} alt="" style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+        : <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(255,145,77,0.14)', color: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, flexShrink: 0, fontSize: '0.9rem' }}>{(u.full_name || u.email || '?').charAt(0).toUpperCase()}</div>}
+
+      {/* Identidad */}
+      <div className="fc-id" style={{ flex: '2 1 190px', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '7px', minWidth: 0 }}>
+          <span style={{ fontWeight: 700, color: INK, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.full_name || 'Sin nombre'}</span>
+          {/* El rol solo se anuncia cuando NO es clienta: son 16 de 197. */}
+          {!isClient && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0, fontSize: '0.66rem', fontWeight: 800, padding: '2px 7px', borderRadius: '7px', background: 'rgba(255,145,77,0.12)', color: PRIMARY }}>
+              <rm.Icon size={11} /> {rm.label}
+            </span>
           )}
         </div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
-        {isClient && (
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '4px 9px', borderRadius: '8px', background: active ? 'rgba(34,197,94,0.12)' : 'rgba(0,0,0,0.05)', color: active ? '#16A34A' : 'var(--on-surface-variant)' }}>
-            {active ? (u.membership_plan || 'Activa') : 'Sin plan'}
-          </span>
+      {/* Estado — una línea, color solo si hay algo que atender */}
+      {/* La alineación vive en index.css (.fc-estado): en línea ganaría siempre
+          y en móvil el estado se quedaría pegado a la derecha. */}
+      <div className="fc-estado" style={{ flex: '1 1 150px', minWidth: 0 }}>
+        {estado && (
+          <div style={{ fontSize: '0.82rem', fontWeight: estado.alerta ? 800 : 600, color: estado.alerta ? '#EA7A3B' : INK, lineHeight: 1.3 }}>
+            {estado.txt}
+          </div>
         )}
-        {isClient && active && u.classes_remaining != null && (
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '4px 9px', borderRadius: '8px', background: 'rgba(255,145,77,0.12)', color: PRIMARY }}>{u.classes_remaining} clases</span>
-        )}
-        {isClient && active && u.plan_expires_at && (
-          isPlanExpired(u.plan_expires_at)
-            ? <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 9px', borderRadius: '8px', background: 'rgba(239,68,68,0.12)', color: '#EF4444' }}>Vencido {formatPlanDate(u.plan_expires_at, true)}</span>
-            : <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '4px 9px', borderRadius: '8px', background: 'rgba(59,130,246,0.10)', color: '#2563EB' }}>Vence {formatPlanDate(u.plan_expires_at, true)}</span>
-        )}
-        {u.birth_date && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, padding: '4px 9px', borderRadius: '8px', background: 'rgba(224,122,156,0.12)', color: '#E07A9C' }}><Cake size={12} /> {fmtBday(u.birth_date)}</span>
-        )}
-        {u.phone && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 700, padding: '4px 9px', borderRadius: '8px', background: 'rgba(0,0,0,0.05)', color: 'var(--on-surface-variant)' }}><Phone size={11} /> {u.phone}</span>
+        {vigencia && (
+          <div style={{ fontSize: '0.73rem', fontWeight: vigencia.alerta ? 800 : 500, color: vigencia.alerta ? '#DC2626' : 'var(--on-surface-variant)', whiteSpace: 'nowrap' }}>
+            {vigencia.txt}
+          </div>
         )}
       </div>
 
-      {(isClient || canDelete) && (
-        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
-          {isClient && (
-            <button disabled={busy} onClick={() => onManage(u)} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,145,77,0.12)', color: PRIMARY, border: 'none', borderRadius: '10px', padding: '8px 12px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
-              <CalendarPlus size={14} /> Clases
-            </button>
-          )}
-          {isClient && (active ? (
-            <button disabled={busy} onClick={() => onBaja(u)} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(186,26,26,0.08)', color: '#ba1a1a', border: 'none', borderRadius: '10px', padding: '8px 12px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
-              <UserX size={14} /> Dar de baja
-            </button>
-          ) : (
-            <button disabled={busy} onClick={() => onReactivar(u)} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(34,197,94,0.1)', color: '#16A34A', border: 'none', borderRadius: '10px', padding: '8px 12px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
-              <UserCheck size={14} /> Reactivar plan
-            </button>
-          ))}
-          {canDelete && (
-            <button disabled={busy} onClick={() => onDelete(u)} title="Eliminar definitivamente" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(186,26,26,0.08)', color: '#ba1a1a', border: 'none', borderRadius: '10px', padding: '8px 12px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', marginLeft: 'auto' }}>
-              <Trash2 size={14} /> Eliminar
-            </button>
-          )}
-        </div>
-      )}
+      {/* Acciones — detrás del menú, no en la cara de las 197 filas */}
+      <div style={{ position: 'relative', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+        <button onClick={() => setMenu(m => !m)} disabled={busy} title="Más acciones"
+          style={{ border: 'none', background: menu ? 'rgba(0,0,0,0.07)' : 'transparent', borderRadius: '9px', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--on-surface-variant)' }}>
+          <MoreHorizontal size={17} />
+        </button>
+        {menu && (
+          <>
+            <div onClick={() => setMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
+            <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 11, background: '#fff', borderRadius: '12px', boxShadow: '0 12px 30px rgba(0,0,0,0.18)', border: '1px solid rgba(0,0,0,0.06)', overflow: 'hidden', minWidth: '196px' }}>
+              {isClient && (
+                <MenuItem icon={<CalendarPlus size={15} />} onClick={() => { setMenu(false); onManage(u); }}>Abrir ficha</MenuItem>
+              )}
+              {isClient && (active
+                ? <MenuItem icon={<UserX size={15} />} onClick={() => { setMenu(false); onBaja(u); }}>Dar de baja</MenuItem>
+                : <MenuItem icon={<UserCheck size={15} />} color="#16A34A" onClick={() => { setMenu(false); onReactivar(u); }}>Reactivar plan</MenuItem>)}
+
+              <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', padding: '7px 12px 4px', fontSize: '0.64rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)' }}>Rol</div>
+              {ROLES.map(r => (
+                <MenuItem key={r.value} icon={<r.Icon size={15} />} activo={r.value === u.role}
+                  onClick={() => { setMenu(false); if (r.value !== u.role) onRole(u, r.value); }}>{r.label}</MenuItem>
+              ))}
+
+              {canDelete && (
+                <>
+                  <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }} />
+                  <MenuItem icon={<Trash2 size={15} />} color="#ba1a1a" onClick={() => { setMenu(false); onDelete(u); }}>Eliminar cuenta</MenuItem>
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
+  );
+}
+
+function MenuItem({ icon, children, onClick, color, activo }) {
+  return (
+    <button onClick={onClick}
+      style={{ display: 'flex', alignItems: 'center', gap: '9px', width: '100%', padding: '9px 12px', border: 'none', background: activo ? 'rgba(255,145,77,0.09)' : '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.81rem', color: color || (activo ? PRIMARY : INK), textAlign: 'left' }}>
+      {icon} {children}
+    </button>
   );
 }
 
@@ -208,6 +256,13 @@ function CobroAutomatico({ clientId }) {
     });
     if (error || data?.error) {
       setEstado({ cargando: false, error: data?.error || 'No se pudo consultar el cobro' });
+    } else if (!data || (!Array.isArray(data.suscripciones) && !data.sinCobroAutomatico)) {
+      // Sin esta rama, una respuesta con otra forma llegaba al render y
+      // `estado.suscripciones.map` reventaba: la pestaña Clientas COMPLETA se
+      // iba a blanco (no hay error boundary). Encontrado al abrir una ficha en
+      // la maqueta, pero cualquier respuesta rara de la edge function lo
+      // provoca igual en producción.
+      setEstado({ cargando: false, error: 'No se pudo leer el cobro automático de esta clienta.' });
     } else {
       setEstado({ cargando: false, ...data });
     }
@@ -264,7 +319,7 @@ function CobroAutomatico({ clientId }) {
         </div>
       )}
 
-      {estado.suscripciones.map(s => (
+      {(estado.suscripciones || []).map(s => (
         <div key={s.id} style={{ background: '#fff', borderRadius: '12px', padding: '12px', border: `1px solid ${s.esLaDeLaApp ? 'rgba(0,0,0,0.10)' : 'rgba(186,26,26,0.35)'}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
             <div style={{ fontWeight: 800, fontSize: '0.95rem', color: INK }}>
@@ -336,6 +391,7 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
   // "Ver lo que ve ella": abre la pantalla EXACTA de la clienta. La mitad de
   // estas discusiones son "es que la app me dice otra cosa".
   const [verComoElla, setVerComoElla] = useState(false);
+  const [tab, setTab] = useState('resumen');
   const unlimited = isUnlimitedClient(client);
   // El saldo YA NO se escribe al instante: se ajusta en pantalla y se guarda con
   // motivo (RPC admin_set_saldo) para que todo ajuste quede explicado en el
@@ -539,7 +595,25 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
           <button onClick={onClose} style={{ background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={18} color={INK} /></button>
         </div>
 
+        {/* Pestañas. Antes todo esto era UN scroll largo con cinco temas sin
+            relación, al que además se entraba por un botón que decía "Clases"
+            aunque adentro hubiera saldo, vencimiento, cobro e historial. */}
+        <div style={{ display: 'flex', gap: '6px', padding: '0 18px', borderBottom: '1px solid rgba(0,0,0,0.07)', flexShrink: 0 }}>
+          {[['resumen', 'Resumen'], ['historial', 'Historial'], ['reservas', 'Reservas']].map(([id, label]) => (
+            <button key={id} onClick={() => setTab(id)}
+              style={{
+                border: 'none', background: 'none', cursor: 'pointer', padding: '11px 12px',
+                fontSize: '0.86rem', fontWeight: 800,
+                color: tab === id ? PRIMARY : 'var(--on-surface-variant)',
+                borderBottom: `2px solid ${tab === id ? PRIMARY : 'transparent'}`, marginBottom: '-1px',
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div style={{ overflowY: 'auto', padding: '18px' }}>
+          <div style={{ display: tab === 'resumen' ? 'block' : 'none' }}>
           {/* SECCIÓN 1 — Clases disponibles */}
           <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)', margin: '0 0 10px' }}>Clases disponibles</h3>
           {unlimited ? (
@@ -630,11 +704,16 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
           {/* SECCIÓN — Cobro automático (pausar/cancelar y cerrar duplicados) */}
           <CobroAutomatico clientId={client.id} />
 
-          {/* SECCIÓN — Historial completo. Va ANTES de reservar y DESPUÉS del
-              saldo a propósito: es el contexto que faltaba junto al control que
-              modifica ese saldo. */}
-          <HistorialClienta client={client} onVerComoElla={() => setVerComoElla(true)} />
+          </div>
 
+          {/* Historial: el contexto que faltaba junto al control que modifica
+              el saldo. Se monta solo al abrir la pestaña para no pedirle a la
+              BD el historial de cada clienta que se asome a su ficha. */}
+          <div style={{ display: tab === 'historial' ? 'block' : 'none' }}>
+            {tab === 'historial' && <HistorialClienta client={client} onVerComoElla={() => setVerComoElla(true)} />}
+          </div>
+
+          <div style={{ display: tab === 'reservas' ? 'block' : 'none' }}>
           {/* SECCIÓN 2 — Reservar en una clase */}
           <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)', margin: '0 0 10px' }}>Reservar en una clase</h3>
           {noClasses && (
@@ -690,6 +769,7 @@ function ManageClassesModal({ client, onClose, patch, applyLocal }) {
               )}
             </>
           )}
+          </div>
         </div>
       </motion.div>
 
@@ -712,7 +792,11 @@ export default function AdminClientas() {
   // Pedido de la dueña: "quiero ver cuántas chicas y quiénes se inscribieron en
   // agosto". '' = todos los meses; si no, 'YYYY-MM' sobre created_at.
   const [mesAlta, setMesAlta] = useState('');
+  const [verFiltros, setVerFiltros] = useState(false);
   const [planFilter, setPlanFilter] = useState('all');
+  // Va DESPUÉS de planFilter: leerlo antes de su declaración es un
+  // ReferenceError de TDZ que tumba la pestaña completa y que el build no ve.
+  const filtrosActivos = (planFilter !== 'all' ? 1 : 0) + (mesAlta ? 1 : 0);
   const [busy, setBusy] = useState(false);
   const [managing, setManaging] = useState(null); // clienta cuyo modal de clases está abierto
 
@@ -838,43 +922,72 @@ export default function AdminClientas() {
         <span style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{counts.clients} clientas · {counts.active} activas · {counts.staff} staff</span>
       </div>
 
-      <div style={{ position: 'relative', marginBottom: '12px' }}>
-        <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--on-surface-variant)' }} />
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por nombre o correo…"
-          style={{ width: '100%', padding: '12px 14px 12px 42px', borderRadius: '14px', border: '1px solid rgba(0,0,0,0.1)', background: 'white', fontSize: '0.92rem', boxSizing: 'border-box' }} />
+      {/* Buscar + filtros. Los secundarios (membresía y mes de alta) van
+          PLEGADOS: antes eran 3 filas de pastillas siempre visibles, ~180 px de
+          adorno antes del primer dato, cuando lo que la dueña hace casi siempre
+          es escribir un nombre. */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: '1 1 260px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--on-surface-variant)' }} />
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por nombre o correo…"
+            style={{ width: '100%', padding: '12px 14px 12px 42px', borderRadius: '14px', border: '1px solid rgba(0,0,0,0.1)', background: 'white', fontSize: '0.92rem', boxSizing: 'border-box' }} />
+        </div>
+        <button onClick={() => setVerFiltros(v => !v)}
+          style={{ display: 'flex', alignItems: 'center', gap: '7px', flexShrink: 0, border: `1px solid ${filtrosActivos ? 'rgba(255,145,77,0.45)' : 'rgba(0,0,0,0.1)'}`, background: filtrosActivos ? 'rgba(255,145,77,0.08)' : '#fff', color: filtrosActivos ? PRIMARY : 'var(--on-surface-variant)', borderRadius: '14px', padding: '0 16px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
+          <SlidersHorizontal size={16} /> Filtros{filtrosActivos ? ` · ${filtrosActivos}` : ''}
+        </button>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: plans.length ? '10px' : '18px' }}>
+      {/* Estado de la membresía: es lo único que se consulta a diario. */}
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '12px' }}>
         {FILTERS.map(([id, label]) => (
           <Pill key={id} active={filter === id} onClick={() => setFilter(id)}>{label}</Pill>
         ))}
       </div>
-      {plans.length > 0 && (
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '10px', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, marginRight: '2px' }}>Membresía:</span>
-          <Pill active={planFilter === 'all'} onClick={() => setPlanFilter('all')}>Todas</Pill>
-          {plans.map(p => <Pill key={p} active={planFilter === p} onClick={() => setPlanFilter(p)}>{p}</Pill>)}
+
+      {/* Lo que esté filtrado se ve como pastilla quitable, aunque el panel esté
+          cerrado: si no, se filtra sin darse cuenta y la lista "miente". */}
+      {(planFilter !== 'all' || mesAlta) && (
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px', alignItems: 'center' }}>
+          {planFilter !== 'all' && (
+            <button onClick={() => setPlanFilter('all')} style={chipQuitable}>{planFilter} <X size={12} /></button>
+          )}
+          {mesAlta && (
+            <button onClick={() => setMesAlta('')} style={chipQuitable}>Se inscribieron en {nombreMes(mesAlta)} <X size={12} /></button>
+          )}
         </div>
       )}
 
-      {/* "¿Cuántas chicas y quiénes se inscribieron en agosto?" — el número va en
-          la pastilla y la lista de abajo se filtra a esas mismas personas. */}
-      {mesesConAltas.length > 0 && (
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '18px', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, marginRight: '2px' }}>Se inscribieron en:</span>
-          <Pill active={mesAlta === ''} onClick={() => setMesAlta('')}>Cualquier mes</Pill>
-          {mesesConAltas.map(([ym, n]) => (
-            <Pill key={ym} active={mesAlta === ym} onClick={() => setMesAlta(ym)}>{nombreMes(ym)} · {n}</Pill>
-          ))}
+      {verFiltros && (
+        <div style={{ background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '16px', padding: '14px', marginBottom: '16px' }}>
+          {plans.length > 0 && (
+            <>
+              <div style={etiquetaFiltro}>Membresía</div>
+              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: mesesConAltas.length ? '14px' : 0 }}>
+                <Pill active={planFilter === 'all'} onClick={() => setPlanFilter('all')}>Todas</Pill>
+                {plans.map(p => <Pill key={p} active={planFilter === p} onClick={() => setPlanFilter(p)}>{p}</Pill>)}
+              </div>
+            </>
+          )}
+          {mesesConAltas.length > 0 && (
+            <>
+              <div style={etiquetaFiltro}>Se inscribieron en</div>
+              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px' }}>
+                <Pill active={mesAlta === ''} onClick={() => setMesAlta('')}>Cualquier mes</Pill>
+                {mesesConAltas.map(([ym, n]) => (
+                  <Pill key={ym} active={mesAlta === ym} onClick={() => setMesAlta(ym)}>{nombreMes(ym)} · {n}</Pill>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 
-      {mesAlta && (
-        <p style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', margin: '-8px 0 16px' }}>
-          <b style={{ color: INK }}>{list.length}</b> {list.length === 1 ? 'persona se dio de alta' : 'personas se dieron de alta'} en <b style={{ color: INK }}>{nombreMes(mesAlta)}</b>
-          {(filter !== 'all' || planFilter !== 'all' || q.trim()) && ' (con los filtros de arriba aplicados)'}.
-        </p>
-      )}
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>
+          {users === null ? '' : <>{plural(list.length, 'persona', 'personas')}{mesAlta ? <> que se dieron de alta en <b style={{ color: INK }}>{nombreMes(mesAlta)}</b></> : null}</>}
+        </span>
+      </div>
 
       {users === null ? (
         <div style={{ textAlign: 'center', padding: '50px 0', color: 'var(--on-surface-variant)' }}>Cargando…</div>
@@ -884,9 +997,9 @@ export default function AdminClientas() {
           <p style={{ margin: 0, fontWeight: 700, color: INK }}>Sin resultados</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' }}>
+        <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', overflow: 'hidden' }}>
           {list.map(u => (
-            <ClientCard key={u.id} u={u} onRole={onRole} onBaja={onBaja} onReactivar={onReactivar} onDelete={onDelete} onManage={setManaging} busy={busy} currentUserId={user?.id} />
+            <ClientRow key={u.id} u={u} onRole={onRole} onBaja={onBaja} onReactivar={onReactivar} onDelete={onDelete} onManage={setManaging} busy={busy} currentUserId={user?.id} />
           ))}
         </div>
       )}
