@@ -914,7 +914,23 @@ function Admin({ recepcion = false }) {
                                 <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                                   <button onClick={() => openEditClass(c)} style={actionBtn}><Pencil size={14} /> Editar</button>
                                   <button onClick={() => duplicateClass(c)} style={actionBtn}><Copy size={14} /> Duplicar</button>
-                                  <button onClick={() => deleteClass(c.id)} style={{...actionBtn, color: '#FF4D4D', background: '#FF4D4D12'}}><Trash2 size={14} /> Eliminar</button>
+                                  <button onClick={async () => {
+                                    // La BD decide qué pasa al borrar (trigger guard_class_delete):
+                                    // clase futura → devuelve la clase a cada reserva y avisa;
+                                    // clase pasada con asistencias → no se puede (es historial).
+                                    const ocupados = Math.max(0, (c.max_spots ?? c.spots ?? 0) - (c.spots ?? 0));
+                                    const msg = ocupados > 0
+                                      ? `Esta clase tiene ${ocupados} reserva${ocupados === 1 ? '' : 's'}. Al eliminarla se les devolverá la clase a su paquete y se les avisará. ¿Eliminar?`
+                                      : '¿Eliminar esta clase?';
+                                    if (!window.confirm(msg)) return;
+                                    const r = await deleteClass(c.id);
+                                    if (!r?.success) {
+                                      const m = String(r?.error?.message || '');
+                                      alert(m.includes('CLASE_CON_ASISTENCIAS')
+                                        ? 'Esta clase ya ocurrió y tiene asistencias registradas: es historial y no se puede eliminar.'
+                                        : 'No se pudo eliminar la clase. Inténtalo de nuevo.');
+                                    }
+                                  }} style={{...actionBtn, color: '#FF4D4D', background: '#FF4D4D12'}}><Trash2 size={14} /> Eliminar</button>
                                 </div>
                               </div>
                             )) : (
