@@ -27,7 +27,7 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 - **`class_start_at(class_id)`** — inicio real (`date + time::time` en `America/Mexico_City`, la misma fórmula de `fill_waitlist_for_class`), NULL si no se puede calcular.
 - **`cancel_class_secure` reescrita:** reserva `confirmed` → rechaza **`YA_ASISTISTE`** (check-in), **`CLASE_SIN_HORARIO`**, **`CLASE_YA_PASADA`** (inicio ≤ now) y **`DEMASIADO_TARDE`** (< 5 h, salvo `promoted_at` en la última hora = la gracia de la lista de espera). `waitlist`/`offered` siguen saliendo cuando sea, sin cobro. Sin reserva → `true` (idempotente). **Probada 8/8 con ROLLBACK** (el test va al final del mismo SQL). Verificado después: 0 devoluciones de clases pasadas desde que está viva.
 - ⚠️ **`admin_cancel_class` NO se tocó a propósito:** el staff cancela reservas pasadas para devolver clases cuando el estudio suspende una clase. Es un acto explícito con rol.
-- **⏭️ REPARACIÓN PENDIENTE (bloque comentado al final del SQL, probado con ROLLBACK):** repone las 84 reservas borradas (`confirmed`, `created_at` = el cobro original, **`checked_in = true`** porque el registro se perdió al borrar y el 77 % de las reservas pasadas tienen check-in) y retira 1 clase por devolución, **fila por fila** con fuente `correccion_cancelacion_pasada`, `class_id` y nota (así la clienta lo ve explicado en "¿A dónde se fueron mis clases?"). **Nunca deja saldo negativo.** Resultado del dry-run: Jessica 51→9 · Valeria 18→4 · Diana 17→7 · lily 14→9 · Bárbara 11→10 · Marcela 4→3 · Fernanda 3→0 · Rocío 3→1 · **Lorena 1→0 con 5 clases faltantes** (ya las usó reservando; decisión de la dueña). **No se aplicó: el clasificador de permisos bloqueó el commit sobre saldos reales; hay que correrlo con el usuario.** Correr: quitar `/* */`, `begin … commit` en un solo request al Management API.
+- **✅ REPARACIÓN APLICADA (2-sep 09:08 CDMX, aprobada por el usuario; bloque comentado en el SQL):** repuso las **84 reservas** borradas (`confirmed`, `created_at` = el cobro original, **`checked_in = true`** porque el registro se perdió al borrar y el 77 % de las reservas pasadas tienen check-in) y retiró 1 clase por devolución, **fila por fila** con fuente `correccion_cancelacion_pasada`, `class_id` y nota (la clienta lo ve explicado en "¿A dónde se fueron mis clases?"). **78 correcciones**: Jessica 51→9 · Valeria 18→4 · Diana 17→7 · lily 14→9 · Bárbara 11→10 · Marcela 4→3 · Fernanda 3→0 · Rocío 3→1. **Lorena Velázquez se dejó FUERA del ajuste a pedido del usuario** (sigue en 1; ya usó las 6 devueltas reservando, así que quedaría debiendo 5 → lo decide la dueña desde su ficha con "Ajustar saldo"). Verificado después: ledger 0 desincronizadas, 0 saldos negativos, `admin_audit_saldos()` sin filas para las 9.
 
 ### 🎨 Front (`7f00a24`)
 
@@ -44,8 +44,8 @@ Se salta la 1.9.5 (29) / 2.6.5 (vc 17): el App Store sirve la **1.9.4** (publica
 
 ### ⏭️ Lo que sigue
 
-1. **Correr la reparación** (arriba) con el usuario presente, y avisarle a la dueña los 9 nombres y saldos finales.
-2. **Lorena Velázquez:** queda en 0 y debe 5 (reservó con clases que no tenía). La dueña decide si le cancela reservas futuras o lo deja.
+1. **Avisarle a la dueña** los 8 nombres y saldos finales (arriba).
+2. **Lorena Velázquez:** sin corregir a propósito; tiene 1 y le devolvieron 6 por error que ya usó reservando → debería quedar en 0 y debe 5. La dueña decide si le cancela reservas futuras, se lo cobra o lo deja.
 3. Subir iOS 1.9.6 y Android 2.6.6 para que desaparezcan los fantasmas de la pantalla (el daño ya no es posible sin eso, pero se siguen viendo).
 4. Explicarle a la dueña: **no eran reservas nuevas, eran sus clases ya tomadas** que la app mostraba como próximas; ya no se pueden cancelar clases pasadas desde ninguna versión.
 
