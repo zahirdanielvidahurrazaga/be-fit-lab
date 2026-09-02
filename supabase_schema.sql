@@ -1,3 +1,8 @@
+-- ⚠️⚠️ NO REAPLICAR TAL CUAL (2026-09-02): este archivo trae una versión VIEJA de
+-- cancel_class_secure SIN el candado de clases pasadas/check-in/5 h. Reaplicarlo
+-- reabriría el hueco que devolvió 84 clases. La definición vigente vive en
+-- supabase/sql/cancelacion_clase_pasada.sql (y hay un trigger de respaldo en reservations).
+
 -- Be Fit Lab - Supabase Schema & Security Setup
 
 -- 1. Habilitar extensión UUID
