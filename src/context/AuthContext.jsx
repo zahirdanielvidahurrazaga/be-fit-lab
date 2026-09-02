@@ -1351,13 +1351,23 @@ export const AuthProvider = ({ children }) => {
     const promoted = reservation?.promotedAt ? new Date(reservation.promotedAt) : null;
     const enGracia = promoted && (Date.now() - promoted.getTime()) < 60 * 60 * 1000;
 
-    if (!isWaitlist && !enGracia) {
-      const classStart = classObj?.time
-        ? (classObj.date
-            ? classDateTime(classObj.date, classObj.time)
-            : (classObj.day !== undefined ? getNextClassOccurrence(classObj.day, classObj.time) : null))
-        : null;
-      if (classStart) {
+    // La fecha y la hora viajan EN LA RESERVA (fetchUserData une classes(*)).
+    // globalClasses es solo respaldo: para una clienta trae 10 días atrás, así
+    // que una reserva más vieja NO está ahí. 🔴 Antes se buscaba solo ahí y, sin
+    // clase, se saltaba TODA validación: se cancelaban clases ya tomadas y se
+    // devolvían al paquete (2-sep-2026: 84 clases a 9 clientas; Jessica 42 en
+    // 3 min). Ahora sin fecha no se cancela, y la BD lo rechaza igual.
+    const date = reservation?.date ?? classObj?.date ?? null;
+    const time = reservation?.time ?? classObj?.time ?? null;
+    const classStart = (date && time)
+      ? classDateTime(date, time)
+      : (classObj?.day !== undefined && time ? getNextClassOccurrence(classObj.day, time) : null);
+
+    if (!isWaitlist) {
+      if (!classStart) return { success: false, reason: 'unknown_class' };
+      if (classStart.getTime() <= Date.now()) return { success: false, reason: 'past' };
+      if (reservation?.checkedIn) return { success: false, reason: 'attended' };
+      if (!enGracia) {
         const fiveHoursBefore = new Date(classStart.getTime() - 5 * 60 * 60 * 1000);
         if (new Date() >= fiveHoursBefore) {
           return { success: false, reason: 'too_late' };
@@ -1391,9 +1401,17 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (err) {
       console.error("Error cancelando reserva:", err);
+      // Deshacer el optimismo: la BD manda. cancel_class_secure rechaza clases
+      // ya pasadas, con check-in o a menos de 5 h aunque la app crea otra cosa.
       fetchGlobalClasses(alcanceRef.current);
       fetchUserData(user);
-      return { success: false, reason: 'error' };
+      const msg = String(err?.message || '');
+      const reason = msg.includes('CLASE_YA_PASADA') ? 'past'
+        : msg.includes('YA_ASISTISTE') ? 'attended'
+        : msg.includes('DEMASIADO_TARDE') ? 'too_late'
+        : msg.includes('CLASE_SIN_HORARIO') ? 'unknown_class'
+        : 'error';
+      return { success: false, reason };
     }
   };
 

@@ -32,12 +32,15 @@ function computeNext(myReservations, globalClasses) {
   let best = null;
   for (const res of (myReservations || [])) {
     const cls = (globalClasses || []).find(c => c.id === res.classId) || {};
+    // La reserva trae su propia fecha/hora; globalClasses (10 días atrás para
+    // una clienta) es solo respaldo.
     const time = res.time || cls.time;
+    const date = res.date || cls.date;
     if (!time) continue;
     const { hour, min } = parseTime(time);
     let dt;
-    if (cls.date) {
-      dt = new Date(cls.date + 'T00:00:00');
+    if (date) {
+      dt = new Date(date + 'T00:00:00');
       dt.setHours(hour, min, 0, 0);
     } else if (cls.day != null) {
       dt = new Date(now);

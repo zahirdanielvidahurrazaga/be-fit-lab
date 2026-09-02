@@ -16,6 +16,16 @@ import { hasNutritionAccess } from '../lib/plans';
 import { ESTUDIO, moduloActivo } from '../config/estudio';
 import { crearIrA } from '../demo/navegacionDemo';
 
+// Por qué no se pudo cancelar. Quien decide es la BD (cancel_class_secure);
+// aquí solo se traduce el motivo para la clienta.
+const CANCEL_ERROR_TEXT = {
+  too_late: 'Ya no es posible cancelar esta clase — faltan menos de 5 horas para que inicie.',
+  past: 'Esta clase ya ocurrió. No se puede cancelar ni se devuelve a tu paquete.',
+  attended: 'Ya registraste tu asistencia a esta clase, así que no se puede cancelar.',
+  unknown_class: 'No encontramos el horario de esta clase. Cierra la app, vuelve a abrirla e inténtalo de nuevo.',
+  error: 'No se pudo cancelar la clase. Revisa tu conexión e inténtalo de nuevo.',
+};
+
 function Portal() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
@@ -65,20 +75,27 @@ function Portal() {
   const confirmCancellation = async () => {
     if (!selectedReservation) return;
     const result = await cancelClass(selectedReservation.classId);
-    if (result?.reason === 'too_late') {
-      setCancelError(true);
-      return; // Mantener el modal abierto con el error
+    if (!result?.success) {
+      setCancelError(result?.reason || 'error');
+      return; // Mantener el modal abierto con el motivo
     }
     setCancelError(false);
     setShowCancelModal(false);
   };
 
-  // Fecha+hora real de la clase de una reserva (clase de fecha fija o recurrente).
+  // Fecha+hora real de la clase de una reserva. La fecha y la hora viajan EN LA
+  // RESERVA (fetchUserData une classes(*)); globalClasses es solo respaldo.
+  // 🔴 Antes se buscaba SOLO en globalClasses, que para una clienta trae 10 días
+  // atrás (arreglo de egress del 16-ago): toda reserva más vieja quedaba "sin
+  // fecha", y sin fecha se pintaba como PRÓXIMA y cancelable. Eran clases a las
+  // que YA FUE → "el sistema me reservó clases solas" → las cancelaban → +1 cada
+  // una (2-sep-2026: 84 clases devueltas por error a 9 clientas).
   const reservationClassDate = (res) => {
     const c = globalClasses?.find(cl => cl.id === res.classId);
-    if (!c || !c.time) return null;
-    if (c.date) return classDateTime(c.date, c.time);
-    if (c.day !== undefined) return getNextClassOccurrence(c.day, c.time);
+    const date = res.date ?? c?.date ?? null;
+    const time = res.time ?? c?.time ?? null;
+    if (date && time) return classDateTime(date, time);
+    if (c && c.day !== undefined && time) return getNextClassOccurrence(c.day, time);
     return null;
   };
 
@@ -91,7 +108,9 @@ function Portal() {
     // hay lugar cobrado que proteger).
     if (res?.status === 'waitlist' || res?.status === 'offered') return true;
     const classStart = reservationClassDate(res);
-    if (!classStart) return true;
+    // Sin fecha conocida NO se cancela (antes era `true`: cualquier reserva cuya
+    // clase no estuviera cargada se podía cancelar y devolver).
+    if (!classStart) return false;
     const fiveHoursBefore = new Date(classStart.getTime() - 5 * 60 * 60 * 1000);
     return new Date() < fiveHoursBefore;
   };
@@ -115,7 +134,8 @@ function Portal() {
   // Próximas clases: ocultar las que ya pasaron + ordenar por más cercana.
   const upcomingReservations = (myReservations || [])
     .map(res => ({ res, classObj: globalClasses?.find(c => c.id === res.classId), classDate: reservationClassDate(res) }))
-    .filter(({ classDate }) => !classDate || classDate.getTime() >= Date.now())
+    // Sin fecha conocida no es "próxima": se oculta en vez de inventarle futuro.
+    .filter(({ classDate }) => classDate && classDate.getTime() >= Date.now())
     .sort((a, b) => (a.classDate?.getTime() || Infinity) - (b.classDate?.getTime() || Infinity));
 
   // ¿La clase es HOY? (mismo día local del dispositivo).
@@ -578,7 +598,7 @@ function Portal() {
               <div style={{ background: 'rgba(255,77,77,0.08)', border: '1px solid rgba(255,77,77,0.2)', borderRadius: '16px', padding: '14px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                 <Lock size={16} color="#FF4D4D" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <p style={{ margin: 0, fontSize: '0.85rem', color: '#FF4D4D', fontWeight: 600, lineHeight: 1.5 }}>
-                  Ya no es posible cancelar esta clase — faltan menos de 5 horas para que inicie.
+                  {CANCEL_ERROR_TEXT[cancelError] || CANCEL_ERROR_TEXT.error}
                 </p>
               </div>
             ) : cancellingWaitlist ? (
