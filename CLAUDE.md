@@ -162,6 +162,8 @@ Se **saltan la 1.9.4(28) y la 2.6.4(vc16)**: se prepararon el 15-ago y desde la 
 
 **Qué llega a las apps** (lo demás de esta sesión es panel de admin, y eso viaja por web): la pantalla **"¿A dónde se fueron mis clases?"** y la **lista de espera que pregunta antes de apartar**.
 
+✅ **iOS 1.9.6 (30) YA SUBIDA a App Store Connect por el usuario el 2-sep** (Archive + Distribute hechos) → esperando revisión de Apple. **El build 30 NO trae el confirm de "Eliminar clase" del panel** (commit `6ffdc16`, posterior al archive): no importa, el panel se usa desde la web. **El próximo iOS debe ser 1.9.7 (31).** Android 2.6.6 (vc 18) sí llevará todo (se compila después en Windows).
+
 ✅ `npm run build` + `npx cap sync ios` + `npx cap sync android` hechos. **`pk_live` verificada** en `dist/` y **dentro de los assets nativos de ambas** (`ios/App/App/public/assets/`, `android/app/src/main/assets/public/assets/`), cero `pk_test`. Confirmados también los textos nuevos en los dos bundles. **Xcode abierto → falta Archive → Distribute → Upload.** El AAB va en la PC de Windows (`git pull` primero, y **verificar el `.env` de esa PC**: en julio tenía `pk_test` y salieron APKs que no podían cobrar).
 
 ⏭️ **Cuando Apple apruebe:** `update public.app_config set latest_ios_version='1.9.5', updated_at=now() where id=1;` — hoy dice `1.9.3`. Verificar con `curl -s "https://itunes.apple.com/lookup?bundleId=com.befitlab.app&country=mx"`.
