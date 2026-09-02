@@ -6,6 +6,49 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
+## 🔴 Sesión 2026-09-02 — "EL SISTEMA LES RESERVA CLASES SOLAS Y AL CANCELAR SE LAS DEVUELVE" (una clienta con 51)
+
+**Reporte de las dueñas (WhatsApp, 8:06):** *"A varias clientas les está reservando clases por sí solas. Y ellas lo cancelan y se las regresan. Ahorita una clienta tiene 50 clases"* · *"les pasa siempre a las mismas"* · *"ya hoy me comentaron tres"*. Commit `7f00a24` (web desplegada), BD aplicada.
+
+### 🎯 LA CAUSA (medida en prod, no era la lista de espera)
+
+**Nadie reservaba nada: eran clases a las que YA HABÍAN IDO** (junio, julio, agosto) que reaparecían en "Próximas clases". Tres piezas:
+
+1. **Desde el 16-ago (`3a862f2`, egress) una clienta solo recibe las clases de los últimos 10 días.** `Portal.reservationClassDate` buscaba la clase de cada reserva **solo en `globalClasses`** → toda reserva más vieja quedaba **sin fecha** → `upcomingReservations` la dejaba pasar (`!classDate ||`) y `canCancelReservation` devolvía `true` (`if (!classStart) return true`). Y `cancelClass` en AuthContext, sin `classObj`, **se saltaba la regla de 5 h**. Por eso "siempre a las mismas": las más constantes, con más historial.
+2. **`cancel_class_secure` no revisaba NADA de la clase:** borraba la reserva (con su `checked_in`, o sea la asistencia) y devolvía +1. **Jessica Narváez canceló 42 clases pasadas entre las 06:38:04 y las 06:39:39 (una por segundo) y pasó de 9 a 51.**
+3. **Empezó el 30-ago, no el 16:** iOS 1.9.4 con ese front salió al App Store el **28-ago 14:27 CDMX** (iTunes lookup). La web ya lo tenía desde el 16 pero casi todas usan la app nativa.
+
+**Escala:** 84 clases devueltas por error a **9 clientas** entre el 30-ago y el 2-sep (Jessica 42 · Valeria Caballero 14 · Diana Karen Escobar 10 · Lorena Velázquez 6 · lily mercado 5 · Ma. Fernanda Mandujano 3 · Rocío Triana 2 · Bárbara Macías 1 · Marcela Paleta 1). Se detectan con: `cancelacion` en el ledger cuyo `class_start_at(class_id) < created_at`. Cero entre el 1 y el 29-ago.
+
+> **Principio que quedó:** la BD decide si una reserva se puede cancelar. El front solo traduce el motivo. Un candado que vive únicamente en React se cae con cualquier cambio de qué datos se cargan (esto es exactamente lo que pasó).
+
+### 🗄️ BD — `supabase/sql/cancelacion_clase_pasada.sql` (gitignored, solo en la Mac) · **APLICADO a prod**
+
+- **`class_start_at(class_id)`** — inicio real (`date + time::time` en `America/Mexico_City`, la misma fórmula de `fill_waitlist_for_class`), NULL si no se puede calcular.
+- **`cancel_class_secure` reescrita:** reserva `confirmed` → rechaza **`YA_ASISTISTE`** (check-in), **`CLASE_SIN_HORARIO`**, **`CLASE_YA_PASADA`** (inicio ≤ now) y **`DEMASIADO_TARDE`** (< 5 h, salvo `promoted_at` en la última hora = la gracia de la lista de espera). `waitlist`/`offered` siguen saliendo cuando sea, sin cobro. Sin reserva → `true` (idempotente). **Probada 8/8 con ROLLBACK** (`scratchpad/test_guard.sql`). Verificado después: 0 devoluciones de clases pasadas desde que está viva.
+- ⚠️ **`admin_cancel_class` NO se tocó a propósito:** el staff cancela reservas pasadas para devolver clases cuando el estudio suspende una clase. Es un acto explícito con rol.
+- **⏭️ REPARACIÓN PENDIENTE (bloque comentado al final del SQL, probado con ROLLBACK):** repone las 84 reservas borradas (`confirmed`, `created_at` = el cobro original, **`checked_in = true`** porque el registro se perdió al borrar y el 77 % de las reservas pasadas tienen check-in) y retira 1 clase por devolución, **fila por fila** con fuente `correccion_cancelacion_pasada`, `class_id` y nota (así la clienta lo ve explicado en "¿A dónde se fueron mis clases?"). **Nunca deja saldo negativo.** Resultado del dry-run: Jessica 51→9 · Valeria 18→4 · Diana 17→7 · lily 14→9 · Bárbara 11→10 · Marcela 4→3 · Fernanda 3→0 · Rocío 3→1 · **Lorena 1→0 con 5 clases faltantes** (ya las usó reservando; decisión de la dueña). **No se aplicó: el clasificador de permisos bloqueó el commit sobre saldos reales; hay que correrlo con el usuario.** Correr: quitar `/* */`, `begin … commit` en un solo request al Management API.
+
+### 🎨 Front (`7f00a24`)
+
+- **`Portal.jsx`:** `reservationClassDate` toma `res.date`/`res.time` (**ya viajaban en el join `classes(*)` de `fetchUserData`**), `globalClasses` es solo respaldo. **Sin fecha → NO es próxima y NO se puede cancelar** (antes las dos cosas al revés). `cancelError` pasa de booleano a motivo; `CANCEL_ERROR_TEXT` traduce `too_late · past · attended · unknown_class · error`.
+- **`AuthContext.cancelClass`:** misma derivación de fecha; bloquea `unknown_class`, `past`, `attended` y `too_late` (con la gracia); en el `catch` mapea los `raise` de la BD al motivo y refresca (deshace el optimismo).
+- **`NextClassTicket.computeNext`:** prefiere `res.date`.
+- **Apps viejas (iOS 1.9.4 en la tienda):** siguen PINTANDO los fantasmas hasta actualizar, pero al cancelar la BD rechaza → no se devuelve nada, la reserva reaparece al refrescar. Sin daño posible.
+
+### 📱 Binarios — iOS **1.9.6 (30)** · Android **2.6.6 (vc 18)**
+
+Se salta la 1.9.5 (29) / 2.6.5 (vc 17): el App Store sirve la **1.9.4** (publicada 28-ago) y no hay forma de saber desde la Mac si la 29 se alcanzó a subir. `npm run build` + `cap sync ios/android` hechos; **`pk_live` verificada en ambos assets nativos, cero `pk_test`**, texto nuevo presente. **Falta Archive → Distribute → Upload en Xcode**; el AAB en la PC de Windows (`git pull` + revisar `.env`). ⏭️ Cuando Apple apruebe: `update public.app_config set latest_ios_version='1.9.6', updated_at=now() where id=1;` (hoy dice `1.9.3`; ya va atrasado dos versiones).
+
+⚠️ **Entorno:** `github.com` (140.82.113.3) dio timeout en 443 y 22 durante ~15 min mientras `api.github.com` y otras IPs de GitHub respondían; el push salió al reintentar. Si vuelve a pasar, es la red, no el repo.
+
+### ⏭️ Lo que sigue
+
+1. **Correr la reparación** (arriba) con el usuario presente, y avisarle a la dueña los 9 nombres y saldos finales.
+2. **Lorena Velázquez:** queda en 0 y debe 5 (reservó con clases que no tenía). La dueña decide si le cancela reservas futuras o lo deja.
+3. Subir iOS 1.9.6 y Android 2.6.6 para que desaparezcan los fantasmas de la pantalla (el daño ya no es posible sin eso, pero se siguen viendo).
+4. Explicarle a la dueña: **no eran reservas nuevas, eran sus clases ya tomadas** que la app mostraba como próximas; ya no se pueden cancelar clases pasadas desde ninguna versión.
+
 ## 🔴 Sesión 2026-08-27 — EL DETECTOR DE DESCUADRES MENTÍA (raíz del reclamo que se repite) + 3 pedidos más
 
 **Reporte de la dueña (WhatsApp):** *"otra chica nos volvió a comentar que no se le están descontando las clases. Se llama Andrea Pérez. Hoy se las descontamos manual… imagínate, no sé si haya otras igual y no me avisan"*. Es la enésima vez, así que se atacó de raíz. Todo aplicado a prod y desplegado (commit `60ee869`).
