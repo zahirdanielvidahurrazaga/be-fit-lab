@@ -55,7 +55,7 @@ Se revisó **cada camino** que mueve `classes_remaining` o `reservations`: polí
 
 ### 📱 Binarios — iOS **1.9.6 (30)** · Android **2.6.6 (vc 18)**
 
-Se salta la 1.9.5 (29) / 2.6.5 (vc 17): el App Store sirve la **1.9.4** (publicada 28-ago) y no hay forma de saber desde la Mac si la 29 se alcanzó a subir. `npm run build` + `cap sync ios/android` hechos; **`pk_live` verificada en ambos assets nativos, cero `pk_test`**, texto nuevo presente. **Falta Archive → Distribute → Upload en Xcode**; el AAB en la PC de Windows (`git pull` + revisar `.env`). ⏭️ Cuando Apple apruebe: `update public.app_config set latest_ios_version='1.9.6', updated_at=now() where id=1;` (hoy dice `1.9.3`; ya va atrasado dos versiones).
+Se salta la 1.9.5 (29) / 2.6.5 (vc 17): el App Store sirve la **1.9.4** (publicada 28-ago) y no hay forma de saber desde la Mac si la 29 se alcanzó a subir. `npm run build` + `cap sync ios/android` hechos; **`pk_live` verificada en ambos assets nativos, cero `pk_test`**, texto nuevo presente. ✅ **iOS 1.9.6 APROBADA Y VIVA** en el App Store (publicada 3-sep 05:04 UTC) y **`app_config.latest_ios_version` actualizado a `1.9.6`** el 2-sep 23:18 CDMX — venía atrasado desde el 15-ago en `1.9.3`, así que el banner de "actualiza la app" llevaba dos versiones apuntando mal. **Android 2.6.6 (vc 18) subiéndose esa misma noche desde la PC de Windows** → confirmar que quedó en **producción**, no en prueba interna.
 
 ⚠️ **Entorno:** `github.com` (140.82.113.3) dio timeout en 443 y 22 durante ~15 min mientras `api.github.com` y otras IPs de GitHub respondían; el push salió al reintentar. Si vuelve a pasar, es la red, no el repo.
 
@@ -63,7 +63,7 @@ Se salta la 1.9.5 (29) / 2.6.5 (vc 17): el App Store sirve la **1.9.4** (publica
 
 1. **Avisarle a la dueña** los 8 nombres y saldos finales (arriba).
 2. **Lorena Velázquez:** sin corregir a propósito; tiene 1 y le devolvieron 6 por error que ya usó reservando → debería quedar en 0 y debe 5. La dueña decide si le cancela reservas futuras, se lo cobra o lo deja.
-3. Subir iOS 1.9.6 y Android 2.6.6 para que desaparezcan los fantasmas de la pantalla (el daño ya no es posible sin eso, pero se siguen viendo).
+3. ~~Subir iOS 1.9.6 y Android 2.6.6~~ → **iOS ya está viva (3-sep)**; Android se subió esa noche. Conforme las clientas actualicen, dejan de ver los fantasmas en "Próximas clases".
 4. Explicarle a la dueña: **no eran reservas nuevas, eran sus clases ya tomadas** que la app mostraba como próximas; ya no se pueden cancelar clases pasadas desde ninguna versión.
 
 ## 🔴 Sesión 2026-08-27 — EL DETECTOR DE DESCUADRES MENTÍA (raíz del reclamo que se repite) + 3 pedidos más
@@ -162,7 +162,7 @@ Se **saltan la 1.9.4(28) y la 2.6.4(vc16)**: se prepararon el 15-ago y desde la 
 
 **Qué llega a las apps** (lo demás de esta sesión es panel de admin, y eso viaja por web): la pantalla **"¿A dónde se fueron mis clases?"** y la **lista de espera que pregunta antes de apartar**.
 
-✅ **iOS 1.9.6 (30) YA SUBIDA a App Store Connect por el usuario el 2-sep** (Archive + Distribute hechos) → esperando revisión de Apple. **El build 30 NO trae el confirm de "Eliminar clase" del panel** (commit `6ffdc16`, posterior al archive): no importa, el panel se usa desde la web. **El próximo iOS debe ser 1.9.7 (31).** Android 2.6.6 (vc 18) sí llevará todo (se compila después en Windows).
+✅ **iOS 1.9.6 (30) SUBIDA el 2-sep y APROBADA** (viva en el App Store el 3-sep 05:04 UTC). **El build 30 NO trae el confirm de "Eliminar clase" del panel** (commit `6ffdc16`, posterior al archive): no importa, el panel se usa desde la web. **El próximo iOS debe ser 1.9.7 (31).** Android 2.6.6 (vc 18) sí llevará todo (se compila después en Windows).
 
 ✅ `npm run build` + `npx cap sync ios` + `npx cap sync android` hechos. **`pk_live` verificada** en `dist/` y **dentro de los assets nativos de ambas** (`ios/App/App/public/assets/`, `android/app/src/main/assets/public/assets/`), cero `pk_test`. Confirmados también los textos nuevos en los dos bundles. **Xcode abierto → falta Archive → Distribute → Upload.** El AAB va en la PC de Windows (`git pull` primero, y **verificar el `.env` de esa PC**: en julio tenía `pk_test` y salieron APKs que no podían cobrar).
 
