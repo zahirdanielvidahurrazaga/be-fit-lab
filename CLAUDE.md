@@ -33,7 +33,7 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 ### ⚠️ PENDIENTE (bloqueado por permisos del entorno o fuera de la app)
 
-1. **DESPLEGAR las dos funciones** (el clasificador bloqueó `supabase functions deploy`): `supabase functions deploy stripe-webhook --project-ref fifaowaiokauhuqklzwe` y `... manage-membership ...`. `config.toml` conserva `verify_jwt=false` del webhook. Verificar después: `supabase functions list` (webhook v22, manage-membership v3) y que Stripe siga recibiendo 200 en el siguiente evento real.
+1. ~~DESPLEGAR las dos funciones~~ → ✅ **DESPLEGADAS por el usuario** (el clasificador me bloqueó el deploy): `stripe-webhook` **v22** (verify_jwt false, responde 400 a firma inválida) y `manage-membership` **v3** (401 sin JWT). Falta ver el primer `invoice.payment_failed` real.
 2. **Stripe Dashboard (Zahir, 2 min):** Developers → Webhooks → endpoint `we_1TcgypARaQ2rSJDtR2DkMvUa` → agregar el evento **`invoice.payment_failed`** (la llave del CLI es de solo lectura, no pude). Y en Settings → Billing → Subscriptions and emails: activar **"Send emails about failed payments"** con el enlace para actualizar la tarjeta (así la clienta arregla la tarjeta sola; la app no tiene flujo de cambio de tarjeta).
 3. Nombres de la dueña para cruzar caso por caso. Borrar las 6 "Tren superior" duplicadas.
 4. Binarios: el candado y el aviso de reactivación van en **iOS 1.9.7 (31) / Android 2.6.7 (vc 19)** (la web los toma al hacer push).
