@@ -7,6 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { DEFAULT_PLANS, dbRowToPlan, setPlans as hydratePlansRegistry } from '../lib/plans';
 import { mexicoTodayStr, mexicoClassStart } from '../lib/dates';
+import { registrarIntentoBloqueado, vaciarColaIntentos, esErrorDeRed } from '../lib/telemetria';
 
 // El flag del tour se guarda en almacenamiento NATIVO (Preferences) porque el
 // localStorage del WebView lo purga iOS entre lanzamientos → el tour reaparecía.
@@ -1126,6 +1127,8 @@ export const AuthProvider = ({ children }) => {
         }));
         setMyReservations(formattedReservations);
       }
+      // Intentos frenados que quedaron en cola sin red → se mandan ahora.
+      vaciarColaIntentos(currentUser?.id);
     } catch (err) {
       console.error("Error obteniendo datos del usuario:", err);
       setRole('CLIENT');
@@ -1269,7 +1272,10 @@ export const AuthProvider = ({ children }) => {
     if (!user) return false;
     // Se exige saldo incluso para entrar a la espera (así al promoverla siempre
     // habrá una clase que descontar). El servidor lo re-valida de forma autoritativa.
-    if (classesRemaining <= 0) return false;
+    if (classesRemaining <= 0) {
+      registrarIntentoBloqueado({ userId: user.id, accion: 'reservar', motivo: 'sin_saldo', classId: classObj?.id, saldoApp: classesRemaining, venceApp: planExpiresAt });
+      return false;
+    }
 
     try {
       // DB Updates via secure RPC — el servidor decide confirmada vs. espera.
@@ -1323,6 +1329,14 @@ export const AuthProvider = ({ children }) => {
       return waitlisted ? 'waitlist' : 'confirmed';
     } catch (err) {
       console.error("Error reservando clase:", err);
+      // Queda registrado si la petición murió en la red (no llegó al servidor)
+      // o si el servidor la rechazó y con qué texto. Ver src/lib/telemetria.js.
+      registrarIntentoBloqueado({
+        userId: user.id, accion: 'reservar',
+        motivo: esErrorDeRed(err) ? 'error_red' : 'rechazo_servidor',
+        classId: classObj?.id, detalle: err?.message || String(err),
+        saldoApp: classesRemaining, venceApp: planExpiresAt,
+      });
       // Rollback
       fetchGlobalClasses(alcanceRef.current);
       fetchUserData(user);
@@ -1330,7 +1344,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const cancelClass = async (classId) => {
+  const cancelClassInterno = async (classId) => {
     if (!user) return { success: false, reason: 'no_user' };
 
     const classObj = globalClasses.find(c => c.id === classId);
@@ -1411,8 +1425,23 @@ export const AuthProvider = ({ children }) => {
         : msg.includes('DEMASIADO_TARDE') ? 'too_late'
         : msg.includes('CLASE_SIN_HORARIO') ? 'unknown_class'
         : 'error';
-      return { success: false, reason };
+      return { success: false, reason, detail: msg, red: esErrorDeRed(err) };
     }
+  };
+
+  // Envoltura: cualquier cancelación FRENADA (en pantalla o por el servidor)
+  // queda registrada con su motivo. La lógica vive en cancelClassInterno.
+  const cancelClass = async (classId) => {
+    const r = await cancelClassInterno(classId);
+    if (r && !r.success && user && r.reason !== 'no_user') {
+      registrarIntentoBloqueado({
+        userId: user.id, accion: 'cancelar',
+        motivo: r.red ? 'error_red' : r.reason,
+        classId, detalle: r.detail || null,
+        saldoApp: classesRemaining, venceApp: planExpiresAt,
+      });
+    }
+    return r;
   };
 
   // Cambiar la preferencia sin salirse de la fila: "apártamelo" ⇄ "pregúntame".

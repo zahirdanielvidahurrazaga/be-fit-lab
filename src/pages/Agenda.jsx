@@ -18,6 +18,7 @@ import { ClassListSkeleton } from '../components/Skeleton';
 import ClassmatesList from '../components/ClassmatesList';
 import { ESTUDIO } from '../config/estudio';
 import { crearIrA } from '../demo/navegacionDemo';
+import { registrarIntentoBloqueado } from '../lib/telemetria';
 
 function Agenda() {
   const isNative = Capacitor.isNativePlatform();
@@ -79,6 +80,7 @@ function Agenda() {
     }
     const dt = classDateTime(dateStr, classObj?.time);
     if (dt && dt < new Date()) {
+      registrarIntentoBloqueado({ userId: user.id, accion: 'reservar', motivo: 'clase_pasada', classId: classObj?.id, detalle: `${dateStr} ${classObj?.time} · reloj del aparato: ${new Date().toString()}`, saldoApp: classesRemaining, venceApp: planExpiresAt });
       alert("Esta clase ya terminó.");
       return;
     }
@@ -98,10 +100,12 @@ function Agenda() {
     // Nota: ya NO se bloquea por clase llena — si está llena, el servidor mete
     // a la clienta a LISTA DE ESPERA (se exige saldo para poder promoverla luego).
     if (classesRemaining <= 0) {
+      registrarIntentoBloqueado({ userId: user?.id, accion: 'reservar', motivo: 'sin_saldo', classId: modalData?.id, saldoApp: classesRemaining, venceApp: planExpiresAt });
       alert("No te quedan clases disponibles. Renueva tu paquete.");
       return;
     }
     if (planExpiresAt && new Date(planExpiresAt) < new Date()) {
+      registrarIntentoBloqueado({ userId: user?.id, accion: 'reservar', motivo: 'membresia_vencida', classId: modalData?.id, saldoApp: classesRemaining, venceApp: planExpiresAt });
       alert("Tu membresía venció. Renueva tu plan para reservar clases.");
       irA('/planes');
       return;
