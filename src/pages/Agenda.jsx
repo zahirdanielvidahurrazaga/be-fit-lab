@@ -4,7 +4,7 @@ import { Calendar as CalendarIcon, Clock, ChevronRight, User, TrendingUp, Play, 
 import { useAuth } from '../context/AuthContext';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useScrollDetect } from '../hooks/useScrollDetect';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
 import { addClassToCalendar } from '../hooks/useCalendar';
@@ -47,6 +47,14 @@ function Agenda() {
   // el estado deshabilita el botón y muestra "Reservando…".
   const reservandoRef = useRef(false);
   const [reservando, setReservando] = useState(false);
+  // La hoja de detalle se arrastra SOLO desde la barrita de arriba. Antes el
+  // arrastre vivía en toda la hoja (framer pone touch-action:none) y la hoja
+  // tenía max-height sin scroll: con una descripción larga (la de "Pilates con
+  // aro" tiene 540 caracteres) el botón Reservar quedaba abajo de la pantalla
+  // y no había forma de llegar a él. 4-sep-2026: "no carga completo y no les
+  // da el botón de reservar" (Zabdy, Isabel, María José, Angélica).
+  const dragControls = useDragControls();
+  const [descExpandida, setDescExpandida] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
@@ -87,6 +95,7 @@ function Agenda() {
     setModalData(classObj);
     setShowModal(true);
     setIsSuccess(false);
+    setDescExpandida(false);
     setWaitlisted(false);
     setAutoClaim(true);
     setCalendarError(null);
@@ -243,6 +252,8 @@ function Agenda() {
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               drag="y"
+              dragListener={false}
+              dragControls={dragControls}
               dragConstraints={{ top: 0, bottom: 0 }}
               dragElastic={0.2}
               onDragEnd={(_, info) => {
@@ -253,9 +264,15 @@ function Agenda() {
                 }
               }}
               className="qr-bottom-sheet"
-              style={{ padding: '12px 24px 36px', background: 'var(--surface)' }}
+              style={{ padding: '0 24px calc(36px + env(safe-area-inset-bottom, 0px))', background: 'var(--surface)', maxHeight: 'calc(100dvh - 40px)', overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
             >
-              <div className="sheet-handle" />
+              {/* Zona de arrastre: solo aquí se jala la hoja; el resto hace scroll. */}
+              <div
+                onPointerDown={(e) => dragControls.start(e)}
+                style={{ position: 'sticky', top: 0, zIndex: 2, padding: '12px 0 6px', margin: '0 -24px', background: 'var(--surface)', touchAction: 'none', cursor: 'grab' }}
+              >
+                <div className="sheet-handle" style={{ margin: '0 auto' }} />
+              </div>
 
               {isSuccess ? (
                 <div style={{ textAlign: 'center', paddingTop: '10px' }}>
@@ -343,11 +360,20 @@ function Agenda() {
                   </div>
 
                   {/* Descripción de la clase */}
-                  {modalData?.description && (
-                    <div style={{ marginBottom: '16px', padding: '14px 16px', background: 'var(--fill-subtle)', borderRadius: '16px', border: '1px solid var(--divider)' }}>
-                      <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>{modalData.description}</p>
-                    </div>
-                  )}
+                  {modalData?.description && (() => {
+                    const larga = modalData.description.length > 180;
+                    const recortada = larga && !descExpandida;
+                    return (
+                      <div style={{ marginBottom: '16px', padding: '14px 16px', background: 'var(--fill-subtle)', borderRadius: '16px', border: '1px solid var(--divider)' }}>
+                        <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--on-surface-variant)', lineHeight: 1.5, ...(recortada ? { display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' } : {}) }}>{modalData.description}</p>
+                        {larga && (
+                          <button onClick={() => setDescExpandida(v => !v)} style={{ marginTop: '8px', padding: 0, border: 'none', background: 'transparent', color: 'var(--primary)', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer' }}>
+                            {descExpandida ? 'Ver menos' : 'Ver más'}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Mini-perfil del coach — expandible */}
                   {(() => {
