@@ -45,6 +45,7 @@ const MOTIVOS = {
   vencimiento_membresia: 'Venció la vigencia del plan',
   baja_membresia: 'Baja de membresía',
   restitucion_auditoria: 'Clases repuestas por el estudio',
+  correccion_reanudacion: 'Vigencia extendida por el estudio',
   ajuste_manual: 'Ajuste hecho a mano',
 };
 

@@ -14,6 +14,44 @@ function planDates() {
 // Estados en los que una suscripción de Stripe TODAVÍA puede generar cobros.
 const SUB_COBRABLES = ['active', 'past_due', 'unpaid', 'trialing', 'paused'];
 
+// "6 de septiembre" en hora de CDMX, para los avisos de cobro rechazado.
+function fechaCDMX(unix: number): string {
+  return new Date(unix * 1000).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', timeZone: 'America/Mexico_City' });
+}
+
+// Por qué rechazó el banco. El motivo NO viene en el invoice: vive en el
+// PaymentIntent (o, con la API 2025 que ya no lo trae en la raíz, en el último
+// cargo de la clienta). Se traduce a algo que la clienta y la dueña entiendan.
+async function motivoRechazo(stripe: Stripe, invoice: Stripe.Invoice): Promise<string> {
+  let code = '', decline = '', msg = '';
+  try {
+    const inv = invoice as any;
+    const piId: string | null = typeof inv.payment_intent === 'string' ? inv.payment_intent
+      : inv.payment_intent?.id ?? inv.payments?.data?.[0]?.payment?.payment_intent ?? null;
+    if (piId) {
+      const pi = await stripe.paymentIntents.retrieve(piId);
+      code = pi.last_payment_error?.code ?? '';
+      decline = pi.last_payment_error?.decline_code ?? '';
+      msg = pi.last_payment_error?.message ?? '';
+    } else if (invoice.customer) {
+      const ch = await stripe.charges.list({ customer: invoice.customer as string, limit: 1 });
+      const c = ch.data[0];
+      if (c && c.status === 'failed') {
+        code = c.failure_code ?? ''; decline = c.outcome?.reason ?? ''; msg = c.failure_message ?? '';
+      }
+    }
+  } catch (e) { console.error('No se pudo leer el motivo del rechazo:', e); }
+  const k = `${decline} ${code}`.toLowerCase();
+  if (k.includes('insufficient_funds')) return 'fondos insuficientes';
+  if (k.includes('expired_card')) return 'tarjeta vencida';
+  if (k.includes('lost_card') || k.includes('stolen_card')) return 'tarjeta reportada';
+  if (k.includes('incorrect_cvc') || k.includes('incorrect_number') || k.includes('invalid')) return 'datos de la tarjeta incorrectos';
+  if (k.includes('processing_error')) return 'error al procesar el pago';
+  if (k.includes('highest_risk') || k.includes('elevated_risk') || k.includes('fraud')) return 'bloqueado por seguridad de Stripe';
+  if (k.includes('do_not_honor') || k.includes('generic_decline') || k.includes('card_declined') || k.includes('declined')) return 'el banco no autorizó el cargo';
+  return msg ? msg.slice(0, 80) : 'el banco no autorizó el cargo';
+}
+
 // Al activar una membresía nueva, cancela las suscripciones ANTERIORES de la
 // misma clienta.
 //
@@ -228,7 +266,11 @@ serve(async (req) => {
       // Aquí cubrimos: (a) subscription_create del flujo NATIVO (PaymentSheet, que no
       // genera checkout.session) como respaldo del stripe-membership-notify, y
       // (b) subscription_cycle (renovación mensual → resetear clases).
-      if (reason !== 'subscription_create' && reason !== 'subscription_cycle') return new Response('ok');
+      // `subscription_update` con dinero = reanudación con cobro HOY (manage-
+      // membership reinicia el ciclo con billing_cycle_anchor:'now'). Se trata
+      // igual que una renovación. Un update sin cobro (monto 0) se ignora.
+      const esReanudacion = reason === 'subscription_update' && (invoice.amount_paid ?? 0) > 0;
+      if (reason !== 'subscription_create' && reason !== 'subscription_cycle' && !esReanudacion) return new Response('ok');
 
       // OJO: Stripe quitó `invoice.subscription` de la raíz en su API de 2025; ahora
       // vive en `parent.subscription_details`. El endpoint manda la versión NUEVA
@@ -297,6 +339,74 @@ serve(async (req) => {
         if (error) console.error('Error renovando clases:', error.message);
         else console.log(`🔄 Clases renovadas: ${class_count} para usuaria ${targetId}`);
       }
+    }
+
+    // ── Cobro de renovación RECHAZADO por el banco ───────────────────────────
+    // Antes nadie se enteraba: la suscripción quedaba past_due en Stripe, la BD
+    // seguía diciendo "active", el plan vencía y la clienta solo veía "Tu
+    // membresía venció" (4-sep-2026: 5 clientas así, todas por tarjeta). Ahora se
+    // avisa a la clienta (qué pasó, cuándo se reintenta, qué puede hacer) y a las
+    // administradoras. ⚠️ Requiere que el endpoint de Stripe mande
+    // `invoice.payment_failed` (Developers → Webhooks → el endpoint → eventos).
+    if (event.type === 'invoice.payment_failed') {
+      const invoice = event.data.object as Stripe.Invoice;
+      const subDetails = (invoice as any).parent?.subscription_details ?? null;
+      const subscriptionId = ((invoice as any).subscription as string) ?? subDetails?.subscription ?? null;
+      if (!subscriptionId) return new Response('ok'); // pago único (cafetería/eventos): no aplica
+
+      let meta: Record<string, string> = subDetails?.metadata ?? {};
+      if (!meta.plan_title) {
+        try { meta = (await stripe.subscriptions.retrieve(subscriptionId)).metadata ?? {}; } catch (_) { /* sin metadata */ }
+      }
+
+      const cols = 'id, full_name, membership_plan';
+      const { data: porSub } = await supabase.from('users').select(cols).eq('stripe_subscription_id', subscriptionId).limit(1);
+      let clienta = porSub?.[0] ?? null;
+      if (!clienta && meta.supabase_user_id) {
+        const { data: porId } = await supabase.from('users').select(cols).eq('id', meta.supabase_user_id).limit(1);
+        clienta = porId?.[0] ?? null;
+      }
+      if (!clienta) {
+        console.error('Cobro rechazado sin usuaria asociada:', subscriptionId);
+        return new Response('ok');
+      }
+
+      const intento = invoice.attempt_count ?? 1;
+      // Idempotente por (factura, intento): Stripe puede reenviar el mismo evento.
+      const { data: yaAvisado } = await supabase.from('notification_logs').select('id')
+        .eq('user_id', clienta.id).contains('data', { invoice_id: invoice.id, attempt: intento }).limit(1);
+      if (yaAvisado?.length) return new Response('ok');
+
+      const motivo = await motivoRechazo(stripe, invoice);
+      const monto = Math.round((invoice.amount_due ?? 0) / 100);
+      const plan = meta.plan_title || clienta.membership_plan || 'tu membresía';
+      const proximo = invoice.next_payment_attempt ? fechaCDMX(invoice.next_payment_attempt) : null;
+
+      // A la clienta (in-app + push por el trigger de notification_logs)
+      await supabase.from('notification_logs').insert({
+        user_id: clienta.id, type: 'payment', status: 'sent',
+        title: 'No pudimos cobrar tu membresía',
+        body: `Tu banco rechazó el cargo de $${monto} de tu ${plan} (${motivo}). `
+          + (proximo ? `Lo volveremos a intentar el ${proximo}. ` : '')
+          + 'Para no quedarte sin clases, actualiza tu tarjeta con el enlace que te llegó por correo o pasa a recepción a pagar en el estudio.',
+        data: { screen: 'planes', kind: 'payment_failed', invoice_id: invoice.id, attempt: intento },
+      });
+
+      // A las administradoras: qué clienta, cuánto, por qué y cuándo se reintenta.
+      const { data: admins } = await supabase.from('users').select('id').eq('role', 'ADMIN');
+      if (admins?.length) {
+        const nombre = (clienta.full_name || 'Una clienta').trim();
+        await supabase.from('notification_logs').insert(admins.map((a: { id: string }) => ({
+          user_id: a.id, type: 'payment', status: 'sent',
+          title: `Cobro rechazado: ${nombre}`,
+          body: `${plan} · $${monto} · ${motivo} · intento ${intento}. `
+            + (proximo ? `Stripe lo reintenta el ${proximo}. ` : 'Stripe ya no lo va a reintentar. ')
+            + 'Mientras no pase el cobro, la app no la deja reservar.',
+          data: { screen: 'admin', kind: 'payment_failed', invoice_id: invoice.id, attempt: intento, client_id: clienta.id },
+        })));
+      }
+      console.log(`⚠️ Cobro rechazado (${motivo}) para ${clienta.id}, intento ${intento}`);
+      return new Response('ok');
     }
 
     // ── Suscripción cancelada ────────────────────────────────────────────────

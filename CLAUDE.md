@@ -6,6 +6,42 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
+## 🟠 Sesión 2026-09-04 — "HAY CLIENTAS QUE NO PUEDEN RESERVAR" (no era el flujo: eran vencidas, saldo 0, cuentas nuevas y TARJETAS RECHAZADAS) + candado anti doble toque + reanudar cobra hoy + aviso de cobro rechazado
+
+**Reporte de la dueña (WhatsApp 11:22):** *"Ayer y hoy me han estado haciendo comentarios… No me deja reservar :("* + captura de una clienta en el detalle de "Gym libre 9:30 AM". Sin nombres.
+
+### 🎯 Diagnóstico (solo con prod: SQL + logs del API de Supabase + Stripe de solo lectura)
+
+**El flujo de reservas NO estaba roto.** 3-sep: 69 reservas · 4-sep: 32 hasta mediodía, desde iOS y Android, app vieja y 1.9.6. En 30 h el servidor rechazó **3 reservas y las 3 fueron DOBLE TOQUE** (segunda llamada 0-3 s después de una exitosa → "Ya tienes una reserva" → la app cerraba el modal y decía "No se pudo reservar" aunque SÍ quedó). `spots` 0 desincronizados en 241 clases futuras; grants, RLS y zona horaria bien. El banner de "actualiza" es suave.
+
+**Lo que sí frena a clientas concretas (la app avisa ANTES de llamar al servidor, por eso no sale en logs):**
+1. **Membresía vencida con clases restantes** ("Tu membresía venció"): vencieron el 3-sep rosario acevedo (Premium), Zabdi Alcaide (9), Alejandra Cristel Quintanar (5); más viejas Berenice Gómez, Coral Casco, Daysi Cabañas, Carolina Ordoñez (pausada), Karla García, Alejandra P, Danna Rosas (pausada).
+2. **Saldo 0 por reservar todo el paquete por adelantado** (se descuenta al reservar): Yolanda Maldonado (11 reservas el 3-sep en 40 min → 0), Ma. Fernanda Mandujano, Edzna Itzel, Maria Lilia Osorio.
+3. **Cuentas nuevas sin plan:** Aranxa Sabanero (se registró sola el 3-sep), Pily González (1-sep).
+4. **🔴 TARJETAS RECHAZADAS (verificado en Stripe):** las renovaciones automáticas SÍ funcionan (~35 aplicadas en el ciclo ago→sep, dos filas `stripe_sistema` por clienta). Las que no entraron están `past_due` en Stripe por rechazo del banco, con reintentos automáticos 4-6 sep: Alejandra Cristel (fondos insuficientes 3-sep 18:46), Verónica Gaspar (fondos ×2), Coral Casco (do_not_honor ×3), Daysi Cabañas (fondos ×3), Karla García (processing_error + bloqueo highest_risk, 6 intentos), Berenice Gómez (fondos ×3, además canceló). **NO es el webhook.** Pero **nadie se enteraba**: el endpoint live (`we_1TcgypARaQ2rSJDtR2DkMvUa`) solo manda `checkout.session.completed`, `invoice.payment_succeeded` y `customer.subscription.deleted`; la BD seguía en `active` y la clienta solo veía "venció".
+5. **🔴 HUECO NUESTRO — reanudar tras pausa no cobraba:** `manage-membership` resume solo quitaba `pause_collection`; Stripe no cobra hasta el siguiente ciclo. **Alejandra P** pausó (factura del 13-ago anulada), reanudó desde la app el **31-ago 19:01** (evento de Stripe) y quedó "reactivada" pero vencida y sin poder usar sus 5 clases hasta el 13-sep.
+6. iOS 1.9.4 sin actualizar: fantasmas de clases pasadas; la BD los frena (3 `YA_ASISTISTE` el 3-sep 19:41). Contraseñas: 4 fallaron el login la noche del 3-sep, 2 la recuperaron.
+
+**Hallazgo aparte:** 7 clases idénticas "Tren superior" 10-sep 6:30 PM creadas el mismo segundo (27-ago 20:25:55) → doble envío en Admin; borrar 6.
+
+### ✅ Hecho
+
+- **Candado anti doble toque** — `Agenda.jsx` (Reservar / Unirme a lista de espera) y `Portal.jsx` (Cancelar Clase / Salir de lista de espera): `ref` que ignora el segundo toque en el mismo tick + estado que deshabilita el botón y dice "Reservando…" / "Cancelando…". Lint igual que antes (11 avisos viejos).
+- **`manage-membership`: reactivar con el mes VENCIDO reinicia el ciclo y cobra HOY** (`billing_cycle_anchor:'now'`, `proration_behavior:'none'`, `payment_behavior:'allow_incomplete'`), lee la factura y devuelve `{ chargedNow, paid }`. Con mes vigente solo quita la pausa (cobra en su fecha). `Planes.jsx`: aviso "al reactivar se cobra hoy" cuando venció, y el mensaje de éxito distingue cobro hecho / cobro rechazado.
+- **`stripe-webhook`:** (a) `invoice.payment_succeeded` acepta `billing_reason='subscription_update'` con `amount_paid>0` como renovación (es la reanudación con cobro hoy); (b) **handler nuevo `invoice.payment_failed`**: resuelve la clienta por suscripción (fallback metadata), traduce el motivo (`motivoRechazo`: PaymentIntent → o último cargo, API 2025), avisa a la clienta (in-app + push por el trigger de `notification_logs`, tipo `payment`, `data.kind='payment_failed'`) y a todas las ADMIN ("Cobro rechazado: nombre · plan · $ · motivo · intento · reintento el X"); idempotente por `(invoice_id, attempt)` con `contains` sobre `data`. `deno check --node-modules-dir=none` pasa (solo el error viejo del literal `apiVersion`, ya existía).
+- **Alejandra P reparada en BD (COMMIT):** `plan_expires_at` 13-ago → **13-sep 18:58 CDMX** (= `current_period_end` de su suscripción, cuando Stripe le cobra y el webhook le pone 12 clases nuevas). El trigger del ledger NO registra cambios solo de vencimiento (su `WHEN` mira saldo/plan/status/inicio), así que se insertó a mano una fila delta 0 con fuente **`correccion_reanudacion`** y nota completa; `HistorialClienta.jsx` la etiqueta "Vigencia extendida por el estudio".
+
+### ⚠️ PENDIENTE (bloqueado por permisos del entorno o fuera de la app)
+
+1. **DESPLEGAR las dos funciones** (el clasificador bloqueó `supabase functions deploy`): `supabase functions deploy stripe-webhook --project-ref fifaowaiokauhuqklzwe` y `... manage-membership ...`. `config.toml` conserva `verify_jwt=false` del webhook. Verificar después: `supabase functions list` (webhook v22, manage-membership v3) y que Stripe siga recibiendo 200 en el siguiente evento real.
+2. **Stripe Dashboard (Zahir, 2 min):** Developers → Webhooks → endpoint `we_1TcgypARaQ2rSJDtR2DkMvUa` → agregar el evento **`invoice.payment_failed`** (la llave del CLI es de solo lectura, no pude). Y en Settings → Billing → Subscriptions and emails: activar **"Send emails about failed payments"** con el enlace para actualizar la tarjeta (así la clienta arregla la tarjeta sola; la app no tiene flujo de cambio de tarjeta).
+3. Nombres de la dueña para cruzar caso por caso. Borrar las 6 "Tren superior" duplicadas.
+4. Binarios: el candado y el aviso de reactivación van en **iOS 1.9.7 (31) / Android 2.6.7 (vc 19)** (la web los toma al hacer push).
+
+### 📓 Cómo se investigó (para la próxima)
+- **Logs de Supabase por API:** `GET api.supabase.com/v1/projects/<ref>/analytics/endpoints/logs.all?iso_timestamp_start=…&iso_timestamp_end=…&sql=…` **solo devuelve el día UTC del `start`** (retención ~1 día). `edge_logs.event_message` = "METHOD | STATUS | URL | UA"; en `postgres_logs` los `raise exception` se encuentran buscando por texto en `event_message` (el `parsed.error_severity` sale vacío).
+- **Stripe de solo lectura desde la Mac:** `stripe <recurso> … --live` (perfil `@befit.lab`, `acct_1TcfJQARaQ2rSJDt`). `subscriptions retrieve`, `invoices list --subscription`, `charges list --customer` (ahí está `failure_code`/`outcome.reason`), `events list --type customer.subscription.updated` (pausas/reanudaciones, 30 días). Escribir (webhook_endpoints update) NO está permitido con esa llave.
+
 ## 🔴 Sesión 2026-09-02 — "EL SISTEMA LES RESERVA CLASES SOLAS Y AL CANCELAR SE LAS DEVUELVE" (una clienta con 51)
 
 **Reporte de las dueñas (WhatsApp, 8:06):** *"A varias clientas les está reservando clases por sí solas. Y ellas lo cancelan y se las regresan. Ahorita una clienta tiene 50 clases"* · *"les pasa siempre a las mismas"* · *"ya hoy me comentaron tres"*. Commit `7f00a24` (web desplegada), BD aplicada.

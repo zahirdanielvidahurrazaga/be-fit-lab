@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Calendar as CalendarIcon, Clock, ChevronRight, User, TrendingUp, Play, Utensils, CheckCircle2, QrCode, CalendarPlus, Wallet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -38,6 +38,14 @@ function Agenda() {
   const [addedToCalendar, setAddedToCalendar] = useState(false);
   const [calendarError, setCalendarError] = useState(null);
   const [showCoachDetail, setShowCoachDetail] = useState(false);
+  // Candado anti doble toque. El 3-sep-2026 tres clientas tocaron "Reservar"
+  // dos veces (0-3 s entre toques, sin spinner que dijera "ya voy"): la primera
+  // llamada reservó y la segunda regresó "Ya tienes una reserva" → la app cerró
+  // el modal y avisó "No se pudo reservar" aunque SÍ quedó. El ref frena el
+  // segundo toque en el mismo tick (el estado de React no alcanza a re-render);
+  // el estado deshabilita el botón y muestra "Reservando…".
+  const reservandoRef = useRef(false);
+  const [reservando, setReservando] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
@@ -84,6 +92,8 @@ function Agenda() {
   };
 
   const confirmReservation = async () => {
+    // Un toque a la vez: si ya hay una reserva en vuelo, el segundo se ignora.
+    if (reservandoRef.current) return;
     // Validaciones (el servidor también las re-verifica de forma autoritativa).
     // Nota: ya NO se bloquea por clase llena — si está llena, el servidor mete
     // a la clienta a LISTA DE ESPERA (se exige saldo para poder promoverla luego).
@@ -96,15 +106,22 @@ function Agenda() {
       irA('/planes');
       return;
     }
-    const result = await bookClass(modalData, autoClaim);
-    if (result === 'confirmed' || result === 'waitlist') {
-      setWaitlisted(result === 'waitlist');
-      setIsSuccess(true);
-      setAddedToCalendar(false);
-    } else {
-      // Reserva no realizada (sin clases, membresía vencida, o error de red).
-      setShowModal(false);
-      alert("No se pudo reservar. Actualiza e inténtalo de nuevo.");
+    reservandoRef.current = true;
+    setReservando(true);
+    try {
+      const result = await bookClass(modalData, autoClaim);
+      if (result === 'confirmed' || result === 'waitlist') {
+        setWaitlisted(result === 'waitlist');
+        setIsSuccess(true);
+        setAddedToCalendar(false);
+      } else {
+        // Reserva no realizada (sin clases, membresía vencida, o error de red).
+        setShowModal(false);
+        alert("No se pudo reservar. Actualiza e inténtalo de nuevo.");
+      }
+    } finally {
+      reservandoRef.current = false;
+      setReservando(false);
     }
   };
 
@@ -456,9 +473,9 @@ function Agenda() {
                         </div>
                       )}
                       <div style={{ display: 'flex', gap: '10px' }}>
-                        <button onClick={() => { setShowModal(false); setCalendarError(null); }} className="btn-outline" style={{ flex: 1, padding: '13px' }}>Cancelar</button>
-                        <button onClick={confirmReservation} className="btn-primary" style={{ flex: 1.4, padding: '13px', justifyContent: 'center', fontSize: isFull ? '0.82rem' : undefined }}>
-                          {isFull ? 'Unirme a lista de espera' : 'Reservar'}
+                        <button onClick={() => { setShowModal(false); setCalendarError(null); }} className="btn-outline" style={{ flex: 1, padding: '13px' }} disabled={reservando}>Cancelar</button>
+                        <button onClick={confirmReservation} className="btn-primary" disabled={reservando} style={{ flex: 1.4, padding: '13px', justifyContent: 'center', fontSize: isFull ? '0.82rem' : undefined, opacity: reservando ? 0.7 : 1, cursor: reservando ? 'wait' : 'pointer' }}>
+                          {reservando ? 'Reservando…' : isFull ? 'Unirme a lista de espera' : 'Reservar'}
                         </button>
                       </div>
                       </>

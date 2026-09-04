@@ -59,6 +59,11 @@ function Portal() {
   const [showAppBanner, setShowAppBanner] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState(null);
+  // Candado anti doble toque en "Cancelar Clase" (mismo motivo que el de
+  // "Reservar" en Agenda): el ref frena el segundo toque en el mismo tick, el
+  // estado deshabilita el botón y muestra "Cancelando…".
+  const cancelandoRef = useRef(false);
+  const [cancelando, setCancelando] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [verMovimientos, setVerMovimientos] = useState(false);
   // Filtro de "Próximas clases": 'hoy' (solo las de hoy) | 'todas'. Arranca en
@@ -74,13 +79,21 @@ function Portal() {
 
   const confirmCancellation = async () => {
     if (!selectedReservation) return;
-    const result = await cancelClass(selectedReservation.classId);
-    if (!result?.success) {
-      setCancelError(result?.reason || 'error');
-      return; // Mantener el modal abierto con el motivo
+    if (cancelandoRef.current) return; // ya hay una cancelación en vuelo
+    cancelandoRef.current = true;
+    setCancelando(true);
+    try {
+      const result = await cancelClass(selectedReservation.classId);
+      if (!result?.success) {
+        setCancelError(result?.reason || 'error');
+        return; // Mantener el modal abierto con el motivo
+      }
+      setCancelError(false);
+      setShowCancelModal(false);
+    } finally {
+      cancelandoRef.current = false;
+      setCancelando(false);
     }
-    setCancelError(false);
-    setShowCancelModal(false);
   };
 
   // Fecha+hora real de la clase de una reserva. La fecha y la hora viajan EN LA
@@ -616,6 +629,7 @@ function Portal() {
                 onClick={() => { setShowCancelModal(false); setCancelError(false); }}
                 className="btn-outline"
                 style={{ flex: 1, padding: '12px', fontSize: '0.9rem' }}
+                disabled={cancelando}
               >
                 Volver
               </button>
@@ -623,9 +637,10 @@ function Portal() {
                 <button
                   onClick={confirmCancellation}
                   className="btn-primary"
-                  style={{ flex: 1, padding: '12px', fontSize: '0.9rem', justifyContent: 'center', background: '#FF4D4D', boxShadow: '0 10px 25px rgba(255,77,77,0.3)' }}
+                  disabled={cancelando}
+                  style={{ flex: 1, padding: '12px', fontSize: '0.9rem', justifyContent: 'center', background: '#FF4D4D', boxShadow: '0 10px 25px rgba(255,77,77,0.3)', opacity: cancelando ? 0.7 : 1, cursor: cancelando ? 'wait' : 'pointer' }}
                 >
-                  {cancellingWaitlist ? 'Salir de lista de espera' : 'Cancelar Clase'}
+                  {cancelando ? 'Cancelando…' : cancellingWaitlist ? 'Salir de lista de espera' : 'Cancelar Clase'}
                 </button>
               )}
             </div>

@@ -38,7 +38,15 @@ function Planes() {
         setMgmtMsg({ ok: false, text: 'Tu plan no tiene una suscripción automática que gestionar.' });
       } else {
         await refreshUserData?.();
-        setMgmtMsg({ ok: true, text: action === 'pause' ? 'Listo, tu membresía quedó en pausa.' : action === 'cancel' ? 'Listo, tu renovación quedó cancelada.' : '¡Membresía reactivada!' });
+        // Reactivar con el mes vencido cobra HOY (la función reinicia el ciclo);
+        // si el banco rechazó ese cobro, hay que decirlo, no fingir éxito.
+        let text;
+        if (action === 'pause') text = 'Listo, tu membresía quedó en pausa.';
+        else if (action === 'cancel') text = 'Listo, tu renovación quedó cancelada.';
+        else if (data?.chargedNow && data?.paid === false) text = 'Reactivamos tu membresía, pero tu banco rechazó el cobro de hoy. Actualiza tu tarjeta o pasa a recepción a pagar en el estudio; Stripe lo reintentará solo en unos días.';
+        else if (data?.chargedNow) text = '¡Membresía reactivada! Se hizo el cobro de tu renovación y en un momento verás tus clases.';
+        else text = '¡Membresía reactivada!';
+        setMgmtMsg({ ok: !(data?.chargedNow && data?.paid === false), text });
       }
     } catch (e) {
       console.error('manage-membership:', e);
@@ -389,6 +397,11 @@ function Planes() {
                         <PauseCircle size={18} color="#2563EB" style={{ flexShrink: 0 }} />
                         <span style={{ fontSize: '0.78rem', color: '#1D4ED8', fontWeight: 600, lineHeight: 1.4 }}>Membresía en pausa — no se te cobrará la renovación.</span>
                       </div>
+                      {planExpiresAt && new Date(planExpiresAt) < new Date() && (
+                        <p style={{ fontSize: '0.74rem', color: 'var(--on-surface-variant)', margin: '0 0 10px', lineHeight: 1.45, textAlign: 'center' }}>
+                          Tu mes ya terminó: al reactivar se cobra hoy tu renovación y recibes tus clases al momento.
+                        </p>
+                      )}
                       <button onClick={() => manageMembership('resume')} disabled={mgmtBusy} style={{ width: '100%', padding: '13px', borderRadius: '14px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: mgmtBusy ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', opacity: mgmtBusy ? 0.7 : 1 }}>
                         <PlayCircle size={17} /> Reactivar membresía
                       </button>
