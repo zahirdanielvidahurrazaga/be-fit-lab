@@ -43,7 +43,7 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 ### ⚠️ PENDIENTE (bloqueado por permisos del entorno o fuera de la app)
 
 1. ~~DESPLEGAR las dos funciones~~ → ✅ **DESPLEGADAS por el usuario** (el clasificador me bloqueó el deploy): `stripe-webhook` **v22** (verify_jwt false, responde 400 a firma inválida) y `manage-membership` **v3** (401 sin JWT). Falta ver el primer `invoice.payment_failed` real.
-2. **Stripe Dashboard (Zahir, 2 min):** Developers → Webhooks → endpoint `we_1TcgypARaQ2rSJDtR2DkMvUa` → agregar el evento **`invoice.payment_failed`** (la llave del CLI es de solo lectura, no pude). Y en Settings → Billing → Subscriptions and emails: activar **"Send emails about failed payments"** con el enlace para actualizar la tarjeta (así la clienta arregla la tarjeta sola; la app no tiene flujo de cambio de tarjeta).
+2. ~~Stripe Dashboard~~ → ✅ **HECHO por el usuario (4-sep tarde):** el endpoint `we_1TcgypARaQ2rSJDtR2DkMvUa` escucha los **4 eventos** (`checkout.session.completed`, `invoice.payment_succeeded`, `customer.subscription.deleted`, `invoice.payment_failed`; verificado por CLI) y activó los correos de pago fallido con enlace para actualizar tarjeta + la política al agotar reintentos. ⚠️ Al editar se borró por accidente `invoice.payment_succeeded` unos minutos; se repuso y **no cayó ningún cobro en el hueco** (último `invoice.payment_succeeded` fue el 2-sep 11:49).
 3. Nombres de la dueña para cruzar caso por caso. Borrar las 6 "Tren superior" duplicadas.
 4. Binarios: el candado y el aviso de reactivación van en **iOS 1.9.7 (31) / Android 2.6.7 (vc 19)** (la web los toma al hacer push).
 
