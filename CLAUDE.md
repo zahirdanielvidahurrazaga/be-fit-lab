@@ -42,7 +42,14 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 - **Suscripciones duplicadas vivas: 0** de 80 cobrables → el fix de `cancelarSuscripcionesAnteriores` aguanta.
 - **Ninguna clienta tiene guardada una suscripción muerta** (77 con suscripción, 0 huérfanas).
-- **🟡 3 clientas PAUSADAS en Stripe que la app muestra como "activa"** (causa 2/3 arriba, o pausa hecha desde el Dashboard): **Jessica Narváez Cruz** (`sub_1TtiIG…`, renueva 15-sep, saldo 10), **Valeria Caballero** (`sub_1TnVA1…`, 28-sep, saldo 3), **Verónica Morales Moreno** (`sub_1ToAqh…`, 30-sep, saldo 0 y sin vigencia). Como están pausadas **no se les va a cobrar** y su membresía se muere en silencio. El handler nuevo las sincroniza de aquí en adelante; **hay que decidir con la dueña si de verdad deben estar pausadas** y, si no, reactivarlas.
+- **🟡 3 clientas PAUSADAS en Stripe que la app muestra como "activa" — pero NO hay dinero perdido.** Rastreado a fondo: la pausa es de **antes del 7-ago** (Stripe solo guarda 30 días de eventos y no hay ninguno de pausa en esa ventana), y el historial de facturas lo confirma — cada una pagó UN mes con tarjeta y **todas las renovaciones desde entonces salen `void`** (Stripe las emite y las anula sola por la pausa; esto de paso demuestra que `pause_collection` SÍ funciona para las facturas nuevas):
+  | Clienta | Suscripción | Última pagada con tarjeta | Renovaciones anuladas | ¿Paga en persona? |
+  |---|---|---|---|---|
+  | **Jessica Narváez Cruz** | `sub_1TtiIG…` | 15-jul $1,050 | 15-ago | ✅ **$1,300 transferencia 26-ago** (Plan Fit) |
+  | **Valeria Caballero** | `sub_1TnVA1…` | 28-jun $850 | 28-jul, 28-ago | ✅ **$1,050 efectivo 10-ago** |
+  | **Verónica Morales Moreno** | `sub_1ToAqh…` | 30-jun $1,050 | 30-jul, 30-ago | ❌ **cero ventas** — saldo 0, sin vigencia: ya no va |
+
+  **Por qué la app dice "activa":** al cobrarles desde ADMIN, `activatePlan` (`AdminClientas.jsx:1022`) escribe `membership_renewal:'active'` en la BD; eso nunca tocó Stripe. O sea, pausaron la tarjeta y pasaron a pagar en recepción, y cada cobro manual les reponía la bandera. **El daño es informativo, no económico:** su app dice "Suscripción Activa" y les ofrece "Pausar" cuando su tarjeta lleva meses pausada. El handler nuevo las sincroniza de aquí en adelante pero **no repara lo viejo** (ver pendiente 4).
 - Factura muerta de **Laura Sekerlegan** `in_1UAiXn…` ($1,050, 4 intentos, sin reintento, suscripción ya cancelada): conviene anularla en el Dashboard por higiene.
 
 ### ⏭️ PRÓXIMA SESIÓN / pendientes
@@ -54,7 +61,7 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 3. **Decisión de la dueña con Berenice:** se le cobraron $1,050 el 6-sep de un mes que ya había cancelado. O se le reembolsa y se corta ya (pierde las 15 clases), o se deja el mes (ya está cancelada, no hay más cobros y llega al 6-oct). **No se tocó nada de dinero.**
 4. **Las 3 pausadas siguen desincronizadas:** el handler nuevo solo actúa sobre cambios FUTUROS, no repara lo que ya estaba mal. Para ponerlas al día (hace que la app diga la verdad y, de paso, `expire_membership_credits` deja de poder borrarles el saldo por su Candado 2):
    `update public.users set membership_renewal='paused' where id in ('d9adda4b-69b4-4b63-9e33-1f1180231d79','cf013a2e-3640-4ccb-806a-8144a0651308','9ddd56e2-eb02-4fb3-ab3a-3e6b0f6ac98a');`
-   No se aplicó: primero hay que saber de la dueña si de verdad pidieron pausar (si no, lo que toca es reactivarlas en Stripe, no marcarlas).
+   No se aplicó: la pregunta para la dueña es más simple de lo que parecía — **¿Jessica y Valeria se quedan pagando en efectivo/transferencia (entonces marcarlas `paused` es lo correcto) o las regresa a cobro con tarjeta (entonces hay que quitar la pausa en Stripe)?** Verónica ya no va, con marcarla basta.
 5. Binarios: el fix de `Planes.jsx`/`AdminClientas.jsx` va a web al hacer push; para nativo toca **iOS 1.9.8 / Android 2.6.8**.
 
 ## 🟠 Sesión 2026-09-04 — "HAY CLIENTAS QUE NO PUEDEN RESERVAR" (no era el flujo: eran vencidas, saldo 0, cuentas nuevas y TARJETAS RECHAZADAS) + candado anti doble toque + reanudar cobra hoy + aviso de cobro rechazado
