@@ -6,6 +6,53 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
+## 🔴 Sesión 2026-09-06 — "SE DAN DE BAJA Y LES SIGUE COBRANDO" (era una factura ya emitida que ni pausar ni cancelar detienen)
+
+**Reporte de la dueña (WhatsApp 9:44):** *"Comentan esto mis clientas cuando se dan de baja les hace el cobro aún así"*, reenviando el mensaje de una clienta: *"Sí me di de baja pero anoche se me hizo el cobro 🥹 y se volvió a poner activa la membresía 😳"*. Sin nombre.
+
+### 🎯 Quién era y qué pasó exactamente
+
+**Berenice Gómez De los Santos** (`0b150d47…`, `sub_1ToAwmARaQ2rSJDtAVxZU9Ps`). Línea de tiempo reconstruida con los eventos de Stripe y el ledger:
+
+| Cuándo (CDMX) | Qué |
+|---|---|
+| 30-ago 17:21 | Stripe emite su renovación `in_1UAI2oARaQ2rSJDt40lQ8nvD` ($1,050) |
+| 30-ago 18:22 | El banco la rechaza (fondos insuficientes) → suscripción `past_due`, **factura `open`** |
+| **31-ago 07:35** | **Ella PAUSA desde la app** → `pause_collection: void` |
+| **2-sep 21:48** | Reactiva y **CANCELA** (6 s después) → `cancel_at_period_end: true` |
+| **6-sep 01:22** | 🔴 **El 4º reintento de Stripe PASA: se le cobran $1,050** |
+| 6-sep 01:22:57 | El webhook le pone 15 clases, vence 6-oct y `membership_renewal='active'` → *"se volvió a poner activa"* |
+| 6-sep 01:24 | Vuelve a cancelar (es la captura que mandó) |
+
+### 🔎 Las 4 causas de raíz
+
+1. **🔴 Ni `pause_collection` ni `cancel_at_period_end` detienen una factura que Stripe YA emitió.** Las dos cosas solo aplican a los ciclos que vienen. Cuando el cobro del mes se cae por tarjeta rechazada, la factura queda `open` y Stripe la reintenta durante **días** (Smart Retries, hasta 4 intentos). Pausar o cancelar en esa ventana no la toca: la app decía *"listo, no se te cobrará"* y el cargo entraba igual. **En los 12 días de eventos revisados (25-ago → 6-sep) hubo 8 pausas/cancelaciones y 4 cayeron en esa ventana, de 2 clientas**: Berenice (cobrada) y Laura Sekerlegan (se salvó solo porque Stripe ya se había rendido tras 4 intentos).
+2. **El webhook borraba la pausa/cancelación de la clienta.** `invoice.payment_succeeded` escribía `membership_renewal:'active'` a ciegas: cualquier cobro que entrara la volvía a mostrar "Suscripción Activa" aunque en Stripe siguiera cancelada.
+3. **Estando en pausa el único botón era "Reactivar membresía"** — así que para darse de baja había que reactivar primero, y desde el fix del 4-sep eso **cobra hoy** si el mes venció. Berenice hizo exactamente eso el 2-sep.
+4. **`customer.subscription.deleted` borraba días ya pagados.** Stripe corta al terminar SU ciclo (`cancel_at`), que no siempre es el vencimiento que ve la clienta: cuando la renovación se paga tarde, `planDates()` da un mes desde el día del pago. Berenice pagó el 6-sep un ciclo que en Stripe vence el **30-sep** → ese día se le habrían borrado 15 clases y 6 días pagados.
+
+### ✅ Hecho (código; falta desplegar)
+
+- **`manage-membership` + `admin-membership`: `anularFacturasPendientes()`.** Al pausar o cancelar (y en `cancel_now`) se anulan (`invoices.voidInvoice`) las facturas `open` de esa suscripción. Es seguro y es lo justo: el saldo SOLO se abona con `invoice.payment_succeeded`, así que una factura sin pagar no le dio nada a la clienta. Las `draft` NO se tocan a propósito (ese es el ciclo que acaba de empezar; si el cobro pasa, recibe su mes completo). Devuelven cuánto se frenó → la app lo dice: *"También detuvimos el cobro pendiente de $1,050…"*.
+- **`stripe-webhook`:** (a) la renovación ya no fuerza `'active'`: lee el estado REAL de la suscripción (`pause_collection` / `cancel_at_period_end`); (b) **handler nuevo `customer.subscription.updated`** que espeja pausa/cancelación en la BD venga de donde venga —app, panel de la dueña o Dashboard de Stripe— filtrando por `previous_attributes` para no reescribir la fila en cada roce; (c) `customer.subscription.deleted` conserva plan y clases si a la clienta **todavía le quedan días pagados** (solo le quita el cobro automático; el cron `expire_membership_credits` cierra cuando toca, porque exige `stripe_subscription_id is null`).
+- **`Planes.jsx`:** botón **"Cancelar mi membresía" también en el estado de pausa** (sin pasar por Reactivar), aviso del cobro frenado en el mensaje de éxito, y el modal de cancelar ya no promete acceso "hasta" una fecha que ya pasó.
+- **`AdminClientas.jsx` + `admin-membership list`:** cada suscripción muestra **"⚠️ Cobro caído de $X pendiente · Stripe lo reintenta el …"**. Antes eso no se veía por ningún lado.
+
+### 🔬 Auditoría de producción (6-sep)
+
+- **Suscripciones duplicadas vivas: 0** de 80 cobrables → el fix de `cancelarSuscripcionesAnteriores` aguanta.
+- **Ninguna clienta tiene guardada una suscripción muerta** (77 con suscripción, 0 huérfanas).
+- **🟡 3 clientas PAUSADAS en Stripe que la app muestra como "activa"** (causa 2/3 arriba, o pausa hecha desde el Dashboard): **Jessica Narváez Cruz** (`sub_1TtiIG…`, renueva 15-sep, saldo 10), **Valeria Caballero** (`sub_1TnVA1…`, 28-sep, saldo 3), **Verónica Morales Moreno** (`sub_1ToAqh…`, 30-sep, saldo 0 y sin vigencia). Como están pausadas **no se les va a cobrar** y su membresía se muere en silencio. El handler nuevo las sincroniza de aquí en adelante; **hay que decidir con la dueña si de verdad deben estar pausadas** y, si no, reactivarlas.
+- Factura muerta de **Laura Sekerlegan** `in_1UAiXn…` ($1,050, 4 intentos, sin reintento, suscripción ya cancelada): conviene anularla en el Dashboard por higiene.
+
+### ⏭️ PRÓXIMA SESIÓN / pendientes
+
+1. **DESPLEGAR** `manage-membership`, `admin-membership` y `stripe-webhook` (el clasificador me bloquea el deploy).
+2. **Stripe Dashboard:** agregar **`customer.subscription.updated`** al endpoint `we_1TcgypARaQ2rSJDtR2DkMvUa` (hoy manda 4 eventos). Sin eso el espejo no funciona.
+3. **Decisión de la dueña con Berenice:** se le cobraron $1,050 el 6-sep de un mes que ya había cancelado. O se le reembolsa y se corta ya (pierde las 15 clases), o se deja el mes (ya está cancelada, no hay más cobros y llega al 6-oct). **No se tocó nada de dinero.**
+4. Revisar las 3 pausadas del punto anterior.
+5. Binarios: el fix de `Planes.jsx`/`AdminClientas.jsx` va a web al hacer push; para nativo toca **iOS 1.9.8 / Android 2.6.8**.
+
 ## 🟠 Sesión 2026-09-04 — "HAY CLIENTAS QUE NO PUEDEN RESERVAR" (no era el flujo: eran vencidas, saldo 0, cuentas nuevas y TARJETAS RECHAZADAS) + candado anti doble toque + reanudar cobra hoy + aviso de cobro rechazado
 
 **Reporte de la dueña (WhatsApp 11:22):** *"Ayer y hoy me han estado haciendo comentarios… No me deja reservar :("* + captura de una clienta en el detalle de "Gym libre 9:30 AM". Sin nombres.

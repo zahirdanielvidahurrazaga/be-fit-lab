@@ -237,6 +237,7 @@ const funcionesFalsas = {
             id: 'sub_demo', monto: 1300, estado: 'active',
             esLaDeLaApp: true, pausada: false, terminaAlVencer: false,
             proximoCobro: Math.floor((hoy.getTime() + 21 * 86400000) / 1000),
+            pendiente: null, pendienteProximoIntento: null,
           }],
         },
         error: null,

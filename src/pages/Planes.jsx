@@ -46,6 +46,9 @@ function Planes() {
         else if (data?.chargedNow && data?.paid === false) text = 'Reactivamos tu membresía, pero tu banco rechazó el cobro de hoy. Actualiza tu tarjeta o pasa a recepción a pagar en el estudio; Stripe lo reintentará solo en unos días.';
         else if (data?.chargedNow) text = '¡Membresía reactivada! Se hizo el cobro de tu renovación y en un momento verás tus clases.';
         else text = '¡Membresía reactivada!';
+        // Si traía un cobro caído que Stripe seguía reintentando, decirlo: es
+        // justo lo que la clienta teme cuando se da de baja.
+        if (data?.pendingVoided > 0) text += ` También detuvimos el cobro pendiente de $${Number(data.pendingVoided).toLocaleString('es-MX')} que no había podido hacerse.`;
         setMgmtMsg({ ok: !(data?.chargedNow && data?.paid === false), text });
       }
     } catch (e) {
@@ -405,6 +408,13 @@ function Planes() {
                       <button onClick={() => manageMembership('resume')} disabled={mgmtBusy} style={{ width: '100%', padding: '13px', borderRadius: '14px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: mgmtBusy ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', opacity: mgmtBusy ? 0.7 : 1 }}>
                         <PlayCircle size={17} /> Reactivar membresía
                       </button>
+                      {/* Darse de baja SIN pasar por "Reactivar": estando en pausa
+                          este era el único botón, así que quien quería cancelar
+                          tenía que reactivar primero — y con el mes vencido eso
+                          cobra hoy. Berenice hizo exactamente eso el 2-sep-2026. */}
+                      <button onClick={() => { setMgmtMsg(null); setMgmtAction('cancel'); }} disabled={mgmtBusy} style={{ width: '100%', marginTop: '8px', padding: '11px', borderRadius: '14px', border: 'none', background: 'transparent', color: '#DC2626', fontWeight: 700, fontSize: '0.82rem', cursor: mgmtBusy ? 'default' : 'pointer' }}>
+                        Cancelar mi membresía
+                      </button>
                     </>
                   ) : membershipRenewal === 'canceling' ? (
                     <>
@@ -613,7 +623,9 @@ function Planes() {
             <p style={{ fontSize: '0.9rem', color: 'var(--on-surface-variant)', textAlign: 'center', lineHeight: 1.55, margin: '0 0 22px' }}>
               {mgmtAction === 'pause'
                 ? <>No se te cobrará la próxima renovación. Conservas tu acceso hasta {planExpiresAt ? `el ${formatPlanDate(planExpiresAt)}` : 'que termine tu mes actual'} y puedes <strong>reactivar cuando regreses</strong>, sin volver a registrar tu tarjeta.</>
-                : <>Tu membresía <strong>no se renovará</strong>. Conservas el acceso hasta {planExpiresAt ? `el ${formatPlanDate(planExpiresAt)}` : 'que termine tu mes actual'} y después se cancela. Para volver tendrás que suscribirte de nuevo.</>}
+                : expired
+                  ? <>No se te hará <strong>ningún cobro más</strong>. Tu mes ya terminó, así que la suscripción se cierra y para volver tendrás que suscribirte de nuevo.</>
+                  : <>Tu membresía <strong>no se renovará</strong>. Conservas el acceso hasta {planExpiresAt ? `el ${formatPlanDate(planExpiresAt)}` : 'que termine tu mes actual'} y después se cancela. Para volver tendrás que suscribirte de nuevo.</>}
             </p>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setMgmtAction(null)} disabled={mgmtBusy} style={{ flex: 1, padding: '13px', borderRadius: '14px', border: '1px solid var(--border-subtle)', background: 'var(--app-surface-solid)', color: 'var(--on-surface)', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>Volver</button>

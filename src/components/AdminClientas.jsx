@@ -380,6 +380,18 @@ function CobroAutomatico({ clientId }) {
             {s.estado === 'past_due' && ' Su último cobro falló.'}
           </div>
 
+          {/* Cobro caído que Stripe sigue reintentando. Pausar o cancelar NO lo
+              detenía: por eso a Berenice Gómez le entró el cargo el 6-sep-2026,
+              cuatro días después de darse de baja. Ahora las dos acciones lo
+              anulan, pero conviene verlo antes de contestarle a la clienta. */}
+          {s.pendiente > 0 && (
+            <div style={{ marginTop: '8px', background: 'rgba(186,26,26,0.07)', border: '1px solid rgba(186,26,26,0.22)', borderRadius: '10px', padding: '8px 10px', fontSize: '0.75rem', color: '#ba1a1a', fontWeight: 600, lineHeight: 1.45 }}>
+              ⚠️ Cobro caído de ${s.pendiente.toLocaleString('es-MX')} pendiente
+              {s.pendienteProximoIntento ? `. Stripe lo reintenta el ${fecha(s.pendienteProximoIntento)}` : '. Stripe ya no lo reintenta'}.
+              Si la das de baja o la pausas aquí, se anula.
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '6px', marginTop: '10px', flexWrap: 'wrap' }}>
             {!s.esLaDeLaApp ? (
               <button

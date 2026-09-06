@@ -26,6 +26,36 @@ const corsHeaders = {
 
 const SUB_COBRABLES = ['active', 'past_due', 'unpaid', 'trialing', 'paused'];
 
+// Anula las facturas que ya estaban ABIERTAS al detener el cobro.
+//
+// Mismo hueco que en `manage-membership` (ahí está el caso completo): ni
+// `pause_collection` ni `cancel_at_period_end` frenan una factura que Stripe ya
+// emitió. Si el cobro del mes se cayó por tarjeta rechazada, la factura queda
+// `open` y Stripe la reintenta durante días — así que la dueña "cancelaba el
+// cobro" y la clienta igual terminaba con el cargo. Se anulan aquí también,
+// porque una factura sin pagar no le abonó clases a nadie (el saldo solo se
+// mueve con `invoice.payment_succeeded`).
+async function anularFacturasPendientes(stripe: Stripe, subId: string): Promise<number> {
+  let montoAnulado = 0;
+  try {
+    const { data } = await stripe.invoices.list({ subscription: subId, status: 'open', limit: 20 });
+    for (const inv of data) {
+      const falta = inv.amount_remaining ?? 0;
+      if (falta <= 0 || !inv.id) continue;
+      try {
+        await stripe.invoices.voidInvoice(inv.id);
+        montoAnulado += falta;
+        console.log(`🧾 Factura pendiente anulada: ${inv.id} ($${falta / 100}) de ${subId}`);
+      } catch (e) {
+        console.error(`No se pudo anular la factura ${inv.id}:`, e instanceof Error ? e.message : String(e));
+      }
+    }
+  } catch (e) {
+    console.error('No se pudieron listar las facturas pendientes:', e instanceof Error ? e.message : String(e));
+  }
+  return montoAnulado;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
@@ -86,6 +116,29 @@ serve(async (req) => {
     // ── list ─────────────────────────────────────────────────────────────────
     if (action === 'list') {
       const { data } = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 });
+
+      // Cobros CAÍDOS que Stripe sigue reintentando. Una factura rechazada queda
+      // `open` durante días y no se ve por ningún lado: la dueña "cancelaba el
+      // cobro" y días después entraba igual. Aquí se muestran para que sepa que
+      // hay algo pendiente antes de decirle nada a la clienta.
+      const pendientePorSub = new Map<string, { monto: number; proximoIntento: number | null }>();
+      try {
+        const abiertas = await stripe.invoices.list({ customer: customerId, status: 'open', limit: 30 });
+        for (const inv of abiertas.data) {
+          const anyInv = inv as any;
+          const sid: string | null = (typeof anyInv.subscription === 'string' ? anyInv.subscription : null)
+            ?? anyInv.parent?.subscription_details?.subscription ?? null;
+          if (!sid || (inv.amount_remaining ?? 0) <= 0) continue;
+          const previo = pendientePorSub.get(sid);
+          pendientePorSub.set(sid, {
+            monto: (previo?.monto ?? 0) + (inv.amount_remaining ?? 0) / 100,
+            proximoIntento: previo?.proximoIntento ?? inv.next_payment_attempt ?? null,
+          });
+        }
+      } catch (e) {
+        console.error('No se pudieron leer las facturas abiertas:', e instanceof Error ? e.message : String(e));
+      }
+
       const suscripciones = data
         .filter(s => SUB_COBRABLES.includes(s.status))
         .map(s => {
@@ -104,6 +157,9 @@ serve(async (req) => {
             // La que la app tiene guardada es la "buena"; cualquier otra sobra y
             // es la que ha estado cobrando a escondidas.
             esLaDeLaApp: s.id === clienta.stripe_subscription_id,
+            // Cobro caído que Stripe sigue reintentando (null = nada pendiente).
+            pendiente: pendientePorSub.get(s.id)?.monto ?? null,
+            pendienteProximoIntento: pendientePorSub.get(s.id)?.proximoIntento ?? null,
           };
         })
         .sort((a, b) => Number(b.esLaDeLaApp) - Number(a.esLaDeLaApp) || b.creada - a.creada);
@@ -132,8 +188,13 @@ serve(async (req) => {
 
     if (action === 'cancel') {
       await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true, pause_collection: '' });
+      const frenado = await anularFacturasPendientes(stripe, subscriptionId);
       if (esLaDeLaApp) await supabase.from('users').update({ membership_renewal: 'canceling' }).eq('id', userId);
-      return Response.json({ ok: true, resultado: 'Dejará de cobrarse al terminar el periodo pagado' }, { headers: corsHeaders });
+      return Response.json({
+        ok: true,
+        resultado: 'Dejará de cobrarse al terminar el periodo pagado'
+          + (frenado ? `. También se detuvo un cobro caído de $${frenado / 100} que Stripe seguía reintentando.` : ''),
+      }, { headers: corsHeaders });
     }
 
     if (action === 'cancel_now') {
@@ -150,6 +211,7 @@ serve(async (req) => {
         });
       }
       await stripe.subscriptions.cancel(subscriptionId);
+      await anularFacturasPendientes(stripe, subscriptionId);
       if (esLaDeLaApp) {
         await supabase.from('users')
           .update({ stripe_subscription_id: null, membership_renewal: 'active' })
@@ -165,8 +227,13 @@ serve(async (req) => {
 
     if (action === 'pause') {
       await stripe.subscriptions.update(subscriptionId, { pause_collection: { behavior: 'void' }, cancel_at_period_end: false });
+      const frenado = await anularFacturasPendientes(stripe, subscriptionId);
       if (esLaDeLaApp) await supabase.from('users').update({ membership_renewal: 'paused' }).eq('id', userId);
-      return Response.json({ ok: true, resultado: 'Cobro pausado. Puedes reactivarlo cuando quiera volver.' }, { headers: corsHeaders });
+      return Response.json({
+        ok: true,
+        resultado: 'Cobro pausado. Puedes reactivarlo cuando quiera volver.'
+          + (frenado ? ` También se detuvo un cobro caído de $${frenado / 100} que Stripe seguía reintentando.` : ''),
+      }, { headers: corsHeaders });
     }
 
     // resume

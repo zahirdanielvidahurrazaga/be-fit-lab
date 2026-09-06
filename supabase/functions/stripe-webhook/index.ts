@@ -284,9 +284,15 @@ serve(async (req) => {
         return new Response('ok');
       }
 
-      // La metadata ya viaja en el propio invoice; solo pedimos la suscripción si falta.
+      // La metadata ya viaja en el propio invoice; solo pedimos la suscripción si
+      // falta (o si hay que leer su estado de renovación, más abajo).
+      let subCache: Stripe.Subscription | null = null;
+      const traerSub = async (): Promise<Stripe.Subscription> => {
+        if (!subCache) subCache = await stripe.subscriptions.retrieve(subscriptionId);
+        return subCache;
+      };
       let meta: Record<string, string> = subDetails?.metadata ?? {};
-      if (!meta.plan_title) meta = (await stripe.subscriptions.retrieve(subscriptionId)).metadata ?? {};
+      if (!meta.plan_title) meta = (await traerSub()).metadata ?? {};
       const { supabase_user_id, plan_title, class_count } = meta;
       if (!plan_title) {
         console.error('Suscripción sin plan_title en metadata:', subscriptionId);
@@ -330,14 +336,26 @@ serve(async (req) => {
           console.error('Renovación sin usuaria asociada:', subscriptionId);
           return new Response('ok');
         }
+        // 🔴 Un cobro que entra NO significa "renovación activa". Antes se
+        // escribía `'active'` a ciegas y eso borraba la pausa/cancelación de la
+        // clienta: a Berenice Gómez (6-sep-2026) le pasó el 4º reintento de una
+        // factura caída, cuatro días después de haber cancelado, y la app volvió
+        // a decirle "Suscripción Activa". Se lee el estado REAL de Stripe.
+        let renovacion: 'active' | 'paused' | 'canceling' = 'active';
+        try {
+          const sub = await traerSub();
+          renovacion = sub.pause_collection ? 'paused' : (sub.cancel_at_period_end ? 'canceling' : 'active');
+        } catch (e) {
+          console.error('No se pudo leer el estado de renovación:', e instanceof Error ? e.message : String(e));
+        }
         const { error } = await supabase.from('users').update({
           membership_status: 'ACTIVE',
           classes_remaining: parseInt(class_count ?? '0'),
-          membership_renewal: 'active',
+          membership_renewal: renovacion,
           ...planDates(),
         }).eq('id', targetId);
         if (error) console.error('Error renovando clases:', error.message);
-        else console.log(`🔄 Clases renovadas: ${class_count} para usuaria ${targetId}`);
+        else console.log(`🔄 Clases renovadas: ${class_count} para usuaria ${targetId} (renovación: ${renovacion})`);
       }
     }
 
@@ -409,6 +427,35 @@ serve(async (req) => {
       return new Response('ok');
     }
 
+    // ── Pausa / cancelación programada / reanudación ─────────────────────────
+    // Espeja en la app el estado REAL de Stripe venga de donde venga: de la app,
+    // del panel de la dueña o del Dashboard de Stripe. Antes la BD solo se
+    // enteraba de lo que pasaba por nuestras edge functions, y una pausa hecha
+    // desde el Dashboard quedaba invisible: al 6-sep-2026 había 3 clientas
+    // (Jessica Narváez, Valeria Caballero, Verónica Morales) pausadas en Stripe
+    // que la app mostraba como "Suscripción Activa" — su membresía se iba a
+    // morir en silencio el día de su renovación, sin cobro y sin aviso.
+    // ⚠️ Requiere que el endpoint de Stripe mande `customer.subscription.updated`.
+    if (event.type === 'customer.subscription.updated') {
+      const sub = event.data.object as Stripe.Subscription;
+      const previo = ((event.data as { previous_attributes?: Record<string, unknown> }).previous_attributes) ?? {};
+      // Solo cuando cambió la pausa o la cancelación programada. Sin este filtro
+      // entraría cada roce de la suscripción (cambios de estado, de metadata al
+      // limpiar duplicadas, renovaciones) y reescribiría la fila sin motivo.
+      if (!('pause_collection' in previo) && !('cancel_at_period_end' in previo)) return new Response('ok');
+
+      const renovacion = sub.pause_collection ? 'paused' : (sub.cancel_at_period_end ? 'canceling' : 'active');
+      const { data: users } = await supabase
+        .from('users').select('id, membership_renewal')
+        .eq('stripe_subscription_id', sub.id).limit(1);
+      const u = users?.[0];
+      if (u && u.membership_renewal !== renovacion) {
+        await supabase.from('users').update({ membership_renewal: renovacion }).eq('id', u.id);
+        console.log(`↔️ Renovación espejada desde Stripe: ${sub.id} → ${renovacion} (usuaria ${u.id})`);
+      }
+      return new Response('ok');
+    }
+
     // ── Suscripción cancelada ────────────────────────────────────────────────
     if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object as Stripe.Subscription;
@@ -423,20 +470,37 @@ serve(async (req) => {
 
       const { data: users } = await supabase
         .from('users')
-        .select('id')
+        .select('id, plan_expires_at')
         .eq('stripe_subscription_id', subscription.id)
         .limit(1);
 
       if (users?.length) {
-        await supabase.from('users').update({
-          membership_status: 'INACTIVE',
-          classes_remaining: 0,
-          stripe_subscription_id: null,
-          plan_expires_at: null,
-          membership_renewal: 'active',
-        }).eq('id', users[0].id);
+        const u = users[0];
+        // ¿Todavía le quedan días pagados? Stripe corta al terminar SU ciclo, que
+        // no siempre es el vencimiento que ve la clienta: cuando la renovación se
+        // paga tarde (reintento tras un rechazo), `planDates()` le da un mes desde
+        // el día del pago y ese mes termina después. Berenice pagó el 6-sep un
+        // ciclo que en Stripe vence el 30-sep; darla de baja ese día le borraría
+        // 15 clases y 6 días que sí pagó. En ese caso solo se le quita el cobro
+        // automático: el vencimiento normal —y el cron `expire_membership_credits`,
+        // que exige `stripe_subscription_id is null`— cierran cuando toca.
+        const leQuedanDiasPagados = !!u.plan_expires_at && new Date(u.plan_expires_at).getTime() > Date.now();
 
-        console.log(`❌ Suscripción cancelada para usuario ${users[0].id}`);
+        await supabase.from('users').update(
+          leQuedanDiasPagados
+            ? { stripe_subscription_id: null, membership_renewal: 'active' }
+            : {
+                membership_status: 'INACTIVE',
+                classes_remaining: 0,
+                stripe_subscription_id: null,
+                plan_expires_at: null,
+                membership_renewal: 'active',
+              },
+        ).eq('id', u.id);
+
+        console.log(leQuedanDiasPagados
+          ? `🛑 Cobro automático dado de baja para ${u.id}; conserva su plan hasta ${u.plan_expires_at}`
+          : `❌ Suscripción cancelada para usuario ${u.id}`);
       }
     }
   } catch (err: unknown) {
