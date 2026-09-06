@@ -48,9 +48,13 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 ### ⏭️ PRÓXIMA SESIÓN / pendientes
 
 1. ✅ **LAS 3 EDGE FUNCTIONS DESPLEGADAS** (6-sep): `manage-membership` **v4**, `admin-membership` **v2** (las dos responden 401 sin JWT) y `stripe-webhook` **v23** — esta última la desplegó el usuario porque el clasificador me la bloquea; verificado que conservó `verify_jwt=false` y que responde **400** a firma inválida. Web desplegada por push (`b9e3760`). **El bug del dinero ya está corregido en producción.**
-2. **Stripe Dashboard (DESPUÉS de desplegar el webhook):** agregar **`customer.subscription.updated`** al endpoint `we_1TcgypARaQ2rSJDtR2DkMvUa` (verificado el 6-sep: hoy manda 4 eventos — `checkout.session.completed`, `customer.subscription.deleted`, `invoice.payment_failed`, `invoice.payment_succeeded`). Sin eso el espejo no funciona. ⚠️ Al guardar, confirmar que los 4 viejos siguen marcados (el 4-sep se borró uno por accidente al editar).
+2. ✅ **Stripe Dashboard HECHO (6-sep ~15:00):** el endpoint `we_1TcgypARaQ2rSJDtR2DkMvUa` escucha ahora **5 eventos** — se agregó `customer.subscription.updated` y los otros 4 siguen marcados (verificado por API). ⚠️ En la interfaz nueva (Workbench) el botón es **"Edita el destino"**, arriba a la derecha; el viejo "Actualizar detalles" ya no existe.
+   **Verificado además:** el endpoint está sano — los eventos reales de hoy (`invoice.payment_succeeded` 01:22, `invoice.payment_failed` 07:46) salen con `pending_webhooks: 0`. Y **`pause_collection` sí funciona para las facturas NUEVAS**: a Cecilia Martínez le tocó ciclo hoy 10:33 estando pausada y Stripe le anuló la factura sola a las 11:34 (`in_1UCj0q…` en `void`). El bug siempre fue solo con las facturas YA abiertas.
+   ⏳ Lo único sin probar en vivo es el espejo: se confirma con la próxima pausa/cancelación real.
 3. **Decisión de la dueña con Berenice:** se le cobraron $1,050 el 6-sep de un mes que ya había cancelado. O se le reembolsa y se corta ya (pierde las 15 clases), o se deja el mes (ya está cancelada, no hay más cobros y llega al 6-oct). **No se tocó nada de dinero.**
-4. Revisar las 3 pausadas del punto anterior.
+4. **Las 3 pausadas siguen desincronizadas:** el handler nuevo solo actúa sobre cambios FUTUROS, no repara lo que ya estaba mal. Para ponerlas al día (hace que la app diga la verdad y, de paso, `expire_membership_credits` deja de poder borrarles el saldo por su Candado 2):
+   `update public.users set membership_renewal='paused' where id in ('d9adda4b-69b4-4b63-9e33-1f1180231d79','cf013a2e-3640-4ccb-806a-8144a0651308','9ddd56e2-eb02-4fb3-ab3a-3e6b0f6ac98a');`
+   No se aplicó: primero hay que saber de la dueña si de verdad pidieron pausar (si no, lo que toca es reactivarlas en Stripe, no marcarlas).
 5. Binarios: el fix de `Planes.jsx`/`AdminClientas.jsx` va a web al hacer push; para nativo toca **iOS 1.9.8 / Android 2.6.8**.
 
 ## 🟠 Sesión 2026-09-04 — "HAY CLIENTAS QUE NO PUEDEN RESERVAR" (no era el flujo: eran vencidas, saldo 0, cuentas nuevas y TARJETAS RECHAZADAS) + candado anti doble toque + reanudar cobra hoy + aviso de cobro rechazado
