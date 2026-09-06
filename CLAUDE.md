@@ -47,8 +47,11 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 ### ⏭️ PRÓXIMA SESIÓN / pendientes
 
-1. **DESPLEGAR** `manage-membership`, `admin-membership` y `stripe-webhook` (el clasificador me bloquea el deploy).
-2. **Stripe Dashboard:** agregar **`customer.subscription.updated`** al endpoint `we_1TcgypARaQ2rSJDtR2DkMvUa` (hoy manda 4 eventos). Sin eso el espejo no funciona.
+1. ✅ **`manage-membership` v4 y `admin-membership` v2 DESPLEGADAS** (6-sep 14:54/14:56, las dos responden 401 sin JWT). **El bug del dinero ya está corregido en producción:** pausar y cancelar anulan la factura pendiente. Web desplegada por push (`b9e3760`).
+   ⏳ **Falta `stripe-webhook` (sigue en v22 del 4-sep)** — el clasificador me bloquea justo ese deploy. El comando exacto, para correrlo con `!`:
+   `cd ~/Developer/be-fit-lab && SUPABASE_ACCESS_TOKEN=$(security find-generic-password -s "Supabase CLI" -w) supabase functions deploy stripe-webhook --project-ref fifaowaiokauhuqklzwe`
+   Mientras siga en v22: el webhook todavía puede volver a poner "activa" a quien canceló, todavía borra días pagados al cerrarse la suscripción, y el espejo nuevo no existe.
+2. **Stripe Dashboard (DESPUÉS de desplegar el webhook):** agregar **`customer.subscription.updated`** al endpoint `we_1TcgypARaQ2rSJDtR2DkMvUa` (verificado el 6-sep: hoy manda 4 eventos — `checkout.session.completed`, `customer.subscription.deleted`, `invoice.payment_failed`, `invoice.payment_succeeded`). Sin eso el espejo no funciona. ⚠️ Al guardar, confirmar que los 4 viejos siguen marcados (el 4-sep se borró uno por accidente al editar).
 3. **Decisión de la dueña con Berenice:** se le cobraron $1,050 el 6-sep de un mes que ya había cancelado. O se le reembolsa y se corta ya (pierde las 15 clases), o se deja el mes (ya está cancelada, no hay más cobros y llega al 6-oct). **No se tocó nada de dinero.**
 4. Revisar las 3 pausadas del punto anterior.
 5. Binarios: el fix de `Planes.jsx`/`AdminClientas.jsx` va a web al hacer push; para nativo toca **iOS 1.9.8 / Android 2.6.8**.
