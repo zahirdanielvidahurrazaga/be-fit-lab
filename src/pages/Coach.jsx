@@ -12,7 +12,7 @@ import { supabase } from '../lib/supabase';
 import { ESTUDIO } from '../config/estudio';
 
 function Coach() {
-  const { user, logout, globalClasses, avatarUrl, coaches } = useAuth();
+  const { user, logout, globalClasses, avatarUrl, coaches, profileName } = useAuth();
   const navigate = useNavigate();
   const scrolled = useScrollDetect(30);
 
@@ -35,12 +35,18 @@ function Coach() {
   const [rosterClass, setRosterClass] = useState(null);   // clase abierta
   const [roster, setRoster] = useState([]);
   const [rosterLoading, setRosterLoading] = useState(false);
+  const [rosterError, setRosterError] = useState(null);   // 'ajena' | 'error'
 
   const openRoster = async (c) => {
     setRosterClass(c);
     setRoster([]);
+    setRosterError(null);
+    // La lista de alumnas es de las clases de una: la BD solo deja leer las
+    // reservas de las clases donde la coach está asignada. Decirlo aquí evita
+    // la mentira de "no hay alumnas inscritas" en la clase de una compañera.
+    if (!isMyClass(c)) { setRosterError('ajena'); return; }
     setRosterLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('reservations')
       .select('id, checked_in, status, users:user_id(id, full_name, email, avatar_url)')
       .eq('class_id', c.id)
@@ -50,6 +56,7 @@ function Coach() {
       // reportó exactamente eso el 29-jul ("aparece reservada y no está en la
       // lista"). Mejor mostrarla marcada que no mostrarla.
       .in('status', ['confirmed', 'offered']);
+    if (error) { setRosterError('error'); setRosterLoading(false); return; }
     const list = (data || []).map(r => ({
       id: r.id,
       name: r.users?.full_name || r.users?.email?.split('@')[0] || 'Sin nombre',
@@ -90,14 +97,32 @@ function Coach() {
 
   const getDayOfWeek = (dateStr) => new Date(dateStr + 'T12:00:00').getDay();
 
+  // ── "¿Esta clase es mía?" ───────────────────────────────────────────
+  // El único dato estable es `coach_id`: lo pone el formulario de clases y no
+  // cambia. El texto `instructor` lo escribe la dueña a mano y se le va
+  // moviendo — a Pilar le puso "MARIA DEL PILAR MENDEZ CALDERON" hasta agosto y
+  // "Pili" desde septiembre —, así que compararlo contra el nombre de la sesión
+  // dejaba a la coach con 0 clases y 0 alumnas en su panel aunque sí tuviera
+  // clase ese día (reporte de la dueña del 7-sep: "ya van 3 de ellas").
+  const normalizar = (s) => (s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // sin acentos
+    .trim().toLowerCase().replace(/\s+/g, ' ');
+  const misNombres = [user?.user_metadata?.full_name, profileName, user?.email?.split('@')[0]]
+    .map(normalizar).filter(Boolean);
+  // Respaldo solo para clases viejas que se cargaron sin coach_id: nombre
+  // completo IGUAL, nunca "contiene" — con substring una coach llamada "Pao"
+  // se adueñaba de las clases de "Nallely Paola".
+  const isMyClass = (c) => {
+    if (!c) return false;
+    if (c.coach_id) return c.coach_id === user?.id;
+    return misNombres.includes(normalizar(c.instructor));
+  };
+
   const getMyClassesForDate = (dateStr) => {
     if (!dateStr) return [];
     const dow = getDayOfWeek(dateStr);
-    const coachName = (user?.user_metadata?.full_name || user?.email?.split('@')[0] || '').toLowerCase();
-    return globalClasses.filter(c => {
-      const isMe = coachName && c.instructor.toLowerCase().includes(coachName);
-      return isMe && (c.date === dateStr || (c.date === null && c.day === dow));
-    });
+    return globalClasses.filter(c =>
+      isMyClass(c) && (c.date === dateStr || (c.date === null && c.day === dow)));
   };
 
   const getTodasClasesForDate = (dateStr) => {
@@ -109,9 +134,6 @@ function Coach() {
   const myClasses = getMyClassesForDate(selectedDateStr);
   const todasClases = getTodasClasesForDate(selectedDateStr);
   const totalAlumnasHoy = myClasses.reduce((acc, c) => acc + ((c.max_spots || 10) - c.spots), 0);
-
-  const coachName = (user?.user_metadata?.full_name || user?.email?.split('@')[0] || '').toLowerCase();
-  const isMyClass = (c) => coachName && c.instructor.toLowerCase().includes(coachName);
 
   // ── Shared calendar renderer ────────────────────────────────────────
   // getDotsForDate(dateStr) => { mine: number, others: number }
@@ -315,7 +337,7 @@ function Coach() {
                         <div style={{ flex: 1, height: '3px', background: 'rgba(0,0,0,0.06)', borderRadius: '2px' }}>
                           <div style={{ width: `${porcentaje}%`, height: '100%', background: esMia ? 'var(--primary)' : 'rgba(0,0,0,0.2)', borderRadius: '2px', transition: 'width 0.3s' }} />
                         </div>
-                        <span style={{ fontSize: '0.66rem', fontWeight: 800, color: 'var(--primary)', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>Ver <ChevronRight size={13} /></span>
+                        {esMia && <span style={{ fontSize: '0.66rem', fontWeight: 800, color: 'var(--primary)', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>Ver lista <ChevronRight size={13} /></span>}
                       </div>
                     </div>
                   </motion.div>
@@ -453,13 +475,27 @@ function Coach() {
                   <button onClick={() => setRosterClass(null)} aria-label="Cerrar" style={{ width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.06)', color: 'var(--on-surface)', cursor: 'pointer', flexShrink: 0, fontSize: '1rem' }}>✕</button>
                 </div>
                 <div style={{ marginTop: '12px', display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255,145,77,0.12)', color: 'var(--primary)', padding: '6px 12px', borderRadius: '20px', fontWeight: 800, fontSize: '0.8rem' }}>
-                  <Users size={15} /> {roster.length} {roster.length === 1 ? 'alumna inscrita' : 'alumnas inscritas'}
+                  <Users size={15} /> {rosterError
+                    ? `${(rosterClass.max_spots || 10) - rosterClass.spots} inscritas`
+                    : `${roster.length} ${roster.length === 1 ? 'alumna inscrita' : 'alumnas inscritas'}`}
                 </div>
               </div>
               {/* lista */}
               <div style={{ overflowY: 'auto', padding: '12px 18px', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))', WebkitOverflowScrolling: 'touch' }}>
                 {rosterLoading ? (
                   <div style={{ textAlign: 'center', padding: '40px', color: 'var(--on-surface-variant)' }}>Cargando…</div>
+                ) : rosterError ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--on-surface-variant)' }}>
+                    <Users size={34} color="rgba(0,0,0,0.18)" />
+                    {rosterError === 'ajena' ? (
+                      <>
+                        <p style={{ margin: '12px 0 0', fontSize: '0.9rem', fontWeight: 700, color: 'var(--black)' }}>Esta clase es de {rosterClass.instructor}.</p>
+                        <p style={{ margin: '6px 0 0', fontSize: '0.85rem' }}>Solo puedes ver la lista de tus clases. Si vas a cubrirla, pide que te la asignen.</p>
+                      </>
+                    ) : (
+                      <p style={{ margin: '12px 0 0', fontSize: '0.9rem' }}>No se pudo cargar la lista. Revisa tu conexión e inténtalo de nuevo.</p>
+                    )}
+                  </div>
                 ) : roster.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--on-surface-variant)' }}>
                     <Users size={34} color="rgba(0,0,0,0.18)" />

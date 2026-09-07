@@ -6,6 +6,43 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
+## 🔴 Sesión 2026-09-07 — "A LAS COACHES LES SALEN 0 ALUMNAS Y 0 CLASES" (dos fallas apiladas: identidad por nombre + RLS que nunca existió)
+
+**Reporte de la dueña (WhatsApp 8:07):** *"mis maestras me mencionan que no aparecen cuántas alumnas tienen y quiénes vienen a sus clases, no lo pueden ver, ya van 3 de ellas que mencionan esto"* + captura del panel de **MARIA DEL PILAR MENDEZ CALDERON** con **0 ALUMNAS HOY / 0 CLASES HOY**, mientras abajo el horario del estudio sí listaba clases. Ese contraste es la pista: los datos llegaban, lo que fallaba era el "¿cuál es mía?".
+
+### 🎯 Causa 1 — "mis clases" se decidía comparando TEXTO, y el texto se mueve
+
+`Coach.jsx` hacía `c.instructor.toLowerCase().includes(coachName)`, con `coachName` sacado de **`user.user_metadata.full_name`** (el nombre con el que la coach se registró). Pero `classes.instructor` es **texto libre que escribe la dueña** en el formulario, y se le va cambiando:
+
+| Coach | Nombre en su sesión (auth) | `instructor` en sus clases | ¿Coincidía? |
+|---|---|---|---|
+| **Pili** (`a580c8f0…`) | `MARIA DEL PILAR MENDEZ CALDERON` | `MARIA DEL PILAR…` hasta el 31-ago, **`Pili `** desde el 2-sep | ❌ desde el 2-sep |
+| **Vio** (`5aad461e…`) | `violeta flores` | `violeta flores` hasta el 31-ago, **`Vio`** desde el 1-sep | ❌ desde el 1-sep |
+| **Bren Flores💐** (`87372f1c…`) | `bren coach` | `Bren Flores💐` | ❌ siempre |
+
+**Son exactamente 3 → los "ya van 3" de la dueña.** Las otras 8 coaches tienen el mismo texto en los dos lados y por eso nunca reportaron nada. Medido: Pili tenía **2 clases hoy con 15 alumnas** (la de 7:00 AM iba 11/12) y su panel decía 0.
+
+**Arreglo:** la identidad se resuelve por **`classes.coach_id`**, que lo pone el selector de coach del formulario y no cambia nunca. **Las 236 clases futuras tienen `coach_id`** (0 sin él), así que cubre el 100%. El respaldo por nombre queda solo para clases viejas sin `coach_id` y ahora exige **igualdad normalizada, nunca `includes`** — con substring una coach llamada "Pao" se adueñaba de las clases de "Nallely **Pao**la". Simulado contra la semana real: Pili 0→2 clases y 0→15 alumnas, Vio 0→1 y 0→12, las de control sin cambio, y **0 clases reclamadas por dos coaches**.
+
+> **Principio:** un nombre que la dueña teclea es una etiqueta, no una identidad. Lo mismo ya se había corregido en `ScheduleCalendar`/`Portal`/`Agenda` el 6-jul; `Coach.jsx` era el último que quedaba comparando texto.
+
+### 🔴 Causa 2 — el rol COACH nunca tuvo permiso de leer `reservations`
+
+La otra mitad del reporte ("**quiénes** vienen") fallaba por algo distinto y más viejo: la función "coach ve alumnas inscritas" (`openRoster`) se construyó el **29-jun (`13e50db`) sin ninguna política de RLS**. Las únicas políticas de SELECT en `reservations` eran `is_admin()`, `is_reception_or_admin()` y "mis propias reservas". Con RLS activo eso **no da error: devuelve cero filas**, así que la app pintaba tan campante *"Aún no hay alumnas inscritas en esta clase"* en clases que iban llenas. **Verificado suplantando a Pili en la BD: 0 filas en su clase de 11 inscritas.** O sea, esa lista **nunca funcionó para nadie** en 10 semanas.
+
+**Arreglo (`supabase/sql/coach_ve_su_lista.sql`, APLICADO a prod):** política nueva `Coaches can view reservations of their classes` — cada coach lee las reservas de las clases **donde ella es la coach asignada** (`classes.coach_id = auth.uid()`), nada más. Es aditiva: las políticas de RLS se suman con OR, así que no se tocó ninguna existente. **Solo lectura**: tomar asistencia sigue siendo de recepción/admin (el check-in se hace con el lector de QR).
+
+**Probado 12/12 con ROLLBACK y luego verificado en vivo:** Pili ve sus 2 clases (11 y 4) y **0** de la de Nallely · Silvia ve sus 36 y 0 ajenas · **una clienta sigue viendo solo sus 88 reservas y cero ajenas** · la dueña admin sigue viendo las 3,684 · ninguna política de UPDATE para coaches.
+
+### 🎨 Front — la hoja ya no miente
+
+`openRoster` distingue tres casos en vez de uno: clase propia (lista real), **clase de otra coach** (*"Esta clase es de X. Solo puedes ver la lista de tus clases. Si vas a cubrirla, pide que te la asignen"*, con el conteo de inscritas del cupo, que no es dato sensible) y error de red (*"No se pudo cargar la lista"*). El "Ver lista" solo aparece en las clases propias. Antes, los tres casos decían lo mismo: *"Aún no hay alumnas inscritas"*.
+
+### ⏭️ Lo que sigue
+
+1. **La web ya está desplegada y la BD ya está viva** → las coaches lo ven al entrar (la mayoría usa la app nativa: ahí llega con el próximo build, **iOS 1.9.8 / Android 2.6.8**; el arreglo de RLS sí aplica a cualquier versión instalada, pero el conteo del panel viaja en el front).
+2. **🟡 Dato para la dueña: "Bren Flores💐" (`sally_2609@hotmail.com`) da 28 clases futuras pero su cuenta tiene rol `CLIENT`** → no puede entrar al portal de coach en absoluto. Si debe ver su panel, hay que ponerle rol `COACH`. (Y **MAYRA PAOLA CASTILLO HERNANDEZ** sigue sin cuenta, con 39 clases viejas sin `coach_id`.)
+
 ## 🔴 Sesión 2026-09-06 — "SE DAN DE BAJA Y LES SIGUE COBRANDO" (era una factura ya emitida que ni pausar ni cancelar detienen)
 
 **Reporte de la dueña (WhatsApp 9:44):** *"Comentan esto mis clientas cuando se dan de baja les hace el cobro aún así"*, reenviando el mensaje de una clienta: *"Sí me di de baja pero anoche se me hizo el cobro 🥹 y se volvió a poner activa la membresía 😳"*. Sin nombre.
