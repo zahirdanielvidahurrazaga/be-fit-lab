@@ -6,6 +6,69 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
+## 🔵 Sesión 2026-09-11 — PAUSA QUE CONGELA (vivo) · temporadas, borrado de cuenta y respaldo por correo (construidos, SIN desplegar) · 🔴 UNA LLAVE service_role EN TEXTO PLANO
+
+**Contexto:** día de propuesta comercial a Brenda (plan de temporadas sep→dic + los tres cierres de año). Mientras se espera su confirmación se atacaron huecos de producción. **Casi todo quedó construido y probado pero SIN desplegar, a propósito.**
+
+### ✅ APLICADO A PRODUCCIÓN HOY
+
+**1. Cuenta de prueba borrada.** `admin.prueba@befitlab.app` (ADMIN, creada 7-jul, último acceso 15-ago, 0 clases/ventas/boletos/movimientos). Acumulaba **26 avisos sin entregar al mes** porque no tenía ningún aparato registrado. Auditada antes de borrar; se fue en cascada con sus avisos. Admins restantes: Brenda flowers · Zahir Admin. Las 216 clientas intactas.
+
+**2. 🕒 PAUSAR AHORA CONGELA LA VIGENCIA (commit `e7b94a1`, local, SIN push).**
+- **El bug:** pausar frenaba el cobro y conservaba el saldo (candado 2 del cron), pero `plan_expires_at` seguía corriendo. La clienta pausaba por vacaciones, volvía, y su membresía había vencido mientras no estaba — con sus clases intactas y `book_class_secure` negándose a dejarla usarlas. **El usuario confirmó que la intención original SIEMPRE fue que todo se pausara.**
+- **BD aplicada** (`supabase/sql/pausa_congela_vigencia.sql`, probado **7/7 con ROLLBACK**): columna `users.paused_at`; función `reanudar_vigencia(uuid)` SECURITY DEFINER, ejecutable **solo por service_role**; y **`paused_at` agregada al guard `enforce_user_profile_guard`** — sin eso una clienta se ponía una fecha vieja y se cobraba años de vigencia gratis (2 de las 7 pruebas cubren justo eso).
+- **El cálculo vive en la BD, no en las edge functions**, porque hay DOS caminos que reactivan (clienta y dueña) y dos copias se desincronizan.
+- **`manage-membership` v5 y `admin-membership` v3 DESPLEGADAS** (las dos responden 401 sin JWT, verificado). El orden importa y quedó explícito: primero se devuelven los días, **después** se decide si se cobra. Si los días recuperados la dejan vigente, **no se le cobra nada**.
+- **NO se tocó `book_class_secure` ni el cron.** Una pausada con días vigentes sigue reservando como siempre.
+- **6 fechas de pausa reales registradas**, sacadas de los eventos de Stripe (ventana de 30 días, paginando 209 eventos): Carolina Ordoñez 24-ago · Aylin Zenteno 14-ago · Cecilia Martínez 1-sep · Fernanda Domínguez 7-sep · Lorena Velázquez 9-sep · Fabiola Urcid 11-sep. **Ningún vencimiento se movió hoy**: solo se registró el hecho, el ajuste ocurre cuando cada una reactive. Al reactivar: Fernanda +30 días, Aylin +16 (saldo 0), Cecilia +5 con sus 13 clases, Carolina +4. **Lorena y Fabiola no reciben nada porque pausaron ya vencidas** — sale de la fórmula, sin caso especial.
+- ⏭️ **Jessica Narváez se dejó SIN fecha a propósito** (su plan se reactivó a mano el 26-ago, su reloj ya se reinició; ponerle la fecha vieja le regalaría más de un mes). ⏭️ **Danna Rosas** (5 clases) pausó antes de la ventana de 30 días: sin evidencia, **lo decide la dueña** desde su panel.
+
+### 🧰 CONSTRUIDO Y PROBADO, SIN DESPLEGAR (vive en el árbol de trabajo, sin commitear)
+
+**3. TEMPORADAS DE LA APP** — espera el sí de Brenda.
+- `supabase/sql/app_seasons.sql` (**probado 7/7 con ROLLBACK, NO aplicado**): tabla `app_seasons` (slug, rango de fechas, `colores`/`colores_oscuro`, `decor`, `saludo`), lectura pública, escritura admin. Si dos se traslapan gana la de `starts_on` más reciente.
+- `src/lib/temporada.js`: resuelve por **`mexicoTodayStr()`**, no por el reloj del dispositivo. Pinta desde `localStorage` y se corrige con la BD (sin parpadeo en la 2ª visita). Valida el rango también contra el caché, si no un Halloween guardado pintaría en noviembre. Todo en `try/catch`: es adorno, no puede tumbar la app.
+- `src/config/estudio.js`: se colgó de **`paletaDe()`**, que ya era el único punto por donde pasan los colores. Sin temporada el comportamiento es idéntico al de hoy.
+- `src/components/SaludoTemporada.jsx`: papel picado (SVG con perforaciones reales por `fill-rule="evenodd"`, se ve en los dos temas) + tarjeta de saludo. Montado en `Portal.jsx`.
+- ⚠️ **Decisión de diseño: la temporada mueve el ADORNO, no la paleta funcional.** El verde bandera pelea con cada superficie durazno y el modo oscuro tiene su propio acento (`#2B231D`) que un cambio completo rompe sin lanzar error. El 4º banderín es el durazno de la marca (el crema se probó y se pierde sobre la tarjeta blanca).
+- ⚠️ **Trampa encontrada:** `--border-subtle` y `--card-shadow` **solo están definidos en el tema oscuro** de `index.css`. Todo el código los usa con respaldo (`var(--border-subtle, rgba(55,61,59,0.1))`); sin él, en claro la tarjeta sale sin borde ni sombra.
+- 🔴 **FALTA: pestaña de admin para que la dueña edite la temporada.** Hoy el texto del saludo (la `nota` con el horario del feriado) se llena con un `UPDATE`. La propuesta le promete que ella maneja el contenido → hacen falta ~40 min y sirve para las 4 temporadas.
+
+**4. ELIMINAR CUENTA (la app prometía algo que no hacía).**
+- `Ajustes.jsx` hacía `delete()` directo sobre `reservations` y `users`. **No existe ni una política DELETE** en esas tablas: con RLS eso no falla, borra cero filas y devuelve éxito. Se cerraba la sesión y la clienta se iba creyendo que su cuenta no existía, cuando seguía completa y podía volver a entrar. Riesgo con Apple (guía **5.1.1(v)**: una app que crea cuentas debe permitir eliminarlas).
+- **`supabase/functions/delete-my-account/index.ts` (NUEVA):** el id sale del token, nunca del cuerpo. **Cancela Stripe ANTES de borrar** y anula las facturas `open` (cancelar no detiene una factura ya emitida — el caso del 6-sep). Si Stripe falla **aborta el borrado**: mejor una cuenta de más que una tarjeta cobrándose sola. Rechaza al staff (`classes.coach_id` es SET NULL → una coach que se borra deja sus clases sin dueña).
+- **`admin-delete-client`: el mismo corte de Stripe.** Antes borraba el perfil y dejaba la suscripción viva cobrando a alguien que ya no existe en la base. **79 clientas tienen suscripción.**
+- `Ajustes.jsx` ahora revisa el resultado y muestra el motivo real (con `await errorDeFuncion`, que es async).
+- ⏭️ **Decisión de copy pendiente:** el modal dice "se eliminarán todos tus datos", pero `sales` conserva un snapshot de nombre y correo (a propósito, es contabilidad). Hay que ajustar el texto.
+
+**5. RESPALDO POR CORREO DE LOS COBROS RECHAZADOS (`push-deliver`).**
+- **29 clientas activas no tienen ningún aparato registrado** y el respaldo por correo solo cubría los avisos de lista de espera. O sea que "no pudimos cobrar tu membresía" **no llegaba por ningún lado**.
+- `type` no servía como filtro: de 150 avisos `payment` de un mes, **104 son cobros rechazados y 46 compras exitosas**. Se agregó **`CRITICOS_POR_KIND`** (discrimina por `data.kind`) + `class_cancelled` a la lista por tipo (si no se entera, hace el viaje al estudio para nada). Verificado que el trigger sí manda `data` (`coalesce(new.data,'{}')`), typecheck limpio y **clasificador 8/8** (incluido que una compra exitosa NO dispare correo).
+- Rescata a 4 clientas reales al mes (lily mercado, Magui Romero, Norma Tobón y **Lorena Velázquez**, que tiene 3 avisos sin entregar y cero aparatos). Los otros 26 eran de la cuenta de prueba, **ya borrada**.
+
+**6. TEXTOS DE PAUSA (`Planes.jsx`).** El modal decía "conservas tu acceso hasta el [fecha]" — la promesa rota. Ahora dice que sus días se congelan, con el número ("los 12 días que te quedan te esperan completos"), y al reactivar le dice cuántos recuperó (`daysRestored`).
+
+### 🔴 PENDIENTE MÁS GRAVE — UNA LLAVE `service_role` EN TEXTO PLANO
+
+`supabase/sql/waitlist_offer_claim.sql` línea 217 trae un **JWT de `service_role` horneado**. Decodificado: rol `service_role`, proyecto `fifaowaiokauhuqklzwe`, emitida 25-abr-2026, **expira 2036**. **Probada: HTTP 200 → SIGUE VIVA y salta toda la RLS.**
+
+Vive en **tres** lugares: ese `.sql`, el respaldo del Escritorio, y **el cuerpo de la función `notification_logs_push` en producción** (cualquiera con lectura del esquema la ve).
+
+⚠️ **ORDEN OBLIGATORIO AL ROTAR:** primero reescribir `notification_logs_push` para que NO traiga la llave escrita, y después rotar. **Rotar primero deja a todas las clientas sin push**, porque ese trigger es el que los entrega.
+
+Los otros dos archivos con llave (`debug_badges.mjs`, `test_supabase.js`) **sí están en git pero traen la `anon`**, que es pública por diseño (verificado decodificando el rol, no por la nota vieja).
+
+### ⏭️ PARA MAÑANA, EN ORDEN
+
+1. **🔴 Rotar la llave `service_role`** con el orden de arriba.
+2. **Limpiar los 2 SQL con secretos y afinar el `.gitignore`.** `.gitignore` línea 22 ignora `*.sql` → **los 39 archivos SQL (casi toda la lógica de negocio de la base) no están en git ni en GitHub**. Antes de commitearlos: quitar la llave de `waitlist_offer_claim.sql` y el `moris26` en claro de `admin_reports_passcode.sql:25` (la clave de Reportes; lo que se guarda va con bcrypt, pero la línea que la siembra la trae escrita). `flujo_reservas_al_cien.sql` trae 3 correos reales. **Respaldo hecho hoy en `~/Desktop/be-fit-lab-SQL-respaldo-2026-09-11/` (39 archivos) → moverlo a iCloud o Drive.**
+3. **Si Brenda aprueba las temporadas:** aplicar `app_seasons.sql`, desplegar `delete-my-account`, `admin-delete-client` y `push-deliver`, y push a `main` (se lleva todo el front junto). **Commits por separado, uno por tema** — no uno solo: si en noviembre el adviento rompe algo, hay que poder revertir esa pieza sin arrastrar el borrado de cuentas.
+4. **iOS 1.9.8 (build 32) / Android 2.6.8 (vc 20)** — hoy el repo está en 1.9.7(31) y 2.6.7(vc19, nunca compilada). El build arrastra pendientes que ya están en `main`: cancelar en pausa, aviso del cobro frenado, fix del panel de coaches, registro de intentos frenados. **Al aprobar Apple: `update app_config set latest_ios_version='1.9.8'`** (se ha olvidado 3 veces).
+5. **Para Brenda:** **9 clientas con 50 clases pagadas que no pueden usar** (Cecilia 13, Laura Ugarte 7, Lorena 6, Daysi 5, Danna 5, Alejandra Cristel 5, Marcela 4, Maribel 3, Fabiola 2). Tres son normales (pagan en efectivo y su mes acabó, dos vencieron ese mismo día), dos son tarjeta rechazada (el sistema avisó, nadie actuó) y cuatro eran las pausadas — esas ya quedan resueltas al reactivar.
+6. **Valeria Caballero y Verónica Morales siguen desincronizadas** (la app las muestra `active` con la tarjeta pausada en Stripe). De las 3 del 6-sep **solo Jessica se corrigió**. El `UPDATE` sigue escrito en la sesión del 6-sep, esperando la respuesta de la dueña.
+7. **Dato nuevo de `intentos_bloqueados`** (la tabla del 4-sep que nadie había leído): **la fricción #1 es CANCELAR, no reservar.** 16 intentos `too_late` de **10 mujeres distintas** en una semana — más que saldo agotado y membresía vencida juntos — con toques repetidos (Daniela Castillo 3 veces en 10 segundos). La regla de 5 h no está mal; el mensaje no les aterriza.
+8. **Verificado hoy y se puede cerrar:** el aviso de cobro rechazado del 4-sep **funciona en producción** (Daysi 11-sep 18:31, Fabiola y Alejandra el 10-sep, cada uno a la clienta + las 3 admins). Y el espejo de Stripe del 6-sep **está registrando** (8 pausadas + 3 en cancelación de las 79 con suscripción).
+
 ## 🔴 Sesión 2026-09-07 — "A LAS COACHES LES SALEN 0 ALUMNAS Y 0 CLASES" (dos fallas apiladas: identidad por nombre + RLS que nunca existió)
 
 **Reporte de la dueña (WhatsApp 8:07):** *"mis maestras me mencionan que no aparecen cuántas alumnas tienen y quiénes vienen a sus clases, no lo pueden ver, ya van 3 de ellas que mencionan esto"* + captura del panel de **MARIA DEL PILAR MENDEZ CALDERON** con **0 ALUMNAS HOY / 0 CLASES HOY**, mientras abajo el horario del estudio sí listaba clases. Ese contraste es la pista: los datos llegaban, lo que fallaba era el "¿cuál es mía?".
