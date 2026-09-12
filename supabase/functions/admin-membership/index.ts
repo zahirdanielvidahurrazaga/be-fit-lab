@@ -189,7 +189,7 @@ serve(async (req) => {
     if (action === 'cancel') {
       await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true, pause_collection: '' });
       const frenado = await anularFacturasPendientes(stripe, subscriptionId);
-      if (esLaDeLaApp) await supabase.from('users').update({ membership_renewal: 'canceling' }).eq('id', userId);
+      if (esLaDeLaApp) await supabase.from('users').update({ membership_renewal: 'canceling', paused_at: null }).eq('id', userId);
       return Response.json({
         ok: true,
         resultado: 'Dejará de cobrarse al terminar el periodo pagado'
@@ -228,7 +228,13 @@ serve(async (req) => {
     if (action === 'pause') {
       await stripe.subscriptions.update(subscriptionId, { pause_collection: { behavior: 'void' }, cancel_at_period_end: false });
       const frenado = await anularFacturasPendientes(stripe, subscriptionId);
-      if (esLaDeLaApp) await supabase.from('users').update({ membership_renewal: 'paused' }).eq('id', userId);
+      // Se marca CUÁNDO empezó la pausa: al reactivar se le devuelven esos días
+      // de vigencia. Pausar congela el reloj, no lo deja corriendo.
+      if (esLaDeLaApp) {
+        await supabase.from('users')
+          .update({ membership_renewal: 'paused', paused_at: new Date().toISOString() })
+          .eq('id', userId);
+      }
       return Response.json({
         ok: true,
         resultado: 'Cobro pausado. Puedes reactivarlo cuando quiera volver.'
@@ -238,8 +244,27 @@ serve(async (req) => {
 
     // resume
     await stripe.subscriptions.update(subscriptionId, { pause_collection: '', cancel_at_period_end: false });
-    if (esLaDeLaApp) await supabase.from('users').update({ membership_renewal: 'active' }).eq('id', userId);
-    return Response.json({ ok: true, resultado: 'Cobro reactivado' }, { headers: corsHeaders });
+    let devueltos = 0;
+    if (esLaDeLaApp) {
+      // Mismo cálculo que usa la app de la clienta: vive en la BD para que los
+      // dos caminos no se desincronicen.
+      const { data: antes } = await supabase
+        .from('users').select('plan_expires_at').eq('id', userId).maybeSingle();
+      const { data: despues, error: eReanudar } = await supabase
+        .rpc('reanudar_vigencia', { p_user: userId });
+      if (eReanudar) console.error('reanudar_vigencia:', eReanudar.message);
+      if (antes?.plan_expires_at && despues) {
+        devueltos = Math.round(
+          (new Date(despues).getTime() - new Date(antes.plan_expires_at).getTime()) / 86400000,
+        );
+      }
+      await supabase.from('users').update({ membership_renewal: 'active' }).eq('id', userId);
+    }
+    return Response.json({
+      ok: true,
+      resultado: 'Cobro reactivado'
+        + (devueltos > 0 ? `. Se le devolvieron ${devueltos} día${devueltos === 1 ? '' : 's'} de vigencia por el tiempo que estuvo pausada.` : ''),
+    }, { headers: corsHeaders });
 
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

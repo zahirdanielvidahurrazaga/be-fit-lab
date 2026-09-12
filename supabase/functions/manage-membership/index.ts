@@ -113,17 +113,37 @@ serve(async (req) => {
     let cobroHoy = false;
     let pagado: boolean | null = null;
     let pendienteAnulado = 0; // $ de facturas caídas que se frenaron al pausar/cancelar
+    let diasDevueltos = 0;    // días de vigencia recuperados al reanudar una pausa
+    let pausadaEn: string | null | undefined;  // undefined = no tocar la columna
     try {
       if (action === 'pause') {
         await stripe.subscriptions.update(subId, { pause_collection: { behavior: 'void' }, cancel_at_period_end: false });
         pendienteAnulado = await anularFacturasPendientes(stripe, subId);
         renewal = 'paused';
+        // Se guarda el momento exacto: es lo que se le devuelve al reactivar.
+        pausadaEn = new Date().toISOString();
       } else if (action === 'cancel') {
         await stripe.subscriptions.update(subId, { cancel_at_period_end: true, pause_collection: '' });
         pendienteAnulado = await anularFacturasPendientes(stripe, subId);
         renewal = 'canceling';
       } else { // resume / reactivar
-        const vencida = !!row?.plan_expires_at && new Date(row.plan_expires_at).getTime() < Date.now();
+        // 🕒 Primero se le DEVUELVEN LOS DÍAS QUE ESTUVO PAUSADA, y con el
+        // vencimiento ya corregido se decide si además hay que cobrar. El orden
+        // importa: si los días que traía de vuelta la dejan vigente otra vez, no
+        // se le cobra nada — pausar es congelar, no perder.
+        // El cálculo vive en la BD (`reanudar_vigencia`) porque este mismo
+        // camino existe también en el panel de la dueña y dos copias se
+        // desincronizan.
+        const { data: venceTrasReanudar, error: eReanudar } = await supabase
+          .rpc('reanudar_vigencia', { p_user: user.id });
+        if (eReanudar) console.error('reanudar_vigencia:', eReanudar.message);
+        const venceEn = venceTrasReanudar ?? row?.plan_expires_at ?? null;
+        if (row?.plan_expires_at && venceTrasReanudar) {
+          diasDevueltos = Math.round(
+            (new Date(venceTrasReanudar).getTime() - new Date(row.plan_expires_at).getTime()) / 86400000,
+          );
+        }
+        const vencida = !!venceEn && new Date(venceEn).getTime() < Date.now();
         if (vencida) {
           const sub = await stripe.subscriptions.update(subId, {
             pause_collection: '',
@@ -160,7 +180,13 @@ serve(async (req) => {
       throw e;
     }
 
-    await supabase.from('users').update({ membership_renewal: renewal }).eq('id', user.id);
+    // `reanudar_vigencia` ya limpió paused_at en el camino de reactivar; aquí
+    // solo se escribe al pausar (se marca) y al cancelar (se descarta la pausa:
+    // una membresía que se va no tiene días congelados que devolver).
+    const cambios: Record<string, unknown> = { membership_renewal: renewal };
+    if (action === 'pause') cambios.paused_at = pausadaEn;
+    if (action === 'cancel') cambios.paused_at = null;
+    await supabase.from('users').update(cambios).eq('id', user.id);
 
     return Response.json({
       ok: true,
@@ -170,6 +196,8 @@ serve(async (req) => {
       // $ del cobro caído que se frenó (0 = no había nada pendiente). El front lo
       // dice en el mensaje: es justo lo que la clienta estaba reclamando.
       pendingVoided: pendienteAnulado / 100,
+      // Días de vigencia recuperados al reanudar (0 = no venía de una pausa).
+      daysRestored: diasDevueltos,
     }, { headers: corsHeaders });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
