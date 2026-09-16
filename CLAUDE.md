@@ -5,6 +5,58 @@ App del estudio de pilates **Be Fit Lab** (mujeres). React + Vite + Capacitor
 cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
+## 🔵 Sesión 2026-09-16 — PLAN PRO CONTRATADO (egress) · backfill de `coach_id` de Vio (aplicado)
+
+**Detonante:** Supabase cortó el periodo de gracia el **14-sep**. El plan Free se quedó corto de egress por segunda vez y, pasada la cuota, **las peticiones responden 402 y la app deja de servir hasta el siguiente ciclo** (el ciclo corre del 16 de cada mes). El usuario contrató **Pro ($25 USD/mes por organización)**.
+
+### 📊 Diagnóstico de egress (medido, no estimado)
+
+Con los logs del gateway (`/v1/projects/{ref}/analytics/endpoints/logs.all`) y midiendo payloads reales contra la BD:
+
+| Origen | 24 h |
+|---|---|
+| Storage (imágenes) | **17.6 MB** — cafe-products 9.9 · avatars 6.3 · disciplines 1.3 |
+| `classes` (REST) | ~9.2 MB — 712 refetches × 12.9 kB |
+| `users select=*` | ~6.4 MB — 143 llamadas × 238 kB crudos |
+
+≈ **35-40 MB/día ≈ 1.1 GB/mes** en un día normal. El pico que reventó los 5 GB **no se pudo ver: en Free los logs duran 1 día.** Con Pro duran 7.
+
+**Ojo para medir:** las respuestas de PostgREST van **gzip y en chunks**, así que `content_length` viene NULL en `edge_logs` — el egress de REST **no se puede leer de los logs**. Se midió con `curl --compressed` contra el endpoint real: 68 kB de JSON = **12.9 kB en el cable** (~5.3×).
+
+### 🗜️ Optimizaciones IDENTIFICADAS pero NO hechas (con Pro dejaron de ser urgentes)
+
+250 GB contra 1.1 GB/mes de consumo = 200× de margen. Quedan como mejoras de **velocidad**, no de costo:
+- `cacheControl: '3600'` (1 hora) en `src/lib/avatar.js:42` y `src/lib/cafeImage.js:60`. Las URLs ya llevan versión (`?v=timestamp` / nombre único), así que subirlo a 1 año no tiene riesgo. Hoy el CDN revalida cada hora: **582 peticiones/día para 81 avatares**. Ojo: sólo aplica a subidas NUEVAS; las ~272 imágenes existentes conservan su metadata.
+- `fetchAllUsers` (`AuthContext.jsx:454`) hace `select('*')` de 218 clientas (238 kB) y el canal `public:users:all` (`AuthContext.jsx:352`) lo **redispara entero cada vez que cambia cualquier fila de `users`** — y el saldo cambia en cada reserva y cada check-in.
+- Los eventos de `classes` recargan la ventana completa (134 filas) en **cada pestaña conectada**, en vez de aplicar la fila del evento al estado.
+
+### ✅ APLICADO A PRODUCCIÓN HOY
+
+**Backfill de `coach_id` — clases de Vio** (`supabase/sql/backfill_coach_id_vio.sql`, probado con ROLLBACK antes de aplicar).
+
+Resto del bug del 7-sep: se arregló hacia adelante, pero el histórico quedó sucio. **22 clases de Cardio Dance (25-jun → 31-jul)** estaban guardadas con el **correo** de la coach (`vio250984@gmail.com`, 21) o como `VIOLETA` (1), sin `coach_id`. Las clientas veían un correo como nombre de instructora.
+
+- Vio (`5aad461e-417d-4711-8079-4142eb85165c`, COACH): **36 → 58 clases · 307 → 534 reservas · 197 → 345 asistencias**.
+- Correos crudos en `classes.instructor`: **0**.
+
+### 🚧 PENDIENTE / DECISIONES ABIERTAS
+
+- **⏰ Compute sigue en NANO.** En Pro **Nano se factura igual que Micro**, o sea que ya se está pagando y no se está usando. Pasar a Micro duplica la RAM (0.5 → **1 GB**, venía al 60%) y da 2 cores, **sin costo extra**. **Reinicia la base unos minutos → hacerlo de noche o antes de la primera clase.**
+- **🙋 39 clases de Mayra (196 reservas, 136 asistencias) siguen sin `coach_id`.** No tiene cuenta en `users` (0 coincidencias). **Decisión de la dueña:** si la da de alta se recuperan con el mismo UPDATE; si no, quedan así.
+- **📅 Los datos arrancan el 24-jun-2026.** No hay nada de enero a mayo. **El Wrapped de diciembre NO puede llamarse "tu año"** — tiene que ser "tu temporada" / "desde que abrió la app". Decidirlo antes de vendérselo.
+- Respaldos: **ya corren solos, diarios** (`walg_enabled: true`). PITR NO está y es add-on de $100, no hace falta.
+- Con Pro se desbloquearon: **transformaciones de imagen** (ojo: 100 imágenes origen incluidas, luego $5/1000, y hay ~272), **storage de 1 GB → 100 GB** (el bucket `event-gallery` está VACÍO y `progress-photos` tiene 5 fotos — estaban estrangulados por el límite), **branching** y **7 días de logs**.
+
+### 💼 Comercial
+
+Brenda contestó a la propuesta de temporadas: **no al aumento de iguala** ("seguiremos trabajando en los detalles que sigan saliendo" = se quedan en $500/mes) y **sí, sin fecha, al cierre de diciembre** ("tal vez podríamos hacer lo de Diciembre"). Acordado: no reabrir la iguala, cerrar diciembre con fecha, y pasar el costo de Supabase como **línea aparte en el recibo** (~$500 MXN, tipo de cambio 16-sep: **17.16 MXN/USD**). Verificar en la factura real si Supabase cobra IVA.
+
+### 🧰 Nota de entorno
+
+- **En la org `D-Phantom Org` hay 3 proyectos:** Befitlab (activo), CARPERfit y Santuario (pausados). Los pausados no cobran compute, pero **si alguien los reactiva son ~$10/mes cada uno** (el crédito de $10 incluido sólo cubre uno).
+- Las llamadas a la API de gestión van **con `curl`, nunca con python-urllib** (Cloudflare lo bloquea con 403/1010). Token: `security find-generic-password -s "Supabase CLI" -w`.
+- `git` en esta Mac está roto por la licencia de Xcode (`sudo xcodebuild -license`).
+
 
 ## 🔵 Sesión 2026-09-11 — PAUSA QUE CONGELA (vivo) · temporadas, borrado de cuenta y respaldo por correo (construidos, SIN desplegar) · 🔴 UNA LLAVE service_role EN TEXTO PLANO
 

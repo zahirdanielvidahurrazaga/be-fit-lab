@@ -12,6 +12,7 @@ import { Capacitor } from '@capacitor/core';
 import { addToAppleWallet, addToGoogleWallet, getWalletPlatform } from '../hooks/useWallet';
 import ProfileMenu from '../components/ProfileMenu';
 import ProgressPhotos from '../components/ProgressPhotos';
+import RecordatorioProgreso from '../components/RecordatorioProgreso';
 import BasculaBLE from '../components/BasculaBLE';
 import { ESTUDIO } from '../config/estudio';
 import { crearIrA } from '../demo/navegacionDemo';
@@ -327,6 +328,11 @@ function Evolucion() {
         {subtab === 'resumen' && (
         <motion.main key="resumen" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="dashboard-main" style={{ paddingTop: '10px' }}>
         <div className="dashboard-sidebar">
+
+          {/* Recordatorio de fotos de progreso. Vive aquí, en Resumen, porque la
+              invitación que ya existía estaba dentro de la pestaña Fotos: sólo la
+              veía quien ya había decidido entrar. */}
+          <RecordatorioProgreso userId={user?.id} onIrAFotos={() => setSubtab('fotos')} />
 
           {/* PROGRESS RING */}
           <motion.section initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6 }}>

@@ -57,7 +57,7 @@ export async function uploadImage(source, { bucket = 'cafe-products', folder = '
   const path = `${folder ? folder + '/' : ''}${id}.jpg`;
   const { error } = await supabase.storage
     .from(bucket)
-    .upload(path, blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '3600' });
+    .upload(path, blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '31536000' });
   if (error) return { url: null, error };
 
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);

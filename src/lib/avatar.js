@@ -38,7 +38,7 @@ export async function uploadAvatar(userId, source) {
   const path = `${userId}/avatar.jpg`;
   const { error } = await supabase.storage
     .from('avatars')
-    .upload(path, blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '3600' });
+    .upload(path, blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '31536000' });
 
   if (error) return { url: null, error };
 
