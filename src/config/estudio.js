@@ -161,9 +161,34 @@ export const ESTUDIO = {
   },
 };
 
-// Devuelve la paleta que toca según el tema activo.
+// ── Temporada activa ─────────────────────────────────────────────────────────
+// Patrio, Halloween, Día de Muertos, Navidad… La resuelve `src/lib/temporada.js`
+// leyendo la tabla `app_seasons` y la instala aquí.
+//
+// Vive en el módulo, igual que la identidad del estudio, y por la misma razón:
+// la paleta se escribe como estilos en línea sobre <html>, así que tiene que
+// haber UN solo lugar que decida qué color va en cada token. La temporada se
+// mezcla ENCIMA de la paleta del estudio — lo que la temporada no traiga
+// conserva el color de la marca.
+let temporada = null;
+
+export function instalarTemporada(t) {
+  temporada = t && typeof t === 'object' ? t : null;
+  if (typeof document !== 'undefined') {
+    aplicarMarca(document.documentElement.getAttribute('data-theme') || 'light');
+  }
+}
+
+export function temporadaActual() {
+  return temporada;
+}
+
+// Devuelve la paleta que toca según el tema activo, con la temporada encima.
 export function paletaDe(tema) {
-  return tema === 'dark' ? ESTUDIO.coloresOscuro : ESTUDIO.colores;
+  const base = tema === 'dark' ? ESTUDIO.coloresOscuro : ESTUDIO.colores;
+  if (!temporada) return base;
+  const encima = (tema === 'dark' ? temporada.colores_oscuro : temporada.colores) || {};
+  return Object.keys(encima).length ? { ...base, ...encima } : base;
 }
 
 // Qué variable de CSS alimenta cada color de la configuración. Un color puede

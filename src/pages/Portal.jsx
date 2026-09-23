@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { Capacitor } from '@capacitor/core';
 import ProfileMenu from '../components/ProfileMenu';
+import SaludoTemporada from '../components/SaludoTemporada';
 import MisClasesMovimientos from '../components/MisClasesMovimientos';
 import { hasNutritionAccess } from '../lib/plans';
 import { ESTUDIO, moduloActivo } from '../config/estudio';
@@ -284,7 +285,10 @@ function Portal() {
       </header>
 
       <main className="dashboard-main" style={{ paddingTop: '10px' }}>
-        
+
+        {/* SALUDO DE TEMPORADA — no pinta nada si hoy no corre ninguna */}
+        <SaludoTemporada />
+
         {/* APP DOWNLOAD BANNER */}
         {/* Sin app publicada no hay nada que descargar: el estudio todavía no
             tiene ficha en las tiendas y heredar la de fábrica mandaría a la
