@@ -5,6 +5,32 @@ App del estudio de pilates **Be Fit Lab** (mujeres). React + Vite + Capacitor
 cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
+## 🔵 Sesión 2026-09-23 — auditoría de cobros (limpia) · despliegue de lo del 11-sep · fix iOS 27 · hueco en push-deliver
+
+**Temporadas: RECHAZADAS por ahora** (quizá diciembre + recap). El código quedó en la rama **`temporadas-diciembre`** (en GitHub); `app_seasons.sql` sigue local sin aplicar.
+
+### ✅ Auditoría de cobros (solo lectura) — TODO CUADRA
+- `admin_audit_saldos()` (desde 27-ago): **0** reservas sin cobro, **0** cobros sin reserva.
+- Saldo actual vs último movimiento del ledger: **0 descuadres** en 200 cuentas. 0 saldos negativos, 0 cobros dobles por clase, 0 reservas duplicadas.
+- Cupos: 0 clases con sobrecupo, `spots` coincide con confirmed+offered en todas las futuras.
+- Lista de espera: 0 ofertas vencidas sin procesar, 0 clases con lugar libre y gente esperando, nadie en espera con cobro; cron `expire_waitlist_offers` sin fallas en 7 días.
+- Stripe: cada renovación deja **2 filas `stripe_sistema`**, la 2ª con delta 0 (dos eventos del webhook) → **NO es recarga doble**. Las renovaciones de Stripe no van a `sales`; el dashboard las toma de Stripe directo (`admin-analytics`), así que no faltan ingresos.
+- Angeles Ochoa con 14 en plan de 12 = ajuste manual de Brenda "Pagó en efectivo". OK.
+- ⚠️ **Decisión de negocio (no bug):** `book_class_secure` solo exige que el plan esté vigente HOY, no el día de la clase → 17 reservas de clientas para fechas posteriores a su vencimiento (p. ej. Lily Calderón vence 18-sep y reservó 28-30 sep). La clase sí se cobró. Preguntar a Brenda si quiere bloquearlo.
+
+### ✅ Aplicado hoy
+- **Cron `daily_photo_reminders` fallaba 7/7 días** (insertaba en columna `metadata`; es `data`). Corregido con `cron.alter_job`, ensayado con ROLLBACK. Nadie perdió aviso (ninguna clienta cumplía 42 días esa semana).
+- **Desplegadas:** `delete-my-account` v1, `admin-delete-client` v3, `push-deliver` v6 (respaldo por correo). Las 3 responden 401 sin JWT.
+- **Front a main** (commits separados): eliminar cuenta real (`a459106`), textos de pausa (`de389da`).
+- **iOS 1.9.8 (32) / Android 2.6.8 (vc20)** con **SceneDelegate + UIApplicationSceneManifest** (`1791052`). Sin esto, compilada con Xcode 27 truena al abrir (al POS lo rechazaron por eso hoy). Compila en simulador; `dist` + `cap copy ios` hechos. **Falta: probar, Archive/Upload, y al aprobar `latest_ios_version='1.9.8'`.**
+
+### 🔴 EN CURSO — push-deliver abierto + llave service_role
+- **Hueco nuevo:** `push-deliver` no valida nada adentro; bastaba cualquier JWT del proyecto (la `anon` es pública) para mandar avisos/correos a cualquier clienta.
+- **Preparado SIN desplegar** (árbol de trabajo): `push-deliver` exige header `x-push-secret` = env `PUSH_DELIVER_SECRET` (falla cerrado) + `verify_jwt=false` en `config.toml`; `supabase/sql/push_deliver_secreto.sql` con el trigger que lee el secreto del Vault (`push_deliver_secret`).
+- **Bloqueado:** crear el secreto (env + Vault) requiere permiso del usuario.
+- La llave **nunca llegó a GitHub** (`git log -S` limpio). Vive en `waitlist_offer_claim.sql`, el respaldo del Escritorio y el cuerpo del trigger.
+- **Rotar de verdad** = deshabilitar las llaves legacy, lo que también mata la `anon` horneada en las apps instaladas → primero pasar el front a la `sb_publishable_…` (ya existe en el proyecto) y forzar actualización.
+
 ## 🔵 Sesión 2026-09-16 — PLAN PRO CONTRATADO (egress) · backfill de `coach_id` de Vio (aplicado)
 
 **Detonante:** Supabase cortó el periodo de gracia el **14-sep**. El plan Free se quedó corto de egress por segunda vez y, pasada la cuota, **las peticiones responden 402 y la app deja de servir hasta el siguiente ciclo** (el ciclo corre del 16 de cada mes). El usuario contrató **Pro ($25 USD/mes por organización)**.
