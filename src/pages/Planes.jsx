@@ -41,11 +41,14 @@ function Planes() {
         // Reactivar con el mes vencido cobra HOY (la función reinicia el ciclo);
         // si el banco rechazó ese cobro, hay que decirlo, no fingir éxito.
         let text;
-        if (action === 'pause') text = 'Listo, tu membresía quedó en pausa.';
+        if (action === 'pause') text = 'Listo, tu membresía quedó en pausa. Tus días de vigencia se congelan: cuando la reactives te los devolvemos completos.';
         else if (action === 'cancel') text = 'Listo, tu renovación quedó cancelada.';
         else if (data?.chargedNow && data?.paid === false) text = 'Reactivamos tu membresía, pero tu banco rechazó el cobro de hoy. Actualiza tu tarjeta o pasa a recepción a pagar en el estudio; Stripe lo reintentará solo en unos días.';
         else if (data?.chargedNow) text = '¡Membresía reactivada! Se hizo el cobro de tu renovación y en un momento verás tus clases.';
         else text = '¡Membresía reactivada!';
+        // Pausar congela el reloj: al volver se le devuelven los días que
+        // estuvo detenida. Decirlo es la mitad del valor de la función.
+        if (data?.daysRestored > 0) text += ` Te devolvimos ${data.daysRestored} día${data.daysRestored === 1 ? '' : 's'} de vigencia por el tiempo que estuviste en pausa.`;
         // Si traía un cobro caído que Stripe seguía reintentando, decirlo: es
         // justo lo que la clienta teme cuando se da de baja.
         if (data?.pendingVoided > 0) text += ` También detuvimos el cobro pendiente de $${Number(data.pendingVoided).toLocaleString('es-MX')} que no había podido hacerse.`;
@@ -398,7 +401,7 @@ function Planes() {
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.18)', borderRadius: '12px', padding: '10px 12px', marginBottom: '10px' }}>
                         <PauseCircle size={18} color="#2563EB" style={{ flexShrink: 0 }} />
-                        <span style={{ fontSize: '0.78rem', color: '#1D4ED8', fontWeight: 600, lineHeight: 1.4 }}>Membresía en pausa — no se te cobrará la renovación.</span>
+                        <span style={{ fontSize: '0.78rem', color: '#1D4ED8', fontWeight: 600, lineHeight: 1.4 }}>Membresía en pausa — no se te cobrará la renovación y tus días de vigencia están congelados.</span>
                       </div>
                       {planExpiresAt && new Date(planExpiresAt) < new Date() && (
                         <p style={{ fontSize: '0.74rem', color: 'var(--on-surface-variant)', margin: '0 0 10px', lineHeight: 1.45, textAlign: 'center' }}>
@@ -622,7 +625,7 @@ function Planes() {
             </h2>
             <p style={{ fontSize: '0.9rem', color: 'var(--on-surface-variant)', textAlign: 'center', lineHeight: 1.55, margin: '0 0 22px' }}>
               {mgmtAction === 'pause'
-                ? <>No se te cobrará la próxima renovación. Conservas tu acceso hasta {planExpiresAt ? `el ${formatPlanDate(planExpiresAt)}` : 'que termine tu mes actual'} y puedes <strong>reactivar cuando regreses</strong>, sin volver a registrar tu tarjeta.</>
+                ? <>No se te cobrará la próxima renovación y <strong>tus días se congelan</strong>: {daysLeft > 0 ? <>los {daysLeft} día{daysLeft === 1 ? '' : 's'} que te quedan te esperan completos</> : <>tu vigencia queda detenida donde está</>}. Tus clases tampoco se pierden. Al <strong>reactivar cuando regreses</strong> te devolvemos el tiempo, sin volver a registrar tu tarjeta.</>
                 : expired
                   ? <>No se te hará <strong>ningún cobro más</strong>. Tu mes ya terminó, así que la suscripción se cierra y para volver tendrás que suscribirte de nuevo.</>
                   : <>Tu membresía <strong>no se renovará</strong>. Conservas el acceso hasta {planExpiresAt ? `el ${formatPlanDate(planExpiresAt)}` : 'que termine tu mes actual'} y después se cancela. Para volver tendrás que suscribirte de nuevo.</>}
