@@ -17,7 +17,27 @@ const CRITICOS = new Set([
   'waitlist_confirmed',
   'waitlist_expired',
   'waitlist_dropped',
+  // Si se cancela su clase y no se entera, hace el viaje al estudio para nada.
+  'class_cancelled',
 ]);
+
+// Hay avisos que comparten `type` y solo se distinguen por el `kind` que viaja
+// en `data`, así que el tipo solo no alcanza para decidir: de los 150 avisos de
+// tipo `payment` de un mes, 104 son cobros rechazados (críticos) y 46 son
+// compras exitosas (no hay por qué duplicarlas por correo).
+const CRITICOS_POR_KIND = new Set([
+  // "No pudimos cobrar tu membresía". Perderse este aviso es justo la cadena
+  // que dejó a 9 clientas con 50 clases pagadas sin poder reservar: la tarjeta
+  // se cae, el sistema avisa, y quien no tiene push no se entera de nada.
+  // 29 socias activas no tienen ningún aparato registrado.
+  'payment_failed',
+]);
+
+function esCritico(type: unknown, data: Record<string, unknown> | null | undefined): boolean {
+  if (CRITICOS.has(String(type))) return true;
+  const kind = data && typeof data === 'object' ? data['kind'] : undefined;
+  return CRITICOS_POR_KIND.has(String(kind ?? ''));
+}
 
 // Entrega PUSH a todos los dispositivos de un usuario (APNs/FCM), con RESPALDO
 // POR CORREO si no hay a dónde mandarlo. La llama el trigger de
@@ -44,7 +64,7 @@ Deno.serve(async (req) => {
     };
 
     const porCorreo = async (motivo: string) => {
-      if (!CRITICOS.has(String(type))) { await marcar('undelivered'); return 0; }
+      if (!esCritico(type, data)) { await marcar('undelivered'); return 0; }
       const { data: u } = await supabase.from('users').select('email, full_name').eq('id', userId).maybeSingle();
       if (!u?.email) { await marcar('undelivered'); return 0; }
       const ok = await sendNotificationEmail({ to: u.email, nombre: u.full_name, title, body });
