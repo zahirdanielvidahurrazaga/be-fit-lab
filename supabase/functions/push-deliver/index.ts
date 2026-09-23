@@ -46,8 +46,31 @@ function esCritico(type: unknown, data: Record<string, unknown> | null | undefin
 // Marca el resultado en `notification_logs.status` ('sent' | 'email' |
 // 'undelivered'): antes no había forma de saber que un aviso nunca llegó, y por
 // eso el fallo de la lista de espera del 29-jul pasó desapercibido durante días.
+// Comparación en tiempo constante: no deja adivinar el secreto midiendo cuánto
+// tarda en responder.
+function mismoSecreto(a: string, b: string): boolean {
+  const x = new TextEncoder().encode(a);
+  const y = new TextEncoder().encode(b);
+  if (x.length !== y.length) return false;
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  // Solo la llama el trigger `notification_logs_push`, con un secreto que vive
+  // en el Vault. Antes bastaba cualquier JWT del proyecto, y la llave `anon`
+  // viaja dentro de la app: cualquiera podía mandar avisos y correos falsos a
+  // cualquier clienta. Sin el secreto configurado se rechaza todo (falla
+  // cerrado): mejor un aviso que no sale que una puerta abierta.
+  const esperado = Deno.env.get('PUSH_DELIVER_SECRET') || '';
+  const recibido = req.headers.get('x-push-secret') || '';
+  if (!esperado || !mismoSecreto(recibido, esperado)) {
+    return Response.json({ error: 'no autorizado' }, { status: 401, headers: corsHeaders });
+  }
+
   try {
     const { userId, title, body, type, data = {}, logId } = await req.json();
     if (!userId || !title || !body) return Response.json({ error: 'datos requeridos' }, { status: 400, headers: corsHeaders });

@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.event-tickets]
 verify_jwt = false
+
+# La llama SOLO el trigger `notification_logs_push`, que se autentica con el
+# header `x-push-secret` (secreto en el Vault + env PUSH_DELIVER_SECRET). La
+# función lo valida adentro; ya no depende de un JWT del proyecto.
+[functions.push-deliver]
+verify_jwt = false

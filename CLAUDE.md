@@ -24,12 +24,12 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 - **Front a main** (commits separados): eliminar cuenta real (`a459106`), textos de pausa (`de389da`).
 - **iOS 1.9.8 (32) / Android 2.6.8 (vc20)** con **SceneDelegate + UIApplicationSceneManifest** (`1791052`). Sin esto, compilada con Xcode 27 truena al abrir (al POS lo rechazaron por eso hoy). Compila en simulador; `dist` + `cap copy ios` hechos. **Falta: probar, Archive/Upload, y al aprobar `latest_ios_version='1.9.8'`.**
 
-### 🔴 EN CURSO — push-deliver abierto + llave service_role
-- **Hueco nuevo:** `push-deliver` no valida nada adentro; bastaba cualquier JWT del proyecto (la `anon` es pública) para mandar avisos/correos a cualquier clienta.
-- **Preparado SIN desplegar** (árbol de trabajo): `push-deliver` exige header `x-push-secret` = env `PUSH_DELIVER_SECRET` (falla cerrado) + `verify_jwt=false` en `config.toml`; `supabase/sql/push_deliver_secreto.sql` con el trigger que lee el secreto del Vault (`push_deliver_secret`).
-- **Bloqueado:** crear el secreto (env + Vault) requiere permiso del usuario.
-- La llave **nunca llegó a GitHub** (`git log -S` limpio). Vive en `waitlist_offer_claim.sql`, el respaldo del Escritorio y el cuerpo del trigger.
-- **Rotar de verdad** = deshabilitar las llaves legacy, lo que también mata la `anon` horneada en las apps instaladas → primero pasar el front a la `sb_publishable_…` (ya existe en el proyecto) y forzar actualización.
+### ✅ CERRADO — push-deliver abierto + llave service_role fuera de la base
+- **Hueco:** `push-deliver` no validaba nada adentro; bastaba cualquier JWT del proyecto (la `anon` es pública) para mandar avisos/correos a cualquier clienta.
+- **Fix (vivo):** `push-deliver` v8 exige header `x-push-secret` = env `PUSH_DELIVER_SECRET` (comparación en tiempo constante, falla cerrado) y `verify_jwt=false` (`config.toml`). El trigger `notification_logs_push` lee el secreto de **Vault (`push_deliver_secret`)** — `supabase/sql/push_deliver_secreto.sql`. Se aplicó en 3 pasos sin cortar avisos (trigger con secreto+JWT → deploy → trigger sin JWT).
+- **Verificado:** sin nada / con la `anon` / secreto falso → **401**; por el trigger → **200**. **0 funciones en `public` con JWT escrito.** Llave borrada de `waitlist_offer_claim.sql` y del respaldo del Escritorio. Nunca estuvo en GitHub (`git log -S` limpio).
+- El secreto lo creó el usuario con un script (el clasificador bloquea que Claude escriba secretos aunque haya permiso).
+- **Pendiente (menor, no urgente):** rotar/deshabilitar las llaves legacy. Ya no hay copias sueltas, así que la urgencia bajó. Hacerlo implica pasar el front a `sb_publishable_…` y forzar actualización de apps, porque deshabilitar legacy mata también la `anon` horneada en iOS/Android instaladas.
 
 ## 🔵 Sesión 2026-09-16 — PLAN PRO CONTRATADO (egress) · backfill de `coach_id` de Vio (aplicado)
 
