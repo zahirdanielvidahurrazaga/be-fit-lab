@@ -22,7 +22,7 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 - **Cron `daily_photo_reminders` fallaba 7/7 días** (insertaba en columna `metadata`; es `data`). Corregido con `cron.alter_job`, ensayado con ROLLBACK. Nadie perdió aviso (ninguna clienta cumplía 42 días esa semana).
 - **Desplegadas:** `delete-my-account` v1, `admin-delete-client` v3, `push-deliver` v6 (respaldo por correo). Las 3 responden 401 sin JWT.
 - **Front a main** (commits separados): eliminar cuenta real (`a459106`), textos de pausa (`de389da`).
-- **iOS 1.9.8 (32) / Android 2.6.8 (vc20)** con **SceneDelegate + UIApplicationSceneManifest** (`1791052`). Sin esto, compilada con Xcode 27 truena al abrir (al POS lo rechazaron por eso hoy). Compila en simulador; `dist` + `cap copy ios` hechos. **Falta: probar, Archive/Upload, y al aprobar `latest_ios_version='1.9.8'`.**
+- **iOS 1.9.8 (32) / Android 2.6.8 (vc20)** con **SceneDelegate + UIApplicationSceneManifest** (`1791052`). Sin esto, compilada con Xcode 27 truena al abrir (al POS lo rechazaron por eso hoy). **iOS 1.9.8 (32) SUBIDA por el usuario el 23-sep** → al aprobar: `update app_config set latest_ios_version='1.9.8'`. **Android 2.6.8 (vc20) pendiente en la otra PC** (git pull → npm install → npm run build → npx cap sync android → AAB firmado).
 
 ### ✅ CERRADO — push-deliver abierto + llave service_role fuera de la base
 - **Hueco:** `push-deliver` no validaba nada adentro; bastaba cualquier JWT del proyecto (la `anon` es pública) para mandar avisos/correos a cualquier clienta.
