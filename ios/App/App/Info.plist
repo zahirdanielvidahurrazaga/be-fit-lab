@@ -2,14 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Be Fit Lab se conecta a la báscula inteligente por Bluetooth para registrar tu peso y composición corporal.</string>
-    <key>CAPACITOR_DEBUG</key>
+	<key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>Be Fit Lab</string>
+	<string>Be Fit Lab</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -22,12 +20,41 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.befitlab.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>befitlab</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Be Fit Lab se conecta a la báscula inteligente por Bluetooth para registrar tu peso y composición corporal.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Be Fit Lab agrega tus clases reservadas a tu calendario para que nunca olvides una sesión.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Be Fit Lab usa tu cámara para actualizar tu foto de perfil.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Be Fit Lab lee tus pasos y calorías activas del día, y tu peso y porcentaje de grasa corporal si usas una báscula conectada, para mostrarte tu progreso dentro de la app.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Be Fit Lab guarda las calorías que quemas en tu clase de pilates para que queden en tu historial de Salud.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Be Fit Lab puede guardar fotos en tu biblioteca.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Be Fit Lab accede a tu galería para que puedas elegir tu foto de perfil.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>Be Fit Lab puede crear recordatorios de tus clases próximas.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Recibe recordatorios de tus clases, actualizaciones de tu plan y novedades del estudio.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -47,6 +74,8 @@
 			</array>
 		</dict>
 	</dict>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>armv7</string>
@@ -66,34 +95,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<key>NSHealthShareUsageDescription</key>
-	<string>Be Fit Lab lee tus pasos y calorías activas del día, y tu peso y porcentaje de grasa corporal si usas una báscula conectada, para mostrarte tu progreso dentro de la app.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>Be Fit Lab guarda las calorías que quemas en tu clase de pilates para que queden en tu historial de Salud.</string>
-	<key>NSCalendarsUsageDescription</key>
-	<string>Be Fit Lab agrega tus clases reservadas a tu calendario para que nunca olvides una sesión.</string>
-	<key>NSRemindersUsageDescription</key>
-	<string>Be Fit Lab puede crear recordatorios de tus clases próximas.</string>
-	<key>NSUserNotificationsUsageDescription</key>
-	<string>Recibe recordatorios de tus clases, actualizaciones de tu plan y novedades del estudio.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Be Fit Lab usa tu cámara para actualizar tu foto de perfil.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Be Fit Lab accede a tu galería para que puedas elegir tu foto de perfil.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Be Fit Lab puede guardar fotos en tu biblioteca.</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>com.befitlab.app</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>befitlab</string>
-			</array>
-		</dict>
-	</array>
 </dict>
 </plist>
