@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Settings, Bell, Moon, Lock, FileText, ShieldAlert, Trash2, ChevronRight, ChevronLeft, Check, AlertCircle, Home, TrendingUp, Utensils, CalendarDays, QrCode, Info } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase, errorDeFuncion } from '../lib/supabase';
 import { useScrollDetect } from '../hooks/useScrollDetect';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ESTUDIO } from '../config/estudio';
@@ -21,6 +21,8 @@ function Ajustes() {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteStep, setDeleteStep] = useState(1);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   // Password change
   const [newPassword, setNewPassword] = useState('');
@@ -99,15 +101,31 @@ function Ajustes() {
       setDeleteStep(2);
       return;
     }
-    // Step 2: actual delete
+    // Paso 2: eliminar de verdad.
+    //
+    // ⚠️ Antes esto hacía `delete()` directo sobre `reservations` y `users`. Con
+    // RLS activo y SIN políticas DELETE, eso no da error: borra CERO filas y
+    // devuelve éxito. Se cerraba la sesión y la clienta se iba creyendo que su
+    // cuenta ya no existía, cuando seguía completa. Ahora lo hace la edge
+    // function `delete-my-account`, que además cancela el cobro de Stripe antes
+    // de borrar, y aquí SÍ se revisa el resultado.
+    setDeleting(true);
+    setDeleteError('');
     try {
-      // Delete user data from users table
-      await supabase.from('reservations').delete().eq('user_id', user.id);
-      await supabase.from('users').delete().eq('id', user.id);
+      const { data, error } = await supabase.functions.invoke('delete-my-account');
+      if (error || data?.error) {
+        // errorDeFuncion es async: lee el motivo real del CUERPO de la respuesta.
+        // Sin el await aquí se guardaría una promesa como texto del error.
+        setDeleteError(await errorDeFuncion(error, data, 'No se pudo eliminar tu cuenta. Vuelve a intentarlo.'));
+        setDeleting(false);
+        return;
+      }
       await logout();
       navigate('/');
     } catch (err) {
       console.error('Error deleting account:', err);
+      setDeleteError('No se pudo eliminar tu cuenta. Revisa tu conexión e inténtalo otra vez.');
+      setDeleting(false);
     }
   };
 
@@ -428,7 +446,7 @@ function Ajustes() {
 
 
       {/* DELETE ACCOUNT MODAL */}
-      <ModalOverlay show={showDeleteConfirm} onClose={() => { setShowDeleteConfirm(false); setDeleteStep(1); }}>
+      <ModalOverlay show={showDeleteConfirm} onClose={() => { setShowDeleteConfirm(false); setDeleteStep(1); setDeleteError(''); }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{
             width: '72px', height: '72px', borderRadius: '50%',
@@ -442,24 +460,31 @@ function Ajustes() {
           </h2>
           <p style={{ fontSize: '0.95rem', color: 'var(--on-surface-variant)', marginBottom: '28px', lineHeight: 1.5, fontWeight: 500 }}>
             {deleteStep === 1
-              ? 'Se eliminarán todos tus datos, reservaciones e historial. Esta acción no se puede deshacer.'
+              ? 'Se eliminarán todos tus datos, reservaciones e historial, y se cancelará tu cobro automático si tienes uno. Esta acción no se puede deshacer.'
               : 'Esta es tu última oportunidad. Al confirmar, tu cuenta será eliminada permanentemente y perderás acceso a todo tu progreso.'}
           </p>
 
+          {deleteError && (
+            <p style={{ fontSize: '0.9rem', color: '#ba1a1a', fontWeight: 600, marginBottom: '16px', lineHeight: 1.45 }}>
+              {deleteError}
+            </p>
+          )}
+
           <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={deleting ? undefined : { scale: 1.02 }}
+            whileTap={deleting ? undefined : { scale: 0.98 }}
+            disabled={deleting}
             onClick={handleDeleteAccount}
             style={{
               width: '100%', padding: '16px',
               borderRadius: '20px', border: 'none',
               background: '#ba1a1a', color: 'white',
               fontSize: '1.05rem', fontWeight: 800, fontFamily: 'var(--font-display)',
-              cursor: 'pointer', marginBottom: '14px',
+              cursor: deleting ? 'default' : 'pointer', marginBottom: '14px', opacity: deleting ? 0.7 : 1,
               boxShadow: '0 8px 25px rgba(186,26,26,0.4), inset 0 1px 0 rgba(255,255,255,0.2)'
             }}
           >
-            {deleteStep === 1 ? 'Sí, eliminar mi cuenta' : 'Confirmar eliminación definitiva'}
+            {deleting ? 'Eliminando…' : (deleteStep === 1 ? 'Sí, eliminar mi cuenta' : 'Confirmar eliminación definitiva')}
           </motion.button>
 
           <motion.button
