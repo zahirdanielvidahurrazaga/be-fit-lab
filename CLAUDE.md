@@ -5,6 +5,12 @@ App del estudio de pilates **Be Fit Lab** (mujeres). React + Vite + Capacitor
 cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
+## 🔵 Revisión 2026-09-27 (desde la sesión del POS)
+- ✅ **iOS 1.9.8 VIVA** en App Store desde el 24-sep (lookup de iTunes) → **`app_config.latest_ios_version` = '1.9.8'** (actualizado 27-sep 21:05 CDMX; estaba en 1.9.7).
+- ✅ **push-deliver con secreto funciona en producción:** `notification_logs` del 22 al 27-sep con `sent` diario, respaldo `email` desde el 24, **0 `undelivered` desde el 25**; `net._http_response` 6/6 en 200 en 4 días.
+- ⏭️ Siguen abiertos (sin cambio): Android 2.6.8 (vc20) en la otra PC; compute Nano→Micro (gratis en Pro, reinicia la BD unos minutos: de noche); decisión de Brenda sobre reservar clases posteriores al vencimiento del plan; Mayra sin cuenta (39 clases sin `coach_id`); copy del modal de eliminar cuenta; rotar llaves legacy (menor).
+- Hay una carpeta `ios/App/App.xcodeproj/xcshareddata/xcodecloud` SIN versionar (la creó Xcode, probablemente al abrir Xcode Cloud). No se subió; borrarla si no se usa Xcode Cloud.
+
 ## 🔵 Sesión 2026-09-23 — auditoría de cobros (limpia) · despliegue de lo del 11-sep · fix iOS 27 · hueco en push-deliver
 
 **Temporadas: RECHAZADAS por ahora** (quizá diciembre + recap). El código quedó en la rama **`temporadas-diciembre`** (en GitHub); `app_seasons.sql` sigue local sin aplicar.
