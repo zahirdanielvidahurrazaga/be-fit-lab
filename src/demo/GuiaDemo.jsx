@@ -1,4 +1,5 @@
 import { MessageCircle, RotateCcw, X, ChevronRight } from 'lucide-react';
+import { KAIZEN, PALETA } from './kaizen/marca';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GUÍA DE LA MAQUETA
@@ -12,9 +13,9 @@ import { MessageCircle, RotateCcw, X, ChevronRight } from 'lucide-react';
 // apaga con un módulo, el paso desaparece con él.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// El WhatsApp de Zahir, el mismo del portafolio (Portafolio/src/data/contacto.js).
+// El WhatsApp de KaiZen (src/demo/kaizen/marca.jsx), el mismo del sitio.
 // ⚠️ NO es el de `config/estudio.js`: ese es el del estudio de Be Fit Lab.
-const WHATSAPP_AUTOR = '528138833422';
+const C = PALETA.light;
 
 // Recorrido de la clienta, en el orden en que conviene enseñarlo.
 const PASOS_CLIENTA = [
@@ -87,45 +88,42 @@ export default function GuiaDemo({ cfg, rol, vista, irA, alReiniciar, alCerrar, 
   const siguiente = indice >= 0 ? pasos[indice + 1] : null;
 
   const mensaje = cfg.esReal
-    ? `Hola Zahir, vi la demostración de la app de ${cfg.nombre} y me interesa platicarlo.`
-    : `Hola Zahir, vi la demostración de ${cfg.nombre} y me interesa una app así para mi estudio.`;
-  const enlaceWhatsApp = `https://wa.me/${WHATSAPP_AUTOR}?text=${encodeURIComponent(mensaje)}`;
+    ? `Hola KaiZen, vi la demostración de la app de ${cfg.nombre} y me interesa platicarlo.`
+    : `Hola KaiZen, vi la demostración de ${cfg.nombre} y me interesa una app así para mi estudio.`;
+  const enlaceWhatsApp = `https://wa.me/${KAIZEN.whatsapp}?text=${encodeURIComponent(mensaje)}`;
 
+  // Tarjeta en la marca de KaiZen (como la de las demás demos), no en la del estudio.
   return (
     <aside
       aria-label="Guía de la demostración"
       style={{
-        color: '#fff', borderRadius: '22px', padding: '18px',
-        background: 'rgba(20,20,20,0.92)', backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        boxShadow: '0 24px 60px rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.08)',
-        fontFamily: "'Avenir Next', system-ui, sans-serif",
-        display: 'flex', flexDirection: 'column', gap: '14px',
+        color: C.tinta, borderRadius: '24px', padding: '22px', background: '#fff',
+        border: `1px solid ${C.cristalBorde}`, boxShadow: '0 24px 60px rgba(0,0,0,0.14)',
+        fontFamily: KAIZEN.texto, display: 'flex', flexDirection: 'column', gap: '14px',
         ...style,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)' }}>
-            {rol === 'clienta' ? `Paso ${indice + 1} de ${pasos.length} · Tu clienta` : 'Qué estás viendo'}
-          </div>
-          <div style={{ fontSize: '1.15rem', fontWeight: 700, marginTop: '4px' }}>{paso.titulo}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '10px', borderBottom: `1px solid ${C.borde}` }}>
+        <div style={{ flex: 1, fontSize: '0.64rem', fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.tenue }}>
+          {rol === 'clienta' ? `Guía · Paso ${indice + 1} de ${pasos.length}` : 'Guía · Qué estás viendo'}
         </div>
         {alCerrar && (
           <button
             type="button" onClick={alCerrar} aria-label="Cerrar la guía"
-            style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', padding: '2px', display: 'flex' }}
+            style={{ background: 'transparent', border: 'none', color: C.tenue, cursor: 'pointer', padding: '2px', display: 'flex' }}
           >
             <X size={17} />
           </button>
         )}
       </div>
 
-      <p style={{ margin: 0, fontSize: '0.86rem', lineHeight: 1.5, color: 'rgba(255,255,255,0.86)' }}>{paso.texto}</p>
+      <div style={{ fontFamily: KAIZEN.display, fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.1 }}>{paso.titulo}</div>
+
+      <p style={{ margin: 0, fontSize: '0.88rem', lineHeight: 1.55, color: '#3a3a3c' }}>{paso.texto}</p>
 
       {paso.prueba && (
-        <div style={{ fontSize: '0.8rem', lineHeight: 1.45, padding: '10px 12px', borderRadius: '12px', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.82)' }}>
-          <strong style={{ color: '#fff' }}>Pruébalo: </strong>{paso.prueba}
+        <div style={{ fontSize: '0.82rem', lineHeight: 1.5, padding: '12px 14px', borderRadius: '16px', background: C.elevado, color: '#3a3a3c' }}>
+          <strong style={{ color: C.tinta }}>Pruébalo: </strong>{paso.prueba}
         </div>
       )}
 
@@ -141,13 +139,13 @@ export default function GuiaDemo({ cfg, rol, vista, irA, alReiniciar, alCerrar, 
                   <button
                     type="button" onClick={() => irA(p.vista)} aria-current={activo ? 'step' : undefined}
                     style={{
-                      border: 'none', cursor: 'pointer', borderRadius: '999px', padding: '6px 11px',
-                      fontSize: '0.74rem', fontWeight: 700,
-                      background: activo ? '#fff' : 'rgba(255,255,255,0.09)',
-                      color: activo ? '#141414' : 'rgba(255,255,255,0.75)',
+                      cursor: 'pointer', borderRadius: '999px', padding: '6px 12px',
+                      fontFamily: KAIZEN.texto, fontSize: '0.74rem', fontWeight: 600,
+                      border: activo ? 'none' : `1px solid ${C.borde}`,
+                      background: activo ? C.tinta : '#fff', color: activo ? '#fff' : C.tenue,
                     }}
                   >
-                    {i + 1}. {p.titulo}
+                    {String(i + 1).padStart(2, '0')} {p.titulo}
                   </button>
                 </li>
               );
@@ -158,8 +156,9 @@ export default function GuiaDemo({ cfg, rol, vista, irA, alReiniciar, alCerrar, 
               type="button" onClick={() => irA(siguiente.vista)}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                border: '1px solid rgba(255,255,255,0.14)', background: 'transparent', color: '#fff',
-                borderRadius: '14px', padding: '10px 14px', cursor: 'pointer', fontSize: '0.84rem', fontWeight: 600,
+                border: `1px solid ${C.borde}`, background: '#fff', color: C.tinta,
+                borderRadius: '999px', padding: '11px 16px', cursor: 'pointer', fontFamily: KAIZEN.texto,
+                fontSize: '0.84rem', fontWeight: 600,
               }}
             >
               Siguiente: {siguiente.titulo}
@@ -169,25 +168,23 @@ export default function GuiaDemo({ cfg, rol, vista, irA, alReiniciar, alCerrar, 
         </>
       )}
 
-      <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)' }} />
-
       <a
         href={enlaceWhatsApp} target="_blank" rel="noopener noreferrer"
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-          borderRadius: '14px', padding: '12px 14px', textDecoration: 'none',
-          background: '#fff', color: '#141414', fontSize: '0.88rem', fontWeight: 700,
+          borderRadius: '999px', padding: '13px 16px', textDecoration: 'none',
+          background: C.tinta, color: '#fff', fontSize: '0.9rem', fontWeight: 600,
         }}
       >
-        <MessageCircle size={17} strokeWidth={2.5} />
+        <MessageCircle size={17} strokeWidth={2.2} />
         {cfg.esReal ? `Quiero la app de ${cfg.nombre}` : 'Quiero una app así para mi estudio'}
       </a>
       <button
         type="button" onClick={alReiniciar}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-          background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.55)',
-          cursor: 'pointer', fontSize: '0.76rem', fontWeight: 600, padding: '2px',
+          background: 'transparent', border: 'none', color: C.tenue, fontFamily: KAIZEN.texto,
+          cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, padding: '2px',
         }}
       >
         <RotateCcw size={13} /> Reiniciar la demostración

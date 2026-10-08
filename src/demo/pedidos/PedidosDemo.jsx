@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useParams, Navigate, Link } from 'react-router-dom';
-import { ArrowLeft, Bike, ChefHat, Compass, LayoutDashboard, Loader2, MessageCircle, RotateCcw, Smartphone, X } from 'lucide-react';
+import { useParams, Navigate } from 'react-router-dom';
+import { Bike, ChefHat, LayoutDashboard, Loader2, MessageCircle, RotateCcw, Smartphone } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { errorLegible } from './datos';
-import { useAncho } from './ui';
+import BarraDemo from '../kaizen/BarraDemo';
+import { KAIZEN } from '../kaizen/marca';
 import Cliente from './Cliente';
 import Cocina from './Cocina';
 import Reparto from './Reparto';
@@ -20,7 +21,6 @@ import Dueno from './Dueno';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CONTRASENA = 'StudioAlma-Demo-2026';
-const WHATSAPP_AUTOR = '528138833422';
 
 const ROLES = [
   { id: 'cliente', etiqueta: 'Cliente', Icon: Smartphone, correo: (n) => `ana@demo.${n}.mx` },
@@ -59,8 +59,6 @@ export default function PedidosDemo() {
   const [errorSesion, setErrorSesion] = useState('');
   const [guia, setGuia] = useState(false);
   const [reiniciando, setReiniciando] = useState(false);
-  const [sello, setSello] = useState(true);
-  const ancho = useAncho(760);
   const encabezado = useRef(null);
   const [alto, setAlto] = useState(100);
   const mesaQR = (() => {
@@ -118,7 +116,7 @@ export default function PedidosDemo() {
     medir();
     window.addEventListener('resize', medir);
     return () => window.removeEventListener('resize', medir);
-  }, [sello, negocio]);
+  }, [negocio]);
 
   if (negocio === null) return <Navigate to="/" replace />;
   if (negocio === undefined) {
@@ -139,70 +137,55 @@ export default function PedidosDemo() {
     window.location.href = `/pedidos/${negocio.id}`;
   };
 
-  const mensaje = `Hola Zahir, vi la demo de pedidos en línea de ${negocio.nombre} y me interesa para mi negocio.`;
+  const mensaje = `Hola KaiZen, vi la demo de pedidos en línea de ${negocio.nombre} y me interesa para mi negocio.`;
 
   return (
     <div style={{
       ...vars, minHeight: '100vh', background: 'var(--p-fondo)', color: 'var(--p-texto)',
       fontFamily: "'Avenir Next', 'Segoe UI', system-ui, sans-serif", WebkitFontSmoothing: 'antialiased',
     }}>
-      <div ref={encabezado} style={{ position: 'sticky', top: 0, zIndex: 9300, background: 'var(--p-fondo)' }}>
-        {sello && (
-          <div style={{ position: 'relative', padding: '8px 40px 8px 14px', background: '#1E2A1B', color: '#fff', fontSize: '0.74rem', fontWeight: 600, textAlign: 'center', lineHeight: 1.35 }}>
-            Demostración con datos de ejemplo · {negocio.nombre} es un negocio inventado · por Zahir Vidahurrázaga
-            <button type="button" onClick={() => setSello(false)} aria-label="Ocultar aviso" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex' }}><X size={15} /></button>
-          </div>
-        )}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'stretch', gap: 6, padding: '10px 12px', position: 'relative' }}>
-          {/* De vuelta al índice con todas las demostraciones */}
-          <Link to="/" aria-label="Todas las demos" title="Todas las demos" style={{
-            position: ancho ? 'absolute' : 'static', left: 16, top: 10, bottom: 10,
-            display: 'flex', alignItems: 'center', gap: 6, padding: ancho ? '0 14px' : '0 11px', borderRadius: 999,
-            background: 'rgba(20,28,18,0.92)', color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0,
-          }}>
-            <ArrowLeft size={16} /> {ancho && 'Todas las demos'}
-          </Link>
-          <div role="group" aria-label="Cambiar de vista en la demostración" style={{ display: 'flex', gap: 3, padding: 5, borderRadius: 999, background: 'rgba(20,28,18,0.92)', overflowX: 'auto', scrollbarWidth: 'none', minWidth: 0 }}>
-            {ROLES.map((r) => {
-              const activo = rol === r.id;
-              return (
-                <button key={r.id} type="button" onClick={() => setRol(r.id)} aria-pressed={activo} title={r.etiqueta} style={{
-                  display: 'flex', alignItems: 'center', gap: 6, padding: ancho || activo ? '8px 13px' : '8px 11px', borderRadius: 999, border: 'none', cursor: 'pointer',
-                  background: activo ? '#fff' : 'transparent', color: activo ? '#1E2A1B' : 'rgba(255,255,255,0.75)',
-                  fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
-                }}>
-                  {/* En el celular solo el rol activo lleva texto, para que quepan todos. */}
-                  <r.Icon size={16} strokeWidth={2.4} /> {(ancho || activo) && r.etiqueta}
-                </button>
-              );
-            })}
-          </div>
-          <button type="button" onClick={() => setGuia((g) => !g)} aria-pressed={guia} style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '0 14px', borderRadius: 999, border: 'none', cursor: 'pointer', flexShrink: 0,
-            background: guia ? '#fff' : 'rgba(20,28,18,0.92)', color: guia ? '#1E2A1B' : '#fff', fontWeight: 700, fontSize: '0.8rem',
-          }}><Compass size={16} /> Guía</button>
-        </div>
+      {/* Barra de KaiZen, igual en todas las demos (src/demo/kaizen/BarraDemo.jsx). */}
+      <div ref={encabezado} style={{
+        position: 'sticky', top: 0, zIndex: 9300, paddingBottom: 8,
+        background: 'linear-gradient(var(--p-fondo) 62%, transparent)',
+      }}>
+        <BarraDemo roles={ROLES} rol={rol} alCambiar={setRol}
+          guiaAbierta={guia} alGuia={() => setGuia((g) => !g)}
+          aviso={`Demostración con datos de ejemplo · ${negocio.nombre} es un negocio inventado · por KaiZen`} />
       </div>
 
       {guia && (
         <aside style={{
-          position: 'fixed', zIndex: 9350, right: 12, top: alto + 6, width: 'min(360px, calc(100vw - 24px))', boxSizing: 'border-box',
-          background: '#fff', borderRadius: 20, padding: 18, boxShadow: '0 20px 50px rgba(0,0,0,0.25)', color: '#22301E',
+          position: 'fixed', zIndex: 9350, right: 16, top: alto + 4, width: 'min(380px, calc(100vw - 24px))', boxSizing: 'border-box',
+          background: '#fff', borderRadius: 24, padding: 22, color: '#1d1d1f', fontFamily: KAIZEN.texto,
+          border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 24px 60px rgba(0,0,0,0.14)',
           maxHeight: `calc(100vh - ${alto + 24}px)`, overflowY: 'auto',
         }}>
-          <div style={{ fontWeight: 800, fontSize: '1.05rem', marginBottom: 4 }}>Qué probar como {ROLES.find((r) => r.id === rol).etiqueta.toLowerCase()}</div>
-          <ul style={{ margin: '8px 0 14px', paddingLeft: 18, lineHeight: 1.5, fontSize: '0.9rem' }}>
-            {GUIA[rol].map((p) => <li key={p} style={{ marginBottom: 6 }}>{p}</li>)}
-          </ul>
-          <p style={{ fontSize: '0.82rem', color: '#6B7564', margin: '0 0 14px' }}>
+          <div style={{ fontSize: '0.64rem', fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#6e6e73', paddingBottom: 10, borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
+            Guía · {ROLES.find((r) => r.id === rol).etiqueta}
+          </div>
+          <div style={{ fontFamily: KAIZEN.display, fontSize: '1.45rem', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.15, margin: '14px 0 12px' }}>
+            Qué probar <span style={{ fontStyle: 'italic', color: '#6e6e73' }}>aquí</span>
+          </div>
+          <ol style={{ listStyle: 'none', margin: '0 0 16px', padding: 0, display: 'grid', gap: 10 }}>
+            {GUIA[rol].map((p, i) => (
+              <li key={p} style={{ display: 'flex', gap: 12, fontSize: '0.9rem', lineHeight: 1.5 }}>
+                <span style={{ fontFamily: KAIZEN.display, fontWeight: 700, color: '#86868b', minWidth: 20 }}>{String(i + 1).padStart(2, '0')}</span>
+                <span>{p}</span>
+              </li>
+            ))}
+          </ol>
+          <p style={{ fontSize: '0.82rem', color: '#6e6e73', margin: '0 0 16px', lineHeight: 1.5 }}>
             Todo funciona de verdad: menú, pedidos y avisos viven en una base de datos real. El pago es de prueba: no se cobra nada.
           </p>
-          <a href={`https://wa.me/${WHATSAPP_AUTOR}?text=${encodeURIComponent(mensaje)}`} target="_blank" rel="noreferrer" style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderRadius: 14, background: '#25D366', color: '#fff', fontWeight: 800, textDecoration: 'none', marginBottom: 8,
-          }}><MessageCircle size={18} /> Quiero esto para mi negocio</a>
+          <a href={`https://wa.me/${KAIZEN.whatsapp}?text=${encodeURIComponent(mensaje)}`} target="_blank" rel="noreferrer" style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px 16px', borderRadius: 999,
+            background: '#1d1d1f', color: '#fff', fontWeight: 600, textDecoration: 'none', marginBottom: 8, fontSize: '0.92rem',
+          }}><MessageCircle size={17} /> Quiero esto para mi negocio</a>
           <button type="button" onClick={() => { setGuia(false); reiniciar(); }} style={{
-            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderRadius: 14,
-            border: '1px solid rgba(0,0,0,0.12)', background: '#fff', color: '#22301E', fontWeight: 700, cursor: 'pointer',
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px 16px', borderRadius: 999,
+            border: '1px solid rgba(0,0,0,0.12)', background: '#fff', color: '#1d1d1f', fontWeight: 600, cursor: 'pointer',
+            fontFamily: KAIZEN.texto, fontSize: '0.92rem',
           }}><RotateCcw size={16} /> Reiniciar la demostración</button>
         </aside>
       )}

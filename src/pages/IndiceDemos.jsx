@@ -1,314 +1,221 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, MessageCircle } from 'lucide-react';
 import { SECTORES, TOTAL_DEMOS, destinoDe } from '../demo/catalogo';
+import { KAIZEN, PALETA, KaizenWordmark, cargarFuentesKaizen } from '../demo/kaizen/marca';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PORTADA DEL DESPLIEGUE DE MAQUETAS
 //
 // Solo existe cuando VITE_DEMOS=true. Ocupa la raíz de ese dominio para que, si
 // una prospecta borra el path del link que le mandaste, NO aterrice en el sitio
-// de Be Fit Lab —la marca de su competencia— sino en algo tuyo.
+// de Be Fit Lab —la marca de su competencia— sino en algo de KaiZen.
 //
-// Es el centro de TODAS las demos, por sector, no solo las de pilates. Lo que
-// se muestra sale de `catalogo.js`; aquí no hay nada escrito a mano.
+// Es el centro de TODAS las demos, por sector. Lo que se muestra sale de
+// `catalogo.js`; aquí no hay nada escrito a mano.
 //
 // ⚠️ Esta página es para quien llega en frío o pide "ver ejemplos". El link que
 // le mandas a una prospecta debe ir DIRECTO a su maqueta: un menú donde tiene
 // que elegir convierte peor que ver su propio negocio de entrada.
 //
-// El estilo es el MISMO del portafolio (github.com/zahirdanielvidahurrazaga/
-// Portafolio): negro Apple, azul #0A84FF, SF Pro y el tile con la Z. Una
-// prospecta que llegue aquí desde el portafolio, o al revés, tiene que sentir
-// que es la misma persona. Los valores están copiados de su src/index.css.
+// El estilo es el de kaizenstudiomx.com (marca KaiZen, paleta Mármol, Familjen
+// Grotesk + Inter): quien llega desde el sitio, o al revés, tiene que sentir que
+// es la misma marca. Los tokens viven en src/demo/kaizen/marca.jsx.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const AUTOR = 'Zahir Vidahurrázaga';
-
-// Las dos paletas del portafolio, copiadas de su src/index.css.
-const PALETAS = {
-  dark: {
-    fondo: '#000000', tarjeta: '#1d1d1f',
-    borde: 'rgba(255,255,255,0.1)', bordeSuave: 'rgba(255,255,255,0.05)',
-    texto: '#f5f5f7', fuerte: '#ffffff', tenue: '#86868b',
-    azul: '#0a84ff', azulHover: '#409cff',
-    degradadoTitulo: 'linear-gradient(135deg, #ffffff 0%, #a5a5ac 100%)',
-    // Cristal y esferas: es lo que hace que el portafolio no se vea plano.
-    cristal: 'rgba(45, 45, 45, 0.6)',
-    cristalBorde: 'rgba(255, 255, 255, 0.1)',
-    sheenTop: 'rgba(255, 255, 255, 0.16)',
-    sheenBottom: 'rgba(255, 255, 255, 0.05)',
-    sheenTopHover: 'rgba(255, 255, 255, 0.24)',
-    sheenBottomHover: 'rgba(255, 255, 255, 0.09)',
-    sombraTarjeta: '0 12px 34px rgba(0, 0, 0, 0.3)',
-    sombraHover: '0 24px 60px rgba(0, 0, 0, 0.45)',
-    glowAzul: 'rgba(10, 132, 255, 0.55)',
-    glowMorado: 'rgba(191, 90, 242, 0.5)',
-    glowIndigo: 'rgba(94, 92, 230, 0.2)',
-    glowOpacidad: 0.75,
-  },
-  light: {
-    fondo: '#ffffff', tarjeta: '#ffffff',
-    borde: 'rgba(0,0,0,0.12)', bordeSuave: 'rgba(0,0,0,0.06)',
-    texto: '#1d1d1f', fuerte: '#000000', tenue: '#6e6e73',
-    azul: '#0071e3', azulHover: '#0056b3',
-    degradadoTitulo: 'linear-gradient(135deg, #1d1d1f 0%, #6e6e73 100%)',
-    cristal: 'rgba(255, 255, 255, 0.6)',
-    cristalBorde: 'rgba(0, 0, 0, 0.08)',
-    sheenTop: 'rgba(255, 255, 255, 0.85)',
-    sheenBottom: 'rgba(255, 255, 255, 0.35)',
-    sheenTopHover: 'rgba(255, 255, 255, 0.95)',
-    sheenBottomHover: 'rgba(255, 255, 255, 0.5)',
-    sombraTarjeta: '0 12px 34px rgba(0, 0, 0, 0.09)',
-    sombraHover: '0 24px 60px rgba(0, 0, 0, 0.13)',
-    glowAzul: 'rgba(10, 132, 255, 0.46)',
-    glowMorado: 'rgba(191, 90, 242, 0.42)',
-    glowIndigo: 'rgba(94, 92, 230, 0.2)',
-    glowOpacidad: 0.85,
-  },
-};
-
-// Misma regla que el portafolio (su index.html): manda lo guardado en
-// localStorage.tema y, si no hay nada, la preferencia del sistema. Así una
-// prospecta ve las dos páginas igual, en el tema que ella usa.
+// Misma regla que el sitio (su index.html): manda lo guardado en
+// localStorage.tema y, si no hay nada, la preferencia del sistema.
 function temaInicial() {
   try {
     const t = localStorage.getItem('tema');
     if (t === 'light' || t === 'dark') return t;
   } catch { /* almacenamiento bloqueado */ }
-  return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-const FUENTE = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', "
-  + "Roboto, Helvetica, Arial, sans-serif";
+const MENSAJE = 'Hola KaiZen, vi sus demos y me interesa algo así para mi negocio.';
 
 export default function IndiceDemos() {
   const [tema, setTema] = useState(temaInicial);
-  const C = PALETAS[tema];
+  const C = PALETA[tema];
 
-  // Si la persona cambia el tema del sistema con la página abierta, seguirla.
+  useEffect(() => { cargarFuentesKaizen(); }, []);
+
   useEffect(() => {
-    const mq = window.matchMedia?.('(prefers-color-scheme: light)');
-    if (!mq) return;
-    const alCambiar = () => { try { if (localStorage.getItem('tema')) return; } catch { /* vacío */ }
-      setTema(mq.matches ? 'light' : 'dark'); };
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
+    if (!mq) return undefined;
+    const alCambiar = () => {
+      try { if (localStorage.getItem('tema')) return; } catch { /* vacío */ }
+      setTema(mq.matches ? 'dark' : 'light');
+    };
     mq.addEventListener('change', alCambiar);
     return () => mq.removeEventListener('change', alCambiar);
   }, []);
 
-  // El <body> conserva el fondo de Be Fit Lab (un beige cálido) y se asomaba
-  // por fuera del contenedor. Se pinta con el tema activo y se restaura al salir.
   useEffect(() => {
     const previo = document.body.style.background;
-    document.body.style.background = PALETAS[tema].fondo;
+    document.body.style.background = PALETA[tema].fondo;
     return () => { document.body.style.background = previo; };
   }, [tema]);
 
-  // index.html trae el título y las etiquetas de Be Fit Lab. Aquí se
-  // reemplazan, o la pestaña y la vista previa al compartir el link saldrían
-  // con el nombre y la foto de un estudio que no es el tuyo.
   useEffect(() => {
-    document.title = `${AUTOR} — demostraciones`;
-    const resumen = 'Apps y sitios web a la medida para negocios. Recorre las '
-      + 'demostraciones con datos de ejemplo, sin registrarte.';
+    document.title = 'KaiZen — demos en vivo';
+    const resumen = 'Apps y sitios web a la medida para negocios. Recorre las demos '
+      + 'con datos de ejemplo, sin registrarte.';
     const poner = (sel, valor) => document.head.querySelector(sel)?.setAttribute('content', valor);
     poner('meta[name="description"]', resumen);
-    poner('meta[property="og:title"]', `${AUTOR} — demostraciones`);
+    poner('meta[property="og:title"]', 'KaiZen — demos en vivo');
     poner('meta[property="og:description"]', resumen);
     poner('meta[property="og:image"]', '');
-    poner('meta[name="twitter:title"]', `${AUTOR} — demostraciones`);
+    poner('meta[name="twitter:title"]', 'KaiZen — demos en vivo');
     poner('meta[name="twitter:description"]', resumen);
     poner('meta[name="twitter:image"]', '');
     poner('meta[name="keywords"]', '');
-    poner('meta[property="og:site_name"]', AUTOR);
-    // Los datos estructurados de index.html son de Be Fit Lab: fuera aquí.
+    poner('meta[property="og:site_name"]', 'KaiZen');
+    // index.html declara a Be Fit Lab como negocio local: aquí no aplica.
     document.head.querySelectorAll('script[type="application/ld+json"]')
       .forEach((n) => { n.type = 'application/ld+json-demo-desactivado'; });
   }, []);
 
+  const whatsapp = `https://wa.me/${KAIZEN.whatsapp}?text=${encodeURIComponent(MENSAJE)}`;
+  const etiqueta = { fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.tenue };
+
   return (
-    <div style={{ minHeight: '100vh', background: C.fondo, fontFamily: FUENTE }}>
-      {/* Los :hover y el degradado sobre texto no se pueden en estilos en línea. */}
+    <div style={{ minHeight: '100vh', background: C.fondo, color: C.tinta, fontFamily: KAIZEN.texto, WebkitFontSmoothing: 'antialiased' }}>
+      {/* :hover y degradado sobre texto no se pueden en estilos en línea. */}
       <style>{`
-        /* Las dos esferas del hero del portafolio: radial-gradient enorme con
-           blur(120px) paseándose lento. Es lo que le quita lo plano. */
-        .demos-esfera {
-          position: fixed; top: 0; left: 0; border-radius: 50%;
-          filter: blur(120px); opacity: ${C.glowOpacidad};
-          pointer-events: none; will-change: transform; z-index: 0;
-        }
-        .demos-esfera-a {
-          width: 620px; height: 620px; margin: -310px;
-          background: radial-gradient(circle, ${C.glowAzul} 0%, ${C.glowIndigo} 55%, transparent 72%);
-          animation: demosRoamA 26s ease-in-out infinite;
-        }
-        .demos-esfera-b {
-          width: 680px; height: 680px; margin: -340px;
-          background: radial-gradient(circle, ${C.glowMorado} 0%, ${C.glowIndigo} 55%, transparent 72%);
-          animation: demosRoamB 30s ease-in-out infinite;
-        }
-        @keyframes demosRoamA {
-          0%   { transform: translate(18vw, 28vh); }
-          25%  { transform: translate(72vw, 16vh); }
-          50%  { transform: translate(86vw, 72vh); }
-          75%  { transform: translate(34vw, 82vh); }
-          100% { transform: translate(18vw, 28vh); }
-        }
-        @keyframes demosRoamB {
-          0%   { transform: translate(82vw, 76vh); }
-          25%  { transform: translate(28vw, 84vh); }
-          50%  { transform: translate(16vw, 24vh); }
-          75%  { transform: translate(76vw, 30vh); }
-          100% { transform: translate(82vw, 76vh); }
-        }
-        .demos-titulo {
-          background: ${C.degradadoTitulo};
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
-        }
-        .demos-tarjeta {
-          position: relative; overflow: hidden;
-          background: ${C.cristal};
-          backdrop-filter: blur(20px) saturate(180%);
-          -webkit-backdrop-filter: blur(20px) saturate(180%);
-          border: 1px solid ${C.cristalBorde};
-          box-shadow: ${C.sombraTarjeta};
-          transition: border-color .3s ease, transform .3s ease, box-shadow .3s ease;
-        }
-        /* El brillo de arriba: lo que hace que el cristal parezca cristal. */
-        .demos-tarjeta::before {
-          content: ''; position: absolute; inset: 0; border-radius: inherit;
-          background: linear-gradient(180deg, ${C.sheenTop} 0%, ${C.sheenBottom} 40%, transparent 70%);
-          pointer-events: none; transition: background .3s ease;
-        }
-        .demos-tarjeta:hover {
-          border-color: ${C.azul};
-          transform: translateY(-3px);
-          box-shadow: ${C.sombraHover};
-        }
-        .demos-tarjeta:hover::before {
-          background: linear-gradient(180deg, ${C.sheenTopHover} 0%, ${C.sheenBottomHover} 40%, transparent 70%);
-        }
-        .demos-tarjeta > * { position: relative; z-index: 1; }
-        .demos-tarjeta:focus-visible { outline: 2px solid ${C.azul}; outline-offset: 3px; }
-        .demos-flecha { transition: transform .25s ease, background .25s ease; }
-        .demos-tarjeta:hover .demos-flecha { transform: translateX(3px); background: ${C.azulHover}; }
-        @media (prefers-reduced-motion: reduce) {
-          .demos-tarjeta, .demos-flecha { transition: none; }
-          .demos-tarjeta:hover { transform: none; }
-          .demos-esfera-a { animation: none; transform: translate(25vw, 30vh); }
-          .demos-esfera-b { animation: none; transform: translate(78vw, 70vh); }
+        .kz-italica { font-style: italic; background: ${C.italica}; -webkit-background-clip: text;
+          background-clip: text; color: transparent; padding-right: 0.06em; }
+        .kz-demo { transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+        .kz-demo:hover { transform: translateY(-3px); box-shadow: ${C.sombraHover}; border-color: ${C.borde}; }
+        .kz-demo:hover .kz-flecha { transform: translateX(4px); }
+        .kz-flecha { transition: transform .25s ease; }
+        .kz-boton { transition: transform .2s ease, opacity .2s ease; }
+        .kz-boton:hover { transform: translateY(-1px); opacity: .9; }
+        .kz-nav-relleno { display: none; }
+        @media (max-width: 760px) {
+          .kz-sector { grid-template-columns: 1fr !important; gap: 14px !important; }
+          .kz-nav-centro { display: none !important; }
+          .kz-nav-relleno { display: block; }
         }
       `}</style>
 
-      <div className="demos-esfera demos-esfera-a" aria-hidden="true" />
-      <div className="demos-esfera demos-esfera-b" aria-hidden="true" />
+      {/* Navbar del sitio: píldora de cristal flotante */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 16px 0' }}>
+        <nav style={{
+          maxWidth: 1120, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 16,
+          padding: '8px 8px 8px 22px', borderRadius: 999, boxSizing: 'border-box',
+          background: C.cristal, border: `1px solid ${C.cristalBorde}`,
+          backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          boxShadow: C.sombra,
+        }}>
+          <a href={KAIZEN.sitio} aria-label="KaiZen" style={{ color: C.tinta, display: 'flex' }}>
+            <KaizenWordmark height={15} />
+          </a>
+          <div className="kz-nav-centro" style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 28 }}>
+            <span style={{ ...etiqueta, color: C.tinta }}>Demos</span>
+            <a href={KAIZEN.sitio} style={{ ...etiqueta, textDecoration: 'none' }}>Sitio</a>
+          </div>
+          <div style={{ flex: 1 }} className="kz-nav-relleno" />
+          <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="kz-boton" style={{
+            padding: '9px 18px', borderRadius: 999, background: C.acento, color: C.sobreAcento,
+            textDecoration: 'none', fontSize: '0.84rem', fontWeight: 600, flexShrink: 0,
+          }}>Cotizar</a>
+        </nav>
+      </div>
 
-      <div style={{
-        position: 'relative', zIndex: 1,
-        maxWidth: '820px', margin: '0 auto',
-        padding: 'clamp(28px, 6vw, 76px) clamp(20px, 6vw, 40px) clamp(56px, 9vw, 100px)',
-        display: 'flex', flexDirection: 'column', gap: 'clamp(38px, 6vw, 56px)',
-      }}>
-
-        {/* Marca. Sin el tile de la Z: al lado del nombre repetía lo mismo. */}
-        <span style={{ fontSize: '15px', fontWeight: 600, color: C.texto, letterSpacing: '-0.01em' }}>
-          {AUTOR}
-        </span>
-
-        {/* Encabezado */}
-        <header style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          <h1 className="demos-titulo" style={{
-            margin: 0, fontSize: 'clamp(32px, 6vw, 54px)', fontWeight: 700,
-            letterSpacing: '-0.03em', lineHeight: 1.06, textWrap: 'balance',
+      <main style={{ maxWidth: 1120, margin: '0 auto', padding: '0 24px', boxSizing: 'border-box' }}>
+        {/* Encabezado editorial */}
+        <section style={{ padding: 'clamp(56px, 9vw, 110px) 0 clamp(40px, 6vw, 72px)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, paddingBottom: 12, borderBottom: `1px solid ${C.borde}` }}>
+            <span style={etiqueta}>Demos · en vivo</span>
+            <span style={etiqueta}>{TOTAL_DEMOS} {TOTAL_DEMOS === 1 ? 'demo' : 'demos'} — 2026</span>
+          </div>
+          <h1 style={{
+            fontFamily: KAIZEN.display, fontWeight: 700, letterSpacing: '-0.045em', lineHeight: 0.95,
+            fontSize: 'clamp(3rem, 9vw, 7rem)', margin: '28px 0 0', color: C.fuerte,
           }}>
-            Apps, sitios web y software a la medida
+            Pruébalo antes<br />de <span className="kz-italica">tenerlo.</span>
           </h1>
-          <p style={{
-            margin: 0, maxWidth: '56ch', fontSize: 'clamp(16px, 2.2vw, 19px)',
-            lineHeight: 1.55, color: C.tenue, fontWeight: 400,
-          }}>
-            Cada negocio recibe lo suyo: su marca, su forma de trabajar y su
-            propia cuenta en las tiendas. Aquí puedes recorrer{' '}
-            {TOTAL_DEMOS === 1 ? 'una demostración completa' : `${TOTAL_DEMOS} demostraciones completas`}{' '}
-            con datos de ejemplo, sin registrarte.
+          <p style={{ maxWidth: 620, fontSize: 'clamp(1.02rem, 1.6vw, 1.2rem)', lineHeight: 1.6, color: C.tenue, margin: '28px 0 32px' }}>
+            Cada demo es una app real con datos de ejemplo. Entra como cliente, como
+            tu equipo o como dueño, y mira cómo trabajaría tu negocio. Sin registrarte.
           </p>
-        </header>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="kz-boton" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8, padding: '15px 26px', borderRadius: 999,
+              background: C.acento, color: C.sobreAcento, textDecoration: 'none', fontWeight: 600, fontSize: '0.98rem',
+            }}><MessageCircle size={17} /> Cuéntanos tu proyecto</a>
+            <a href={KAIZEN.sitio} className="kz-boton" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '15px 24px', borderRadius: 999,
+              border: `1px solid ${C.borde}`, color: C.tinta, textDecoration: 'none', fontWeight: 600, fontSize: '0.98rem',
+            }}>Ver el sitio <ArrowUpRight size={16} /></a>
+          </div>
+        </section>
 
-        {/* Demos agrupadas por sector. Todo sale de catalogo.js. */}
-        {SECTORES.map((sector) => (
-          <section key={sector.id} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <h2 style={{
-                margin: 0, fontSize: 'clamp(19px, 2.6vw, 23px)', fontWeight: 600,
-                color: C.fuerte, letterSpacing: '-0.018em',
-              }}>
-                {sector.titulo}
+        {/* Demos por sector, como lista editorial numerada */}
+        {SECTORES.map((s, i) => (
+          <section key={s.id} className="kz-sector" style={{
+            display: 'grid', gridTemplateColumns: 'minmax(0, 0.9fr) minmax(0, 1.4fr)', gap: 40,
+            padding: '36px 0', borderTop: `1px solid ${C.borde}`,
+          }}>
+            <div>
+              <div style={{ fontFamily: KAIZEN.display, fontSize: '0.95rem', fontWeight: 600, color: C.tenue, marginBottom: 10 }}>
+                {String(i + 1).padStart(2, '0')}
+              </div>
+              <h2 style={{ fontFamily: KAIZEN.display, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.05, fontSize: 'clamp(1.7rem, 3vw, 2.4rem)', margin: '0 0 12px', color: C.fuerte }}>
+                {s.titulo}
               </h2>
-              <p style={{ margin: 0, fontSize: '15px', lineHeight: 1.5, color: C.tenue, maxWidth: '58ch' }}>
-                {sector.descripcion}
-              </p>
+              <p style={{ margin: 0, color: C.tenue, lineHeight: 1.6, fontSize: '0.98rem', maxWidth: 380 }}>{s.descripcion}</p>
             </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {sector.demos.map((demo) => {
+            <div style={{ display: 'grid', gap: 12, alignContent: 'start' }}>
+              {s.demos.map((demo) => {
                 const destino = destinoDe(demo);
                 const externa = demo.tipo === 'externa';
                 const contenido = (
                   <>
-                    <span style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: 0 }}>
-                      <span style={{
-                        fontSize: 'clamp(17px, 2.4vw, 20px)', fontWeight: 600,
-                        color: C.fuerte, letterSpacing: '-0.015em',
-                      }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ ...etiqueta, fontSize: '0.62rem', marginBottom: 8 }}>{demo.nota || 'demo en vivo'}</div>
+                      <div style={{ fontFamily: KAIZEN.display, fontWeight: 700, letterSpacing: '-0.02em', fontSize: 'clamp(1.35rem, 2.4vw, 1.75rem)', color: C.fuerte }}>
                         {demo.nombre}
-                      </span>
-                      <span style={{ fontSize: '14.5px', color: C.tenue, lineHeight: 1.45 }}>
-                        {demo.detalle}{demo.nota ? ` · ${demo.nota}` : ''}
-                      </span>
-                    </span>
-                    <span className="demos-flecha" aria-hidden="true" style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      width: '36px', height: '36px', flexShrink: 0, borderRadius: '999px',
-                      background: C.azul, color: '#fff',
-                      boxShadow: `0 8px 26px ${C.azul}47`,
+                      </div>
+                      <div style={{ color: C.tenue, fontSize: '0.92rem', marginTop: 4 }}>{demo.detalle}</div>
+                    </div>
+                    <span className="kz-flecha" style={{
+                      width: 46, height: 46, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', background: C.acento, color: C.sobreAcento,
                     }}>
-                      <ArrowRight size={18} strokeWidth={2.5} />
+                      {externa ? <ArrowUpRight size={19} /> : <ArrowRight size={19} />}
                     </span>
                   </>
                 );
                 const estilo = {
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  gap: '18px', padding: 'clamp(18px, 3vw, 24px)', borderRadius: '18px',
+                  display: 'flex', alignItems: 'center', gap: 18, padding: '22px 22px 22px 26px', borderRadius: 26,
+                  background: C.tarjeta, border: `1px solid ${C.bordeSuave}`, boxShadow: C.sombra,
                   textDecoration: 'none', color: 'inherit',
                 };
-                // Las externas viven en otro despliegue: <a> normal, no <Link>.
-                return externa ? (
-                  <a key={demo.nombre} href={destino} target="_blank" rel="noopener noreferrer"
-                     className="demos-tarjeta" style={estilo}>
-                    {contenido}
-                  </a>
-                ) : (
-                  <Link key={demo.nombre} to={destino} className="demos-tarjeta" style={estilo}>
-                    {contenido}
-                  </Link>
-                );
+                return externa
+                  ? <a key={destino} href={destino} target="_blank" rel="noopener noreferrer" className="kz-demo" style={estilo}>{contenido}</a>
+                  : <Link key={destino} to={destino} className="kz-demo" style={estilo}>{contenido}</Link>;
               })}
             </div>
           </section>
         ))}
 
-        <p style={{
-          margin: 0, paddingTop: '26px', borderTop: `1px solid ${C.bordeSuave}`,
-          fontSize: '13px', lineHeight: 1.65, color: C.tenue,
+        <footer style={{
+          display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap', justifyContent: 'space-between',
+          padding: '32px 0 48px', borderTop: `1px solid ${C.borde}`, marginTop: 8,
         }}>
-          Las demostraciones funcionan de verdad, con negocios y datos inventados:
-          nada se conecta a un negocio real y los pagos son de prueba. Se
-          reinician solas cada noche, o cuando quieras desde su guía.
-        </p>
-
-      </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, color: C.tinta }}>
+            <KaizenWordmark height={13} />
+            <a href={`mailto:${KAIZEN.correo}`} style={{ color: C.tenue, fontSize: '0.85rem', textDecoration: 'none' }}>{KAIZEN.correo}</a>
+          </div>
+          <p style={{ margin: 0, fontSize: '0.8rem', lineHeight: 1.6, color: C.tenue, maxWidth: 520 }}>
+            Las demos funcionan de verdad, con negocios y datos inventados: nada se conecta a un
+            negocio real y los pagos son de prueba. Se reinician solas cada noche, o desde su guía.
+          </p>
+        </footer>
+      </main>
     </div>
   );
 }

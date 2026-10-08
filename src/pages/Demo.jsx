@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef, useLayoutEffect } from 'react';
-import { useParams, Navigate, Link } from 'react-router-dom';
-import { Smartphone, ScanLine, Dumbbell, Coffee, LayoutDashboard, X, Compass, Loader2, ArrowLeft } from 'lucide-react';
-import { useAncho } from '../demo/pedidos/ui';
+import { useParams, Navigate } from 'react-router-dom';
+import { Smartphone, ScanLine, Dumbbell, Coffee, LayoutDashboard, Loader2 } from 'lucide-react';
+import BarraDemo from '../demo/kaizen/BarraDemo';
 import { estudioDemo } from '../demo/estudiosDemo';
 import { activarEstudioDemo, restaurarEstudio } from '../config/estudio';
 import { AuthContext, useAuth } from '../context/AuthContext';
@@ -69,88 +69,9 @@ const RUTAS = {
   '/cumpleanos': 'cumpleanos',
 };
 
-function Interruptor({ rol, alCambiar, guiaAbierta, alGuia }) {
-  const ancho = useAncho(760);
-  return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', margin: '10px auto 0', maxWidth: 'calc(100vw - 24px)' }}>
-      {/* De vuelta al índice con todas las demostraciones. Va fuera del
-          contenedor que atrapa los enlaces, así que sí navega. */}
-      <Link to="/" aria-label="Todas las demos" title="Todas las demos" style={{
-        display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, alignSelf: 'stretch',
-        padding: ancho ? '0 14px' : '0 12px', borderRadius: '999px', pointerEvents: 'auto',
-        background: 'rgba(20,20,20,0.9)', color: '#fff', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 700,
-        backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
-      }}>
-        <ArrowLeft size={16} strokeWidth={2.5} /> {ancho && 'Todas las demos'}
-      </Link>
-    <div
-      role="group"
-      aria-label="Cambiar de vista en la demostración"
-      style={{
-        display: 'flex', gap: '3px', padding: '5px', borderRadius: '999px',
-        width: 'fit-content', pointerEvents: 'auto', minWidth: 0,
-        background: 'rgba(20,20,20,0.9)', backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)', boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
-        // Siete pestañas no caben en un teléfono: la tira se desplaza.
-        overflowX: 'auto', scrollbarWidth: 'none',
-      }}
-    >
-      {ROLES.map((v) => {
-        const activa = rol === v.id;
-        return (
-          <button
-            key={v.id}
-            type="button"
-            onClick={() => alCambiar(v.id)}
-            aria-pressed={activa}
-            title={v.etiqueta}
-            style={{
-              display: 'flex', alignItems: 'center', gap: activa ? '6px' : '0',
-              padding: activa ? '8px 14px' : '8px 11px', borderRadius: '999px',
-              border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700,
-              background: activa ? '#fff' : 'transparent',
-              color: activa ? '#141414' : 'rgba(255,255,255,0.72)',
-              transition: 'background .18s ease, color .18s ease, padding .18s ease',
-              flexShrink: 0, whiteSpace: 'nowrap',
-            }}
-          >
-            <v.Icon size={16} strokeWidth={2.5} />
-            {/* El texto solo en la activa: así las siete caben en un teléfono. */}
-            {activa && v.etiqueta}
-          </button>
-        );
-      })}
-    </div>
-      {/* Fuera de la tira desplazable a propósito: en un teléfono la tira se
-          recorre de lado y la guía no debe quedar escondida al final. */}
-      {alGuia && (
-        <button
-          type="button"
-          onClick={alGuia}
-          aria-pressed={guiaAbierta}
-          aria-label="Guía de la demostración"
-          style={{
-            display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
-            padding: '13px 14px', borderRadius: '999px', border: 'none', cursor: 'pointer',
-            pointerEvents: 'auto', fontSize: '0.78rem', fontWeight: 700,
-            background: guiaAbierta ? '#fff' : 'rgba(20,20,20,0.9)',
-            color: guiaAbierta ? '#141414' : '#fff',
-            backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-            boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
-          }}
-        >
-          <Compass size={16} strokeWidth={2.5} />
-          Guía
-        </button>
-      )}
-    </div>
-  );
-}
-
 export default function Demo() {
   const { estudio } = useParams();
   const cfg = useMemo(() => estudioDemo(estudio), [estudio]);
-  const [selloAbierto, setSelloAbierto] = useState(true);
   const [rol, setRol] = useState('clienta');
   // Solo aplica dentro del rol de clienta: la barra de abajo de la app cambia
   // esto, y ya no se duplica arriba.
@@ -305,7 +226,7 @@ export default function Demo() {
       previos.push([nodo, nodo.getAttribute('content')]);
       nodo.setAttribute('content', valor);
     };
-    const resumen = `Demostración de la app de ${cfg.nombre}, preparada por Zahir Vidahurrázaga.`;
+    const resumen = `Demostración de la app de ${cfg.nombre}, preparada por KaiZen.`;
     ponerMeta('meta[name="description"]', resumen);
     ponerMeta('meta[property="og:title"]', `${cfg.nombre} — demostración`);
     ponerMeta('meta[property="og:description"]', resumen);
@@ -416,7 +337,7 @@ export default function Demo() {
     medir();
     window.addEventListener('resize', medir);
     return () => window.removeEventListener('resize', medir);
-  }, [selloAbierto, cfg]);
+  }, [cfg]);
 
   if (!cfg) return <Navigate to="/" replace />;
 
@@ -453,36 +374,16 @@ export default function Demo() {
           background: 'transparent', pointerEvents: 'none',
         }}
       >
-        {selloAbierto && (
-          <div style={{
-            position: 'relative', padding: '8px 40px 8px 14px', color: '#fff',
-            fontSize: '0.74rem', fontWeight: 600, lineHeight: 1.35, textAlign: 'center',
-            background: 'rgba(20, 20, 20, 0.72)',
-            backdropFilter: 'blur(20px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-            borderBottom: '1px solid rgba(255,255,255,0.08)',
-            pointerEvents: 'auto',
-          }}>
-            Demostración con datos de ejemplo · preparada para <strong>{cfg.nombre}</strong> por Zahir Vidahurrázaga
-            <button
-              type="button"
-              onClick={() => setSelloAbierto(false)}
-              aria-label="Ocultar el aviso de demostración"
-              style={{
-                position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-                background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)',
-                cursor: 'pointer', padding: '4px', display: 'flex',
-              }}
-            >
-              <X size={15} />
-            </button>
-          </div>
-        )}
-        <Interruptor
+        {/* Barra de KaiZen, igual en todas las demos (src/demo/kaizen/BarraDemo.jsx). */}
+        <BarraDemo
+          roles={ROLES}
           rol={rol}
           alCambiar={(r) => { setRol(r); setVista('portal'); }}
           guiaAbierta={guiaAbierta}
           alGuia={() => setGuiaAbierta((a) => !a)}
+          aviso={cfg.esReal
+            ? `Maqueta preparada para ${cfg.nombre} por KaiZen · datos de ejemplo`
+            : `Demostración con datos de ejemplo · ${cfg.nombre} es un estudio inventado · por KaiZen`}
         />
       </div>
 
