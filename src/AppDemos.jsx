@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './index.css';
+import { AuthProvider } from './context/AuthContext';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // APLICACIÓN DEL DESPLIEGUE DE MAQUETAS
@@ -12,9 +13,9 @@ import './index.css';
 // chunks de Landing, Admin y todo lo demás. Con una entrada propia, esos
 // archivos ni existen en este despliegue.
 //
-// Aquí no va AuthProvider: la maqueta sirve su propio contexto (DemoProvider) y
-// el índice no necesita sesión. Sin proveedor de auth, este despliegue no puede
-// autenticar a nadie ni por accidente.
+// AuthProvider va SOLO en la ruta de la maqueta: entra con cuentas de prueba a
+// la base de DEMOSTRACIONES (.env.demos), nunca a la de Be Fit Lab. El índice
+// no necesita sesión.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const IndiceDemos = lazy(() => import('./pages/IndiceDemos'));
@@ -34,7 +35,7 @@ export default function AppDemos() {
       }>
         <Routes>
           <Route path="/" element={<IndiceDemos />} />
-          <Route path="/demo/:estudio" element={<Demo />} />
+          <Route path="/demo/:estudio" element={<AuthProvider><Demo /></AuthProvider>} />
           {/* Cualquier otra dirección regresa al índice: si una prospecta borra
               el path del link, aterriza en algo tuyo y no en otra marca. */}
           <Route path="*" element={<Navigate to="/" replace />} />

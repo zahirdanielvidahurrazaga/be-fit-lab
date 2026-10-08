@@ -13,7 +13,11 @@
 // el sello de "maqueta preparada por…" y la página se marque como noindex.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { logoDeTexto } from '../config/estudio';
+import portadaPase from './imagenes/portada-pase.jpg';
+import portadaMembresia from './imagenes/portada-membresia.jpg';
+import portadaGaleriaEventos from './imagenes/portada-galeria-eventos.jpg';
+import portadaCumpleTarjeta from './imagenes/portada-cumple-tarjeta.jpg';
+import logoAlma from './imagenes/logo-alma.png';
 
 // Degradado como SVG en línea, para no depender de archivos de imagen.
 const fondoDemo = (a, b) => 'data:image/svg+xml;utf8,' + encodeURIComponent(
@@ -26,30 +30,63 @@ export const ESTUDIOS_DEMO = {
 
   // La demo permanente y sin riesgo: estudio inventado. Es la que se puede
   // poner en el portafolio y mandar sin pensarlo dos veces.
-  vera: {
+  alma: {
     esReal: false,
-    nombre: 'Estudio Vera',
-    nombreMayusculas: 'ESTUDIO VERA',
-    nombrePanel: 'Panel Vera',
+    nombre: 'Studio Alma',
+    nombreMayusculas: 'STUDIO ALMA',
+    nombrePanel: 'Panel Alma',
     giro: 'Pilates Reformer',
-    nombreCafeteria: 'Café Vera',
-    nombreNutricion: 'Vera Nutrición',
-    prefijoContrasena: 'Vera',
+    nombreCafeteria: 'Café Alma',
+    nombreNutricion: 'Alma Nutrición',
+    prefijoContrasena: 'Alma',
     ciudad: 'Puebla',
     // ⚠️ La paleta de una maqueta tiene que respetar la LUMINOSIDAD de la de
     // fábrica, no solo el tono: el CSS asume texto oscuro sobre --primary
     // (en Be Fit Lab es un naranja claro). Un verde oscuro deja los textos de
     // las tarjetas de clase ilegibles, aunque el color por sí solo se vea bien.
+    // Paleta oficial de Studio Alma: Café Noir #4C3D19 · Kombu Green #354024 ·
+    // Moss Green #889063 · Tan #CFBB99 · Bone #E5D7C4. Los tenues/suaves son
+    // mezclas de esos cinco, no colores nuevos.
     colores: {
-      primario: '#8FB5A1',
-      primarioTenue: '#7CA491',
-      primarioVivo: '#6D9583',
-      acento: '#DCE8E1',
-      fondo: '#F0EDE7',
-      fondoSuave: '#F7F5F1',
-      textoTenue: '#5F5A52',
+      primario: '#889063',      // Moss Green
+      primarioTenue: '#6E7650', // Moss → Kombu
+      primarioVivo: '#354024',  // Kombu Green
+      acento: '#CFBB99',        // Tan
+      fondo: '#E5D7C4',         // Bone
+      fondoSuave: '#F0E8DC',    // Bone aclarado
+      textoTenue: '#5E5134',    // Café Noir aclarado
+      // No son tokens de Be Fit: los aplica Demo.jsx sobre --on-surface.
+      texto: '#354024',         // Kombu Green
+      textoSuave: '#7D7558',
+      // Letras que la app pinta con el primario (Moss sobre Bone se lee mal):
+      // Moss oscurecido. primarioRgb es el Moss como lo escribe el navegador.
+      textoPrimario: '#5F6743',
+      primarioRgb: 'rgb(136, 144, 99)',
     },
-    marca: { logo: logoDeTexto('Estudio Vera', '#5B7B6F') },
+    // Colores que Be Fit Lab trae escritos a mano (no son variables) y que la
+    // maqueta cambia en la página: ver src/demo/recolorearDemo.js.
+    reemplazos: {
+      '#FF914D': '#889063', // naranja de marca → Moss Green
+      '#E68245': '#6E7650', // naranja tenue
+      '#FF6B00': '#354024', // naranja vivo → Kombu Green
+      '#FF7A5A': '#6E7650', // coral del halo de reserva
+      '#E07A9C': '#5E5134', // rosa de los degradados → Café Noir aclarado
+      '#C2456E': '#4C3D19', // rosa de regalos → Café Noir
+      '#FFD4BA': '#DDD0B5', // durazno claro → Tan aclarado
+      '#3B82F6': '#A8875A', // azul "Preparando" del mostrador → ocre
+      '#16A34A': '#354024', // verde "Listos" → Kombu Green
+      '#F4EFE9': '#F0E8DC', // fondo del mostrador → Bone aclarado
+      '#1A1C1E': '#354024', // carbón (menú lateral del panel, tarjeta del QR,
+                            // barra inferior, títulos) → Kombu Green
+      '#2C302E': '#45512F', // fin del degradado carbón → Kombu aclarado
+    },
+    // El acento (Tan) es claro: los degradados con letra blanca terminan en
+    // Kombu en vez de en Tan. Ver Demo.jsx.
+    degradadoOscuro: true,
+    // Panel de Dirección en claro: menú lateral y tarjetas del mostrador QR en
+    // Bone con letra Kombu, en vez de carbón. Ver Demo.jsx.
+    panelClaro: true,
+    marca: { logo: logoAlma },
     // Vacías a propósito: la maqueta no tiene app publicada, y heredar las de
     // fábrica mandaría a la prospecta a descargar la app DE BE FIT LAB.
     tiendas: { appleId: '', bundleId: '', appStore: '', playStore: '', applePayMerchantId: '' },
@@ -62,18 +99,9 @@ export const ESTUDIOS_DEMO = {
       fondoSuave: '#1A201D',
       textoTenue: '#A8B2AC',
     },
-    coaches: ['Renata', 'Alejandra', 'Sofía', 'Camila'],
-    disciplinas: [
-      { titulo: 'Reformer Basics', nivel: 'Principiante' },
-      { titulo: 'Reformer Flow', nivel: 'Intermedio' },
-      { titulo: 'Power Reformer', nivel: 'Avanzado' },
-      { titulo: 'Barre', nivel: 'Todos los niveles' },
-      { titulo: 'Stretch & Restore', nivel: 'Todos los niveles' },
-    ],
-    // Un estudio de reformer típico: 10 camas, bloque de mañana y de tarde.
-    lugares: 10,
-    horarios: ['07:00', '08:10', '09:20', '10:30', '17:00', '18:10', '19:20', '20:30'],
-    clienta: { nombre: 'María', clasesRestantes: 8, plan: 'Plan Fit' },
+    // Coaches, horario, clases, clientas y menú viven en la base de
+    // DEMOSTRACIONES (supabase/demos/02_demo_reset.sql), no aquí: la maqueta
+    // corre con la app real. Aquí solo va lo que cambia de marca a marca.
     // ⚠️ Las portadas de "Explora" tienen que venir de aquí: las de fábrica son
     // FOTOGRAFÍA DE BE FIT LAB (hay un gorro con su logo bien visible) y
     // enseñarle a otra dueña la marca de su competencia hunde la venta.
@@ -84,8 +112,8 @@ export const ESTUDIOS_DEMO = {
       cafeteria: fondoDemo('#D9C7B2', '#8A6F52'),
       cumpleanos: fondoDemo('#E0BFC6', '#9E6B78'),
       eventos: fondoDemo('#C6D2C0', '#6E8567'),
-      membresia: fondoDemo('#A9BFB1', '#4E6659'),
-      pase: fondoDemo('#B6CDBF', '#5E7A6C'),
+      membresia: portadaMembresia,
+      pase: portadaPase,
       nutricion: fondoDemo('#D6C9B4', '#8E7A5E'),
       progreso: fondoDemo('#C2D2CB', '#71897E'),
       evolucion: fondoDemo('#BCCFC4', '#6B8577'),
@@ -93,7 +121,10 @@ export const ESTUDIOS_DEMO = {
       coach: fondoDemo('#B4C7BC', '#5D7A6C'),
       agenda: fondoDemo('#C9D8CF', '#7B948A'),
       cafeteriaPromo: fondoDemo('#CBBBA6', '#9E8469'),
-      galeriaEventos: fondoDemo('#C6D2C0', '#8FA487'),
+      galeriaEventos: portadaGaleriaEventos,
+      // Foto de la tarjeta de cuenta regresiva de Cumpleaños (en vez del collage
+      // de papel kraft de Be Fit). La aplica Demo.jsx con estilos inyectados.
+      cumpleTarjeta: portadaCumpleTarjeta,
     },
     modulos: {
       cafeteria: true,
@@ -109,6 +140,11 @@ export const ESTUDIOS_DEMO = {
   },
 };
 
+// Claves viejas que siguen abriendo la maqueta: el estudio de ejemplo se llamó
+// "Estudio Vera" y ese link pudo haberse mandado ya.
+const ALIAS = { vera: 'alma' };
+
 export function estudioDemo(clave) {
-  return ESTUDIOS_DEMO[String(clave || '').toLowerCase()] || null;
+  const k = String(clave || '').toLowerCase();
+  return ESTUDIOS_DEMO[ALIAS[k] || k] || null;
 }

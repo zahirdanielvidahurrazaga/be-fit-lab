@@ -25,8 +25,8 @@ export const SECTORES = [
     demos: [
       {
         tipo: 'interna',
-        clave: 'vera',
-        nombre: 'Estudio Vera',
+        clave: 'alma',
+        nombre: 'Studio Alma',
         detalle: 'Pilates Reformer · Puebla',
         nota: 'estudio de ejemplo',
       },

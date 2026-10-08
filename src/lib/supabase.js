@@ -58,9 +58,27 @@ const nativeStorage = {
 // se cerraba la sesión sola. `processLock` es el lock EN MEMORIA que Supabase
 // recomienda para móvil: serializa las operaciones en una cola de promesas
 // (sin navigator.locks, así no se cuelga). En web mantenemos el lock por defecto.
+// Despliegue de maquetas (--mode demos): cada pestaña lleva SU sesión. Con
+// localStorage compartido, abrir "clienta" en una pestaña y "barra" en otra
+// hacía que cada una volviera a entrar con su cuenta al cambiar la otra, en
+// ciclo. La llave única también aísla el BroadcastChannel de supabase-js, que
+// se nombra igual que la llave.
+// La sesión vive SOLO en memoria y la llave es nueva en cada carga: guardarla
+// en sessionStorage no basta, porque "duplicar pestaña" copia sessionStorage y
+// las dos pestañas volvían a compartir canal. Recargar no cuesta nada: la
+// maqueta entra sola con la cuenta del rol. En el build de Be Fit esto no se compila.
+const esDemos = import.meta.env.VITE_DEMOS === 'true';
+const memoriaDemo = new Map();
+const almacenDemo = {
+  getItem: (k) => memoriaDemo.get(k) ?? null,
+  setItem: (k, v) => { memoriaDemo.set(k, v); },
+  removeItem: (k) => { memoriaDemo.delete(k); },
+};
+
 const clienteReal = createClient(finalUrl, finalKey, {
   auth: {
-    storage: isNative ? nativeStorage : window.localStorage,
+    storage: isNative ? nativeStorage : (esDemos ? almacenDemo : window.localStorage),
+    ...(esDemos ? { storageKey: `sb-demo-${crypto.randomUUID()}` } : {}),
     persistSession: true,
     autoRefreshToken: true,
     // En nativo no hay redirect con sesión en la URL; evitarlo previene falsos

@@ -5,7 +5,7 @@
 //   · <Link to="/..."> → lo atrapa Demo.jsx con onClickCapture.
 //   · navigate('/...') o navigate(-1) por código → esto.
 //
-// Un botón de "cerrar" que hace navigate(-1) desde /demo/vera te deja en el
+// Un botón de "cerrar" que hace navigate(-1) desde /demo/alma te deja en el
 // sitio real de Be Fit Lab, que es exactamente lo que no puede pasar con una
 // prospecta enfrente. En vez de bloquearlo (dejando botones muertos), se avisa
 // a Demo.jsx para que cambie de vista: cerrar la cafetería regresa al portal de

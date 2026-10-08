@@ -1,9 +1,11 @@
 import { useEffect, useState, useMemo, useRef, useLayoutEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
-import { Smartphone, ScanLine, Dumbbell, Coffee, LayoutDashboard, X } from 'lucide-react';
+import { Smartphone, ScanLine, Dumbbell, Coffee, LayoutDashboard, X, Compass, Loader2 } from 'lucide-react';
 import { estudioDemo } from '../demo/estudiosDemo';
 import { activarEstudioDemo, restaurarEstudio } from '../config/estudio';
-import DemoProvider from '../demo/DemoProvider';
+import { AuthContext, useAuth } from '../context/AuthContext';
+import { CUENTAS_DEMO, CONTRASENA_DEMO } from '../demo/cuentasDemo';
+import GuiaDemo from '../demo/GuiaDemo';
 import Portal from './Portal';
 import Agenda from './Agenda';
 import Evolucion from './Evolucion';
@@ -15,16 +17,17 @@ import Coach from './Coach';
 import Recepcion from './Recepcion';
 import Barista from './Barista';
 import Admin from './Admin';
-import { supabaseDemo } from '../demo/supabaseDemo';
+import { supabase } from '../lib/supabase';
 import { EVENTO_NAVEGAR } from '../demo/navegacionDemo';
-import { activarSupabaseDemo, desactivarSupabaseDemo } from '../lib/supabase';
+import { recolorearDemo } from '../demo/recolorearDemo';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAQUETA DE VENTA
 //
-// /demo/<estudio> pinta la app entera con la marca de ese estudio y datos en
-// memoria. Sirve para enseñarle a una dueña cómo se vería lo suyo, sin cuenta,
-// sin Supabase y sin que pueda romper nada.
+// /demo/<estudio> pinta la app REAL con la marca de ese estudio, contra la base
+// de DEMOSTRACIONES (proyecto Supabase "Demos", nunca la de Be Fit Lab). Cada
+// rol de la barra es una cuenta de prueba: un clic y se entra con ella. Todo
+// funciona como en producción y la base se restablece sola cada noche.
 //
 // 🔴 POR QUÉ SE INTERCEPTAN LOS CLICS:
 // Portal y Agenda tienen una docena de <Link to="/..."> a rutas reales
@@ -64,19 +67,19 @@ const RUTAS = {
   '/cumpleanos': 'cumpleanos',
 };
 
-function Interruptor({ rol, alCambiar }) {
+function Interruptor({ rol, alCambiar, guiaAbierta, alGuia }) {
   return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', margin: '10px auto 0', maxWidth: 'calc(100vw - 24px)' }}>
     <div
       role="group"
       aria-label="Cambiar de vista en la demostración"
       style={{
-        margin: '10px auto 0',
         display: 'flex', gap: '3px', padding: '5px', borderRadius: '999px',
-        width: 'fit-content', pointerEvents: 'auto',
+        width: 'fit-content', pointerEvents: 'auto', minWidth: 0,
         background: 'rgba(20,20,20,0.9)', backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)', boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
         // Siete pestañas no caben en un teléfono: la tira se desplaza.
-        maxWidth: 'calc(100vw - 24px)', overflowX: 'auto', scrollbarWidth: 'none',
+        overflowX: 'auto', scrollbarWidth: 'none',
       }}
     >
       {ROLES.map((v) => {
@@ -105,6 +108,29 @@ function Interruptor({ rol, alCambiar }) {
         );
       })}
     </div>
+      {/* Fuera de la tira desplazable a propósito: en un teléfono la tira se
+          recorre de lado y la guía no debe quedar escondida al final. */}
+      {alGuia && (
+        <button
+          type="button"
+          onClick={alGuia}
+          aria-pressed={guiaAbierta}
+          aria-label="Guía de la demostración"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
+            padding: '13px 14px', borderRadius: '999px', border: 'none', cursor: 'pointer',
+            pointerEvents: 'auto', fontSize: '0.78rem', fontWeight: 700,
+            background: guiaAbierta ? '#fff' : 'rgba(20,20,20,0.9)',
+            color: guiaAbierta ? '#141414' : '#fff',
+            backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
+          }}
+        >
+          <Compass size={16} strokeWidth={2.5} />
+          Guía
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -116,6 +142,7 @@ export default function Demo() {
   // Solo aplica dentro del rol de clienta: la barra de abajo de la app cambia
   // esto, y ya no se duplica arriba.
   const [vista, setVista] = useState('portal');
+  const [guiaAbierta, setGuiaAbierta] = useState(false);
   // El sello se parte en 2 o 3 renglones en pantallas angostas, así que la
   // altura del encabezado NO se puede adivinar con un número fijo: se mide.
   const encabezadoRef = useRef(null);
@@ -127,9 +154,6 @@ export default function Demo() {
   useMemo(() => {
     if (!cfg) return;
     activarEstudioDemo(cfg);
-    // Antes del primer render: si Cafetería o Eventos alcanzan a consultar la
-    // base real, le enseñan a la prospecta el menú y los precios de Be Fit Lab.
-    activarSupabaseDemo(supabaseDemo);
   }, [cfg]);
 
   useEffect(() => {
@@ -138,7 +162,86 @@ export default function Demo() {
     // Se reactiva aquí además del useMemo de arriba: en desarrollo StrictMode
     // monta, limpia y vuelve a montar, y la limpieza restaura la marca de casa.
     activarEstudioDemo(cfg);
-    activarSupabaseDemo(supabaseDemo);
+
+    // ⚠️ La demo NO modifica archivos de Be Fit Lab: si algo de la app se ve
+    // mal dentro de la maqueta, se corrige aquí, solo mientras la demo está
+    // abierta. La barra flotante de abajo (.ios-bottom-nav, z 2000) tapaba la
+    // hoja "¿A dónde se fueron mis clases?" (z 1401); aquí se baja debajo de ella.
+    const ajustes = document.createElement('style');
+    ajustes.textContent = '.ios-bottom-nav{z-index:1399 !important}';
+    // Cumpleaños: la tarjeta de la cuenta regresiva es un collage de papel kraft
+    // escrito en Cumpleanos.jsx (archivo de Be Fit). Si el estudio trae foto, se
+    // cambia aquí: foto de fondo, sin recortes encima y el contador abajo para no
+    // tapar a las personas.
+    const fotoCumple = cfg.portadas?.cumpleTarjeta;
+    if (fotoCumple) {
+      const tarjeta = 'div[style*="/cumple/kraft.jpg"]';
+      ajustes.textContent += `
+        ${tarjeta}{background-image:url("${fotoCumple}") !important}
+        ${tarjeta}::before{content:"";position:absolute;inset:0;pointer-events:none;
+          background:linear-gradient(180deg,rgba(0,0,0,0) 55%,rgba(30,20,12,0.45) 100%)}
+        ${tarjeta}>img,${tarjeta}>svg{display:none !important}
+        ${tarjeta}>div{top:auto !important;bottom:16px;transform:none !important}`;
+    }
+    // Texto en el color del logo en vez de negro: --on-surface no es token de
+    // marca en Be Fit (estudio.js), así que se pisa aquí. La demo va siempre
+    // en claro, por eso solo el tema claro.
+    const { texto, textoSuave } = cfg.colores || {};
+    if (texto) {
+      ajustes.textContent += `
+        :root:not([data-theme='dark']){--on-surface:${texto};--app-on-surface:${texto}${
+          textoSuave ? `;--on-surface-muted:${textoSuave}` : ''}}`;
+    }
+    // Letras pintadas con el color principal (114 lugares en Be Fit): el
+    // naranja de fábrica es claro y aguanta, pero un primario medio sobre
+    // fondo claro se lee mal, así que solo el TEXTO toma un tono más oscuro.
+    // El espacio antes de "color" deja fuera a background-color y border-color.
+    const textoPrimario = cfg.colores?.textoPrimario;
+    if (textoPrimario) {
+      const sel = (v) => `[style^="color: ${v}"],[style*=" color: ${v}"]`;
+      ajustes.textContent += `
+        ${['var(--primary)', 'var(--primary-dim)', cfg.colores.primarioRgb]
+          .filter(Boolean).map(sel).join(',')}{color:${textoPrimario} !important}`;
+    }
+    // Be Fit pinta botones y la tarjeta de "check-in abierto" con un degradado
+    // del primario al acento con letra blanca: con su naranja→durazno se lee,
+    // pero si el acento del estudio es claro (Tan) la mitad del botón se lava.
+    // En la maqueta el degradado termina en el primario vivo.
+    if (cfg.degradadoOscuro) {
+      ajustes.textContent += `
+        .midnight-gradient-btn,.app-gradient-btn,.qr-client-avatar,
+        [style*="gradient(135deg, var(--primary), var(--accent))"]{
+          background:linear-gradient(135deg,var(--primary),var(--primary-strong)) !important}`;
+    }
+    // Panel de Dirección: el menú lateral (index.css) es carbón con letra
+    // blanca; con panelClaro va en el fondo del estudio con letra de marca.
+    // Las dos tarjetas del mostrador QR (QrCheckIn.jsx) sí se quedan con color
+    // para que contrasten con el panel: el primario en degradado, con la letra
+    // blanca de fábrica. La del lector se reconoce por su degradado (original
+    // o ya recoloreado) y la de "Próxima clase" por su gris #564F49.
+    if (cfg.panelClaro) {
+      const c = cfg.colores;
+      const tinta = c.texto;
+      const tarjetas = [
+        '.wallet-card[style*="rgb(26, 28, 30), rgb(44, 48, 46)"]',
+        '.wallet-card[style*="rgb(53, 64, 36), rgb(69, 81, 47)"]',
+        '[style*="background: rgb(86, 79, 73)"]',
+      ].join(',');
+      ajustes.textContent += `
+        .admin-desktop-sidebar{background:${c.fondo} !important;color:${tinta};
+          border-right:1px solid rgba(0,0,0,0.06) !important}
+        .sidebar-title{color:${tinta} !important}
+        .sidebar-subtitle{color:${c.textoPrimario} !important}
+        .sidebar-nav-item{color:${tinta};opacity:.72}
+        .sidebar-nav-item:hover{opacity:1;background:rgba(0,0,0,0.05) !important}
+        .sidebar-nav-item.active{opacity:1;color:#fff !important;background:${c.primario} !important;
+          box-shadow:0 8px 20px rgba(0,0,0,0.12) !important}
+        .sidebar-nav::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.15) !important}
+        ${tarjetas}{background:linear-gradient(135deg,${c.primario},${c.primarioTenue}) !important;
+          box-shadow:0 14px 30px rgba(0,0,0,0.12) !important}`;
+    }
+    document.head.appendChild(ajustes);
+    const quitarRecolor = recolorearDemo(cfg.reemplazos);
 
     // La demo se ve siempre en claro: es como se enseña en una junta.
     document.documentElement.setAttribute('data-theme', 'light');
@@ -182,14 +285,44 @@ export default function Demo() {
     datosNegocio.forEach((n) => { n.type = 'application/ld+json-demo-desactivado'; });
 
     return () => {
+      quitarRecolor();
+      document.head.removeChild(ajustes);
       document.head.removeChild(meta);
       previos.forEach(([nodo, valor]) => nodo.setAttribute('content', valor ?? ''));
       datosNegocio.forEach((n) => { n.type = 'application/ld+json'; });
       document.body.style.background = fondoPrevio;
       restaurarEstudio();
-      desactivarSupabaseDemo();
     };
   }, [cfg]);
+
+  // ── Sesión real por rol ─────────────────────────────────────────────────────
+  // La maqueta corre contra la base de DEMOSTRACIONES con la app de verdad.
+  // Cada rol es una cuenta: si la sesión abierta no es la del rol elegido, se
+  // entra con la correcta. Mientras llega su perfil, se enseña un aviso.
+  const auth = useAuth();
+  const cuenta = CUENTAS_DEMO[rol];
+  const [errorSesion, setErrorSesion] = useState(null);
+  const [reiniciando, setReiniciando] = useState(false);
+  const esSuCuenta = auth.user?.email === cuenta.correo;
+  const listo = esSuCuenta && auth.role === cuenta.rol;
+
+  useEffect(() => {
+    if (!cfg || auth.loading || esSuCuenta) return;
+    let vivo = true;
+    // La app cierra en web cualquier sesión que no diga "mantener sesión";
+    // sin estas marcas, al recargar la maqueta se saldría sola.
+    try {
+      sessionStorage.setItem('befit_session_active', '1');
+      localStorage.setItem('befit_remember_me', '1');
+    } catch { /* sin almacenamiento: solo dura la pestaña */ }
+    supabase.auth.signInWithPassword({ email: cuenta.correo, password: CONTRASENA_DEMO })
+      .then(({ error }) => { if (vivo) setErrorSesion(error ? error.message : null); });
+    return () => { vivo = false; };
+  }, [cfg, auth.loading, esSuCuenta, cuenta.correo]);
+
+  // Lo mismo que da la sesión real, más la marca de maqueta: las pantallas la
+  // usan para navegar por dentro (crearIrA) y Reportes para enseñar su clave.
+  const authDemo = useMemo(() => ({ ...auth, esDemo: true }), [auth]);
 
   // Atrapa en CAPTURA cualquier clic en un enlace interno antes de que React
   // Router lo procese, y lo traduce a un cambio de vista de la maqueta.
@@ -224,6 +357,22 @@ export default function Demo() {
     return () => window.removeEventListener(EVENTO_NAVEGAR, alNavegar);
   }, []);
 
+  // La guía lleva a una pantalla del recorrido de la clienta.
+  const irA = (destino) => setVista(destino);
+
+  // Regresa la base de demostraciones a Studio Alma recién abierto (la misma
+  // función que corre cada noche) y recarga para leer todo de nuevo.
+  const reiniciar = async () => {
+    setReiniciando(true);
+    const { error } = await supabase.rpc('demo_reset');
+    if (error) {
+      setReiniciando(false);
+      alert('No se pudo reiniciar la demostración: ' + error.message);
+      return;
+    }
+    window.location.reload();
+  };
+
   useLayoutEffect(() => {
     const medir = () => setAltoEncabezado(encabezadoRef.current?.offsetHeight ?? 56);
     medir();
@@ -233,8 +382,28 @@ export default function Demo() {
 
   if (!cfg) return <Navigate to="/" replace />;
 
+  const contenido = (
+    <>
+      {rol === 'clienta' && (
+        <>
+          {vista === 'portal' && <Portal />}
+          {vista === 'agenda' && <Agenda />}
+          {vista === 'evolucion' && <Evolucion />}
+          {vista === 'nutricion' && <Nutricion />}
+          {vista === 'cafeteria' && <Cafeteria />}
+          {vista === 'eventos' && <Eventos />}
+          {vista === 'cumpleanos' && <Cumpleanos />}
+        </>
+      )}
+      {rol === 'recepcion' && <Recepcion />}
+      {rol === 'coach' && <Coach />}
+      {rol === 'barista' && <Barista />}
+      {rol === 'admin' && <Admin />}
+    </>
+  );
+
   return (
-    <DemoProvider cfg={cfg} rol={rol}>
+    <AuthContext.Provider value={authDemo}>
       {/* Sello e interruptor viven juntos en un bloque fijo, y el contenido se
           baja exactamente lo que ese bloque mide. */}
       <div
@@ -271,8 +440,26 @@ export default function Demo() {
             </button>
           </div>
         )}
-        <Interruptor rol={rol} alCambiar={(r) => { setRol(r); setVista('portal'); }} />
+        <Interruptor
+          rol={rol}
+          alCambiar={(r) => { setRol(r); setVista('portal'); }}
+          guiaAbierta={guiaAbierta}
+          alGuia={() => setGuiaAbierta((a) => !a)}
+        />
       </div>
+
+      {guiaAbierta && (
+        <GuiaDemo
+          cfg={cfg} rol={rol} vista={vista} irA={irA}
+          alReiniciar={() => { reiniciar(); setGuiaAbierta(false); }}
+          alCerrar={() => setGuiaAbierta(false)}
+          style={{
+            position: 'fixed', zIndex: 9600, right: '12px', top: `${altoEncabezado + 8}px`,
+            width: 'min(360px, calc(100vw - 24px))', boxSizing: 'border-box',
+            maxHeight: `calc(100vh - ${altoEncabezado + 24}px)`, overflowY: 'auto',
+          }}
+        />
+      )}
 
       <div
         onClickCapture={atraparNavegacion}
@@ -284,23 +471,25 @@ export default function Demo() {
           paddingTop: `${altoEncabezado}px`,
         }}
       >
-        {rol === 'clienta' && (
-          <>
-            {vista === 'portal' && <Portal />}
-            {vista === 'agenda' && <Agenda />}
-            {vista === 'evolucion' && <Evolucion />}
-            {vista === 'nutricion' && <Nutricion />}
-            {vista === 'cafeteria' && <Cafeteria />}
-            {vista === 'eventos' && <Eventos />}
-            {vista === 'cumpleanos' && <Cumpleanos />}
-          </>
+        {listo && !reiniciando ? contenido : (
+          <div style={{
+            minHeight: `calc(100vh - ${altoEncabezado}px)`, display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '24px',
+            color: 'var(--on-surface-variant)', fontSize: '0.9rem', textAlign: 'center',
+          }}>
+            {errorSesion ? (
+              <span>No se pudo entrar a la demostración: {errorSesion}</span>
+            ) : (
+              <>
+                <Loader2 size={26} style={{ animation: 'spin 1s linear infinite' }} />
+                {reiniciando ? 'Reiniciando la demostración…'
+                  : `Entrando como ${ROLES.find((r) => r.id === rol)?.etiqueta.toLowerCase()}…`}
+              </>
+            )}
+          </div>
         )}
-        {rol === 'recepcion' && <Recepcion />}
-        {rol === 'coach' && <Coach />}
-        {rol === 'barista' && <Barista />}
-        {rol === 'admin' && <Admin />}
       </div>
 
-    </DemoProvider>
+    </AuthContext.Provider>
   );
 }
