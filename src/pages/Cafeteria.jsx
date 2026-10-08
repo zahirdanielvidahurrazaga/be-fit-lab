@@ -8,7 +8,6 @@ import { supabase, errorDeFuncion } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import CafeProductSheet from '../components/CafeProductSheet';
 import CafeCartSheet from '../components/CafeCartSheet';
-import CafeOrderTracking from '../components/CafeOrderTracking';
 import CafeOrderHistory from '../components/CafeOrderHistory';
 import { CafeMenuSkeleton } from '../components/Skeleton';
 import { resolveCafeImage } from '../lib/cafeImage';
@@ -65,7 +64,6 @@ function Cafeteria() {
   const [confirming, setConfirming] = useState(null);   // { meta } durante la cuenta de 5s
   const [countdown, setCountdown] = useState(5);
   const [processing, setProcessing] = useState(false);
-  const [trackingOrderId, setTrackingOrderId] = useState(null); // seguimiento del pedido
   const [activeOrders, setActiveOrders] = useState([]);          // pedidos en curso del usuario
   const [activeTab, setActiveTab] = useState('home');            // home, order, rewards, history
   const [isScrolled, setIsScrolled] = useState(false);
@@ -218,20 +216,16 @@ function Cafeteria() {
     }
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Al volver del pago web (Stripe), abrir el seguimiento del último pedido del usuario.
+  // Al volver del pago web (Stripe), llevar a "Pedidos", igual que el pago en
+  // efectivo y el nativo: ahí está el pedido y su seguimiento (CafeOrderHistory).
+  // Antes abría un seguimiento que desde el 7-jun ya no se pinta aquí, y el
+  // bloqueo de scroll se quedaba puesto con la pantalla vacía.
   // Espera a que la sesión cargue; corre de nuevo cuando user.id esté disponible.
   useEffect(() => {
     if (!returnedFromPay || !user?.id) return;
-    let active = true;
-    (async () => {
-      const { data } = await supabase.from('cafe_orders').select('id')
-        .eq('user_id', user.id).in('status', ['paid', 'preparing', 'ready', 'completed'])
-        .order('created_at', { ascending: false }).limit(1).maybeSingle();
-      if (!active) return;
-      setReturnedFromPay(false);
-      if (data?.id) setTrackingOrderId(data.id); else setShowThanks(true);
-    })();
-    return () => { active = false; };
+    setReturnedFromPay(false);
+    setActiveTab('history');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [returnedFromPay, user?.id]);
 
   // Fallback: si tras unos segundos no hay sesión, al menos mostrar el "¡Gracias!"
@@ -243,10 +237,10 @@ function Cafeteria() {
 
   // Bloquear el scroll del fondo cuando hay una hoja/overlay abierto
   useEffect(() => {
-    const open = selectedProduct || showCart || confirming || processing || showThanks || trackingOrderId || showAuthPrompt;
+    const open = selectedProduct || showCart || confirming || processing || showThanks || showAuthPrompt;
     document.body.style.overflow = open ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
-  }, [selectedProduct, showCart, confirming, processing, showThanks, trackingOrderId, showAuthPrompt]);
+  }, [selectedProduct, showCart, confirming, processing, showThanks, showAuthPrompt]);
 
   const nextWidget = () => setActiveWidgetIndex((prev) => (prev + 1) % 3);
   const prevWidget = () => setActiveWidgetIndex((prev) => (prev - 1 + 3) % 3);
