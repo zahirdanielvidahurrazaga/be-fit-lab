@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabase';
 import {
   pesos, MODALIDADES, ESTADOS, pasosDe, modalidadDe, gruposDe, errorLegible, useMenu, useOrdenes,
 } from './datos';
-import { t, Foto, Boton, Chip, Etiqueta, Hoja, Vacio } from './ui';
+import { t, Foto, Boton, Chip, Etiqueta, Hoja, Vacio, useAncho } from './ui';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // APP DEL CLIENTE — menú, carrito, pago de prueba y seguimiento en vivo.
@@ -30,6 +30,7 @@ function horariosParaLlevar(minPrep) {
 export default function Cliente({ negocio, mesaQR, usuario }) {
   const { menu } = useMenu(negocio.id);
   const { ordenes } = useOrdenes(negocio.id);
+  const ancho = useAncho(1000);
   const [pestana, setPestana] = useState('menu');
   const [categoria, setCategoria] = useState(null);
   const [producto, setProducto] = useState(null);
@@ -94,136 +95,202 @@ export default function Cliente({ negocio, mesaQR, usuario }) {
     setPestana('pedidos');
   };
 
+  // Categoría activa según lo que se ve al hacer scroll.
+  useEffect(() => {
+    if (!menu || pestana !== 'menu') return undefined;
+    const obs = new IntersectionObserver((entradas) => {
+      const visible = entradas.filter((e) => e.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+      if (visible) setCategoria(visible.target.dataset.cat);
+    }, { rootMargin: '-180px 0px -55% 0px' });
+    Object.values(secciones.current).forEach((el) => el && obs.observe(el));
+    return () => obs.disconnect();
+  }, [menu, pestana]);
+
+  const portada = (
+    <div style={{
+      position: 'relative', height: ancho ? 300 : 230, overflow: 'hidden',
+      borderRadius: ancho ? 28 : '0 0 28px 28px',
+    }}>
+      <Foto src={marca.portada} alt="" redonda={0} style={{ width: '100%', height: '100%' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.05) 30%, rgba(20,30,18,0.8))' }} />
+      <div style={{ position: 'absolute', left: ancho ? 32 : 20, right: 20, bottom: ancho ? 26 : 18, color: '#fff' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+          <Leaf size={ancho ? 28 : 22} />
+          <span style={{ fontFamily: t.serif, fontSize: ancho ? '2.8rem' : '2rem', fontWeight: 700, letterSpacing: '-0.01em' }}>{negocio.nombre}</span>
+        </div>
+        <div style={{ fontSize: ancho ? '1.05rem' : '0.92rem', opacity: 0.92 }}>{marca.lema} · {negocio.ciudad}</div>
+        <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: '0.82rem', opacity: 0.9, flexWrap: 'wrap' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={14} /> Listo en ~{negocio.tiempo_prep_min} min</span>
+          {negocio.envio_gratis_desde && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Bike size={14} /> Envío gratis desde {pesos(negocio.envio_gratis_desde)}</span>}
+        </div>
+      </div>
+    </div>
+  );
+
+  const selectorModalidad = mesaQR ? (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: t.sup, borderRadius: 18, padding: '12px 14px', border: `1px solid ${t.linea}` }}>
+      <Utensils size={20} color={t.pri} />
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 800, color: t.texto }}>Estás en la mesa {mesaQR}</div>
+        <div style={{ fontSize: '0.82rem', color: t.suave }}>Pide desde aquí y te lo llevamos.</div>
+      </div>
+    </div>
+  ) : (
+    <div style={{ display: 'flex', gap: 8, background: t.sup, padding: 5, borderRadius: 999, border: `1px solid ${t.linea}`, maxWidth: ancho ? 520 : undefined }}>
+      {negocio.modalidades.map((m) => {
+        const Icono = ICONO_MOD[m];
+        const activa = modalidad === m;
+        return (
+          <button key={m} type="button" onClick={() => setModalidad(m)} aria-pressed={activa} style={{
+            flex: 1, border: 'none', borderRadius: 999, padding: '10px 6px', cursor: 'pointer',
+            background: activa ? t.priOsc : 'transparent', color: activa ? '#fff' : t.texto,
+            fontWeight: 800, fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}>
+            <Icono size={16} /> {MODALIDADES[m].etiqueta}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const menuCompleto = menu && (
+    <>
+      {destacados.length > 0 && (
+        <div style={{ padding: ancho ? '24px 0 4px' : '20px 0 4px' }}>
+          <h2 style={{ margin: ancho ? '0 0 12px' : '0 16px 10px', fontFamily: t.serif, fontSize: ancho ? '1.6rem' : '1.35rem', color: t.texto }}>Los favoritos</h2>
+          <div style={ancho
+            ? { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 14 }
+            : { display: 'flex', gap: 12, overflowX: 'auto', padding: '0 16px 6px', scrollbarWidth: 'none' }}>
+            {destacados.map((p) => (
+              <button key={p.id} type="button" onClick={() => setProducto(p)} style={{
+                flex: ancho ? undefined : '0 0 200px', border: 'none', padding: 0, background: t.sup, borderRadius: 20, cursor: 'pointer',
+                textAlign: 'left', overflow: 'hidden', boxShadow: '0 6px 18px rgba(0,0,0,0.06)',
+              }}>
+                <Foto src={p.foto} alt={p.nombre} redonda={0} style={{ width: '100%', height: ancho ? 170 : 130 }} />
+                <div style={{ padding: '10px 12px 12px' }}>
+                  <div style={{ fontWeight: 800, color: t.texto, fontSize: '0.95rem' }}>{p.nombre}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: '0.85rem' }}>
+                    <span style={{ color: t.suave }}>{p.proteina_g ? `${p.proteina_g} g proteína` : `${p.kcal} kcal`}</span>
+                    <span style={{ fontWeight: 800, color: t.priOsc }}>{pesos(p.precio)}</span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Categorías: se quedan arriba y marcan en cuál vas */}
+      <div style={{
+        position: 'sticky', top: 'var(--p-alto-encabezado, 0px)', zIndex: 5, background: t.fondo,
+        display: 'flex', gap: 8, overflowX: 'auto', padding: ancho ? '14px 0 12px' : '12px 16px', scrollbarWidth: 'none',
+        boxShadow: '0 10px 12px -12px rgba(0,0,0,0.25)',
+      }}>
+        {menu.categorias.map((c) => (
+          <Chip key={c.id} activo={categoria === c.id} onClick={() => irACategoria(c.id)}>{c.nombre}</Chip>
+        ))}
+      </div>
+
+      {menu.categorias.map((c) => {
+        const lista = menu.productos.filter((p) => p.categoria_id === c.id);
+        if (!lista.length) return null;
+        return (
+          <section key={c.id} data-cat={c.id} ref={(el) => { secciones.current[c.id] = el; }}
+            style={{ padding: ancho ? '6px 0 4px' : '6px 16px 4px', scrollMarginTop: 'calc(var(--p-alto-encabezado, 0px) + 68px)' }}>
+            <h2 style={{ margin: '14px 0 10px', fontFamily: t.serif, fontSize: ancho ? '1.5rem' : '1.3rem', color: t.texto }}>{c.nombre}</h2>
+            <div style={{ display: 'grid', gap: ancho ? 14 : 10, gridTemplateColumns: ancho ? 'repeat(2, minmax(0, 1fr))' : '1fr' }}>
+              {lista.map((p) => <TarjetaProducto key={p.id} p={p} alAbrir={() => setProducto(p)} grande={ancho} />)}
+            </div>
+          </section>
+        );
+      })}
+    </>
+  );
+
+  const avisos = (
+    <>
+      {!negocio.abierto && (
+        <div style={{ margin: ancho ? '14px 0 0' : '12px 16px 0', padding: '12px 14px', borderRadius: 14, background: '#FFF4D6', color: '#7A5B00', fontWeight: 700, fontSize: '0.9rem' }}>
+          Por ahora no estamos recibiendo pedidos. Puedes ver el menú.
+        </div>
+      )}
+      {activas.length > 0 && !ancho && (
+        <button type="button" onClick={() => { setSeguimiento(activas[0].id); setPestana('pedidos'); }} style={{
+          margin: '14px 16px 0', width: 'calc(100% - 32px)', border: 'none', cursor: 'pointer', textAlign: 'left',
+          display: 'flex', alignItems: 'center', gap: 12, background: t.priOsc, color: '#fff', borderRadius: 18, padding: '14px 16px',
+        }}>
+          <Loader2 size={20} style={{ animation: 'spin 2s linear infinite' }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800 }}>Pedido #{activas[0].folio} · {ESTADOS[activas[0].estado]}</div>
+            <div style={{ fontSize: '0.82rem', opacity: 0.85 }}>Toca para ver el seguimiento</div>
+          </div>
+          <ChevronRight size={20} />
+        </button>
+      )}
+    </>
+  );
+
+  const hojas = (
+    <>
+      <HojaProducto producto={producto} menu={menu} alCerrar={() => setProducto(null)}
+        alAgregar={(linea) => { setCarrito((c) => [...c, linea]); setProducto(null); }} />
+      <HojaCarrito abierta={carritoAbierto} alCerrar={() => setCarritoAbierto(false)}
+        negocio={negocio} carrito={carrito} setCarrito={setCarrito} modalidad={modalidad}
+        setModalidad={mesaQR ? null : setModalidad} mesaQR={mesaQR} usuario={usuario}
+        alCrear={(id, metodo) => (metodo === 'tarjeta' ? setOrdenPago(id) : terminarPedido(id))} />
+      {ordenPago && (
+        <Pasarela ordenId={ordenPago} negocio={negocio}
+          alPagar={() => terminarPedido(ordenPago)}
+          alCancelar={() => { setOrdenPago(null); setCarritoAbierto(true); }} />
+      )}
+      <Seguimiento ordenId={seguimiento} ordenes={ordenes} negocio={negocio} alCerrar={() => setSeguimiento(null)} />
+    </>
+  );
+
+  // ── Computadora: menú a la izquierda, el pedido siempre a la vista ──────────
+  if (ancho) {
+    return (
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '8px 28px 60px', boxSizing: 'border-box' }}>
+        {portada}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 32, alignItems: 'start', marginTop: 20 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 320 }}>{selectorModalidad}</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Chip activo={pestana === 'menu'} onClick={() => setPestana('menu')}>Menú</Chip>
+                <Chip activo={pestana === 'pedidos'} onClick={() => setPestana('pedidos')}>
+                  Mis pedidos{activas.length ? ` · ${activas.length} en curso` : ''}
+                </Chip>
+              </div>
+            </div>
+            {avisos}
+            {pestana === 'menu' ? (menu ? menuCompleto : <Vacio titulo="Cargando el menú…" />)
+              : <MisPedidos ordenes={ordenes} abrir={setSeguimiento} sinPadding />}
+          </div>
+          <aside style={{ position: 'sticky', top: 'calc(var(--p-alto-encabezado, 0px) + 14px)' }}>
+            <ResumenPedido carrito={carrito} setCarrito={setCarrito} subtotal={subtotal} modalidad={modalidad} mesaQR={mesaQR}
+              activa={activas[0]} alVerActiva={() => setSeguimiento(activas[0].id)} alContinuar={() => setCarritoAbierto(true)} />
+          </aside>
+        </div>
+        {hojas}
+      </div>
+    );
+  }
+
+  // ── Celular ─────────────────────────────────────────────────────────────────
   return (
     <div style={{ maxWidth: 560, margin: '0 auto', paddingBottom: 110, minHeight: '100%' }}>
       {pestana === 'menu' && (
         <>
-          {/* Portada */}
-          <div style={{ position: 'relative', height: 230, overflow: 'hidden', borderRadius: '0 0 28px 28px' }}>
-            <Foto src={marca.portada} alt="" redonda={0} style={{ width: '100%', height: '100%' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.05) 30%, rgba(20,30,18,0.78))' }} />
-            <div style={{ position: 'absolute', left: 20, right: 20, bottom: 18, color: '#fff' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                <Leaf size={22} />
-                <span style={{ fontFamily: t.serif, fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.01em' }}>{negocio.nombre}</span>
-              </div>
-              <div style={{ fontSize: '0.92rem', opacity: 0.92 }}>{marca.lema} · {negocio.ciudad}</div>
-              <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: '0.8rem', opacity: 0.9 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={14} /> Listo en ~{negocio.tiempo_prep_min} min</span>
-                {negocio.envio_gratis_desde && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Bike size={14} /> Envío gratis desde {pesos(negocio.envio_gratis_desde)}</span>}
-              </div>
-            </div>
-          </div>
-
-          {/* Cómo quiere su pedido */}
-          <div style={{ padding: '16px 16px 4px' }}>
-            {mesaQR ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: t.sup, borderRadius: 18, padding: '12px 14px', border: `1px solid ${t.linea}` }}>
-                <Utensils size={20} color={t.pri} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, color: t.texto }}>Estás en la mesa {mesaQR}</div>
-                  <div style={{ fontSize: '0.82rem', color: t.suave }}>Pide desde aquí y te lo llevamos.</div>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', gap: 8, background: t.sup, padding: 5, borderRadius: 999, border: `1px solid ${t.linea}` }}>
-                {negocio.modalidades.map((m) => {
-                  const Icono = ICONO_MOD[m];
-                  const activa = modalidad === m;
-                  return (
-                    <button key={m} type="button" onClick={() => setModalidad(m)} aria-pressed={activa} style={{
-                      flex: 1, border: 'none', borderRadius: 999, padding: '10px 6px', cursor: 'pointer',
-                      background: activa ? t.priOsc : 'transparent', color: activa ? '#fff' : t.texto,
-                      fontWeight: 800, fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    }}>
-                      <Icono size={16} /> {MODALIDADES[m].etiqueta}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {!negocio.abierto && (
-            <div style={{ margin: '12px 16px 0', padding: '12px 14px', borderRadius: 14, background: '#FFF4D6', color: '#7A5B00', fontWeight: 700, fontSize: '0.9rem' }}>
-              Por ahora no estamos recibiendo pedidos. Puedes ver el menú.
-            </div>
-          )}
-
-          {activas.length > 0 && (
-            <button type="button" onClick={() => { setSeguimiento(activas[0].id); setPestana('pedidos'); }} style={{
-              margin: '14px 16px 0', width: 'calc(100% - 32px)', border: 'none', cursor: 'pointer', textAlign: 'left',
-              display: 'flex', alignItems: 'center', gap: 12, background: t.priOsc, color: '#fff', borderRadius: 18, padding: '14px 16px',
-            }}>
-              <Loader2 size={20} style={{ animation: 'spin 2s linear infinite' }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 800 }}>Pedido #{activas[0].folio} · {ESTADOS[activas[0].estado]}</div>
-                <div style={{ fontSize: '0.82rem', opacity: 0.85 }}>Toca para ver el seguimiento</div>
-              </div>
-              <ChevronRight size={20} />
-            </button>
-          )}
-
-          {!menu && <Vacio titulo="Cargando el menú…" />}
-
-          {menu && (
-            <>
-              {destacados.length > 0 && (
-                <div style={{ padding: '20px 0 4px' }}>
-                  <h2 style={{ margin: '0 16px 10px', fontFamily: t.serif, fontSize: '1.35rem', color: t.texto }}>Los favoritos</h2>
-                  <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '0 16px 6px', scrollbarWidth: 'none' }}>
-                    {destacados.map((p) => (
-                      <button key={p.id} type="button" onClick={() => setProducto(p)} style={{
-                        flex: '0 0 200px', border: 'none', padding: 0, background: t.sup, borderRadius: 20, cursor: 'pointer',
-                        textAlign: 'left', overflow: 'hidden', boxShadow: '0 6px 18px rgba(0,0,0,0.06)',
-                      }}>
-                        <Foto src={p.foto} alt={p.nombre} redonda={0} style={{ width: '100%', height: 130 }} />
-                        <div style={{ padding: '10px 12px 12px' }}>
-                          <div style={{ fontWeight: 800, color: t.texto, fontSize: '0.92rem' }}>{p.nombre}</div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: '0.85rem' }}>
-                            <span style={{ color: t.suave }}>{p.proteina_g ? `${p.proteina_g} g proteína` : `${p.kcal} kcal`}</span>
-                            <span style={{ fontWeight: 800, color: t.priOsc }}>{pesos(p.precio)}</span>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Categorías */}
-              <div style={{
-                position: 'sticky', top: 'var(--p-alto-encabezado, 0px)', zIndex: 5, background: t.fondo,
-                display: 'flex', gap: 8, overflowX: 'auto', padding: '12px 16px', scrollbarWidth: 'none',
-              }}>
-                {menu.categorias.map((c) => (
-                  <Chip key={c.id} activo={categoria === c.id} onClick={() => irACategoria(c.id)}>{c.nombre}</Chip>
-                ))}
-              </div>
-
-              {menu.categorias.map((c) => {
-                const lista = menu.productos.filter((p) => p.categoria_id === c.id);
-                if (!lista.length) return null;
-                return (
-                  <section key={c.id} ref={(el) => { secciones.current[c.id] = el; }}
-                    style={{ padding: '6px 16px 4px', scrollMarginTop: 'calc(var(--p-alto-encabezado, 0px) + 64px)' }}>
-                    <h2 style={{ margin: '12px 0 10px', fontFamily: t.serif, fontSize: '1.3rem', color: t.texto }}>{c.nombre}</h2>
-                    <div style={{ display: 'grid', gap: 10 }}>
-                      {lista.map((p) => <TarjetaProducto key={p.id} p={p} alAbrir={() => setProducto(p)} />)}
-                    </div>
-                  </section>
-                );
-              })}
-            </>
-          )}
+          {portada}
+          <div style={{ padding: '16px 16px 4px' }}>{selectorModalidad}</div>
+          {avisos}
+          {menu ? menuCompleto : <Vacio titulo="Cargando el menú…" />}
         </>
       )}
+      {pestana === 'pedidos' && <MisPedidos ordenes={ordenes} abrir={setSeguimiento} />}
 
-      {pestana === 'pedidos' && (
-        <MisPedidos ordenes={ordenes} abrir={setSeguimiento} />
-      )}
-
-      {/* Barra inferior */}
       <nav style={{
         position: 'fixed', left: '50%', transform: 'translateX(-50%)', bottom: 'calc(14px + env(safe-area-inset-bottom, 0px))',
         zIndex: 9000, width: 'min(420px, calc(100% - 24px))', display: 'flex', gap: 6, padding: 6, borderRadius: 999,
@@ -241,22 +308,73 @@ export default function Cliente({ negocio, mesaQR, usuario }) {
         <BotonBarra activo={pestana === 'pedidos'} onClick={() => setPestana('pedidos')} icono={Receipt} texto="Pedidos"
           aviso={activas.length > 0} />
       </nav>
+      {hojas}
+    </div>
+  );
+}
 
-      <HojaProducto producto={producto} menu={menu} alCerrar={() => setProducto(null)}
-        alAgregar={(linea) => { setCarrito((c) => [...c, linea]); setProducto(null); }} />
-
-      <HojaCarrito abierta={carritoAbierto} alCerrar={() => setCarritoAbierto(false)}
-        negocio={negocio} carrito={carrito} setCarrito={setCarrito} modalidad={modalidad}
-        setModalidad={mesaQR ? null : setModalidad} mesaQR={mesaQR} usuario={usuario}
-        alCrear={(id, metodo) => (metodo === 'tarjeta' ? setOrdenPago(id) : terminarPedido(id))} />
-
-      {ordenPago && (
-        <Pasarela ordenId={ordenPago} negocio={negocio}
-          alPagar={() => terminarPedido(ordenPago)}
-          alCancelar={() => { setOrdenPago(null); setCarritoAbierto(true); }} />
+// Columna fija del pedido en computadora.
+function ResumenPedido({ carrito, setCarrito, subtotal, modalidad, mesaQR, activa, alVerActiva, alContinuar }) {
+  const cambiar = (linea, delta) => setCarrito((c) => c
+    .map((l) => (l.linea === linea ? { ...l, cantidad: l.cantidad + delta } : l))
+    .filter((l) => l.cantidad > 0));
+  const Icono = ICONO_MOD[modalidad];
+  return (
+    <div style={{ display: 'grid', gap: 12 }}>
+      {activa && (
+        <button type="button" onClick={alVerActiva} style={{
+          border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12,
+          background: t.priOsc, color: '#fff', borderRadius: 20, padding: '14px 16px',
+        }}>
+          <Loader2 size={20} style={{ animation: 'spin 2s linear infinite' }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800 }}>Pedido #{activa.folio} · {ESTADOS[activa.estado]}</div>
+            <div style={{ fontSize: '0.82rem', opacity: 0.85 }}>Ver seguimiento</div>
+          </div>
+          <ChevronRight size={18} />
+        </button>
       )}
-
-      <Seguimiento ordenId={seguimiento} ordenes={ordenes} negocio={negocio} alCerrar={() => setSeguimiento(null)} />
+      <div style={{ background: t.sup, borderRadius: 24, padding: 18, boxShadow: '0 10px 30px rgba(0,0,0,0.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <span style={{ fontFamily: t.serif, fontSize: '1.35rem', fontWeight: 700, color: t.texto }}>Tu pedido</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', fontWeight: 700, color: t.suave }}>
+            <Icono size={14} /> {mesaQR ? `Mesa ${mesaQR}` : MODALIDADES[modalidad].etiqueta}
+          </span>
+        </div>
+        {!carrito.length ? (
+          <div style={{ textAlign: 'center', padding: '26px 8px 12px', color: t.suave }}>
+            <ShoppingBag size={30} style={{ opacity: 0.5, marginBottom: 8 }} />
+            <div style={{ fontWeight: 700, color: t.texto }}>Aún no agregas nada</div>
+            <div style={{ fontSize: '0.85rem', marginTop: 2 }}>Elige algo rico del menú.</div>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'grid', maxHeight: 'calc(100vh - 420px)', overflowY: 'auto' }}>
+              {carrito.map((l) => (
+                <div key={l.linea} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${t.linea}` }}>
+                  <Foto src={l.foto} alt="" style={{ width: 44, height: 44, flexShrink: 0 }} redonda={10} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, color: t.texto, fontSize: '0.9rem' }}>{l.nombre}</div>
+                    {l.detalle.length > 0 && <div style={{ fontSize: '0.75rem', color: t.suave }}>{l.detalle.join(' · ')}</div>}
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: t.priOsc }}>{pesos(l.precioUnitario * l.cantidad)}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <button type="button" aria-label="Quitar uno" onClick={() => cambiar(l.linea, -1)} style={{ ...btnRedondo, width: 28, height: 28 }}>
+                      {l.cantidad === 1 ? <Trash2 size={13} /> : <Minus size={13} />}
+                    </button>
+                    <span style={{ minWidth: 20, textAlign: 'center', fontWeight: 800, fontSize: '0.9rem' }}>{l.cantidad}</span>
+                    <button type="button" aria-label="Agregar uno" onClick={() => cambiar(l.linea, 1)} style={{ ...btnRedondo, width: 28, height: 28 }}><Plus size={13} /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', margin: '14px 0 12px', fontWeight: 800, color: t.texto }}>
+              <span>Subtotal</span><span>{pesos(subtotal)}</span>
+            </div>
+            <Boton onClick={alContinuar} style={{ width: '100%' }}>Continuar</Boton>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -274,14 +392,14 @@ function BotonBarra({ activo, onClick, icono: Icono, texto, aviso }) {
   );
 }
 
-function TarjetaProducto({ p, alAbrir }) {
+function TarjetaProducto({ p, alAbrir, grande }) {
   return (
     <button type="button" onClick={p.disponible ? alAbrir : undefined} disabled={!p.disponible} style={{
       display: 'flex', gap: 12, alignItems: 'stretch', textAlign: 'left', border: 'none', padding: 10,
       background: t.sup, borderRadius: 20, cursor: p.disponible ? 'pointer' : 'default',
       boxShadow: '0 4px 14px rgba(0,0,0,0.04)', opacity: p.disponible ? 1 : 0.55, width: '100%',
     }}>
-      <Foto src={p.foto} alt={p.nombre} style={{ width: 96, height: 96, flexShrink: 0 }} />
+      <Foto src={p.foto} alt={p.nombre} style={{ width: grande ? 120 : 96, height: grande ? 120 : 96, flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <div style={{ fontWeight: 800, color: t.texto, fontSize: '0.98rem' }}>{p.nombre}</div>
         <div style={{
@@ -647,10 +765,10 @@ function Pasarela({ ordenId, negocio, alPagar, alCancelar }) {
   );
 }
 
-function MisPedidos({ ordenes, abrir }) {
+function MisPedidos({ ordenes, abrir, sinPadding }) {
   const lista = (ordenes || []).filter((o) => o.estado !== 'pendiente_pago');
   return (
-    <div style={{ padding: '24px 16px' }}>
+    <div style={{ padding: sinPadding ? '24px 0' : '24px 16px' }}>
       <h1 style={{ margin: '0 0 14px', fontFamily: t.serif, fontSize: '1.9rem', color: t.texto }}>Mis pedidos</h1>
       {!ordenes && <Vacio titulo="Cargando…" />}
       {ordenes && !lista.length && <Vacio icono={Receipt} titulo="Aún no has pedido" texto="Tus pedidos aparecerán aquí." />}

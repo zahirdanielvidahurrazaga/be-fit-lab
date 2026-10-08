@@ -10,6 +10,19 @@ export const t = {
   linea: 'rgba(0,0,0,0.08)', serif: "ui-serif, 'Iowan Old Style', Georgia, serif",
 };
 
+// ¿Pantalla de computadora? (la maqueta se enseña mucho en juntas, en laptop)
+export function useAncho(min = 1000) {
+  const consulta = `(min-width: ${min}px)`;
+  const [ancho, setAncho] = useState(() => window.matchMedia(consulta).matches);
+  useEffect(() => {
+    const m = window.matchMedia(consulta);
+    const alCambiar = () => setAncho(m.matches);
+    m.addEventListener('change', alCambiar);
+    return () => m.removeEventListener('change', alCambiar);
+  }, [consulta]);
+  return ancho;
+}
+
 export function Foto({ src, alt, style, redonda = 16 }) {
   const [falla, setFalla] = useState(!src);
   useEffect(() => { setFalla(!src); }, [src]);
@@ -68,6 +81,8 @@ export function Etiqueta({ children, color = '#4F6B47', fondo = 'rgba(79,107,71,
 
 // Hoja que sube desde abajo (en pantallas anchas queda centrada).
 export function Hoja({ abierta, alCerrar, children, ancho = 520, titulo }) {
+  // En computadora la hoja es una ventana centrada; en el celular sube desde abajo.
+  const centrada = useAncho(760);
   useEffect(() => {
     if (!abierta) return;
     const previo = document.body.style.overflow;
@@ -80,11 +95,12 @@ export function Hoja({ abierta, alCerrar, children, ancho = 520, titulo }) {
   return (
     <div onClick={alCerrar} style={{
       position: 'fixed', inset: 0, zIndex: 9400, background: 'rgba(20,24,18,0.5)',
-      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      display: 'flex', alignItems: centrada ? 'center' : 'flex-end', justifyContent: 'center',
+      padding: centrada ? 24 : 0, boxSizing: 'border-box',
     }}>
       <div role="dialog" aria-label={titulo} onClick={(e) => e.stopPropagation()} style={{
-        width: `min(${ancho}px, 100%)`, maxHeight: 'calc(100dvh - 40px)', overflowY: 'auto',
-        overscrollBehavior: 'contain', background: t.fondo, borderRadius: '26px 26px 0 0',
+        width: `min(${ancho}px, 100%)`, maxHeight: centrada ? 'calc(100dvh - 48px)' : 'calc(100dvh - 40px)', overflowY: 'auto',
+        overscrollBehavior: 'contain', background: t.fondo, borderRadius: centrada ? 26 : '26px 26px 0 0',
         boxShadow: '0 -20px 50px rgba(0,0,0,0.25)', boxSizing: 'border-box',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)', position: 'relative',
       }}>

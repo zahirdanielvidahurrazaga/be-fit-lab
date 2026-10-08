@@ -303,8 +303,9 @@ export default function IndiceDemos() {
           margin: 0, paddingTop: '26px', borderTop: `1px solid ${C.bordeSuave}`,
           fontSize: '13px', lineHeight: 1.65, color: C.tenue,
         }}>
-          Las demostraciones usan datos inventados y no se conectan a ningún
-          estudio real. Se reinician al recargar la página.
+          Las demostraciones funcionan de verdad, con negocios y datos inventados:
+          nada se conecta a un negocio real y los pagos son de prueba. Se
+          reinician solas cada noche, o cuando quieras desde su guía.
         </p>
 
       </div>

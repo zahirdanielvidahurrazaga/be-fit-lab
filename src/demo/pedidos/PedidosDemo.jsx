@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useParams, Navigate } from 'react-router-dom';
-import { Bike, ChefHat, Compass, LayoutDashboard, Loader2, MessageCircle, RotateCcw, Smartphone, X } from 'lucide-react';
+import { useParams, Navigate, Link } from 'react-router-dom';
+import { ArrowLeft, Bike, ChefHat, Compass, LayoutDashboard, Loader2, MessageCircle, RotateCcw, Smartphone, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { errorLegible } from './datos';
+import { useAncho } from './ui';
 import Cliente from './Cliente';
 import Cocina from './Cocina';
 import Reparto from './Reparto';
@@ -59,6 +60,7 @@ export default function PedidosDemo() {
   const [guia, setGuia] = useState(false);
   const [reiniciando, setReiniciando] = useState(false);
   const [sello, setSello] = useState(true);
+  const ancho = useAncho(760);
   const encabezado = useRef(null);
   const [alto, setAlto] = useState(100);
   const mesaQR = (() => {
@@ -151,17 +153,26 @@ export default function PedidosDemo() {
             <button type="button" onClick={() => setSello(false)} aria-label="Ocultar aviso" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex' }}><X size={15} /></button>
           </div>
         )}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, padding: '10px 12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'stretch', gap: 6, padding: '10px 12px', position: 'relative' }}>
+          {/* De vuelta al índice con todas las demostraciones */}
+          <Link to="/" aria-label="Todas las demos" title="Todas las demos" style={{
+            position: ancho ? 'absolute' : 'static', left: 16, top: 10, bottom: 10,
+            display: 'flex', alignItems: 'center', gap: 6, padding: ancho ? '0 14px' : '0 11px', borderRadius: 999,
+            background: 'rgba(20,28,18,0.92)', color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0,
+          }}>
+            <ArrowLeft size={16} /> {ancho && 'Todas las demos'}
+          </Link>
           <div role="group" aria-label="Cambiar de vista en la demostración" style={{ display: 'flex', gap: 3, padding: 5, borderRadius: 999, background: 'rgba(20,28,18,0.92)', overflowX: 'auto', scrollbarWidth: 'none', minWidth: 0 }}>
             {ROLES.map((r) => {
               const activo = rol === r.id;
               return (
                 <button key={r.id} type="button" onClick={() => setRol(r.id)} aria-pressed={activo} title={r.etiqueta} style={{
-                  display: 'flex', alignItems: 'center', gap: 6, padding: '8px 13px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 6, padding: ancho || activo ? '8px 13px' : '8px 11px', borderRadius: 999, border: 'none', cursor: 'pointer',
                   background: activo ? '#fff' : 'transparent', color: activo ? '#1E2A1B' : 'rgba(255,255,255,0.75)',
                   fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
                 }}>
-                  <r.Icon size={16} strokeWidth={2.4} /> {r.etiqueta}
+                  {/* En el celular solo el rol activo lleva texto, para que quepan todos. */}
+                  <r.Icon size={16} strokeWidth={2.4} /> {(ancho || activo) && r.etiqueta}
                 </button>
               );
             })}

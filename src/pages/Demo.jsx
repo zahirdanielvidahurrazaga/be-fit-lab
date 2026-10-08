@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useRef, useLayoutEffect } from 'react';
-import { useParams, Navigate } from 'react-router-dom';
-import { Smartphone, ScanLine, Dumbbell, Coffee, LayoutDashboard, X, Compass, Loader2 } from 'lucide-react';
+import { useParams, Navigate, Link } from 'react-router-dom';
+import { Smartphone, ScanLine, Dumbbell, Coffee, LayoutDashboard, X, Compass, Loader2, ArrowLeft } from 'lucide-react';
+import { useAncho } from '../demo/pedidos/ui';
 import { estudioDemo } from '../demo/estudiosDemo';
 import { activarEstudioDemo, restaurarEstudio } from '../config/estudio';
 import { AuthContext, useAuth } from '../context/AuthContext';
@@ -69,8 +70,19 @@ const RUTAS = {
 };
 
 function Interruptor({ rol, alCambiar, guiaAbierta, alGuia }) {
+  const ancho = useAncho(760);
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', margin: '10px auto 0', maxWidth: 'calc(100vw - 24px)' }}>
+      {/* De vuelta al índice con todas las demostraciones. Va fuera del
+          contenedor que atrapa los enlaces, así que sí navega. */}
+      <Link to="/" aria-label="Todas las demos" title="Todas las demos" style={{
+        display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, alignSelf: 'stretch',
+        padding: ancho ? '0 14px' : '0 12px', borderRadius: '999px', pointerEvents: 'auto',
+        background: 'rgba(20,20,20,0.9)', color: '#fff', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 700,
+        backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
+      }}>
+        <ArrowLeft size={16} strokeWidth={2.5} /> {ancho && 'Todas las demos'}
+      </Link>
     <div
       role="group"
       aria-label="Cambiar de vista en la demostración"
