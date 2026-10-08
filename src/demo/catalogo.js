@@ -12,6 +12,8 @@
 // y se lista con `url`. Por eso hay dos tipos de entrada:
 //
 //   tipo: 'interna' → `clave` apunta a un bloque de estudiosDemo.js
+//   tipo: 'pedidos' → `clave` es un negocio de la demo de pedidos en línea
+//                     (tabla pedidos_negocios, ruta /pedidos/<clave>)
 //   tipo: 'externa' → `url` a una demo desplegada aparte
 //
 // Para agregar una: un bloque más aquí. Nada más se toca.
@@ -29,6 +31,20 @@ export const SECTORES = [
         nombre: 'Studio Alma',
         detalle: 'Pilates Reformer · Puebla',
         nota: 'estudio de ejemplo',
+      },
+    ],
+  },
+  {
+    id: 'comida',
+    titulo: 'Cafeterías y restaurantes',
+    descripcion: 'Pedidos en línea para llevar, en mesa con QR y a domicilio, con tablero de cocina y reparto.',
+    demos: [
+      {
+        tipo: 'pedidos',
+        clave: 'hoja',
+        nombre: 'Hoja · cocina fit',
+        detalle: 'Cafetería saludable · Puebla',
+        nota: 'negocio de ejemplo',
       },
     ],
   },
@@ -64,5 +80,7 @@ export const TOTAL_DEMOS = SECTORES.reduce((n, s) => n + s.demos.length, 0);
 
 // A dónde lleva cada tarjeta.
 export function destinoDe(demo) {
-  return demo.tipo === 'externa' ? demo.url : `/demo/${demo.clave}`;
+  if (demo.tipo === 'externa') return demo.url;
+  if (demo.tipo === 'pedidos') return `/pedidos/${demo.clave}`;
+  return `/demo/${demo.clave}`;
 }
