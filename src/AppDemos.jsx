@@ -21,6 +21,15 @@ import { AuthProvider } from './context/AuthContext';
 const IndiceDemos = lazy(() => import('./pages/IndiceDemos'));
 const Demo = lazy(() => import('./pages/Demo'));
 
+// Regreso de la pasarela de prueba (src/demo/PasarelaPrueba.jsx): el pago se
+// "cobra" dentro de la maqueta de la que salió la compra.
+function RegresoPago() {
+  const orden = new URLSearchParams(window.location.search).get('orden') || '';
+  let estudio = 'alma';
+  try { estudio = sessionStorage.getItem('demo_actual') || 'alma'; } catch { /* sin almacenamiento */ }
+  return <Navigate to={`/demo/${encodeURIComponent(estudio)}?pago=${encodeURIComponent(orden)}`} replace />;
+}
+
 export default function AppDemos() {
   return (
     <Router>
@@ -36,6 +45,7 @@ export default function AppDemos() {
         <Routes>
           <Route path="/" element={<IndiceDemos />} />
           <Route path="/demo/:estudio" element={<AuthProvider><Demo /></AuthProvider>} />
+          <Route path="/pago-prueba" element={<RegresoPago />} />
           {/* Cualquier otra dirección regresa al índice: si una prospecta borra
               el path del link, aterriza en algo tuyo y no en otra marca. */}
           <Route path="*" element={<Navigate to="/" replace />} />

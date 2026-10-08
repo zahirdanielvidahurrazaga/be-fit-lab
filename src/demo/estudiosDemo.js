@@ -79,6 +79,24 @@ export const ESTUDIOS_DEMO = {
       '#1A1C1E': '#354024', // carbón (menú lateral del panel, tarjeta del QR,
                             // barra inferior, títulos) → Kombu Green
       '#2C302E': '#45512F', // fin del degradado carbón → Kombu aclarado
+      // Segunda familia de naranjas de Be Fit (Mi cuenta, Ajustes, avatar,
+      // barras de "Tu semana", Nutrición…). Los rojos y ámbar de error/aviso
+      // NO van aquí: son semánticos y se quedan.
+      '#FF8B42': '#889063', // naranja secundario → Moss Green
+      '#EA7A3B': '#6E7650',
+      '#E8A56B': '#889063', // barra "asistida" de Tu semana
+      '#FF7A00': '#354024',
+      '#E6722B': '#6E7650',
+      '#E8643C': '#6E7650',
+      '#F2855F': '#889063',
+      '#C75D3A': '#5E5134', // naranjas oscuros → Café Noir aclarado
+      '#8A4A16': '#4C3D19',
+      '#7E562E': '#5E5134',
+      '#EEBA89': '#CFBB99', // duraznos claros → Tan
+      '#FFC79E': '#DDD0B5',
+      '#FFB37A': '#CFBB99',
+      '#FFB085': '#CFBB99',
+      '#FFD194': '#DDD0B5',
     },
     // El acento (Tan) es claro: los degradados con letra blanca terminan en
     // Kombu en vez de en Tan. Ver Demo.jsx.

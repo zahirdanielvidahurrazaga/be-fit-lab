@@ -6,6 +6,7 @@ import { activarEstudioDemo, restaurarEstudio } from '../config/estudio';
 import { AuthContext, useAuth } from '../context/AuthContext';
 import { CUENTAS_DEMO, CONTRASENA_DEMO } from '../demo/cuentasDemo';
 import GuiaDemo from '../demo/GuiaDemo';
+import PasarelaPrueba from '../demo/PasarelaPrueba';
 import Portal from './Portal';
 import Agenda from './Agenda';
 import Evolucion from './Evolucion';
@@ -143,6 +144,11 @@ export default function Demo() {
   // esto, y ya no se duplica arriba.
   const [vista, setVista] = useState('portal');
   const [guiaAbierta, setGuiaAbierta] = useState(false);
+  // Pedido de la cafetería que regresa a pagar en la pasarela de prueba
+  // (/pago-prueba → /demo/<estudio>?pago=<id>). Ver src/demo/PasarelaPrueba.jsx.
+  const [pagoOrden] = useState(() => new URLSearchParams(window.location.search).get('pago'));
+  const [pagoAbierto, setPagoAbierto] = useState(Boolean(pagoOrden));
+
   // El sello se parte en 2 o 3 renglones en pantallas angostas, así que la
   // altura del encabezado NO se puede adivinar con un número fijo: se mide.
   const encabezadoRef = useRef(null);
@@ -155,6 +161,26 @@ export default function Demo() {
     if (!cfg) return;
     activarEstudioDemo(cfg);
   }, [cfg]);
+
+  // La pasarela de prueba regresa por /pago-prueba, que no sabe de qué maqueta
+  // venía la compra: se le deja dicho aquí.
+  useEffect(() => {
+    try { sessionStorage.setItem('demo_actual', estudio); } catch { /* sin almacenamiento */ }
+  }, [estudio]);
+
+  // De vuelta a la cafetería. NO se usa su ?payment=success (el regreso de
+  // Stripe): en Cafeteria.jsx ese camino bloquea el scroll para un seguimiento
+  // que ya no se pinta (bug de Be Fit, sin tocar aquí). La pasarela confirma el
+  // pago ella misma y el pedido se ve en "Pedidos". Pagado → carrito vacío;
+  // cancelado → el carrito se queda para reintentar.
+  const terminarPago = (resultado) => {
+    if (resultado === 'pagado') {
+      try { localStorage.setItem('befit_cafe_cart', '[]'); } catch { /* sin almacenamiento */ }
+    }
+    setPagoAbierto(false);
+    window.history.replaceState({}, '', `/demo/${estudio}`);
+    setVista('cafeteria');
+  };
 
   useEffect(() => {
     if (!cfg) return;
@@ -447,6 +473,10 @@ export default function Demo() {
           alGuia={() => setGuiaAbierta((a) => !a)}
         />
       </div>
+
+      {pagoAbierto && listo && rol === 'clienta' && (
+        <PasarelaPrueba ordenId={pagoOrden} cfg={cfg} alTerminar={terminarPago} />
+      )}
 
       {guiaAbierta && (
         <GuiaDemo

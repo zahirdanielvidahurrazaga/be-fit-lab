@@ -238,17 +238,18 @@ begin
   join users u on u.id = x.id
   where u.membership_plan is not null;
 
-  -- 9 · Cafetería.
+  -- 9 · Cafetería. Las fotos viven en el Storage de Demos (bucket cafe-products);
+  -- si se sembraran degradados, cada reinicio dejaría el menú sin fotos.
   insert into cafe_products (name, description, price, category, image_url, cals, protein, available, sort_order) values
-    ('Latte de vainilla', 'Espresso doble con leche vaporizada y vainilla natural.', 68, 'coffee', demo_fondo('#D9C7B2', '#B49A7D'), 180, 8, true, 1),
-    ('Matcha latte', 'Matcha ceremonial con leche de almendra.', 78, 'coffee', demo_fondo('#C6D6BE', '#93AE88'), 150, 5, true, 2),
-    ('Cold brew', 'Extracción en frío de 18 horas, suave y sin acidez.', 60, 'coffee', demo_fondo('#B9A08A', '#6F5847'), 15, 1, true, 3),
-    ('Latte frío de avena', 'Doble espresso con leche de avena y hielo.', 75, 'coffee', demo_fondo('#E2D3C0', '#B9A285'), 170, 4, true, 4),
-    ('Smoothie de frutos rojos', 'Fresa, zarzamora, plátano y yogur griego.', 85, 'smoothie', demo_fondo('#E0BFC6', '#B8848F'), 240, 12, true, 1),
-    ('Smoothie verde post-clase', 'Espinaca, piña, plátano y proteína de vainilla.', 89, 'smoothie', demo_fondo('#D3E0D0', '#A7BFA3'), 260, 24, true, 2),
-    ('Bowl de açaí', 'Con granola artesanal y fruta de temporada.', 115, 'smoothie', demo_fondo('#C9B6CE', '#8F7597'), 380, 9, true, 3),
-    ('Chai de temporada', 'Especias calientes con leche espumada.', 72, 'temporada', demo_fondo('#E3C9A8', '#B68A5C'), 190, 6, true, 1),
-    ('Pan de plátano', 'Hecho en casa, sin azúcar refinada.', 52, 'temporada', demo_fondo('#DFCBB0', '#B99C77'), 210, 5, true, 2);
+    ('Latte de vainilla', 'Espresso doble con leche vaporizada y vainilla natural.', 68, 'coffee', v_storage || '/cafe-products/78e62e8b-d2d4-4900-b0ac-98920823e8b8.jpg', 180, 8, true, 1),
+    ('Matcha latte', 'Matcha ceremonial con leche de almendra.', 78, 'coffee', v_storage || '/cafe-products/6ab0b874-4e67-4daf-9833-61a9ff9f8acd.jpg', 150, 5, true, 2),
+    ('Cold brew', 'Extracción en frío de 18 horas, suave y sin acidez.', 60, 'coffee', v_storage || '/cafe-products/48550983-eab8-4080-a597-cf0a942867a3.jpg', 15, 1, true, 3),
+    ('Latte frío de avena', 'Doble espresso con leche de avena y hielo.', 75, 'coffee', v_storage || '/cafe-products/c688f9e2-afed-40d4-992d-708e8b74fde3.jpg', 170, 4, true, 4),
+    ('Smoothie de frutos rojos', 'Fresa, zarzamora, plátano y yogur griego.', 85, 'smoothie', v_storage || '/cafe-products/4728bc9e-fe3c-4a52-a38a-8ec1ad8206f7.jpg', 240, 12, true, 1),
+    ('Smoothie verde post-clase', 'Espinaca, piña, plátano y proteína de vainilla.', 89, 'smoothie', v_storage || '/cafe-products/97867ce2-7762-4e2c-bdad-b487ec1ddb77.jpg', 260, 24, true, 2),
+    ('Bowl de açaí', 'Con granola artesanal y fruta de temporada.', 115, 'smoothie', v_storage || '/cafe-products/990ab1c2-045a-494e-9da6-6fdb121feaac.jpg', 380, 9, true, 3),
+    ('Chai de temporada', 'Especias calientes con leche espumada.', 72, 'temporada', v_storage || '/cafe-products/6b0ddff7-b51b-42d8-bc50-5c79dfc262fa.jpg', 190, 6, true, 1),
+    ('Pan de plátano', 'Hecho en casa, sin azúcar refinada.', 52, 'temporada', v_storage || '/cafe-products/fdd68ef7-cc13-485f-9f68-4d5ab42d91bd.jpg', 210, 5, true, 2);
 
   insert into cafe_option_groups (name, selection_type, required, applies_to, sort_order) values
     ('Tipo de leche', 'single', true, array['coffee', 'smoothie'], 1),
