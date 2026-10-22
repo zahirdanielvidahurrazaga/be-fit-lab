@@ -60,21 +60,34 @@ serve(async (req) => {
     // Resolver la suscripción a partir del PaymentIntent si no vino directa
     let subId: string | null = subscriptionId || null;
     let piSucceeded = false;
+    let piInvoiceId: string | null = null;
     if (paymentIntentId) {
       const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
       piSucceeded = pi.status === 'succeeded';
-      if (!subId && pi.invoice) {
-        const inv = await stripe.invoices.retrieve(pi.invoice as string);
+      piInvoiceId = (pi.invoice as string) ?? null;
+      if (piInvoiceId) {
+        const inv = await stripe.invoices.retrieve(piInvoiceId);
         // Igual que en el webhook: en la API nueva el id vive en `parent`.
-        subId = ((inv as any).subscription as string)
+        const piSubId = ((inv as any).subscription as string)
           ?? (inv as any).parent?.subscription_details?.subscription
           ?? null;
+        // El pago tiene que ser de ESTA suscripción: si no, un pago viejo
+        // cualquiera serviría para activar un plan sin pagarlo.
+        if (subId && piSubId && piSubId !== subId) {
+          return Response.json({ error: 'El pago no corresponde a la suscripción' }, { status: 400, headers: corsHeaders });
+        }
+        subId = subId ?? piSubId;
       }
     }
     if (!subId) return Response.json({ error: 'No se pudo identificar la suscripción' }, { status: 400, headers: corsHeaders });
 
     const sub = await stripe.subscriptions.retrieve(subId);
-    const active = sub.status === 'active' || sub.status === 'trialing' || piSucceeded;
+    // El atajo del pago recién hecho solo vale mientras la suscripción sigue
+    // `incomplete` (Stripe aún no la actualiza) y si ese pago es de su primera
+    // factura. Una suscripción cancelada no se revive con su pago de hace meses.
+    const latestInvoiceId = typeof sub.latest_invoice === 'string' ? sub.latest_invoice : sub.latest_invoice?.id;
+    const pagoRecien = piSucceeded && sub.status === 'incomplete' && !!piInvoiceId && piInvoiceId === latestInvoiceId;
+    const active = sub.status === 'active' || sub.status === 'trialing' || pagoRecien;
     if (!active) {
       return Response.json({ activated: false, status: sub.status }, { headers: corsHeaders });
     }
@@ -82,6 +95,23 @@ serve(async (req) => {
     const { supabase_user_id, plan_title, class_count } = sub.metadata ?? {};
     if (!supabase_user_id || !plan_title) {
       return Response.json({ error: 'Metadata de suscripción incompleta' }, { status: 400, headers: corsHeaders });
+    }
+
+    // Solo la dueña de la suscripción la activa desde aquí (el webhook es el
+    // respaldo y no pasa por esta función).
+    const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+    const { data: { user } } = await supabase.auth.getUser(token);
+    if (!user) return Response.json({ error: 'No autenticado' }, { status: 401, headers: corsHeaders });
+    if (user.id !== supabase_user_id) return Response.json({ error: 'No autorizado' }, { status: 403, headers: corsHeaders });
+
+    // Idempotente de verdad: si esta suscripción ya es la suya (la activó el
+    // webhook o una llamada anterior), no se vuelve a escribir. Antes cada
+    // llamada repetida le reponía las clases completas y le corría el
+    // vencimiento un mes más, sin cobrar.
+    const { data: actual } = await supabase
+      .from('users').select('stripe_subscription_id').eq('id', supabase_user_id).maybeSingle();
+    if (actual?.stripe_subscription_id === subId) {
+      return Response.json({ activated: true, already: true }, { headers: corsHeaders });
     }
 
     // Fechas: pago = ahora, vence = +1 mes (regla del negocio, para el bloqueo).

@@ -32,6 +32,14 @@ serve(async (req) => {
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
+    // Pedir (y sobre todo canjear un regalo) requiere sesión, y solo a nombre
+    // propio. Antes bastaba la llave pública para meter pedidos "pagados" a la
+    // cola de las baristas, o canjear el regalo de otra clienta.
+    const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+    const { data: { user } } = await supabase.auth.getUser(token);
+    if (!user) return Response.json({ error: 'No autenticado' }, { status: 401, headers: corsHeaders });
+    if (userId && user.id !== userId) return Response.json({ error: 'No autorizado' }, { status: 403, headers: corsHeaders });
+
     const productIds = [...new Set(list.map((i: any) => i.product_id).filter(Boolean))];
     const optionIds = [...new Set(list.flatMap((i: any) => i.option_ids || []).filter(Boolean))];
 
@@ -50,10 +58,7 @@ serve(async (req) => {
     // de verdad tiene un regalo disponible.
     let canjeAplicado = false;
     if (isLoyaltyRedemption) {
-      if (!userId) {
-        return Response.json({ error: 'Un canje requiere sesión iniciada' }, { status: 400, headers: corsHeaders });
-      }
-      const { error: canjeErr } = await supabase.rpc('redeem_cafe_gift', { p_user_id: userId });
+      const { error: canjeErr } = await supabase.rpc('redeem_cafe_gift', { p_user_id: user.id });
       if (canjeErr) {
         return Response.json(
           { error: 'No tienes regalos disponibles para canjear' },
@@ -89,7 +94,7 @@ serve(async (req) => {
     // Create the order directly as 'paid' since it's a cash order (to be paid at pickup)
     const giftObj = gift && gift.is_gift ? gift : null;
     const { data: order, error: ordErr } = await supabase.from('cafe_orders').insert({
-      user_id: userId || null,
+      user_id: user.id,
       status: 'paid', // Cash orders immediately show up in Barista queue
       items: snapshot,
       subtotal: total,

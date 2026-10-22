@@ -61,6 +61,16 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
+    // La membresía se crea para quien trae la sesión, no para el userId que
+    // venga en el cuerpo: antes cualquiera podía crearle o reemplazarle la
+    // membresía a otra clienta (y al activarse se cancelaban las suyas).
+    const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+    const { data: { user } } = await supabase.auth.getUser(token);
+    if (!user) return Response.json({ error: 'No autenticado' }, { status: 401, headers: corsHeaders });
+    if (user.id !== userId) return Response.json({ error: 'No autorizado' }, { status: 403, headers: corsHeaders });
+    // El cliente de Stripe se busca por correo: usar el de la sesión, no el del cuerpo.
+    const email = user.email || userEmail;
+
     // Plan desde la BD (fuente de verdad, editable desde admin).
     const { data: planRow, error: planErr } = await supabase
       .from('membership_plans')
@@ -75,11 +85,11 @@ serve(async (req) => {
     const productName = `${planRow.name} – Be Fit Lab`;
 
     // Buscar o crear cliente en Stripe
-    const existingCustomers = await stripe.customers.list({ email: userEmail, limit: 1 });
+    const existingCustomers = await stripe.customers.list({ email, limit: 1 });
     let customer = existingCustomers.data[0];
     if (!customer) {
       customer = await stripe.customers.create({
-        email: userEmail,
+        email,
         metadata: { supabase_user_id: userId },
       });
     } else if (!customer.metadata?.supabase_user_id) {

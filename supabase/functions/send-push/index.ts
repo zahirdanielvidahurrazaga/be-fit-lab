@@ -22,6 +22,22 @@ Deno.serve(async (req) => {
     if (skipLog) return Response.json({ sent: 0, note: 'skipLog' }, { headers: corsHeaders });
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
+    // Quién puede avisar a quién: las otras edge functions (llave service_role),
+    // la clienta a sí misma, o el staff a cualquiera (insignias en check-in,
+    // avisos del admin, "pedido listo" de la barista). Antes cualquiera podía
+    // mandarle un aviso falso a cualquier usuaria.
+    const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+    if (token !== Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) {
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (!user) return Response.json({ error: 'No autenticado' }, { status: 401, headers: corsHeaders });
+      if (user.id !== userId) {
+        const { data: quien } = await supabase.from('users').select('role').eq('id', user.id).maybeSingle();
+        if (!['ADMIN', 'RECEPCION', 'COACH', 'BARISTA'].includes(quien?.role)) {
+          return Response.json({ error: 'No autorizado' }, { status: 403, headers: corsHeaders });
+        }
+      }
+    }
     const { error } = await supabase.from('notification_logs').insert({ user_id: userId, type, title, body, status: 'sent' });
     if (error) throw error;
 
