@@ -23,7 +23,7 @@ import { registrarIntentoBloqueado } from '../lib/telemetria';
 function Agenda() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, classesRemaining, bookClass, globalClasses, updateReservationCalendarId, avatarUrl, coaches, badgeConfigs, myReservations, classesLoaded, planExpiresAt, esDemo } = useAuth();
+  const { user, plan, classesRemaining, bookClass, globalClasses, updateReservationCalendarId, avatarUrl, coaches, badgeConfigs, myReservations, classesLoaded, classesError, reloadClasses, planExpiresAt, esDemo } = useAuth();
   // Dentro de la maqueta, navegar a una ruta real sacaría a la prospecta.
   const irA = crearIrA(navigate, esDemo);
   
@@ -221,6 +221,12 @@ function Agenda() {
           <section style={{ marginBottom: '10px' }}>
             {!classesLoaded && globalClasses.length === 0 ? (
               <ClassListSkeleton />
+            ) : classesError && globalClasses.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <p style={{ color: 'var(--on-surface)', fontWeight: 700, marginBottom: '6px' }}>No se pudieron cargar las clases</p>
+                <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem', marginBottom: '16px' }}>Revisa tu conexión e intenta de nuevo.</p>
+                <button onClick={reloadClasses} style={{ padding: '10px 22px', borderRadius: '20px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Reintentar</button>
+              </div>
             ) : (
               <ScheduleCalendar
                 globalClasses={globalClasses}

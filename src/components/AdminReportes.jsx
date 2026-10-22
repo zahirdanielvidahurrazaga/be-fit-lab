@@ -82,6 +82,20 @@ function RankRow({ rank, title, sub, value, pct, avatar, top }) {
   );
 }
 
+// La base entrega máximo 1,000 filas por consulta aunque se pida .limit(5000):
+// el resto se perdía en silencio y los reportes salían cortos. Se pide por
+// páginas hasta traer todo. `armar` recibe (desde, hasta) y arma la consulta.
+async function traerTodo(armar) {
+  const PAGINA = 1000;
+  const filas = [];
+  for (let desde = 0; ; desde += PAGINA) {
+    const { data, error } = await armar().range(desde, desde + PAGINA - 1);
+    if (error) throw error;
+    filas.push(...(data || []));
+    if (!data || data.length < PAGINA) return filas;
+  }
+}
+
 const SectionTitle = ({ children }) => (
   <h3 style={{ fontSize: '0.76rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--on-surface-variant)', margin: '4px 0 12px' }}>{children}</h3>
 );
@@ -96,20 +110,33 @@ export default function AdminReportes() {
   const [reservations, setReservations] = useState([]);
   const [cafeOrders, setCafeOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [datosErr, setDatosErr] = useState(false);
 
   // Datos locales (una vez)
   useEffect(() => {
     (async () => {
-      const { data: resv } = await supabase.from('reservations')
-        .select('id, checked_in, status, created_at, classes(title, instructor, coach_id, category)')
-        .order('created_at', { ascending: false }).limit(5000);
-      setReservations(resv || []);
-      const { data: orders } = await supabase.from('cafe_orders')
-        .select('id, items, total, created_at, is_gift, status')
-        .in('status', ['paid', 'preparing', 'ready', 'completed'])
-        .order('created_at', { ascending: false }).limit(3000);
-      setCafeOrders(orders || []);
-      setLoading(false);
+      // Solo hace falta lo que cubre el rango más largo (1 año).
+      const desde = new Date(Date.now() - 366 * 86400000).toISOString();
+      try {
+        const [resv, orders] = await Promise.all([
+          traerTodo(() => supabase.from('reservations')
+            .select('id, checked_in, status, created_at, classes(title, instructor, coach_id, category)')
+            .gte('created_at', desde)
+            .order('created_at', { ascending: false }).order('id')),
+          traerTodo(() => supabase.from('cafe_orders')
+            .select('id, items, total, created_at, is_gift, status')
+            .in('status', ['paid', 'preparing', 'ready', 'completed'])
+            .gte('created_at', desde)
+            .order('created_at', { ascending: false }).order('id')),
+        ]);
+        setReservations(resv);
+        setCafeOrders(orders);
+      } catch (e) {
+        console.error('AdminReportes: no se pudieron cargar los datos', e);
+        setDatosErr(true);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
@@ -294,7 +321,7 @@ export default function AdminReportes() {
 
           {/* ===== CLASES ===== */}
           {subtab === 'clases' && (
-            loading ? <Loading /> : classRank.length === 0 ? <Empty text="Sin asistencias en el periodo" sub="Los datos aparecen al hacer check-in en el mostrador." />
+            loading ? <Loading /> : datosErr ? <Empty text="No se pudieron cargar las asistencias" sub="Revisa la conexión y vuelve a abrir Reportes." /> : classRank.length === 0 ? <Empty text="Sin asistencias en el periodo" sub="Los datos aparecen al hacer check-in en el mostrador." />
             : <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(148px, 1fr))', gap: '12px' }}>
                   <Kpi label="Clase top" value={classRank[0].title} sub={`${classRank[0].asistencias} asistencias`} Icon={Crown} />
@@ -314,7 +341,7 @@ export default function AdminReportes() {
 
           {/* ===== COACHES ===== */}
           {subtab === 'coaches' && (
-            loading ? <Loading /> : coachRank.length === 0 ? <Empty text="Sin datos de coaches" sub="Asigna coaches a las clases y registra asistencias." />
+            loading ? <Loading /> : datosErr ? <Empty text="No se pudieron cargar los datos de coaches" sub="Revisa la conexión y vuelve a abrir Reportes." /> : coachRank.length === 0 ? <Empty text="Sin datos de coaches" sub="Asigna coaches a las clases y registra asistencias." />
             : <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(148px, 1fr))', gap: '12px' }}>
                   <Kpi label="Coach top" value={coachRank[0].name} sub={`${coachRank[0].asistencias} asistencias`} Icon={Crown} />
@@ -333,7 +360,7 @@ export default function AdminReportes() {
 
           {/* ===== CAFETERÍA ===== */}
           {subtab === 'cafeteria' && (
-            loading ? <Loading /> : cafe.orders === 0 ? <Empty text="Sin ventas de cafetería en el periodo" sub="Los pedidos pagados aparecerán aquí." />
+            loading ? <Loading /> : datosErr ? <Empty text="No se pudieron cargar las ventas de cafetería" sub="Revisa la conexión y vuelve a abrir Reportes." /> : cafe.orders === 0 ? <Empty text="Sin ventas de cafetería en el periodo" sub="Los pedidos pagados aparecerán aquí." />
             : <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(148px, 1fr))', gap: '12px' }}>
                   <Kpi label="Ingresos café" value={money(cafe.revenue)} Icon={DollarSign} />

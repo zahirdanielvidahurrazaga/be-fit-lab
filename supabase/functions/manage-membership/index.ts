@@ -45,6 +45,75 @@ async function anularFacturasPendientes(stripe: Stripe, subId: string): Promise<
   return montoAnulado;
 }
 
+
+// Reactivar con el mes YA VENCIDO: quita la pausa, reinicia el ciclo HOY y
+// cobra el mes (el webhook, con `subscription_update` y monto, le pone sus
+// clases y su mes nuevo). Devuelve si el cobro pasó (null = no se supo).
+// Gemela en manage-membership/admin-membership (aquí no se comparten módulos).
+//
+// Nunca dos cobros por la misma reactivación: si la última factura ya es un
+// cobro de reactivación de las últimas 24 h pagado o en curso (doble toque, la
+// dueña y la clienta a la vez, reintento antes de que llegue el webhook), solo
+// se quita la pausa. Si en medio hubo una pausa, esa factura quedó anulada y sí
+// se cobra de nuevo. La llave de idempotencia sale de la factura anterior: dos
+// peticiones simultáneas ven la misma y Stripe emite una sola.
+async function reanudarCobrandoHoy(stripe: Stripe, subId: string): Promise<boolean | null> {
+  const actual = await stripe.subscriptions.retrieve(subId, { expand: ['latest_invoice'] });
+  const previa = actual.latest_invoice as Stripe.Invoice | null;
+  const yaCobrando = !!previa
+    && previa.billing_reason === 'subscription_update'
+    && (previa.amount_due ?? 0) > 0
+    && (previa.status === 'paid' || previa.status === 'open')
+    && Date.now() / 1000 - previa.created < 86400;
+  if (yaCobrando) {
+    await stripe.subscriptions.update(subId, { pause_collection: '', cancel_at_period_end: false });
+    return previa!.status === 'paid';
+  }
+  const sub = await stripe.subscriptions.update(subId, {
+    pause_collection: '',
+    cancel_at_period_end: false,
+    billing_cycle_anchor: 'now',
+    proration_behavior: 'none',
+    payment_behavior: 'allow_incomplete',
+  }, { idempotencyKey: `reanudar-cobro-${subId}-${previa?.id ?? 'sin-factura'}` });
+  const invId = typeof sub.latest_invoice === 'string'
+    ? sub.latest_invoice
+    : ((sub.latest_invoice as { id?: string } | null)?.id ?? null);
+  if (!invId) return null;
+  try {
+    const inv = await stripe.invoices.retrieve(invId);
+    return inv.status === 'paid';
+  } catch (_) { return null; }
+}
+
+// Si la reactivación tronó, regresa la pausa como estaba (reanudar_vigencia ya
+// había devuelto los días y borrado `paused_at`; sin esto esos días se pierden).
+// Pero un error no prueba que Stripe no la haya hecho (p. ej. se cortó la
+// respuesta): si la suscripción ya no está pausada ni por cancelarse, no se
+// toca nada. Y solo se deshace si la fila sigue con lo que escribió ESTA
+// operación: si el webhook ya le puso su mes nuevo, no se le pisa.
+async function deshacerReanudacion(
+  stripe: Stripe,
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  subId: string,
+  userId: string,
+  escrito: string | null,
+  antes: { plan_expires_at: string | null; paused_at: string | null },
+): Promise<void> {
+  try {
+    const s = await stripe.subscriptions.retrieve(subId);
+    if (!s.pause_collection && !s.cancel_at_period_end) return;
+  } catch (_) { /* sin respuesta de Stripe: decide la condición de abajo */ }
+  if (!escrito) return;
+  const { error } = await supabase.from('users')
+    .update({ plan_expires_at: antes.plan_expires_at, paused_at: antes.paused_at })
+    .eq('id', userId)
+    .eq('plan_expires_at', escrito)
+    .is('paused_at', null);
+  if (error) console.error('No se pudo regresar la pausa:', error.message);
+}
+
 // Gestión de la membresía por la CLIENTA (desde "Mi Membresía"):
 //   - pause:  pausa el cobro de la suscripción (vacaciones). Reactivable sin
 //             volver a meter tarjeta. No se le cobra la próxima renovación.
@@ -83,7 +152,7 @@ serve(async (req) => {
 
     const { data: row } = await supabase
       .from('users')
-      .select('stripe_subscription_id, plan_expires_at')
+      .select('stripe_subscription_id, plan_expires_at, paused_at')
       .eq('id', user.id)
       .single();
 
@@ -136,7 +205,12 @@ serve(async (req) => {
         // desincronizan.
         const { data: venceTrasReanudar, error: eReanudar } = await supabase
           .rpc('reanudar_vigencia', { p_user: user.id });
-        if (eReanudar) console.error('reanudar_vigencia:', eReanudar.message);
+        // Sin los días devueltos no se sabe si de verdad venció: mejor no tocar
+        // nada que cobrarle con la fecha vieja.
+        if (eReanudar) {
+          console.error('reanudar_vigencia:', eReanudar.message);
+          return Response.json({ error: 'No se pudo reactivar ahora. No se te cobró nada; intenta de nuevo.' }, { status: 500, headers: corsHeaders });
+        }
         const venceEn = venceTrasReanudar ?? row?.plan_expires_at ?? null;
         if (row?.plan_expires_at && venceTrasReanudar) {
           diasDevueltos = Math.round(
@@ -144,28 +218,21 @@ serve(async (req) => {
           );
         }
         const vencida = !!venceEn && new Date(venceEn).getTime() < Date.now();
-        if (vencida) {
-          const sub = await stripe.subscriptions.update(subId, {
-            pause_collection: '',
-            cancel_at_period_end: false,
-            billing_cycle_anchor: 'now',
-            proration_behavior: 'none',
-            payment_behavior: 'allow_incomplete',
-          });
-          cobroHoy = true;
-          // ¿Pasó el cobro? (si el banco lo rechaza, la suscripción queda
-          // past_due y Stripe reintenta solo; el front avisa a la clienta).
-          const invId = typeof sub.latest_invoice === 'string'
-            ? sub.latest_invoice
-            : ((sub.latest_invoice as { id?: string } | null)?.id ?? null);
-          if (invId) {
-            try {
-              const inv = await stripe.invoices.retrieve(invId);
-              pagado = inv.status === 'paid';
-            } catch (_) { pagado = null; }
+        try {
+          if (vencida) {
+            // ¿Pasó el cobro? (si el banco lo rechaza, la suscripción queda
+            // past_due y Stripe reintenta solo; el front avisa a la clienta).
+            pagado = await reanudarCobrandoHoy(stripe, subId);
+            cobroHoy = true;
+          } else {
+            await stripe.subscriptions.update(subId, { pause_collection: '', cancel_at_period_end: false });
           }
-        } else {
-          await stripe.subscriptions.update(subId, { pause_collection: '', cancel_at_period_end: false });
+        } catch (e) {
+          await deshacerReanudacion(stripe, supabase, subId, user.id, venceTrasReanudar ?? null, {
+            plan_expires_at: row?.plan_expires_at ?? null,
+            paused_at: row?.paused_at ?? null,
+          });
+          throw e;
         }
         renewal = 'active';
       }

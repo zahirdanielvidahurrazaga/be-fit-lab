@@ -56,6 +56,74 @@ async function anularFacturasPendientes(stripe: Stripe, subId: string): Promise<
   return montoAnulado;
 }
 
+
+// Reactivar con el mes YA VENCIDO: quita la pausa, reinicia el ciclo HOY y
+// cobra el mes (el webhook, con `subscription_update` y monto, le pone sus
+// clases y su mes nuevo). Devuelve si el cobro pasó (null = no se supo).
+// Gemela en manage-membership/admin-membership (aquí no se comparten módulos).
+//
+// Nunca dos cobros por la misma reactivación: si la última factura ya es un
+// cobro de reactivación de las últimas 24 h pagado o en curso (doble toque, la
+// dueña y la clienta a la vez, reintento antes de que llegue el webhook), solo
+// se quita la pausa. Si en medio hubo una pausa, esa factura quedó anulada y sí
+// se cobra de nuevo. La llave de idempotencia sale de la factura anterior: dos
+// peticiones simultáneas ven la misma y Stripe emite una sola.
+async function reanudarCobrandoHoy(stripe: Stripe, subId: string): Promise<boolean | null> {
+  const actual = await stripe.subscriptions.retrieve(subId, { expand: ['latest_invoice'] });
+  const previa = actual.latest_invoice as Stripe.Invoice | null;
+  const yaCobrando = !!previa
+    && previa.billing_reason === 'subscription_update'
+    && (previa.amount_due ?? 0) > 0
+    && (previa.status === 'paid' || previa.status === 'open')
+    && Date.now() / 1000 - previa.created < 86400;
+  if (yaCobrando) {
+    await stripe.subscriptions.update(subId, { pause_collection: '', cancel_at_period_end: false });
+    return previa!.status === 'paid';
+  }
+  const sub = await stripe.subscriptions.update(subId, {
+    pause_collection: '',
+    cancel_at_period_end: false,
+    billing_cycle_anchor: 'now',
+    proration_behavior: 'none',
+    payment_behavior: 'allow_incomplete',
+  }, { idempotencyKey: `reanudar-cobro-${subId}-${previa?.id ?? 'sin-factura'}` });
+  const invId = typeof sub.latest_invoice === 'string'
+    ? sub.latest_invoice
+    : ((sub.latest_invoice as { id?: string } | null)?.id ?? null);
+  if (!invId) return null;
+  try {
+    const inv = await stripe.invoices.retrieve(invId);
+    return inv.status === 'paid';
+  } catch (_) { return null; }
+}
+
+// Si la reactivación tronó, regresa la pausa como estaba (reanudar_vigencia ya
+// había devuelto los días y borrado `paused_at`; sin esto esos días se pierden).
+// Pero un error no prueba que Stripe no la haya hecho (p. ej. se cortó la
+// respuesta): si la suscripción ya no está pausada ni por cancelarse, no se
+// toca nada. Y solo se deshace si la fila sigue con lo que escribió ESTA
+// operación: si el webhook ya le puso su mes nuevo, no se le pisa.
+async function deshacerReanudacion(
+  stripe: Stripe,
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  subId: string,
+  userId: string,
+  escrito: string | null,
+  antes: { plan_expires_at: string | null; paused_at: string | null },
+): Promise<void> {
+  try {
+    const s = await stripe.subscriptions.retrieve(subId);
+    if (!s.pause_collection && !s.cancel_at_period_end) return;
+  } catch (_) { /* sin respuesta de Stripe: decide la condición de abajo */ }
+  if (!escrito) return;
+  const { error } = await supabase.from('users')
+    .update({ plan_expires_at: antes.plan_expires_at, paused_at: antes.paused_at })
+    .eq('id', userId)
+    .eq('plan_expires_at', escrito)
+    .is('paused_at', null);
+  if (error) console.error('No se pudo regresar la pausa:', error.message);
+}
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
@@ -243,28 +311,62 @@ serve(async (req) => {
     }
 
     // resume
-    await stripe.subscriptions.update(subscriptionId, { pause_collection: '', cancel_at_period_end: false });
+    // Mismo orden que en la app de la clienta (manage-membership): primero se le
+    // devuelven los días que estuvo pausada y, con el vencimiento ya corregido,
+    // se decide si hay que cobrar. Antes desde aquí solo se quitaba la pausa:
+    // si el mes ya había vencido, Stripe no cobraba hasta el siguiente ciclo
+    // y la clienta quedaba reactivada sin pagar (o bloqueada sin clases).
     let devueltos = 0;
+    let vencida = false;
+    let antes: { plan_expires_at: string | null; paused_at: string | null } | null = null;
+    let escrito: string | null = null;
     if (esLaDeLaApp) {
       // Mismo cálculo que usa la app de la clienta: vive en la BD para que los
       // dos caminos no se desincronicen.
-      const { data: antes } = await supabase
-        .from('users').select('plan_expires_at').eq('id', userId).maybeSingle();
+      ({ data: antes } = await supabase
+        .from('users').select('plan_expires_at, paused_at').eq('id', userId).maybeSingle());
       const { data: despues, error: eReanudar } = await supabase
         .rpc('reanudar_vigencia', { p_user: userId });
-      if (eReanudar) console.error('reanudar_vigencia:', eReanudar.message);
+      // Sin los días devueltos no se sabe si de verdad venció: mejor no tocar
+      // nada que cobrarle con la fecha vieja.
+      if (eReanudar) {
+        console.error('reanudar_vigencia:', eReanudar.message);
+        return Response.json({ error: 'No se pudo calcular su vigencia. No se cobró nada; intenta de nuevo.' }, { status: 500, headers: corsHeaders });
+      }
       if (antes?.plan_expires_at && despues) {
         devueltos = Math.round(
           (new Date(despues).getTime() - new Date(antes.plan_expires_at).getTime()) / 86400000,
         );
       }
+      escrito = despues ?? null;
+      const venceEn = despues ?? antes?.plan_expires_at ?? null;
+      vencida = !!venceEn && new Date(venceEn).getTime() < Date.now();
+    }
+
+    let pagado: boolean | null = null;
+    try {
+      if (vencida) pagado = await reanudarCobrandoHoy(stripe, subscriptionId);
+      else await stripe.subscriptions.update(subscriptionId, { pause_collection: '', cancel_at_period_end: false });
+    } catch (e) {
+      if (esLaDeLaApp && antes) {
+        await deshacerReanudacion(stripe, supabase, subscriptionId, userId, escrito, antes);
+      }
+      throw e;
+    }
+    if (esLaDeLaApp) {
       await supabase.from('users').update({ membership_renewal: 'active' }).eq('id', userId);
     }
-    return Response.json({
-      ok: true,
-      resultado: 'Cobro reactivado'
-        + (devueltos > 0 ? `. Se le devolvieron ${devueltos} día${devueltos === 1 ? '' : 's'} de vigencia por el tiempo que estuvo pausada.` : ''),
-    }, { headers: corsHeaders });
+
+    let resultado = 'Cobro reactivado';
+    if (devueltos > 0) resultado += `. Se le devolvieron ${devueltos} día${devueltos === 1 ? '' : 's'} de vigencia por el tiempo que estuvo pausada.`;
+    if (vencida) {
+      resultado += pagado === true
+        ? '. Su mes ya había vencido: se cobró hoy y empieza su mes nuevo.'
+        : pagado === false
+          ? '. Su mes ya había vencido y se intentó cobrar hoy, pero el banco lo rechazó: no tendrá clases nuevas hasta que pase el cobro.'
+          : '. Su mes ya había vencido: se intentó cobrar hoy; revisa en Stripe si pasó.';
+    }
+    return Response.json({ ok: true, resultado }, { headers: corsHeaders });
 
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

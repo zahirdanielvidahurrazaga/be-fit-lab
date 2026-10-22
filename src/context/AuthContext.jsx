@@ -49,6 +49,7 @@ export const AuthProvider = ({ children }) => {
   // Flags de "ya hizo la 1ª carga" → para distinguir "cargando" de "vacío real"
   // y mostrar skeletons hasta que el dataset trajo respuesta del servidor.
   const [classesLoaded, setClassesLoaded] = useState(false);
+  const [classesError, setClassesError] = useState(false);
   const [recipesLoaded, setRecipesLoaded] = useState(false);
   const [cafeProductsLoaded, setCafeProductsLoaded] = useState(false);
   const [disciplinesLoaded, setDisciplinesLoaded] = useState(false);
@@ -582,15 +583,19 @@ export const AuthProvider = ({ children }) => {
         .order('day', { ascending: true })
         .order('time', { ascending: true });
 
-      if (data) {
-        setGlobalClasses(data);
-      }
+      // Antes el error se ignoraba y la Agenda salía vacía, como si no hubiera
+      // clases. Ahora se avisa para que la pantalla diga "no se pudo cargar".
+      if (error) throw error;
+      setGlobalClasses(data || []);
+      setClassesError(false);
     } catch (err) {
-      console.error(err);
+      console.error('No se pudieron cargar las clases:', err);
+      setClassesError(true);
     } finally {
       setClassesLoaded(true);
     }
   };
+  const reloadClasses = () => fetchGlobalClasses(alcanceRef.current);
 
   const fetchRecipes = async () => {
     try {
@@ -1905,7 +1910,7 @@ export const AuthProvider = ({ children }) => {
       user, role, plan, membershipStatus, planStartedAt, planExpiresAt, loading, profileName,
       membershipRenewal, hasSubscription,
       classesRemaining, myReservations, waitlistPositions, globalClasses, recipes, allUsers,
-      classesLoaded, recipesLoaded, cafeProductsLoaded,
+      classesLoaded, classesError, reloadClasses, recipesLoaded, cafeProductsLoaded,
       avatarUrl, setAvatarUrl, customBadges, badgeConfigs,
       monthlyGoal, updateMonthlyGoal,
       favoriteRecipeIds, toggleRecipeFavorite,
