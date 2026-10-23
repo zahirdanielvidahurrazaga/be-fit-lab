@@ -23,7 +23,7 @@ import { registrarIntentoBloqueado } from '../lib/telemetria';
 function Agenda() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, classesRemaining, bookClass, globalClasses, updateReservationCalendarId, avatarUrl, coaches, badgeConfigs, myReservations, classesLoaded, classesError, reloadClasses, planExpiresAt, esDemo } = useAuth();
+  const { user, plan, classesRemaining, bookClass, globalClasses, updateReservationCalendarId, avatarUrl, coaches, badgeConfigs, myReservations, classesLoaded, classesError, reloadClasses, planExpiresAt, bookingWindowDays, esDemo } = useAuth();
   // Dentro de la maqueta, navegar a una ruta real sacaría a la prospecta.
   const irA = crearIrA(navigate, esDemo);
   
@@ -102,6 +102,18 @@ function Agenda() {
     setShowCoachDetail(false);
   };
 
+  // Se reserva con máximo `bookingWindowDays` días de anticipación (pedido de
+  // Brenda, 23-oct). La clase se sigue VIENDO en el calendario; solo el botón
+  // espera a que abra. La BD lo hace cumplir igual (guard_reservation_window).
+  const reservaAbreEn = (classObj) => {
+    if (!bookingWindowDays || !classObj) return null;
+    const inicio = classDateTime(classObj.date, classObj.time);
+    if (!inicio) return null;
+    const abre = new Date(inicio.getTime() - bookingWindowDays * 24 * 60 * 60 * 1000);
+    return abre > new Date() ? abre : null;
+  };
+  const textoAbre = (d) => d.toLocaleString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' });
+
   const confirmReservation = async () => {
     // Un toque a la vez: si ya hay una reserva en vuelo, el segundo se ignora.
     if (reservandoRef.current) return;
@@ -127,6 +139,9 @@ function Agenda() {
         setWaitlisted(result === 'waitlist');
         setIsSuccess(true);
         setAddedToCalendar(false);
+      } else if (result === 'fuera_de_ventana') {
+        setShowModal(false);
+        alert(`Puedes reservar con máximo ${bookingWindowDays || 7} días de anticipación. Esta clase todavía no abre.`);
       } else {
         // Reserva no realizada (sin clases, membresía vencida, o error de red).
         setShowModal(false);
@@ -453,6 +468,20 @@ function Agenda() {
                     const isReservedClass = !!myRes;
                     const isWaitlisted = myRes?.status === 'waitlist';
                     const isFull = (modalData?.spots ?? 0) <= 0;
+                    const abre = reservaAbreEn(modalData);
+                    if (!isReservedClass && abre) {
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '14px', borderRadius: '16px', background: 'var(--fill-subtle)' }}>
+                            <CalendarIcon size={18} color="var(--primary)" style={{ flexShrink: 0, marginTop: 2 }} />
+                            <span style={{ fontSize: '0.85rem', color: 'var(--on-surface)', lineHeight: 1.45 }}>
+                              Las clases se reservan con máximo <strong>{bookingWindowDays} días</strong> de anticipación. Esta se abre el <strong>{textoAbre(abre)}</strong>.
+                            </span>
+                          </div>
+                          <button onClick={() => { setShowModal(false); setCalendarError(null); }} className="btn-outline" style={{ width: '100%', padding: '13px' }}>Cerrar</button>
+                        </div>
+                      );
+                    }
                     if (isReservedClass) {
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -511,7 +540,7 @@ function Agenda() {
                       <div style={{ display: 'flex', gap: '10px' }}>
                         <button onClick={() => { setShowModal(false); setCalendarError(null); }} className="btn-outline" style={{ flex: 1, padding: '13px' }} disabled={reservando}>Cancelar</button>
                         <button onClick={confirmReservation} className="btn-primary" disabled={reservando} style={{ flex: 1.4, padding: '13px', justifyContent: 'center', fontSize: isFull ? '0.82rem' : undefined, opacity: reservando ? 0.7 : 1, cursor: reservando ? 'wait' : 'pointer' }}>
-                          {reservando ? 'Reservando…' : isFull ? 'Unirme a lista de espera' : 'Reservar'}
+                          {reservando ? 'Reservando…' : isFull ? 'Avísame si se libera un lugar' : 'Reservar'}
                         </button>
                       </div>
                       </>

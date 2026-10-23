@@ -24,12 +24,16 @@ const CANCEL_ERROR_TEXT = {
   attended: 'Ya registraste tu asistencia a esta clase, así que no se puede cancelar.',
   unknown_class: 'No encontramos el horario de esta clase. Cierra la app, vuelve a abrirla e inténtalo de nuevo.',
   error: 'No se pudo cancelar la clase. Revisa tu conexión e inténtalo de nuevo.',
+  use_cancel: 'Todavía faltan más de 5 horas: cancela normal y la clase se devuelve a tu paquete.',
+  release_error: 'No se pudo liberar tu lugar. Revisa tu conexión e inténtalo de nuevo.',
 };
+
+const CINCO_HORAS = 5 * 60 * 60 * 1000;
 
 function Portal() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, logout, classesRemaining, myReservations, waitlistPositions, cancelClass, acceptOffer, profileName, globalClasses, avatarUrl, setShowTour, coaches, badgeConfigs, classesLoaded, demoHistorial, esDemo } = useAuth();
+  const { user, plan, logout, classesRemaining, myReservations, waitlistPositions, cancelClass, releaseSpot, acceptOffer, profileName, globalClasses, avatarUrl, setShowTour, coaches, badgeConfigs, classesLoaded, demoHistorial, esDemo } = useAuth();
   // Dentro de la maqueta, navegar a una ruta real sacaría a la prospecta.
   const irA = crearIrA(navigate, esDemo);
   
@@ -64,6 +68,9 @@ function Portal() {
   // estado deshabilita el botón y muestra "Cancelando…".
   const cancelandoRef = useRef(false);
   const [cancelando, setCancelando] = useState(false);
+  // Tras liberar el lugar el modal se queda abierto con la confirmación, para
+  // que quede claro que el lugar se soltó y que la clase no se devolvió.
+  const [liberado, setLiberado] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [verMovimientos, setVerMovimientos] = useState(false);
   // Filtro de "Próximas clases": 'hoy' (solo las de hoy) | 'todas'. Arranca en
@@ -74,7 +81,15 @@ function Portal() {
 
   const handleCancelClick = (res) => {
     setSelectedReservation(res);
+    setLiberado(false);
+    setCancelError(false);
     setShowCancelModal(true);
+  };
+
+  const cerrarModal = () => {
+    setShowCancelModal(false);
+    setCancelError(false);
+    setLiberado(false);
   };
 
   const confirmCancellation = async () => {
@@ -83,12 +98,16 @@ function Portal() {
     cancelandoRef.current = true;
     setCancelando(true);
     try {
-      const result = await cancelClass(selectedReservation.classId);
+      const liberar = modoModal === 'release';
+      const result = liberar
+        ? await releaseSpot(selectedReservation.classId, selectedReservation)
+        : await cancelClass(selectedReservation.classId);
       if (!result?.success) {
-        setCancelError(result?.reason || 'error');
+        setCancelError(result?.reason || (liberar ? 'release_error' : 'error'));
         return; // Mantener el modal abierto con el motivo
       }
       setCancelError(false);
+      if (liberar) { setLiberado(true); return; }
       setShowCancelModal(false);
     } finally {
       cancelandoRef.current = false;
@@ -124,12 +143,32 @@ function Portal() {
     // Sin fecha conocida NO se cancela (antes era `true`: cualquier reserva cuya
     // clase no estuviera cargada se podía cancelar y devolver).
     if (!classStart) return false;
-    const fiveHoursBefore = new Date(classStart.getTime() - 5 * 60 * 60 * 1000);
-    return new Date() < fiveHoursBefore;
+    // Gracia de 1 h cuando fue el sistema quien la inscribió desde la lista de
+    // espera (misma regla que cancel_class_secure).
+    const promoted = res?.promotedAt ? new Date(res.promotedAt).getTime() : null;
+    if (promoted && Date.now() - promoted < 60 * 60 * 1000 && classStart.getTime() > Date.now()) return true;
+    return Date.now() < classStart.getTime() - CINCO_HORAS;
+  };
+
+  // Menos de 5 h y la clase no empieza: ya no se devuelve, pero el lugar se
+  // puede soltar para otra compañera (liberar_lugar en la BD).
+  const canReleaseReservation = (res) => {
+    if (!res || res.status === 'waitlist' || res.status === 'offered') return false;
+    if (res.checkedIn) return false;
+    const classStart = reservationClassDate(res);
+    if (!classStart || classStart.getTime() <= Date.now()) return false;
+    return !canCancelReservation(res);
   };
 
   // ¿La reserva abierta en el modal es de lista de espera? (mensajería distinta).
   const cancellingWaitlist = selectedReservation?.status === 'waitlist' || selectedReservation?.status === 'offered';
+  // Qué ofrece el modal: salir de la espera · cancelar con devolución ·
+  // liberar el lugar sin devolución.
+  const modoModal = !selectedReservation ? null
+    : cancellingWaitlist ? 'waitlist'
+    : canCancelReservation(selectedReservation) ? 'cancel'
+    : canReleaseReservation(selectedReservation) ? 'release'
+    : 'none';
 
   // "en 22 min" / "en 5 h" / "en 3 días"
   const formatCountdown = (date) => {
@@ -483,6 +522,7 @@ function Portal() {
                     offerExpiresAt={res.offerExpiresAt}
                     onAccept={() => acceptOffer(res.classId)}
                     canCancel={canCancelReservation(res)}
+                    canRelease={canReleaseReservation(res)}
                     onClick={() => handleCancelClick(res)}
                   />
                 ))
@@ -594,7 +634,7 @@ function Portal() {
 
       {/* MODAL INTEGRADO PARA CANCELAR */}
       {showCancelModal && (
-        <div className="modal-overlay" onClick={() => { setShowCancelModal(false); setCancelError(false); }}>
+        <div className="modal-overlay" onClick={cerrarModal}>
           <div className="glass-modal" onClick={(e) => e.stopPropagation()}>
             <h2 style={{ fontSize: '1.4rem', fontFamily: 'var(--font-display)', marginBottom: '15px' }}>Detalle de Reserva</h2>
             <div style={{ background: 'var(--fill-subtle)', padding: '15px', borderRadius: '16px', marginBottom: '16px', textAlign: 'left' }}>
@@ -607,7 +647,14 @@ function Portal() {
               )}
             </div>
 
-            {cancelError ? (
+            {liberado ? (
+              <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '16px', padding: '14px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <Check size={16} color="#16A34A" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--on-surface)', fontWeight: 600, lineHeight: 1.5 }}>
+                  Listo, tu lugar quedó libre para otra compañera. Gracias por avisar. La clase no se devuelve a tu paquete.
+                </p>
+              </div>
+            ) : cancelError ? (
               <div style={{ background: 'rgba(255,77,77,0.08)', border: '1px solid rgba(255,77,77,0.2)', borderRadius: '16px', padding: '14px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                 <Lock size={16} color="#FF4D4D" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <p style={{ margin: 0, fontSize: '0.85rem', color: '#FF4D4D', fontWeight: 600, lineHeight: 1.5 }}>
@@ -618,6 +665,14 @@ function Portal() {
               <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem', marginBottom: '16px', lineHeight: 1.5 }}>
                 ¿Salir de la lista de espera de esta clase? <strong>No se te cobró ninguna clase</strong>, así que no se descuenta ni se devuelve nada de tu paquete.
               </p>
+            ) : modoModal === 'release' ? (
+              <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem', marginBottom: '16px', lineHeight: 1.5 }}>
+                Faltan menos de 5 horas, así que <strong>la clase ya no se devuelve a tu paquete</strong>. Si no vas a llegar, libera tu lugar para que otra compañera lo aproveche.
+              </p>
+            ) : modoModal === 'none' ? (
+              <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem', marginBottom: '16px', lineHeight: 1.5 }}>
+                Esta clase ya empezó, así que ya no se puede cancelar ni liberar el lugar.
+              </p>
             ) : (
               <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem', marginBottom: '16px', lineHeight: 1.5 }}>
                 ¿Deseas cancelar esta asistencia? La clase se devolverá a tu paquete. Solo puedes cancelar con <strong>más de 5 horas de anticipación</strong>.
@@ -626,21 +681,25 @@ function Portal() {
 
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
-                onClick={() => { setShowCancelModal(false); setCancelError(false); }}
+                onClick={cerrarModal}
                 className="btn-outline"
                 style={{ flex: 1, padding: '12px', fontSize: '0.9rem' }}
                 disabled={cancelando}
               >
-                Volver
+                {liberado ? 'Cerrar' : 'Volver'}
               </button>
-              {!cancelError && (
+              {!cancelError && !liberado && modoModal !== 'none' && (
                 <button
                   onClick={confirmCancellation}
                   className="btn-primary"
                   disabled={cancelando}
                   style={{ flex: 1, padding: '12px', fontSize: '0.9rem', justifyContent: 'center', background: '#FF4D4D', boxShadow: '0 10px 25px rgba(255,77,77,0.3)', opacity: cancelando ? 0.7 : 1, cursor: cancelando ? 'wait' : 'pointer' }}
                 >
-                  {cancelando ? 'Cancelando…' : cancellingWaitlist ? 'Salir de lista de espera' : 'Cancelar Clase'}
+                  {cancelando
+                    ? (modoModal === 'release' ? 'Liberando…' : 'Cancelando…')
+                    : modoModal === 'waitlist' ? 'Salir de lista de espera'
+                    : modoModal === 'release' ? 'Liberar mi lugar'
+                    : 'Cancelar Clase'}
                 </button>
               )}
             </div>
@@ -810,7 +869,7 @@ function Portal() {
 }
 
 /* TICKET-STYLE CLASS CARD */
-function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, countdown, dateLabel, canCancel, status = 'confirmed', waitlistPosition, autoClaim = false, offerExpiresAt, onAccept, onClick }) {
+function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, countdown, dateLabel, canCancel, canRelease = false, status = 'confirmed', waitlistPosition, autoClaim = false, offerExpiresAt, onAccept, onClick }) {
   const isWaitlisted = status === 'waitlist';
   const isOffered = status === 'offered';
   // Foto real de la coach de esta clase (coach_id → nombre → email). Sin fallbacks
@@ -840,7 +899,7 @@ function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, c
       onClick={onClick}
       style={{
         position: 'relative', display: 'flex', background: 'var(--app-surface-solid)',
-        cursor: 'pointer', opacity: (canCancel || isOffered) ? 1 : 0.85,
+        cursor: 'pointer', opacity: (canCancel || canRelease || isOffered) ? 1 : 0.85,
       }}
     >
       {/* Muescas del boleto (cortes del color del fondo sobre la perforación) */}
@@ -888,6 +947,10 @@ function TicketCard({ title, time, instructor, coachId, coaches, badgeConfigs, c
           {canCancel ? (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: 800, color: 'var(--primary)', whiteSpace: 'nowrap' }}>
               Gestionar <ChevronRight size={13} />
+            </span>
+          ) : canRelease ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: 800, color: 'var(--primary)', whiteSpace: 'nowrap' }}>
+              Liberar lugar <ChevronRight size={13} />
             </span>
           ) : (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.64rem', fontWeight: 700, color: 'var(--on-surface-variant)', background: 'var(--fill-subtle)', padding: '4px 9px', borderRadius: '8px', whiteSpace: 'nowrap' }}>

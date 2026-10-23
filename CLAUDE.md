@@ -7,6 +7,17 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
 > 🧪 **Demos de venta de KaiZen** (`/demo/alma`, `/pedidos/hoja`, índice): viven aquí de forma temporal y se van a mudar a un repo propio. **Todo su estado y lo que sigue está en [`DEMOS.md`](DEMOS.md)** — leerlo antes de tocar demos.
+## 🔵 Sesión 2026-10-23 — "LIBERAR MI LUGAR" + RESERVAR MÁXIMO 7 DÍAS ANTES (BD VIVA; front sin subir)
+
+**Pedido de Brenda (WhatsApp 23-oct):** reservan todo el mes; el día de la clase no pueden ir, a <5 h el sistema no las deja cancelar → pierden la clase (bien) pero el lugar queda ocupado. Dato: la fricción #1 de `intentos_bloqueados` es `too_late`. **Decisiones de Brenda:** liberar NO devuelve la clase aunque otra tome el lugar · se libera hasta la hora de inicio · quiere ver quién cancela tarde · máximo 7 días de anticipación.
+
+- **BD — `supabase/sql/liberar_lugar_y_ventana.sql` (APLICADO a prod 23-oct; prueba `liberar_lugar_PRUEBA.sql` 12/12 OK, se deshace sola):**
+  - `liberar_lugar(p_class_id, p_reservation_id)`: solo reserva `confirmed`, sin check-in, clase no empezada y a <5 h (con más de 5 h o en la gracia de 1 h de la espera → `USA_CANCELAR`). **BORRA la reserva sin devolver** → el trigger de siempre recalcula `spots` y ofrece el lugar a la lista de espera v2. Por eso NO hay status nuevo: apps viejas y conteos de cupo siguen igual. Registra en **`cancelaciones_tarde`** (`reservation_id` único, `paso_a_espera`) y avisa a la clienta (`notification_logs` tipo `reservation`, `data.kind='spot_released'`). `p_reservation_id` es **obligatorio** (`FALTA_RESERVA` si viene null) y evita que un duplicado tardío o un modal viejo borre una reserva NUEVA de la misma clase (2 pasadas de Codex; el front manda el id de la reserva que estaba en pantalla y aborta si no tiene uno real). Prueba final 13/13.
+  - **Ventana de reserva:** `app_config.booking_window_days` (7; NULL/0 = sin límite) + trigger **`guard_reservation_window`** BEFORE INSERT en `reservations` → `FUERA_DE_VENTANA`. Solo frena a la clienta reservando para sí (también la entrada a espera); staff, cron y promociones pasan. Vive en trigger (no en `book_class_secure`) para que reaplicar un SQL viejo no lo tire.
+  - **`admin_audit_saldos` parchada en vivo:** `having sum(delta) + nº de liberaciones de esa clase < 0` → una liberación justifica UN cobro, no la clase entera (un cobro de más sigue saliendo).
+- **Front (SIN commitear al cierre):** Portal (boleto "Liberar lugar", modal en 3 modos waitlist/cancel/release + confirmación), AuthContext (`releaseSpot`, `bookingWindowDays`, `bookClass` devuelve `'fuera_de_ventana'`), Agenda (clases a +7 días: "se abre el …"; botón de espera = "Avísame si se libera un lugar"), Admin → Pase de lista (quién liberó por clase + "Quién cancela tarde" 7/30/90 días), texto del recordatorio de 5 h.
+- ⚠️ **Mientras no se suba el front:** la regla de 7 días YA aplica a todas; las apps viejas muestran "No se pudo reservar" genérico. Subir la web pronto y luego iOS/Android.
+
 ## 🔵 Revisión 2026-09-27 (desde la sesión del POS)
 - ✅ **iOS 1.9.8 VIVA** en App Store desde el 24-sep (lookup de iTunes) → **`app_config.latest_ios_version` = '1.9.8'** (actualizado 27-sep 21:05 CDMX; estaba en 1.9.7).
 - ✅ **push-deliver con secreto funciona en producción:** `notification_logs` del 22 al 27-sep con `sent` diario, respaldo `email` desde el 24, **0 `undelivered` desde el 25**; `net._http_response` 6/6 en 200 en 4 días.

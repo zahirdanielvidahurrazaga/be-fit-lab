@@ -68,6 +68,10 @@ export const AuthProvider = ({ children }) => {
   // Arranca con los defaults para que el sitio nunca quede vacío antes de la BD.
   const [plans, setPlansState] = useState(() => DEFAULT_PLANS.filter(p => p.active !== false));
   const [allPlans, setAllPlans] = useState(DEFAULT_PLANS);
+  // Con cuántos días de anticipación se puede reservar (app_config). La BD
+  // es la que manda (trigger guard_reservation_window); aquí solo sirve para
+  // avisar antes de tocar "Reservar". null = sin límite.
+  const [bookingWindowDays, setBookingWindowDays] = useState(7);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [monthlyGoal, setMonthlyGoal] = useState(0); // meta de clases/mes (users.target_monthly_classes)
 
@@ -438,6 +442,7 @@ export const AuthProvider = ({ children }) => {
     fetchBadgeConfigs();
     fetchCoaches();
     fetchPlans();
+    fetchBookingWindow();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -483,6 +488,19 @@ export const AuthProvider = ({ children }) => {
       setCoaches(data || []);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Si la columna no existe o falla la red se queda en 7: la BD rechaza igual.
+  const fetchBookingWindow = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('app_config').select('booking_window_days').eq('id', 1).single();
+      if (error) throw error;
+      const dias = Number(data?.booking_window_days);
+      setBookingWindowDays(Number.isFinite(dias) && dias > 0 ? dias : null);
+    } catch (err) {
+      console.warn('No se pudo leer la ventana de reserva (se usa 7):', err?.message || err);
     }
   };
 
@@ -1345,6 +1363,8 @@ export const AuthProvider = ({ children }) => {
       // Rollback
       fetchGlobalClasses(alcanceRef.current);
       fetchUserData(user);
+      // La clase todavía no abre (máximo N días antes): la Agenda lo explica.
+      if (String(err?.message || '').includes('FUERA_DE_VENTANA')) return 'fuera_de_ventana';
       return false;
     }
   };
@@ -1447,6 +1467,63 @@ export const AuthProvider = ({ children }) => {
       });
     }
     return r;
+  };
+
+  // "Liberar mi lugar": faltan menos de 5 h, ya no se devuelve la clase, pero
+  // el lugar queda libre y le llega a la siguiente de la lista de espera. La BD
+  // (liberar_lugar) decide todo; con más de 5 h responde USA_CANCELAR para que
+  // nunca se pierda una clase que sí se podía devolver.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  // `reservaVista` = la reserva que tenía abierta en pantalla (no la de la
+  // lista actual): si mientras el modal seguía abierto se liberó y se volvió a
+  // reservar desde otro aparato, se manda el id viejo y la BD no toca la nueva.
+  const releaseSpot = async (classId, reservaVista = null) => {
+    if (!user) return { success: false, reason: 'no_user' };
+    const reservation = reservaVista || myReservations.find(r => r.classId === classId);
+    if (reservation?.calendarEventId) removeClassFromCalendar(reservation.calendarEventId);
+    try {
+      // Optimista: la reserva se va y el lugar aparece libre. El saldo NO cambia.
+      setMyReservations(prev => prev.filter(res => res.classId !== classId));
+      setGlobalClasses(prev => prev.map(c => c.id === classId ? { ...c, spots: (c.spots ?? 0) + 1 } : c));
+
+      // Se manda el id de la reserva que ella vio: si la petición llega
+      // duplicada y tarde (ya volvió a reservar), la BD no toca la nueva.
+      // Recién reservada, la app guarda un id temporal → se pide el real.
+      let reservationId = reservation?.id;
+      if (!UUID_RE.test(String(reservationId || ''))) {
+        const { data: fila, error: errFila } = await supabase.from('reservations')
+          .select('id').eq('user_id', user.id).eq('class_id', classId).maybeSingle();
+        if (errFila) throw errFila;
+        reservationId = fila?.id;
+      }
+      // Sin id real no se libera: sin él la BD no puede comprobar que sea la misma.
+      if (!UUID_RE.test(String(reservationId || ''))) throw new Error('SIN_ID_RESERVA');
+      const { error } = await supabase.rpc('liberar_lugar', { p_class_id: classId, p_reservation_id: reservationId });
+      if (error) throw error;
+
+      cancelClassReminder(classId);
+      // La lista de espera pudo tomar el lugar: el cupo real lo dice el servidor.
+      fetchGlobalClasses(alcanceRef.current);
+      return { success: true };
+    } catch (err) {
+      console.error('Error liberando el lugar:', err);
+      fetchGlobalClasses(alcanceRef.current);
+      fetchUserData(user);
+      const msg = String(err?.message || '');
+      const reason = msg.includes('USA_CANCELAR') ? 'use_cancel'
+        : msg.includes('CLASE_YA_PASADA') ? 'past'
+        : msg.includes('YA_ASISTISTE') ? 'attended'
+        : msg.includes('CLASE_SIN_HORARIO') ? 'unknown_class'
+        : 'release_error';
+      registrarIntentoBloqueado({
+        // La tabla solo acepta reservar/cancelar: liberar es una cancelación.
+        userId: user.id, accion: 'cancelar',
+        motivo: esErrorDeRed(err) ? 'error_red' : `liberar_${reason}`,
+        classId, detalle: msg || null,
+        saldoApp: classesRemaining, venceApp: planExpiresAt,
+      });
+      return { success: false, reason, detail: msg };
+    }
   };
 
   // Cambiar la preferencia sin salirse de la fila: "apártamelo" ⇄ "pregúntame".
@@ -1916,7 +1993,7 @@ export const AuthProvider = ({ children }) => {
       favoriteRecipeIds, toggleRecipeFavorite,
       todayLog, todayConsumed, calorieGoal, planCalories, logFood, removeFoodLog, updateCalorieGoal,
       login, logout, forceCleanSession, fetchAllUsers, refreshUserData,
-      bookClass, cancelClass, acceptOffer, declineOffer, setWaitlistAutoClaim, checkInClient, checkInReservation, updateClassSpots, updateReservationCalendarId,
+      bookClass, cancelClass, releaseSpot, bookingWindowDays, acceptOffer, declineOffer, setWaitlistAutoClaim, checkInClient, checkInReservation, updateClassSpots, updateReservationCalendarId,
       activatePlan, addClass, deleteClass, addRecipe, deleteRecipe,
       fetchClassReservations, fetchClassesByDayOfWeek, fetchGlobalClasses,
       assignCustomBadge, removeCustomBadge, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig,

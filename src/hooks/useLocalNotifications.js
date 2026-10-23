@@ -98,7 +98,7 @@ export async function scheduleCancelDeadlineReminder(reservation, dayOfWeek) {
       notifications: [{
         id: buildCancelDeadlineId(reservation.classId),
         title: '⏰ Última oportunidad para cancelar',
-        body: `Tu clase de ${reservation.title} empieza en 5 horas. Después ya no podrás cancelar.`,
+        body: `Tu clase de ${reservation.title} empieza en 5 horas. Si cancelas después, la clase ya no se devuelve (pero puedes liberar tu lugar).`,
         schedule: { at: deadlineTime, allowWhileIdle: true },
         sound: 'default',
         iconColor: '#FF8B42',

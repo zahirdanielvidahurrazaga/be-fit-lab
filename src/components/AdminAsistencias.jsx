@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Check, ClipboardCheck, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, ClipboardCheck, Clock, DoorOpen } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -56,6 +56,8 @@ export default function AdminAsistencias() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
   const [onlyAttended, setOnlyAttended] = useState(false);
+  // Quién liberó su lugar a menos de 5 h (tabla cancelaciones_tarde).
+  const [liberadas, setLiberadas] = useState({}); // class_id -> [{ id, name, cuando, pasoAEspera }]
 
   const dow = new Date(date + 'T12:00:00').getDay();
 
@@ -114,6 +116,23 @@ export default function AdminAsistencias() {
         setRosters(map);
         setLoading(false);
       });
+    supabase.from('cancelaciones_tarde')
+      .select('id, class_id, liberada_en, paso_a_espera, users:user_id(full_name, email)')
+      .in('class_id', ids)
+      .order('liberada_en', { ascending: true })
+      .then(({ data, error }) => {
+        if (!alive || error) return; // sin la tabla (o sin red) simplemente no se pinta
+        const map = {};
+        (data || []).forEach(r => {
+          (map[r.class_id] ||= []).push({
+            id: r.id,
+            name: r.users?.full_name || r.users?.email?.split('@')[0] || 'Sin nombre',
+            cuando: r.liberada_en,
+            pasoAEspera: !!r.paso_a_espera,
+          });
+        });
+        setLiberadas(map);
+      });
     return () => { alive = false; };
   }, [dayClasses]);
 
@@ -171,6 +190,7 @@ export default function AdminAsistencias() {
             const all = rosters[c.id] || [];
             const roster = all.filter(s => !s.waitlisted); // confirmadas (con lugar)
             const wl = all.filter(s => s.waitlisted);       // lista de espera
+            const lib = liberadas[c.id] || [];              // liberaron su lugar tarde
             const attended = roster.filter(s => s.checkedIn).length;
             const shown = onlyAttended ? roster.filter(s => s.checkedIn) : roster;
             const open = expanded === c.id;
@@ -187,6 +207,7 @@ export default function AdminAsistencias() {
                     <div style={{ fontSize: '0.85rem', fontWeight: 900, color: '#16A34A' }}>{attended} <span style={{ color: 'var(--on-surface-variant)', fontWeight: 600, fontSize: '0.72rem' }}>asist.</span></div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{roster.length} {roster.length === 1 ? 'reserva' : 'reservas'}</div>
                     {wl.length > 0 && <div style={{ fontSize: '0.7rem', color: '#9AA0A6', fontWeight: 700 }}>{wl.length} en espera</div>}
+                    {lib.length > 0 && <div style={{ fontSize: '0.7rem', color: '#C2410C', fontWeight: 700 }}>{lib.length} liberó tarde</div>}
                   </div>
                   <ChevronRight size={18} color="var(--on-surface-variant)" style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
                 </div>
@@ -207,6 +228,22 @@ export default function AdminAsistencias() {
                         )}
                       </div>
                     ))}
+                    {lib.length > 0 && !onlyAttended && (
+                      <div style={{ marginTop: '6px', paddingTop: '10px', borderTop: '1px dashed rgba(0,0,0,0.08)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 800, color: '#C2410C', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 6px 6px' }}>
+                          <DoorOpen size={12} /> Liberaron su lugar (menos de 5 h)
+                        </div>
+                        {lib.map(s => (
+                          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 6px' }}>
+                            <span style={{ flex: 1, minWidth: 0, fontSize: '0.86rem', fontWeight: 600, color: 'var(--on-surface-variant)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', flexShrink: 0 }}>
+                              {new Date(s.cuando).toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' })}
+                              {s.pasoAEspera ? ' · lo tomó la espera' : ''}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {wl.length > 0 && !onlyAttended && (
                       <div style={{ marginTop: '6px', paddingTop: '10px', borderTop: '1px dashed rgba(0,0,0,0.08)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 800, color: '#9AA0A6', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 6px 6px' }}>
@@ -227,6 +264,84 @@ export default function AdminAsistencias() {
           })}
         </div>
       )}
+
+      <CancelacionesTarde />
     </motion.div>
+  );
+}
+
+// Quién libera su lugar tarde más seguido (pedido de Brenda, 23-oct). Liberar
+// no devuelve la clase, así que esto no es dinero: es para detectar a quien
+// lo hace seguido y platicarlo con ella.
+function CancelacionesTarde() {
+  const [dias, setDias] = useState(30);
+  const [filas, setFilas] = useState(null); // null = cargando · [] = nadie
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    setFilas(null);
+    setError(false);
+    const desde = new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString();
+    supabase.from('cancelaciones_tarde')
+      .select('user_id, liberada_en, clase, users:user_id(full_name, email)')
+      .gte('liberada_en', desde)
+      .order('liberada_en', { ascending: false })
+      .limit(1000)
+      .then(({ data, error: err }) => {
+        if (!vivo) return;
+        if (err) { setError(true); setFilas([]); return; }
+        const porClienta = new Map();
+        (data || []).forEach(r => {
+          const f = porClienta.get(r.user_id) || {
+            id: r.user_id,
+            name: r.users?.full_name || r.users?.email?.split('@')[0] || 'Sin nombre',
+            veces: 0, ultima: r.liberada_en, ultimaClase: r.clase,
+          };
+          f.veces += 1;
+          porClienta.set(r.user_id, f);
+        });
+        setFilas([...porClienta.values()].sort((a, b) => b.veces - a.veces || new Date(b.ultima) - new Date(a.ultima)));
+      });
+    return () => { vivo = false; };
+  }, [dias]);
+
+  return (
+    <div style={{ marginTop: '28px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+        <DoorOpen size={20} color={PRIMARY} />
+        <h3 style={{ margin: 0, fontSize: '1.1rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: INK, flex: 1 }}>Quién cancela tarde</h3>
+        <select value={dias} onChange={(e) => setDias(Number(e.target.value))}
+          style={{ border: '1px solid rgba(0,0,0,0.1)', borderRadius: '10px', padding: '6px 8px', fontSize: '0.8rem', fontWeight: 700, background: 'white', color: INK }}>
+          <option value={7}>Últimos 7 días</option>
+          <option value={30}>Últimos 30 días</option>
+          <option value={90}>Últimos 90 días</option>
+        </select>
+      </div>
+      <p style={{ margin: '0 0 12px', fontSize: '0.78rem', color: 'var(--on-surface-variant)', lineHeight: 1.45 }}>
+        Clientas que liberaron su lugar con menos de 5 horas. La clase no se les devuelve; el lugar pasa a la lista de espera.
+      </p>
+      <div style={{ background: 'white', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '16px', overflow: 'hidden' }}>
+        {filas === null ? (
+          <div style={{ padding: '18px', textAlign: 'center', fontSize: '0.82rem', color: 'var(--on-surface-variant)' }}>Cargando…</div>
+        ) : error ? (
+          <div style={{ padding: '18px', textAlign: 'center', fontSize: '0.82rem', color: 'var(--on-surface-variant)' }}>No se pudo cargar la lista.</div>
+        ) : filas.length === 0 ? (
+          <div style={{ padding: '18px', textAlign: 'center', fontSize: '0.82rem', color: 'var(--on-surface-variant)' }}>Nadie ha cancelado tarde en este periodo.</div>
+        ) : filas.map((f, i) => (
+          <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '11px 14px', borderTop: i ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                Última: {f.ultimaClase || 'clase'} · {new Date(f.ultima).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+              </div>
+            </div>
+            <span style={{ fontSize: '0.78rem', fontWeight: 900, color: f.veces >= 3 ? '#C2410C' : INK, background: f.veces >= 3 ? 'rgba(234,88,12,0.1)' : 'rgba(0,0,0,0.05)', padding: '5px 10px', borderRadius: '999px', flexShrink: 0 }}>
+              {f.veces} {f.veces === 1 ? 'vez' : 'veces'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
