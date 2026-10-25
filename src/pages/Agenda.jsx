@@ -11,6 +11,8 @@ import { addClassToCalendar } from '../hooks/useCalendar';
 import { classDateTime } from '../hooks/useLocalNotifications';
 import { supabase } from '../lib/supabase';
 import { ScheduleCalendar } from '../components/ScheduleCalendar';
+import { useTemporada } from '../lib/temporada';
+import { FiestaTemporada } from '../components/Temporada';
 import ProfileMenu from '../components/ProfileMenu';
 import { hasNutritionAccess } from '../lib/plans';
 import { NextClassTicket } from '../components/NextClassTicket';
@@ -30,6 +32,7 @@ function Agenda() {
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const temporada = useTemporada();
   const [waitlisted, setWaitlisted] = useState(false); // la reserva quedó en lista de espera
   // Decisión que se toma AL FORMARSE (no cuando se libera el lugar, que es
   // cuando el aviso puede no llegar). true = entro solita y se me cobra.
@@ -295,6 +298,7 @@ function Agenda() {
                 <div className="sheet-handle" style={{ margin: '0 auto' }} />
               </div>
 
+              {isSuccess && !waitlisted && <FiestaTemporada temporada={temporada} />}
               {isSuccess ? (
                 <div style={{ textAlign: 'center', paddingTop: '10px' }}>
                   <motion.div

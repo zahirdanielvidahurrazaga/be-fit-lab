@@ -42,6 +42,7 @@ import NotificationSheet from './components/NotificationSheet';
 import BadgeUnlockOverlay from './components/BadgeUnlockOverlay';
 import UpdateGate from './components/UpdateGate';
 import WaitlistOfferGate from './components/WaitlistOfferGate';
+import { useTemporada } from './lib/temporada';
 import { moduloActivo } from './config/estudio';
 import './index.css';
 
@@ -162,6 +163,26 @@ const ProtectedRoute = ({ children, requireRole, requireNutrition }) => {
   return children;
 };
 
+// En web /welcome no existe; con ?intro=1 (o befit_intro=1) se deja abrir para
+// revisar la animación de temporada sin compilar la app.
+function verIntroEnWeb() {
+  try {
+    return new URLSearchParams(window.location.search).get('intro') === '1' || localStorage.getItem('befit_intro') === '1';
+  } catch { return false; }
+}
+
+// Marca la temporada en <html data-temporada> para que el CSS adorne lo que se
+// repite en todas las pantallas (el botón del QR de la barra de abajo).
+function MarcaTemporada() {
+  const temporada = useTemporada();
+  React.useEffect(() => {
+    const raiz = document.documentElement;
+    if (temporada) raiz.setAttribute('data-temporada', temporada);
+    else raiz.removeAttribute('data-temporada');
+  }, [temporada]);
+  return null;
+}
+
 function App() {
   const isNative = Capacitor.isNativePlatform();
   useLocalNotifications();
@@ -210,7 +231,8 @@ function App() {
           {/* Welcome (onboarding) es SOLO nativo. En web redirige al Landing —
               así ninguna navegación a /welcome (logout, Planes, enlaces viejos)
               muestra la pantalla nativa en el navegador. */}
-          <Route path="/welcome" element={isNative ? <Welcome /> : <Navigate to="/" replace />} />
+          {/* …salvo para revisar la animación de temporada en el navegador (/welcome?intro=1). */}
+          <Route path="/welcome" element={isNative || verIntroEnWeb() ? <Welcome /> : <Navigate to="/" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<Register />} />
           <Route path="/nueva-contrasena" element={<NuevaContrasena />} />
@@ -253,6 +275,7 @@ function App() {
         <GlobalBadgeOverlay />
         <UpdateGate />
         <WaitlistOfferGate />
+        <MarcaTemporada />
       </Router>
     </AuthProvider>
   );

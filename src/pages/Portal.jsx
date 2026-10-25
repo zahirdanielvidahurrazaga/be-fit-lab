@@ -15,6 +15,10 @@ import MisClasesMovimientos from '../components/MisClasesMovimientos';
 import { hasNutritionAccess } from '../lib/plans';
 import { ESTUDIO, moduloActivo } from '../config/estudio';
 import { crearIrA } from '../demo/navegacionDemo';
+import { isPlanExpired, daysUntilExpiry } from '../lib/membership';
+import { useTemporada } from '../lib/temporada';
+import { mexicoTodayStr } from '../lib/dates';
+import { DecorTemporada, IconoTemporada } from '../components/Temporada';
 
 // Por qué no se pudo cancelar. Quien decide es la BD (cancel_class_secure);
 // aquí solo se traduce el motivo para la clienta.
@@ -33,7 +37,8 @@ const CINCO_HORAS = 5 * 60 * 60 * 1000;
 function Portal() {
   const isNative = Capacitor.isNativePlatform();
   const navigate = useNavigate();
-  const { user, plan, logout, classesRemaining, myReservations, waitlistPositions, cancelClass, releaseSpot, acceptOffer, profileName, globalClasses, avatarUrl, setShowTour, coaches, badgeConfigs, classesLoaded, demoHistorial, esDemo } = useAuth();
+  const { user, plan, logout, classesRemaining, myReservations, waitlistPositions, cancelClass, releaseSpot, acceptOffer, profileName, globalClasses, avatarUrl, setShowTour, coaches, badgeConfigs, classesLoaded, demoHistorial, esDemo, planExpiresAt, membershipRenewal } = useAuth();
+  const temporada = useTemporada();
   // Dentro de la maqueta, navegar a una ruta real sacaría a la prospecta.
   const irA = crearIrA(navigate, esDemo);
   
@@ -308,6 +313,24 @@ function Portal() {
     };
   })();
   const greeting = new Date().getHours() < 12 ? 'Buenos días' : new Date().getHours() < 18 ? 'Buenas tardes' : 'Buenas noches';
+  const saludo = temporada === 'halloween' && mexicoTodayStr().endsWith('-10-31') ? '¡Feliz Halloween!'
+    : temporada === 'muertos' ? 'Día de Muertos' : greeting;
+
+  // Estado de la membresía en una sola línea, sin contradicciones: antes decía
+  // "Suscripción Activa" aunque tuviera 0 clases o ya hubiera vencido.
+  const ilimitada = classesRemaining >= 9000;
+  const venceCorto = planExpiresAt ? new Date(planExpiresAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : null;
+  const diasParaVencer = daysUntilExpiry(planExpiresAt);
+  const estadoMembresia = (() => {
+    if (!plan) return { color: '#F87171', texto: 'Sin membresía', accion: 'Ver planes' };
+    if (isPlanExpired(planExpiresAt)) return { color: '#F87171', texto: `Venció el ${venceCorto}`, accion: 'Renovar' };
+    if (!ilimitada && classesRemaining <= 0) return { color: '#FBBF24', texto: 'Sin clases disponibles', accion: 'Comprar clases' };
+    if (membershipRenewal === 'paused') return { color: '#FBBF24', texto: venceCorto ? `En pausa · vence ${venceCorto}` : 'En pausa' };
+    if (membershipRenewal === 'canceling') return { color: '#FBBF24', texto: venceCorto ? `Termina el ${venceCorto}` : 'Termina este mes' };
+    if (diasParaVencer != null && diasParaVencer <= 7) return { color: '#FBBF24', texto: `Vence en ${diasParaVencer} día${diasParaVencer === 1 ? '' : 's'}`, accion: 'Renovar' };
+    return { color: '#4ADE80', texto: venceCorto ? `Activa · vence ${venceCorto}` : 'Activa' };
+  })();
+  const semanaVacia = weekStats.weekCount === 0 && weekStats.reservedCount === 0;
 
   return (
     <div className="mobile-app-container" style={{ background: 'var(--app-bg)' }}>
@@ -315,7 +338,7 @@ function Portal() {
       <header className="ios-header" style={{ paddingBottom: '5px', background: 'transparent' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
           <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
-            <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>{greeting}</p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>{saludo}<IconoTemporada temporada={temporada} size={15} /></p>
             <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>{userName}</h1>
           </motion.div>
           <ProfileMenu />
@@ -389,6 +412,7 @@ function Portal() {
               display: 'flex', alignItems: 'center'
             }}
           >
+            <DecorTemporada temporada={temporada} />
             {/* Brillo suave superior tipo Glass */}
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%)', pointerEvents: 'none' }}></div>
             
@@ -400,8 +424,8 @@ function Portal() {
                 {plan ? plan.replace('Plan ', '') : 'Sin Plan'}
               </h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '20px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: plan ? '#4ADE80' : '#F87171', boxShadow: '0 0 10px rgba(0,0,0,0.15)' }}></div>
-                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.95)', fontWeight: 700 }}>{plan ? 'Suscripción Activa' : 'Inactiva'}</span>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: estadoMembresia.color, boxShadow: `0 0 10px ${estadoMembresia.color}` }}></div>
+                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.95)', fontWeight: 700 }}>{estadoMembresia.texto}</span>
               </div>
               
               {/* Pill oscura estilo Premium Glass */}
@@ -414,12 +438,23 @@ function Portal() {
                     {classesRemaining >= 9000 ? 'Ilimitadas' : 'Clases'}
                   </div>
                 </div>
-                <button 
-                  onClick={() => irA('/planes')}
-                  style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', transition: 'background 0.2s' }}
-                >
-                  <ChevronRight size={16} />
-                </button>
+                {estadoMembresia.accion ? (
+                  // Cuando hay algo que hacer, el botón lo dice en vez de ser una flecha muda.
+                  <button
+                    onClick={() => irA('/planes')}
+                    style={{ height: '32px', padding: '0 14px', borderRadius: '999px', background: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: '4px', color: '#2D2928', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    {estadoMembresia.accion} <ChevronRight size={14} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => irA('/planes')}
+                    aria-label="Ver mi membresía"
+                    style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', transition: 'background 0.2s' }}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                )}
               </div>
 
               {/* La pregunta que más llega a recepción. Que se la conteste la app. */}
@@ -571,7 +606,15 @@ function Portal() {
             </div>
 
             {/* Gráfica de barras: clases por día de la semana */}
-            <motion.div onClick={() => irA('/evolucion')} whileTap={{ scale: 0.99 }} style={{ background: 'var(--app-surface-solid)', borderRadius: '22px', padding: '18px 16px 14px', boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)', cursor: 'pointer', marginBottom: '12px' }}>
+            <motion.div onClick={() => irA('/evolucion')} whileTap={{ scale: 0.99 }} style={{ position: 'relative', background: 'var(--app-surface-solid)', borderRadius: '22px', padding: '18px 16px 14px', boxShadow: 'var(--card-shadow, 0 10px 30px rgba(0,0,0,0.05))', border: '1px solid var(--border-subtle, rgba(55,61,59,0.1))', cursor: 'pointer', marginBottom: '12px', overflow: 'hidden' }}>
+              {/* Sin clases esta semana: en vez de una caja de barras vacías, una frase.
+                  (El botón para reservar ya está justo arriba, en "Próximas clases".) */}
+              {semanaVacia && (
+                <div style={{ position: 'absolute', inset: 0, zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', textAlign: 'center', padding: '0 28px', background: 'var(--app-surface-solid)' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>Tu semana está libre</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', fontWeight: 600, lineHeight: 1.4 }}>Cuando reserves, aquí verás tus clases día por día.</div>
+                </div>
+              )}
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '7px' }}>
                 {weekStats.perDayTotal.map((tot, i) => {
                   const isToday = i === weekStats.todayIdx;

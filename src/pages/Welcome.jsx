@@ -4,11 +4,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ESTUDIO } from '../config/estudio';
+import { useTemporada, tomarIntroTemporada, DURACION_INTRO_MS } from '../lib/temporada';
+import IntroTemporada from '../components/IntroTemporada';
 
 function Welcome() {
   const navigate = useNavigate();
   const { user, membershipStatus, profileName } = useAuth();
   const [phase, setPhase] = useState('splash'); // 'splash' -> 'welcome' | 'ready' | 'exiting'
+  // En temporada (una vez al día, solo nativo) el splash se vuelve la animación
+  // de Halloween / Día de Muertos, con casi la misma duración.
+  const temporada = useTemporada();
+  const [conIntro] = useState(() => tomarIntroTemporada(temporada));
 
   // ¿Venimos de confirmar el correo (deep link)? La bandera la pone el handler
   // del deep link antes de mandarnos aquí. La leemos UNA vez y la limpiamos.
@@ -53,9 +59,9 @@ function Welcome() {
       } else {
         setPhase('welcome');
       }
-    }, 2500);
+    }, conIntro ? DURACION_INTRO_MS : 2500);
     return () => clearTimeout(timer);
-  }, [user, justConfirmed, navigate]);
+  }, [user, justConfirmed, navigate, conIntro]);
 
   // Respaldo: si el plan se activa mientras está en la pantalla "lista" (red
   // lenta / plan comprado antes de registrarse), entra sola para conservar la
@@ -115,12 +121,13 @@ function Welcome() {
             style={{
               position: 'absolute', inset: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(255, 255, 255, 0.75)',
-              backdropFilter: 'blur(30px) saturate(150%)',
-              WebkitBackdropFilter: 'blur(30px) saturate(150%)',
+              background: conIntro ? 'transparent' : 'rgba(255, 255, 255, 0.75)',
+              backdropFilter: conIntro ? 'none' : 'blur(30px) saturate(150%)',
+              WebkitBackdropFilter: conIntro ? 'none' : 'blur(30px) saturate(150%)',
               zIndex: 10
             }}
           >
+            {conIntro ? <IntroTemporada temporada={temporada} /> : (
             <motion.div
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -143,6 +150,7 @@ function Welcome() {
                 }}
               />
             </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

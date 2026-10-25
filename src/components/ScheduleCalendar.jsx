@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { resolveCatColor, categoryLabel } from '../lib/categories';
 import { classDateTime, parseTimeStr } from '../hooks/useLocalNotifications';
 import { toLocalDateStr } from '../lib/dates';
+import { useTemporada, enTemporada } from '../lib/temporada';
+import { DecorTemporada, Calabaza, Cempasuchil } from './Temporada';
 
 // ── Helpers de color: derivan el humo/pill/tarjeta del color elegido para la clase especial ──
 const _hexRgb = (hex) => {
@@ -29,7 +31,8 @@ function CategoryLegendBar({ globalClasses }) {
       <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '10px 18px', padding: '14px 20px', borderRadius: '20px', background: 'var(--glass-bg, rgba(255,255,255,0.55))', border: '1px solid var(--glass-border, rgba(255,255,255,0.7))', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', boxShadow: '0 8px 28px rgba(0,0,0,0.06)' }}>
         {cats.map(cat => (
           <div key={cat.name} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-            <span style={{ width: '18px', height: '18px', borderRadius: '6px', background: cat.color, border: '1px solid rgba(0,0,0,0.12)' }} />
+            {/* Los colores de categoría son pasteles casi blancos: el aro del mismo tono, más oscuro, es lo que los distingue. */}
+            <span style={{ width: '18px', height: '18px', borderRadius: '6px', background: cat.color, boxShadow: `inset 0 0 0 2px ${_darken(cat.color, 0.32)}` }} />
             <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--on-surface)' }}>{categoryLabel(cat.name)}</span>
           </div>
         ))}
@@ -47,6 +50,14 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
   const currentYear = currentMonthDate.getFullYear();
   const [calendarView, setCalendarView] = useState('month'); // 'month' | 'day'
   const [selectedDateStr, setSelectedDateStr] = useState(todayStr);
+  const temporada = useTemporada();
+  // Icono del día festivo dentro de la temporada: calabaza el 31, flor el 1 y 2.
+  const iconoDia = (dateStr) => {
+    if (!temporada) return null;
+    if (dateStr.endsWith('-10-31')) return <Calabaza size={13} />;
+    if (enTemporada(dateStr, 'muertos')) return <Cempasuchil size={13} />;
+    return null;
+  };
 
   const nextMonth = () => setCurrentMonthDate(new Date(currentYear, currentMonth + 1, 1));
   const prevMonth = () => setCurrentMonthDate(new Date(currentYear, currentMonth - 1, 1));
@@ -130,6 +141,8 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
                 const classesOnDay = getClassesForDate(dateStr);
                 const hasClasses = classesOnDay.length > 0;
                 const hasSpecial = classesOnDay.some(c => c.is_special);
+                const isPastDay = dateStr < todayStr;
+                const icono = iconoDia(dateStr);
 
                 return (
                   <motion.button
@@ -143,12 +156,15 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
                     style={{
                       aspectRatio: '1', borderRadius: '12px', border: 'none', cursor: 'pointer',
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative',
-                      background: isToday ? 'var(--primary)' : (hasSpecial ? 'linear-gradient(135deg, rgba(255,145,77,0.16), rgba(224,122,156,0.16))' : (hasClasses ? 'rgba(0,0,0,0.03)' : 'transparent')),
-                      boxShadow: hasSpecial && !isToday ? 'inset 0 0 0 1.5px rgba(224,122,156,0.55)' : 'none',
+                      // Los días que ya pasaron se apagan: antes se veían igual que los que vienen.
+                      background: isToday ? 'var(--primary)' : isPastDay ? 'transparent' : (hasSpecial ? 'linear-gradient(135deg, rgba(255,145,77,0.16), rgba(224,122,156,0.16))' : (hasClasses ? 'rgba(0,0,0,0.04)' : 'transparent')),
+                      boxShadow: hasSpecial && !isToday && !isPastDay ? 'inset 0 0 0 1.5px rgba(224,122,156,0.55)' : 'none',
                       color: isToday ? 'white' : 'var(--black)',
-                      fontWeight: isToday ? 800 : (hasClasses ? 700 : 500)
+                      opacity: isPastDay ? 0.32 : 1,
+                      fontWeight: isToday ? 800 : (hasClasses && !isPastDay ? 700 : 500)
                     }}
                   >
+                    {icono && <span style={{ position: 'absolute', top: '3px', right: '3px', lineHeight: 0 }}>{icono}</span>}
                     <span style={{ fontSize: '1rem' }}>{dayNum}</span>
                     {hasClasses && (
                       <div style={{ display: 'flex', gap: '2px', position: 'absolute', bottom: '6px' }}>
@@ -245,6 +261,8 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
 
 export function ClassItem({ classData, full, isPast, isReserved, isWaitlisted, onReserve, coaches, badgeConfigs }) {
   const { time, title, instructor, spots, category, category_color, coach_id, is_special, special_label, special_color } = classData;
+  const temporada = useTemporada();
+  const temporadaClase = is_special && temporada && classData.date && enTemporada(classData.date, temporada) ? temporada : null;
 
   const bgColor = resolveCatColor(category, category_color);
   const specialText = (special_label && special_label.trim()) || 'Especial';
@@ -291,6 +309,7 @@ export function ClassItem({ classData, full, isPast, isReserved, isWaitlisted, o
             <div className="special-smoke special-smoke-c" style={smokeBg ? { background: smokeBg(0.50) } : undefined} />
           </div>
         )}
+        {temporadaClase && <DecorTemporada temporada={temporadaClase} cuantos={2} oscuro={false} />}
         <div style={{ position: 'relative', zIndex: 1, width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', background: '#FCF9F5', flexShrink: 0, border: '2px solid white', boxShadow: '0 5px 15px rgba(0,0,0,0.08)' }}>
            {(() => {
              // Foto SOLO de la coach real de esta clase (coach_id → nombre → email).

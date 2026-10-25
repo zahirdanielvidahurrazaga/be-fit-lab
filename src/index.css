@@ -36,6 +36,10 @@
   --divider: rgba(0, 0, 0, 0.07);
   --fill-subtle: rgba(0, 0, 0, 0.03);
   --header-bg: rgba(252, 249, 245, 0.95);
+  /* Barra de abajo en claro: vidrio líquido con un velo blanco suave. Sin
+     ningún velo (como estaba) sobre una foto no se leían Metas/Comida/Clases. */
+  --nav-bg: rgba(255, 255, 255, 0.56);
+  --nav-border: rgba(255, 255, 255, 0.75);
 
   --shape-xl: 40px;
   --shape-lg: 32px;
@@ -1780,3 +1784,64 @@ h1, h2, h3, h4, h5 {
 @media (max-width: 900px) {
   .ficha-panel .ficha-volver { display: flex !important; }
 }
+
+
+/* ===== TEMPORADAS (Halloween / Día de Muertos) — ver src/lib/temporada.js ===== */
+.tm-capa { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+.tm-petalo { position: absolute; top: -8%; animation: tmCae 8s linear infinite; }
+@keyframes tmCae {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+  10%  { opacity: 0.95; }
+  50%  { transform: translate(18px, 120px) rotate(160deg); }
+  100% { transform: translate(-10px, 260px) rotate(340deg); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tm-petalo { animation: none; }
+  .tm-petalo { top: 30%; }
+}
+
+/* Botón del QR: en Halloween se vuelve calabaza (gajos + rabito);
+   en Muertos lleva una flor de cempasúchil prendida. */
+html[data-temporada='halloween'] .nav-qr-button {
+  position: relative;
+  background:
+    radial-gradient(ellipse 30% 52% at 22% 55%, rgba(170, 70, 10, 0.28), transparent 70%),
+    radial-gradient(ellipse 30% 52% at 78% 55%, rgba(170, 70, 10, 0.28), transparent 70%),
+    linear-gradient(160deg, #FFA45E, #F07A2E 60%, #D9621B);
+}
+html[data-temporada='halloween'] .nav-qr-button::before {
+  content: '';
+  position: absolute;
+  top: -7px; left: 50%;
+  width: 7px; height: 11px;
+  border-radius: 3px 3px 2px 2px;
+  background: linear-gradient(180deg, #7C8F45, #5B6B2E);
+  transform: translateX(-50%) rotate(12deg);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85);
+}
+html[data-temporada='muertos'] .nav-qr-button { position: relative; }
+html[data-temporada='muertos'] .nav-qr-button::after {
+  content: '';
+  position: absolute;
+  top: -5px; right: -5px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, #E07B00 0 22%, transparent 24%),
+    repeating-conic-gradient(#FFB000 0 18deg, #FF8C00 18deg 36deg);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 3px 8px rgba(224, 123, 0, 0.45);
+}
+
+/* Vidrio líquido de la barra en tema claro: el velo blanco + brillo hacen que
+   el fondo (aunque sea una foto oscura) se aclare detrás de las letras, y el
+   filo de luz arriba le da el borde de vidrio. */
+:root:not([data-theme='dark']) .ios-bottom-nav {
+  backdrop-filter: blur(26px) saturate(190%) brightness(1.08);
+  -webkit-backdrop-filter: blur(26px) saturate(190%) brightness(1.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.25),
+    0 18px 44px rgba(60, 40, 25, 0.16);
+}
+:root:not([data-theme='dark']) .ios-bottom-nav .nav-item { color: #43382F; opacity: 0.78; }
+:root:not([data-theme='dark']) .ios-bottom-nav .nav-item.active { color: #E8661A; opacity: 1; } /* un tono más profundo que --primary: sobre fotos cálidas el durazno se perdía */
