@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { motion, LayoutGroup } from 'framer-motion';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion, LayoutGroup, useMotionValue, useTransform, animate } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { mapaRefraccion } from '../lib/lente';
 
@@ -96,10 +96,10 @@ export default function BarraGlass({ items = [], centro = null, grupo = 'barra',
       let mapaLupaUrl = null;
       if (burbuja && burbuja.w > 10) {
         // Mapa a la densidad de la pantalla (Retina = x2/x3): a 1x el lente pixelaba los íconos.
-        const d = Math.min(3, Math.max(1, Math.round(window.devicePixelRatio || 1)));
+        const d = refraccion ? Math.min(3, Math.max(1, Math.round(window.devicePixelRatio || 1))) : 1;
         try { mapaLupaUrl = mapaLupa(Math.round(burbuja.w * d), Math.round(burbuja.h * d)); } catch { mapaLupaUrl = null; }
       }
-      setPos({ items: nuevos, burbuja, w: nav.offsetWidth, h: nav.offsetHeight, mapaLupa: mapaLupaUrl, d: Math.min(3, Math.max(1, Math.round(window.devicePixelRatio || 1))) });
+      setPos({ items: nuevos, burbuja, w: nav.offsetWidth, h: nav.offsetHeight, mapaLupa: refraccion ? mapaLupaUrl : null, d: refraccion ? Math.min(3, Math.max(1, Math.round(window.devicePixelRatio || 1))) : 1 });
     };
     medir();
     const ro = new ResizeObserver(medir);
@@ -118,6 +118,65 @@ export default function BarraGlass({ items = [], centro = null, grupo = 'barra',
     return () => clearTimeout(t);
   }, [activoId]);
   const lupaId = `lg-lupa-${grupo}`;
+
+  // Posición de la burbuja como "motion values": se mueve sin re-render (más fluido en
+  // iPhone) y puede seguir al dedo. La copia de íconos va exactamente al revés.
+  const bx = useMotionValue(0), by = useMotionValue(0);
+  const dRef = useRef(1);
+  dRef.current = pos.d || 1; // eslint-disable-line react-hooks/refs
+  const copiaX = useTransform(bx, v => -v * dRef.current);
+  const copiaY = useTransform(by, v => -v * dRef.current);
+  const arrastre = useRef(null);       // { x0, bx0, movio } mientras hay dedo encima
+  const yaColocada = useRef(false);
+  const suprimirClick = useRef(false);
+  useEffect(() => {
+    const b = pos.burbuja;
+    if (!b || arrastre.current?.movio) return;
+    if (!yaColocada.current) { bx.set(b.x); by.set(b.y); yaColocada.current = true; return; }
+    const a1 = animate(bx, b.x, resorte), a2 = animate(by, b.y, resorte);
+    return () => { a1.stop(); a2.stop(); };
+  }, [pos.burbuja?.x, pos.burbuja?.y]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Arrastrar con el dedo (como la barra de Apple): la burbuja sigue al dedo y al
+  // soltar se acomoda en la pestaña más cercana y la abre. Un toque normal sigue
+  // funcionando igual (solo cuenta como arrastre después de 8 px).
+  const navigate = useNavigate();
+  const centrosItems = () => items.map(it => ({ it, r: pos.items[it.id] })).filter(o => o.r);
+  const alBajar = (e) => {
+    if (!pos.burbuja || e.target.closest?.('.lg-qr')) return;
+    arrastre.current = { x0: e.clientX, bx0: bx.get(), movio: false, id: e.pointerId };
+  };
+  const alMover = (e) => {
+    const a = arrastre.current;
+    if (!a || a.id !== e.pointerId) return;
+    const dx = e.clientX - a.x0;
+    if (!a.movio) {
+      if (Math.abs(dx) < 8) return;
+      a.movio = true;
+      try { barraRef.current?.setPointerCapture(e.pointerId); } catch { /* sin captura */ }
+      setMoviendo(true);
+    }
+    const xs = centrosItems().map(o => o.r.x + 6);
+    bx.set(Math.min(Math.max(a.bx0 + dx, Math.min(...xs)), Math.max(...xs)));
+  };
+  const alSoltar = (e) => {
+    const a = arrastre.current;
+    arrastre.current = null;
+    if (!a || !a.movio) return;
+    suprimirClick.current = true;
+    setTimeout(() => { suprimirClick.current = false; }, 0);
+    const centro = bx.get() + (pos.burbuja?.w || 0) / 2;
+    let mejor = null;
+    centrosItems().forEach(o => {
+      const dist = Math.abs(o.r.x + o.r.w / 2 - centro);
+      if (!mejor || dist < mejor.dist) mejor = { ...o, dist };
+    });
+    if (!mejor) return;
+    animate(bx, mejor.r.x + 6, resorte);
+    setTimeout(() => setMoviendo(false), 450);
+    if (e.type === 'pointercancel' || mejor.it.activo) return;
+    if (mejor.it.to) navigate(mejor.it.to); else mejor.it.onClick?.();
+  };
 
   const iconoDe = (it, activo) => (
     <span className="lg-icono">
@@ -142,7 +201,7 @@ export default function BarraGlass({ items = [], centro = null, grupo = 'barra',
         {iconoDe(it, it.activo)}
       </>
     );
-    const props = { ref: (el) => { itemRefs.current[it.id] = el; }, className: `lg-item${it.activo ? ' activo' : ''}`, 'aria-label': it.label, 'aria-current': it.activo ? 'page' : undefined };
+    const props = { draggable: false, ref: (el) => { itemRefs.current[it.id] = el; }, className: `lg-item${it.activo ? ' activo' : ''}`, 'aria-label': it.label, 'aria-current': it.activo ? 'page' : undefined };
     return it.to
       ? <Link key={it.id} to={it.to} {...props}>{contenido}</Link>
       : <button key={it.id} type="button" onClick={it.onClick} {...props}>{contenido}</button>;
@@ -159,15 +218,17 @@ export default function BarraGlass({ items = [], centro = null, grupo = 'barra',
         </svg>
       )}
       <nav ref={barraRef} aria-label="Navegación principal"
+        onPointerDown={alBajar} onPointerMove={alMover} onPointerUp={alSoltar} onPointerCancel={alSoltar}
+        onClickCapture={(e) => { if (suprimirClick.current) { e.preventDefault(); e.stopPropagation(); } }}
         className={`lg-barra${compacta ? ' lg-compacta' : ''}${mapa ? ' lg-refracta' : ''}${items.length + (centro ? 1 : 0) <= 3 ? ' lg-corta' : ''} ${className}`}
-        style={mapa ? { backdropFilter: `url(#${filtroId}) blur(10px) saturate(190%) brightness(1.06)` } : undefined}>
+        style={{ touchAction: 'pan-y', ...(mapa ? { backdropFilter: `url(#${filtroId}) blur(10px) saturate(190%) brightness(1.06)` } : {}) }}>
         <span className="lg-brillo" aria-hidden="true" />
         {pos.burbuja && (
           <motion.span aria-hidden="true" className="lg-burbuja lg-lupa"
             initial={false}
-            animate={{ x: pos.burbuja.x, y: pos.burbuja.y, width: pos.burbuja.w, height: pos.burbuja.h }}
+            animate={{ width: pos.burbuja.w, height: pos.burbuja.h }}
             transition={resorte}
-            style={{ inset: 'auto', left: 0, top: 0, zIndex: 3, overflow: 'hidden', pointerEvents: 'none' }}>
+            style={{ x: bx, y: by, inset: 'auto', left: 0, top: 0, zIndex: 3, overflow: 'hidden', pointerEvents: 'none' }}>
             {pos.mapaLupa && (
               <svg width="0" height="0" style={{ position: 'absolute' }}>
                 <filter id={lupaId} x="0" y="0" width="1" height="1" filterUnits="objectBoundingBox" primitiveUnits="objectBoundingBox" colorInterpolationFilters="sRGB">
@@ -182,10 +243,8 @@ export default function BarraGlass({ items = [], centro = null, grupo = 'barra',
             <span style={{ position: 'absolute', left: 0, top: 0, width: pos.burbuja.w * pos.d, height: pos.burbuja.h * pos.d, transform: `scale(${1 / pos.d})`, transformOrigin: '0 0' }}>
               <span style={{ position: 'absolute', inset: 0, overflow: 'hidden', filter: pos.mapaLupa && moviendo ? `url(#${lupaId})` : undefined }}>
                 {/* Copia de los íconos: va al revés que la burbuja → se ven quietos, agrandados */}
-                <motion.span initial={false}
-                  animate={{ x: -pos.burbuja.x * pos.d, y: -pos.burbuja.y * pos.d }}
-                  transition={resorte}
-                  style={{ position: 'absolute', left: 0, top: 0, width: pos.w * pos.d, height: pos.h * pos.d }}>
+                <motion.span
+                  style={{ x: copiaX, y: copiaY, position: 'absolute', left: 0, top: 0, width: pos.w * pos.d, height: pos.h * pos.d }}>
                   {items.map(it => {
                     const r = pos.items[it.id];
                     if (!r) return null;

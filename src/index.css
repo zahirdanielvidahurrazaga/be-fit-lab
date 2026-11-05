@@ -1930,6 +1930,8 @@ html[data-temporada='muertos'] .nav-qr-button::after {
   transition: opacity 0.2s ease, color 0.2s ease, transform 0.15s ease;
 }
 .lg-item:active { transform: scale(0.9); }
+/* El arrastre de la burbuja es nuestro: sin "arrastrar enlace" del navegador ni menú de vista previa en iPhone */
+.lg-barra a, .lg-barra img { -webkit-user-drag: none; user-drag: none; -webkit-touch-callout: none; }
 .lg-item.activo { color: var(--lg-activo); opacity: 1; }
 .lg-icono { position: relative; z-index: 1; display: flex; }
 .lg-avatar { width: 27px; height: 27px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.12); }
