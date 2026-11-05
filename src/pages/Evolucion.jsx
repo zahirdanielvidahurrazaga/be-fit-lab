@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import PaseQR from '../components/PaseQR';
+import { EVENTO_QR } from '../components/BarraClienta';
 import { Activity, Flame, User, Calendar, Utensils, TrendingUp, Award, Target, ChevronRight, QrCode, Zap, Droplets, Scale, RefreshCw, Heart, Clock, Wallet, X, Check, Lock, Bluetooth } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -29,6 +31,12 @@ function Evolucion() {
   // Dentro de la maqueta, navegar a una ruta real sacaría a la prospecta.
   const irA = crearIrA(navigate, esDemo);
   const [showQR, setShowQR] = useState(false);
+  // El botón QR vive en la barra global (BarraClienta): avisa con un evento.
+  useEffect(() => {
+    const abrir = () => setShowQR(true);
+    window.addEventListener(EVENTO_QR, abrir);
+    return () => window.removeEventListener(EVENTO_QR, abrir);
+  }, []);
   const walletPlatform = getWalletPlatform();
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletAdded, setWalletAdded] = useState(() => !!localStorage.getItem('befit_wallet_added'));
@@ -260,8 +268,8 @@ function Evolucion() {
       <header className="ios-header" style={{ paddingBottom: '5px', background: 'transparent' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
           <div>
-            <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>Tu progreso</p>
-            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Evolución</h1>
+            <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 2px', fontWeight: 600 }}>Fotos, metas e insignias</p>
+            <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--black)' }}>Tu progreso</h1>
           </div>
           <ProfileMenu />
         </div>
@@ -362,9 +370,10 @@ function Evolucion() {
                 </svg>
                 <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
                   <div style={{ fontSize: targetMonthlyClasses === 0 ? '1.8rem' : '2.9rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: '#fff', lineHeight: 1, textShadow: '0 2px 14px rgba(0,0,0,0.45)' }}>
-                    {targetMonthlyClasses === 0 ? '0' : score}
+                    {targetMonthlyClasses === 0 ? '—' : <>{score}<span style={{ fontSize: '1.4rem' }}>%</span></>}
                   </div>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.82)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Score</div>
+                  {/* Antes decía "SCORE": es el % de su meta de clases del mes. */}
+                  <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.82)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>{targetMonthlyClasses === 0 ? 'Sin meta' : 'De tu meta'}</div>
                 </div>
               </div>
               <div style={{ position: 'relative', zIndex: 1, fontSize: '0.86rem', color: 'rgba(255,255,255,0.92)', fontWeight: 600, marginBottom: '12px', textShadow: '0 1px 8px rgba(0,0,0,0.4)' }}>
@@ -507,6 +516,14 @@ function Evolucion() {
               </div>
             </div>
             <div style={{ background: 'var(--app-surface-solid)', borderRadius: '24px', padding: '20px', boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)' }}>
+              {/* Semana sin clases: una frase en vez de una caja de barras vacías
+                  (mismo criterio que "Tu semana" en Inicio). */}
+              {weeklyActivity.length > 0 && weeklyActivity.every(d => !d.height) ? (
+                <div style={{ textAlign: 'center', padding: '18px 6px' }}>
+                  <div style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>Esta semana aún no hay clases</div>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', marginTop: '4px' }}>Cuando asistas, aquí verás tu actividad día por día.</div>
+                </div>
+              ) : (
               <div style={{ height: '140px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px' }}>
                 {weeklyActivity.length > 0 ? weeklyActivity.map((dayData, i) => (
                   <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
@@ -535,6 +552,7 @@ function Evolucion() {
                   ))
                 )}
               </div>
+              )}
             </div>
           </motion.section>
 
@@ -593,107 +611,8 @@ function Evolucion() {
       </AnimatePresence>
 
       {/* QR SHEET */}
-      {showQR && (
-        <>
-          <div className="qr-sheet-overlay" onClick={() => setShowQR(false)} />
-          <div className="qr-bottom-sheet" style={{ padding: '12px 24px 20px', background: 'var(--surface)' }}>
-            <div className="sheet-handle" />
-            <button onClick={() => setShowQR(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '14px', right: '16px', width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'var(--fill-subtle)', color: 'var(--on-surface)', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 5 }}>✕</button>
-            <div className="wallet-card" style={{ background: 'var(--surface-low)', boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)', position: 'relative', overflow: 'hidden', margin: '0 auto 10px', width: '100%', borderRadius: '30px' }}>
-              <div style={{ position: 'absolute', top: 0, left: '-100%', width: '50%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)', transform: 'skewX(-20deg)' }} />
-              <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0, paddingTop: '20px', paddingLeft: '20px', paddingRight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(255,139,66,0.18)' }}><img src={ESTUDIO.marca.logo} alt={ESTUDIO.nombre} style={{ height: '24px', width: 'auto', objectFit: 'contain', display: 'block' }} /></div>
-                </div>
-                <QrCode size={20} color="var(--primary)" opacity={0.8} />
-              </div>
-              <div className="wallet-body" style={{ padding: '25px 20px', textAlign: 'center' }}>
-                <div style={{ background: 'white', padding: '12px', borderRadius: '20px', display: 'inline-block', boxShadow: '0 10px 30px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.02)' }}>
-                  <QRCodeCanvas value={user?.id || 'befit-client-id'} size={160} level="H" includeMargin={false} fgColor="#2D2928" />
-                </div>
-              </div>
-              <div className="wallet-footer" style={{ borderTop: '1px dashed var(--divider)', paddingTop: '20px', paddingBottom: '20px', justifyContent: 'center' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{classesRemaining >= 9000 ? '∞' : classesRemaining} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--primary)' }}>{classesRemaining >= 9000 ? 'ilimitadas' : 'sesiones'}</span></div>
-                </div>
-              </div>
-            </div>
-            <div className="sheet-user-info" style={{ marginTop: '10px', textAlign: 'center' }}>
-              <div className="user-name" style={{ fontWeight: 800 }}>{user?.user_metadata?.full_name || `Miembro ${ESTUDIO.nombre}`}</div>
-              <div style={{ color: 'var(--on-surface-variant)' }}>{user?.email}</div>
-            </div>
+      <PaseQR open={showQR} onClose={() => setShowQR(false)} />
 
-            {walletPlatform === 'apple' && (
-              <>
-                <button
-                  onClick={handleAddToWallet}
-                  disabled={walletLoading}
-                  style={{
-                    marginTop: '16px', width: '100%', padding: '14px',
-                    borderRadius: '14px', border: 'none', cursor: walletLoading ? 'default' : 'pointer',
-                    background: walletAdded ? '#1a1a1a' : '#000000',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                    transition: 'opacity 0.2s', opacity: walletLoading ? 0.7 : 1,
-                  }}
-                >
-                  <Wallet size={18} color="white" />
-                  <span style={{ color: 'white', fontWeight: 700, fontSize: '0.95rem', fontFamily: 'var(--font-body)' }}>
-                    {walletLoading ? 'Generando…' : walletAdded ? 'Actualizar Wallet' : 'Agregar a Apple Wallet'}
-                  </span>
-                </button>
-                {walletError && (
-                  <p style={{ marginTop: '8px', fontSize: '0.78rem', color: '#EF4444', textAlign: 'center' }}>
-                    {walletError}
-                  </p>
-                )}
-              </>
-            )}
-            {walletPlatform === 'google' && (
-              <>
-                <button
-                  onClick={handleAddToWallet}
-                  disabled={walletLoading}
-                  style={{
-                    marginTop: '16px', width: '100%', padding: '14px',
-                    borderRadius: '14px', border: 'none', cursor: walletLoading ? 'default' : 'pointer',
-                    background: '#1a73e8',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                    transition: 'opacity 0.2s', opacity: walletLoading ? 0.7 : 1,
-                  }}
-                >
-                  <Wallet size={18} color="white" />
-                  <span style={{ color: 'white', fontWeight: 700, fontSize: '0.95rem', fontFamily: 'var(--font-body)' }}>
-                    {walletLoading ? 'Generando…' : 'Agregar a Google Wallet'}
-                  </span>
-                </button>
-                {walletError && (
-                  <p style={{ marginTop: '8px', fontSize: '0.78rem', color: '#EF4444', textAlign: 'center' }}>
-                    {walletError}
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-        </>
-      )}
-
-      <nav className={`ios-bottom-nav ${isScrolled ? 'scrolled' : ''}`}>
-        <Link to="/portal" className="nav-item">
-          {avatarUrl ? (
-            <div style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--on-surface-variant)', flexShrink: 0 }}>
-              <img src={avatarUrl} alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-          ) : (
-            <User size={22} strokeWidth={2.5} />
-          )}
-          <span>Yo</span>
-        </Link>
-        <Link to="/evolucion" className="nav-item active"><TrendingUp size={22} strokeWidth={2.5} /><span>Metas</span></Link>
-        <button className="nav-qr-button" onClick={() => setShowQR(true)}><QrCode size={24} strokeWidth={2.5} /></button>
-        {hasNutritionAccess(plan) && <Link to="/nutricion" className="nav-item"><Utensils size={22} strokeWidth={2.5} /><span>Comida</span></Link>}
-        <Link to="/agenda" className="nav-item"><Calendar size={22} strokeWidth={2.5} /><span>Clases</span></Link>
-      </nav>
 
       {/* BADGE MODAL */}
       <AnimatePresence>

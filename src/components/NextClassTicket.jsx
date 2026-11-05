@@ -107,7 +107,7 @@ function Field({ label, children }) {
   );
 }
 
-export function NextClassTicket({ myReservations, globalClasses, coaches, classesRemaining, userId, onShowQR }) {
+export function NextClassTicket({ myReservations, globalClasses, coaches, classesRemaining, userId, onShowQR, bloqueo, onRenovar }) {
   const isNative = Capacitor.isNativePlatform();
   const [calState, setCalState] = useState('idle'); // idle | adding | added | error
   const next = useMemo(() => computeNext(myReservations, globalClasses), [myReservations, globalClasses]);
@@ -158,10 +158,24 @@ export function NextClassTicket({ myReservations, globalClasses, coaches, classe
         </TicketPhoto>
         <Perforation />
         <div style={{ padding: '20px 22px 22px', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 4px', fontSize: '1.05rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Aún no tienes clases reservadas</p>
-          <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontWeight: 500 }}>
-            Elige una en el calendario de abajo 👇 · tienes <b style={{ color: 'var(--primary)' }}>{dispChip}</b>
-          </p>
+          {bloqueo ? (
+            // Vencida o sin clases: no invitar a elegir en el calendario (rebotaría).
+            <>
+              <p style={{ margin: '0 0 4px', fontSize: '1.05rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--black)' }}>{bloqueo.titulo}</p>
+              <p style={{ margin: '0 0 14px', fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontWeight: 500 }}>{bloqueo.texto}</p>
+              <button type="button" onClick={onRenovar}
+                style={{ border: 'none', borderRadius: '14px', padding: '11px 22px', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 8px 20px rgba(255,139,66,0.3)' }}>
+                {bloqueo.cta}
+              </button>
+            </>
+          ) : (
+            <>
+              <p style={{ margin: '0 0 4px', fontSize: '1.05rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--black)' }}>Aún no tienes clases reservadas</p>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontWeight: 500 }}>
+                Elige una en el calendario de abajo 👇 · tienes <b style={{ color: 'var(--primary)' }}>{dispChip}</b>
+              </p>
+            </>
+          )}
         </div>
       </motion.div>
     );

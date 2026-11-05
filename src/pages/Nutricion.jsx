@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import PaseQR from '../components/PaseQR';
+import { EVENTO_QR } from '../components/BarraClienta';
 import { ChefHat, Flame, Clock, User, Calendar, Utensils, TrendingUp, CheckCircle2, Droplets, Play, QrCode, ChevronRight, Heart, Info, Scale, Wallet, X, Plus, Check } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -30,6 +32,12 @@ function Nutricion() {
   const [recipeData, setRecipeData] = useState(null);
   const [recipeLogged, setRecipeLogged] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  // El botón QR vive en la barra global (BarraClienta): avisa con un evento.
+  useEffect(() => {
+    const abrir = () => setShowQR(true);
+    window.addEventListener(EVENTO_QR, abrir);
+    return () => window.removeEventListener(EVENTO_QR, abrir);
+  }, []);
   const [activeCat, setActiveCat] = useState('Todas');
   // Fit/Premium: el recetario completo se oculta por defecto (su foco es su plan);
   // se puede abrir con "Ver recetario completo". Las demás clientas siempre lo ven.
@@ -105,7 +113,7 @@ function Nutricion() {
       <header className="ios-header" style={{ paddingBottom: '16px', background: 'transparent' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
           <div>
-            <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 3px', fontWeight: 600 }}>Plan Nutricional</p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', margin: '0 0 3px', fontWeight: 600 }}>Comida · plan nutricional</p>
             <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', margin: 0, lineHeight: 1.1, color: 'var(--on-surface)' }}>{ESTUDIO.nombreNutricion}</h1>
           </div>
           <ProfileMenu />
@@ -384,145 +392,9 @@ function Nutricion() {
 
       {/* QR BOTTOM SHEET */}
       <AnimatePresence>
-        {showQR && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="qr-sheet-overlay" onClick={() => setShowQR(false)} />
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              drag="y"
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.2}
-              onDragEnd={(e, info) => {
-                if (info.offset.y > 100 || info.velocity.y > 500) {
-                  setShowQR(false);
-                }
-              }}
-              className="qr-bottom-sheet"
-              style={{ padding: '12px 24px 20px', background: 'var(--surface)' }}
-            >
-              <div className="sheet-handle" />
-              <button onClick={() => setShowQR(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '14px', right: '16px', width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'var(--fill-subtle)', color: 'var(--on-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }}>
-                <X size={17} color="var(--on-surface)" />
-              </button>
-              
-              <div className="wallet-card" style={{ 
-                background: 'var(--surface-low)', 
-                boxShadow: 'var(--card-shadow)',
-                border: '1px solid var(--border-subtle)',
-                position: 'relative', overflow: 'hidden',
-                margin: '0 auto 10px',
-                width: '100%',
-                borderRadius: '30px'
-              }}>
-                <div style={{ position: 'absolute', top: 0, left: '-100%', width: '50%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)', transform: 'skewX(-20deg)' }}></div>
-
-                <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0, paddingTop: '20px', paddingLeft: '20px', paddingRight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(255,139,66,0.18)' }}><img src={ESTUDIO.marca.logo} alt={ESTUDIO.nombre} style={{ height: '24px', width: 'auto', objectFit: 'contain', display: 'block' }} /></div>
-                  </div>
-                  <QrCode size={20} color="var(--primary)" opacity={0.8} />
-                </div>
-                
-                <div className="wallet-body" style={{ padding: '25px 20px', textAlign: 'center' }}>
-                  <div style={{ background: 'white', padding: '12px', borderRadius: '20px', display: 'inline-block', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', border: 'none' }}>
-                    <QRCodeCanvas 
-                      value={user?.id || 'befit-client-id'} 
-                      size={160}
-                      level={"H"}
-                      includeMargin={false}
-                      fgColor="#000000"
-                    />
-                  </div>
-                </div>
-                
-                <div className="wallet-footer" style={{ borderTop: '1px dashed var(--divider)', paddingTop: '20px', paddingBottom: '20px', justifyContent: 'center' }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Clases Disponibles</div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{classesRemaining >= 9000 ? '∞' : classesRemaining} <span style={{fontSize: '0.9rem', fontWeight: 500, color: 'var(--primary)'}}>{classesRemaining >= 9000 ? 'ilimitadas' : 'sesiones'}</span></div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="sheet-user-info" style={{ marginTop: '10px' }}>
-                <div className="user-name">{user?.user_metadata?.full_name || `Miembro ${ESTUDIO.nombre}`}</div>
-                <div>{user?.email}</div>
-              </div>
-
-              {walletPlatform === 'apple' && (
-                <>
-                  <button
-                    onClick={handleAddToWallet}
-                    disabled={walletLoading}
-                    style={{
-                      marginTop: '16px', width: '100%', padding: '14px',
-                      borderRadius: '14px', border: 'none', cursor: walletLoading ? 'default' : 'pointer',
-                      background: walletAdded ? '#1a1a1a' : '#000000',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                      transition: 'opacity 0.2s', opacity: walletLoading ? 0.7 : 1,
-                    }}
-                  >
-                    <Wallet size={18} color="white" />
-                    <span style={{ color: 'white', fontWeight: 700, fontSize: '0.95rem', fontFamily: 'var(--font-body)' }}>
-                      {walletLoading ? 'Generando…' : walletAdded ? 'Actualizar Wallet' : 'Agregar a Apple Wallet'}
-                    </span>
-                  </button>
-                  {walletError && (
-                    <p style={{ marginTop: '8px', fontSize: '0.78rem', color: '#EF4444', textAlign: 'center' }}>
-                      {walletError}
-                    </p>
-                  )}
-                </>
-              )}
-              {walletPlatform === 'google' && (
-                <>
-                  <button
-                    onClick={handleAddToWallet}
-                    disabled={walletLoading}
-                    style={{
-                      marginTop: '16px', width: '100%', padding: '14px',
-                      borderRadius: '14px', border: 'none', cursor: walletLoading ? 'default' : 'pointer',
-                      background: '#1a73e8',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                      transition: 'opacity 0.2s', opacity: walletLoading ? 0.7 : 1,
-                    }}
-                  >
-                    <Wallet size={18} color="white" />
-                    <span style={{ color: 'white', fontWeight: 700, fontSize: '0.95rem', fontFamily: 'var(--font-body)' }}>
-                      {walletLoading ? 'Generando…' : 'Agregar a Google Wallet'}
-                    </span>
-                  </button>
-                  {walletError && (
-                    <p style={{ marginTop: '8px', fontSize: '0.78rem', color: '#EF4444', textAlign: 'center' }}>
-                      {walletError}
-                    </p>
-                  )}
-                </>
-              )}
-            </motion.div>
-          </>
-        )}
+        <PaseQR open={showQR} onClose={() => setShowQR(false)} />
       </AnimatePresence>
 
-      {/* NAV */}
-      <nav className={`ios-bottom-nav ${isScrolled ? 'scrolled' : ''}`}>
-        <Link to="/portal" className="nav-item">
-          {avatarUrl ? (
-            <div style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--on-surface-variant)', flexShrink: 0 }}>
-              <img src={avatarUrl} alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-          ) : (
-            <User size={22} strokeWidth={2.5} />
-          )}
-          <span>Yo</span>
-        </Link>
-        <Link to="/evolucion" className="nav-item"><TrendingUp size={22} strokeWidth={2.5} /><span>Metas</span></Link>
-        <button className="nav-qr-button" onClick={() => setShowQR(true)}><QrCode size={24} strokeWidth={2.5} /></button>
-        <Link to="/nutricion" className="nav-item active"><Utensils size={22} strokeWidth={2.5} /><span>Comida</span></Link>
-        <Link to="/agenda" className="nav-item"><Calendar size={22} strokeWidth={2.5} /><span>Clases</span></Link>
-      </nav>
     </div>
   );
 }

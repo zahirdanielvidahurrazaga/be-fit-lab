@@ -47,13 +47,16 @@ const MOTIVOS = {
   restitucion_auditoria: 'Clases repuestas por el estudio',
   correccion_reanudacion: 'Vigencia extendida por el estudio',
   ajuste_manual: 'Ajuste hecho a mano',
+  clase_suelta: 'Compró clase suelta',
+  clase_suelta_sin_plan: 'Compró clase suelta (sin plan)',
 };
 
 // Categorías para la frase que explica el saldo.
-export const COMPRA = ['activacion_plan', 'stripe_sistema', 'alta_con_plan'];
+export const COMPRA = ['activacion_plan', 'stripe_sistema', 'alta_con_plan', 'clase_suelta_sin_plan'];
 const USO = ['reserva', 'reserva_admin', 'promocion_espera', 'aceptacion_espera'];
 const DEVUELTO = ['cancelacion', 'cancelacion_admin'];
 const AJUSTE = ['ajuste_manual', 'restitucion_auditoria'];
+const SUELTAS = ['clase_suelta'];
 const CADUCADO = ['vencimiento_membresia', 'baja_membresia'];
 
 // Se exporta porque la pestaña Resumen muestra la MISMA frase: si el cálculo
@@ -75,13 +78,14 @@ export function resumirSaldo(rows, saldoActual) {
     usado: -sum(USO),
     devuelto: sum(DEVUELTO),
     ajustes: sum(AJUSTE),
+    sueltas: sum(SUELTAS),
     caducado: -sum(CADUCADO),
     desdeCuando: ancla.cuando,
   };
 
   // Si la cuenta no cierra, NO se muestra. Un número que no cuadra fue
   // exactamente lo que rompió los saldos de 11 clientas en julio y agosto.
-  const cierra = r.comprado - r.usado + r.devuelto + r.ajustes - r.caducado;
+  const cierra = r.comprado - r.usado + r.devuelto + r.ajustes + r.sueltas - r.caducado;
   if (cierra !== (saldoActual ?? 0)) return null;
   return r;
 }

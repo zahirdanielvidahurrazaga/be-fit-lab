@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Check, Dumbbell, ImagePlus, Loader2, ChevronDown, Camera, Globe } from 'lucide-react';
+import { Plus, Trash2, Check, ImagePlus, Loader2, ChevronDown, Camera, Globe } from 'lucide-react';
+import MenuAcciones from './MenuAcciones';
 import { useAuth } from '../context/AuthContext';
 import { uploadImage } from '../lib/cafeImage';
 
@@ -89,9 +90,9 @@ function DisciplineCard({ d, onPatch, onToggleFeatured, onDelete }) {
         <button onClick={() => setOpen(o => !o)} style={{ background: 'rgba(0,0,0,0.04)', color: 'var(--on-surface-variant)', border: 'none', padding: '8px 12px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
           Descripción <motion.span animate={{ rotate: open ? 180 : 0 }} style={{ display: 'flex' }}><ChevronDown size={15} /></motion.span>
         </button>
-        <button onClick={() => onDelete(d)} aria-label="Eliminar" style={{ marginLeft: 'auto', background: 'rgba(186,26,26,0.1)', color: '#ba1a1a', border: 'none', padding: '9px', borderRadius: '10px', cursor: 'pointer', display: 'flex' }}>
-          <Trash2 size={16} />
-        </button>
+        <div style={{ marginLeft: 'auto' }}>
+          <MenuAcciones acciones={[{ label: 'Eliminar del catálogo', icon: <Trash2 size={15} />, peligro: true, onClick: () => onDelete(d) }]} />
+        </div>
       </div>
 
       <AnimatePresence initial={false}>
@@ -135,9 +136,7 @@ function AdminDisciplinas() {
   return (
     <section>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
-        <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', margin: '0 8px 0 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Dumbbell size={20} color="var(--primary)" /> Clases
-        </h2>
+        <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: '0 8px 0 0' }}>Catálogo de clases</h2>
         <button onClick={() => setShowAdd(s => !s)} style={{ marginLeft: 'auto', background: 'var(--primary)', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
           <Plus size={16} /> Nueva clase
         </button>

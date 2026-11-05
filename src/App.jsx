@@ -1,4 +1,5 @@
 import React, { Suspense, lazy } from 'react';
+import BarraClienta from './components/BarraClienta';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
@@ -276,6 +277,8 @@ function App() {
         <UpdateGate />
         <WaitlistOfferGate />
         <MarcaTemporada />
+        {/* Barra de la clienta: UNA sola para todas sus pantallas (la burbuja se desliza). */}
+        <BarraClienta />
       </Router>
     </AuthProvider>
   );

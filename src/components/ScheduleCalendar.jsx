@@ -41,7 +41,14 @@ function CategoryLegendBar({ globalClasses }) {
   );
 }
 
-export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReservations, onReserve }) {
+export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReservations, onReserve, ventanaDias }) {
+  // Último día que ya se puede reservar (la BD solo abre N días antes). Los
+  // posteriores se atenúan: antes se veían igual y al tocarlos decía "se abre el…".
+  const ultimoReservable = (() => {
+    if (!ventanaDias) return null;
+    const d = new Date(); d.setDate(d.getDate() + ventanaDias);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
   const reservedIds = new Set((myReservations || []).map(r => r.classId));
   const waitlistIds = new Set((myReservations || []).filter(r => r.status === 'waitlist').map(r => r.classId));
   const todayStr = toLocalDateStr();
@@ -142,6 +149,7 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
                 const hasClasses = classesOnDay.length > 0;
                 const hasSpecial = classesOnDay.some(c => c.is_special);
                 const isPastDay = dateStr < todayStr;
+                const aunNoAbre = !!ultimoReservable && dateStr > ultimoReservable;
                 const icono = iconoDia(dateStr);
 
                 return (
@@ -160,7 +168,7 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
                       background: isToday ? 'var(--primary)' : isPastDay ? 'transparent' : (hasSpecial ? 'linear-gradient(135deg, rgba(255,145,77,0.16), rgba(224,122,156,0.16))' : (hasClasses ? 'rgba(0,0,0,0.04)' : 'transparent')),
                       boxShadow: hasSpecial && !isToday && !isPastDay ? 'inset 0 0 0 1.5px rgba(224,122,156,0.55)' : 'none',
                       color: isToday ? 'white' : 'var(--black)',
-                      opacity: isPastDay ? 0.32 : 1,
+                      opacity: isPastDay ? 0.32 : aunNoAbre ? 0.5 : 1,
                       fontWeight: isToday ? 800 : (hasClasses && !isPastDay ? 700 : 500)
                     }}
                   >
@@ -169,7 +177,7 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
                     {hasClasses && (
                       <div style={{ display: 'flex', gap: '2px', position: 'absolute', bottom: '6px' }}>
                         {classesOnDay.slice(0, 3).map((c, idx) => (
-                          <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', background: isToday ? 'white' : (c.is_special ? 'linear-gradient(135deg, #FF914D, #E07A9C)' : 'var(--primary)') }} />
+                          <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', background: isToday ? 'white' : aunNoAbre ? 'rgba(0,0,0,0.25)' : (c.is_special ? 'linear-gradient(135deg, #FF914D, #E07A9C)' : 'var(--primary)') }} />
                         ))}
                       </div>
                     )}
@@ -177,6 +185,11 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
                 );
               })}
             </div>
+            {ultimoReservable && (
+              <p style={{ margin: '12px 0 0', fontSize: '0.74rem', color: 'var(--on-surface-variant)', textAlign: 'center', fontWeight: 600 }}>
+                Puedes reservar con hasta {ventanaDias} días de anticipación · los días atenuados todavía no abren.
+              </p>
+            )}
           </div>
         </motion.div>
       ) : (

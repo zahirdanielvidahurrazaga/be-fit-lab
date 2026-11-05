@@ -22,6 +22,8 @@ const FUENTES = {
   activacion_plan:   { label: 'Cobro / activación de plan', color: '#EA7A3B' },
   alta_con_plan:     { label: 'Alta con plan incluido',     color: '#EA7A3B' },
   ajuste_manual:     { label: 'Ajuste manual de staff',     color: '#DC2626' },
+  clase_suelta:      { label: 'Clase suelta comprada',      color: '#EA7A3B' },
+  clase_suelta_sin_plan: { label: 'Clase suelta (sin plan)', color: '#EA7A3B' },
   stripe_sistema:    { label: 'Stripe / sistema',           color: '#0891B2' },
   baja_membresia:    { label: 'Baja de membresía',          color: '#6B7280' },
   app_clienta:       { label: 'App de la clienta',          color: '#6B7280' },
@@ -48,21 +50,15 @@ const plural = (n, sing, plur) => `${n} ${n === 1 ? sing : plur}`;
 
 const norm = (s = '') => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
 
-const card = { background: 'var(--surface, #fff)', border: '1px solid rgba(0,0,0,0.07)', borderRadius: '18px', padding: '18px', marginBottom: '18px' };
 const h3 = { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem', margin: '0 0 4px', color: 'var(--black)', fontFamily: 'var(--font-display)' };
 const hint = { fontSize: '0.82rem', color: 'var(--on-surface-variant)', margin: '0 0 14px', lineHeight: 1.45 };
 const chip = (bg, color) => ({ fontSize: '0.72rem', fontWeight: 700, padding: '3px 9px', borderRadius: '8px', background: bg, color, whiteSpace: 'nowrap' });
-const leyenda = (bg, border) => ({ flex: '1 1 260px', display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'flex-start', background: bg, border: `1px solid ${border}`, borderRadius: '13px', padding: '11px 13px' });
-const leyendaTxt = { fontSize: '0.78rem', color: 'var(--on-surface-variant)', lineHeight: 1.45 };
-const thStyle = { textAlign: 'left', padding: '8px 10px', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--on-surface-variant)', borderBottom: '1px solid rgba(0,0,0,0.08)', whiteSpace: 'nowrap' };
-const tdStyle = { padding: '9px 10px', fontSize: '0.85rem', color: 'var(--black)', borderBottom: '1px solid rgba(0,0,0,0.05)', verticalAlign: 'top' };
 
 export default function AdminControlSaldos() {
   const { user, allUsers, fetchAllUsers } = useAuth();
 
   // ── Movimientos (ledger) ──────────────────────────────────────────────────
   const [ledgerUserId, setLedgerUserId] = useState('');
-  const [verMovimientos, setVerMovimientos] = useState(false); // consulta, cerrada por defecto
   const [ledger, setLedger] = useState([]);
   const [ledgerLoading, setLedgerLoading] = useState(false);
 
@@ -111,16 +107,6 @@ export default function AdminControlSaldos() {
       || String(b.fecha_clase || '').localeCompare(String(a.fecha_clase || '')));
   }, [descuadres]);
 
-  const resumenDesc = useMemo(() => {
-    if (!descuadres?.length) return null;
-    const sinCobro = descuadres.filter(d => d.tipo === 'reserva_sin_cobro');
-    const deMas = descuadres.filter(d => d.tipo === 'cobro_sin_reserva');
-    return {
-      sinCobro: sinCobro.length,
-      deMas: deMas.length,
-      personas: new Set(descuadres.map(d => d.user_id)).size,
-    };
-  }, [descuadres]);
 
   // ── Ventas (huérfanas / duplicadas / anular) ─────────────────────────────
   const [sales, setSales] = useState([]);
@@ -130,7 +116,7 @@ export default function AdminControlSaldos() {
   const fetchSales = useCallback(async () => {
     setSalesLoading(true);
     const { data } = await supabase.from('sales')
-      .select('id, user_id, plan_name, amount, method, created_at, client_name, client_email, voided')
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(400);
     setSales(data || []);
@@ -139,37 +125,45 @@ export default function AdminControlSaldos() {
 
   useEffect(() => { fetchSales(); }, [fetchSales]);
 
-  // Sospechosas: huérfanas (sin cuenta) + posibles duplicadas (misma clienta,
-  // mismo plan, con menos de 30 min entre sí).
-  const ventasSospechosas = useMemo(() => {
-    const flags = new Map(); // id → motivo
-    for (const s of sales) {
-      if (!s.user_id && !s.client_name) flags.set(s.id, 'Cuenta borrada');
-      else if (!s.user_id) flags.set(s.id, `Cuenta borrada (era ${s.client_name})`);
+  // ── Cobros dobles: pares/grupos de la MISMA clienta y plan con < 30 min ──
+  // Solo esto pide una decisión ("¿es el mismo pago?"). Las ventas de cuentas
+  // borradas NO son pendientes: el dinero sí entró, solo perdió el vínculo.
+  const gruposCobroDoble = useMemo(() => {
+    const porClave = {};
+    for (const v of sales) {
+      if (!v.user_id && !v.client_name) continue;
+      const k = (v.user_id || norm(v.client_name)) + '|' + v.plan_name;
+      (porClave[k] = porClave[k] || []).push(v);
     }
-    const byKey = {};
-    for (const s of sales) {
-      const key = (s.user_id || norm(s.client_name || '?')) + '|' + s.plan_name;
-      (byKey[key] = byKey[key] || []).push(s);
-    }
-    for (const group of Object.values(byKey)) {
-      if (group.length < 2) continue;
-      const sorted = group.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-      for (let i = 1; i < sorted.length; i++) {
-        const gapMin = (new Date(sorted[i].created_at) - new Date(sorted[i - 1].created_at)) / 60000;
-        if (gapMin < 30) {
-          const motivo = `Posible duplicada (${Math.round(gapMin) || '<1'} min después de otra igual)`;
-          flags.set(sorted[i].id, flags.has(sorted[i].id) ? flags.get(sorted[i].id) + ' · ' + motivo : motivo);
-          if (!flags.has(sorted[i - 1].id)) flags.set(sorted[i - 1].id, 'Tiene una posible duplicada');
-        }
+    const grupos = [];
+    for (const lista of Object.values(porClave)) {
+      const ord = lista.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      let actual = [ord[0]];
+      for (let i = 1; i < ord.length; i++) {
+        if ((new Date(ord[i].created_at) - new Date(ord[i - 1].created_at)) / 60000 < 30) actual.push(ord[i]);
+        else { if (actual.length > 1) grupos.push(actual); actual = [ord[i]]; }
       }
+      if (actual.length > 1) grupos.push(actual);
     }
-    return sales.filter(s => flags.has(s.id) || s.voided).map(s => ({ ...s, motivo: flags.get(s.id) || '' }));
+    return grupos
+      .map(g => ({ ventas: g, pendiente: g.filter(v => !v.voided).length > 1 && !g.every(v => v.revisada) }))
+      .sort((a, b) => (b.pendiente - a.pendiente) || (new Date(b.ventas[0].created_at) - new Date(a.ventas[0].created_at)));
   }, [sales]);
+  const doblesPendientes = gruposCobroDoble.filter(g => g.pendiente);
+  const ventasHuerfanas = useMemo(() => sales.filter(v => !v.user_id && !v.voided), [sales]);
 
-  const montoFantasma = useMemo(() =>
-    ventasSospechosas.filter(s => !s.voided && /duplicada|borrada/i.test(s.motivo)).reduce((t, s) => t + (s.amount || 0), 0),
-  [ventasSospechosas]);
+  const marcarRevisadas = async (grupo) => {
+    if (!confirm('¿Confirmas que son PAGOS DISTINTOS (las dos cuentan como ingreso)?\n\nDejarán de salir como pendientes.')) return;
+    const ids = grupo.ventas.map(v => v.id);
+    const { error } = await supabase.from('sales').update({ revisada: true }).in('id', ids);
+    if (error) {
+      alert(/revisada/.test(error.message)
+        ? 'Falta activar esta opción en la base de datos. Avísale a Zahir.'
+        : 'No se pudo guardar: ' + error.message);
+      return;
+    }
+    fetchSales();
+  };
 
   const toggleVoid = async (s) => {
     const accion = s.voided ? 'restaurar' : 'ANULAR';
@@ -250,93 +244,83 @@ export default function AdminControlSaldos() {
   // PENDIENTES, no un explorador de datos: su estado normal es "todo cuadra".
   // Cuando se mezclaron las dos cosas, la dueña leyó 37 renglones de ruido como
   // 37 tareas y "corrigió" 53 clases que estaban bien cobradas.
-  // Las ya anuladas siguen en la lista (para poder restaurarlas) pero NO cuentan
-  // como pendiente: ya se atendieron.
-  const ventasPendientes = (ventasSospechosas || []).filter(v => !v.voided).length;
-  const pendientes = (descuadres?.length || 0) + ventasPendientes + (gruposDuplicados?.length || 0);
+  const pendientes = (descuadres?.length || 0) + doblesPendientes.length + (gruposDuplicados?.length || 0);
   const cargando = descuadres === null;
 
-  // El número se desglosa a propósito. Un total suelto ("15 cosas") no dice si
-  // hay que corregir saldos o revisar cobros, y esa ambigüedad es la que hizo
-  // que se "arreglara" a bulto lo que solo había que mirar.
-  const desglose = [
-    descuadres?.length ? `${plural(descuadres.length, 'clase con el cobro descuadrado', 'clases con el cobro descuadrado')}` : null,
-    ventasPendientes ? `${plural(ventasPendientes, 'venta por revisar', 'ventas por revisar')}` : null,
-    gruposDuplicados?.length ? `${plural(gruposDuplicados.length, 'posible cuenta duplicada', 'posibles cuentas duplicadas')}` : null,
-  ].filter(Boolean);
+  // Pestañas: una cosa a la vez. Antes todo estaba apilado con párrafos largos
+  // y la dueña no sabía por dónde empezar ("mega confuso").
+  const TABS = [
+    ['saldos', 'Saldos', descuadres?.length || 0],
+    ['dobles', 'Cobros dobles', doblesPendientes.length],
+    ['cuentas', 'Cuentas dobles', gruposDuplicados?.length || 0],
+    ['historial', 'Historial', null],
+  ];
+  const [tab, setTab] = useState(null);
+  const tabActiva = tab || (TABS.find(t => t[2] > 0)?.[0]) || 'saldos';
+  const verHistorialDe = (id) => { setLedgerUserId(id); setTab('historial'); };
+
+  const queEs = (texto) => (
+    <details style={{ margin: '0 0 14px' }}>
+      <summary style={{ cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, color: 'var(--on-surface-variant)' }}>¿Qué significa esto?</summary>
+      <div style={{ ...hint, margin: '8px 0 0' }}>{texto}</div>
+    </details>
+  );
+  const vacio = (texto) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '18px', borderRadius: '14px', background: 'rgba(5,150,105,0.07)', color: '#047857', fontWeight: 700, fontSize: '0.9rem' }}>
+      <CheckCircle2 size={20} /> {texto}
+    </div>
+  );
+  const btnSec = { display: 'inline-flex', alignItems: 'center', gap: '5px', border: 'none', borderRadius: '10px', padding: '8px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'inherit' };
 
   return (
     <section>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
-        <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: 0, color: 'var(--black)' }}>Auditoría</h2>
-        <span style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>Solo lo que necesita tu atención</span>
-      </div>
+      <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: '0 0 12px', color: 'var(--black)' }}>Auditoría</h2>
 
-      <div style={{
-        display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '16px 18px', marginBottom: '18px',
-        borderRadius: '18px',
-        background: cargando ? 'rgba(0,0,0,0.03)' : pendientes === 0 ? 'rgba(5,150,105,0.08)' : 'rgba(234,122,59,0.08)',
-        border: `1px solid ${cargando ? 'rgba(0,0,0,0.06)' : pendientes === 0 ? 'rgba(5,150,105,0.22)' : 'rgba(234,122,59,0.25)'}`,
-      }}>
+      {/* Estado general en una línea */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '13px 15px', marginBottom: '14px', borderRadius: '16px',
+        background: cargando ? 'rgba(0,0,0,0.03)' : pendientes === 0 ? 'rgba(5,150,105,0.08)' : 'rgba(234,122,59,0.09)' }}>
         {!cargando && (pendientes === 0
-          ? <CheckCircle2 size={22} color="#059669" style={{ flexShrink: 0, marginTop: '1px' }} />
-          : <AlertTriangle size={22} color="#EA7A3B" style={{ flexShrink: 0, marginTop: '1px' }} />)}
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>
-            {cargando ? 'Revisando…' : pendientes === 0 ? 'Todo cuadra ✓' : desglose.join(' · ')}
-          </div>
-          <p style={{ margin: '5px 0 0', fontSize: '0.82rem', lineHeight: 1.5, color: 'var(--on-surface-variant)' }}>
-            {cargando ? 'Un momento.' : pendientes === 0
-              ? <>No hay nada que corregir. Si una clienta te reclama su saldo, <b>búscala en Clientas → Clases</b>: ahí está su historial completo y la explicación de su saldo.</>
-              : <>Cada renglón de abajo es un <b>hecho concreto</b>, no una estimación: la clase o el cobro exacto. Lo que no aparezca aquí, está bien. Y <b>revisar puede terminar en "déjalo como está"</b> — no todo lo listado hay que cambiarlo.</>}
-          </p>
+          ? <CheckCircle2 size={20} color="#059669" style={{ flexShrink: 0 }} />
+          : <AlertTriangle size={20} color="#EA7A3B" style={{ flexShrink: 0 }} />)}
+        <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--black)' }}>
+          {cargando ? 'Revisando…' : pendientes === 0 ? 'Todo cuadra. No hay nada que corregir.' : `${plural(pendientes, 'cosa por revisar', 'cosas por revisar')}`}
         </div>
       </div>
 
-      {/* ── 1. DESCUADRES ── */}
-      <div style={card}>
-        <h3 style={h3}><Scale size={18} color={PRIMARY} /> Saldos que no cuadran
-          <button onClick={fetchDescuadres} disabled={descLoading} style={{ marginLeft: 'auto', border: 'none', background: 'rgba(0,0,0,0.05)', borderRadius: '10px', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 700, color: 'var(--black)' }}>
-            <RefreshCw size={13} style={descLoading ? { animation: 'spin 1s linear infinite' } : {}} /> Actualizar
-          </button>
-        </h3>
-        <p style={hint}>
-          Cada renglón es <b>una clase concreta</b> donde el cobro no cuadra con la reserva.
-          No es un cálculo ni una estimación: es el movimiento que falta o que sobra.
-        </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
-          <div style={leyenda('rgba(220,38,38,0.07)', 'rgba(220,38,38,0.18)')}>
-            <span style={chip('rgba(220,38,38,0.1)', '#DC2626')}>No se le descontó</span>
-            <span style={leyendaTxt}>Tiene lugar en la clase y nunca se le cobró: <b>el estudio se la está regalando</b>.</span>
-          </div>
-          <div style={leyenda('rgba(234,122,59,0.07)', 'rgba(234,122,59,0.2)')}>
-            <span style={chip('rgba(234,122,59,0.12)', '#EA7A3B')}>Se le descontó de más</span>
-            <span style={leyendaTxt}>Se le cobró la clase y ya no tiene lugar en ella: <b>el estudio se la debe</b>.</span>
-          </div>
-        </div>
-        <p style={{ ...hint, display: 'flex', gap: '7px', alignItems: 'flex-start', marginBottom: '14px' }}>
-          <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '2px', color: '#EA7A3B' }} />
-          <span>
-            <b>Ojo:</b> aquí ya no aparecen los pagos en efectivo, las cortesías ni las reposiciones.
-            Esas son decisiones tuyas, no errores{trazableDesde ? <> — y solo se revisa lo que pasó del <b>{fmtDia(trazableDesde)}</b> en adelante,
-            que es desde cuando se guarda a qué clase fue cada descuento</> : null}.
-          </span>
-        </p>
+      {/* Pestañas */}
+      <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', marginBottom: '16px', WebkitOverflowScrolling: 'touch' }}>
+        {TABS.map(([id, label, n]) => {
+          const activa = tabActiva === id;
+          return (
+            <button key={id} onClick={() => setTab(id)}
+              style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '7px', padding: '9px 14px', borderRadius: '999px', fontFamily: 'inherit',
+                       border: activa ? '1px solid var(--primary)' : '1px solid rgba(0,0,0,0.08)', cursor: 'pointer',
+                       background: activa ? 'rgba(255,145,77,0.12)' : '#fff', color: activa ? 'var(--primary)' : 'var(--black)', fontWeight: 800, fontSize: '0.84rem' }}>
+              {label}
+              {n !== null && (
+                <span style={{ minWidth: '20px', padding: '1px 6px', borderRadius: '999px', fontSize: '0.72rem', textAlign: 'center',
+                               background: n > 0 ? '#EA7A3B' : 'rgba(0,0,0,0.07)', color: n > 0 ? '#fff' : 'var(--on-surface-variant)' }}>{n}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-        {descuadres === null ? <p style={hint}>Cargando…</p> : descuadres.length === 0 ? (
-          <p style={{ ...hint, color: '#059669', fontWeight: 700, margin: 0 }}>Todo cuadra ✓</p>
-        ) : (
-          <>
-            {resumenDesc && (
-              <p style={{ ...hint, marginBottom: '12px' }}>
-                <b>{plural(descuadres.length, 'clase', 'clases')}</b> por revisar
-                en <b>{plural(resumenDesc.personas, 'clienta', 'clientas')}</b>:{' '}
-                {resumenDesc.sinCobro > 0 && <><b>{resumenDesc.sinCobro}</b> sin descontar</>}
-                {resumenDesc.sinCobro > 0 && resumenDesc.deMas > 0 && ' · '}
-                {resumenDesc.deMas > 0 && <><b>{resumenDesc.deMas}</b> descontadas de más</>}.
-              </p>
-            )}
-
+      {/* ── SALDOS ── */}
+      {tabActiva === 'saldos' && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            <p style={{ ...hint, margin: 0, flex: 1 }}>Clases donde la reserva y el cobro no coinciden.</p>
+            <button onClick={fetchDescuadres} disabled={descLoading} aria-label="Actualizar" style={{ ...btnSec, background: 'rgba(0,0,0,0.05)', color: 'var(--black)', padding: '7px 9px' }}>
+              <RefreshCw size={14} style={descLoading ? { animation: 'spin 1s linear infinite' } : {}} />
+            </button>
+          </div>
+          {queEs(<>
+            <b>No se le descontó:</b> tiene lugar en la clase y nunca se le cobró (el estudio se la está regalando).<br />
+            <b>Se le descontó de más:</b> se le cobró y ya no tiene lugar (el estudio se la debe).<br />
+            No aparecen pagos en efectivo, cortesías ni reposiciones: esas son decisiones tuyas{trazableDesde ? <>. Solo se revisa desde el <b>{fmtDia(trazableDesde)}</b></> : null}.
+          </>)}
+          {descuadres === null ? <p style={hint}>Cargando…</p> : descuadres.length === 0 ? vacio('Todos los saldos cuadran.') : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {descOrdenados.map(d => {
                 const sinCobro = d.tipo === 'reserva_sin_cobro';
@@ -345,195 +329,168 @@ export default function AdminControlSaldos() {
                   ? `Cobro de la clase "${d.clase}" del ${fmtDia(d.fecha_clase)}, que había quedado sin descontar`
                   : `Devolución de la clase "${d.clase}" del ${fmtDia(d.fecha_clase)}, que se cobró sin que tuviera lugar`;
                 return (
-                  <div key={`${d.user_id}-${d.class_id}-${d.tipo}`} style={{ border: '1px solid rgba(0,0,0,0.08)', borderLeft: `4px solid ${acento}`, borderRadius: '14px', padding: '13px 15px', background: 'rgba(0,0,0,0.015)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '9px', flexWrap: 'wrap', marginBottom: '7px' }}>
-                      <b style={{ fontSize: '0.95rem', color: 'var(--black)' }}>{d.nombre || d.email}</b>
-                      <span style={chip(sinCobro ? 'rgba(220,38,38,0.1)' : 'rgba(234,122,59,0.12)', acento)}>
-                        {sinCobro ? 'No se le descontó' : 'Se le descontó de más'}
-                      </span>
+                  <div key={`${d.user_id}-${d.class_id}-${d.tipo}`} style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.07)', borderLeft: `4px solid ${acento}`, borderRadius: '14px', padding: '13px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'baseline' }}>
+                      <b style={{ fontSize: '0.95rem', color: 'var(--black)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.nombre || d.email}</b>
+                      <span style={{ ...chip(sinCobro ? 'rgba(220,38,38,0.1)' : 'rgba(234,122,59,0.12)', acento), flexShrink: 0 }}>{sinCobro ? 'No se le descontó' : 'De más'}</span>
                     </div>
-
-                    <p style={{ fontSize: '0.86rem', color: 'var(--black)', margin: '0 0 9px', lineHeight: 1.5 }}>
-                      {d.detalle}
-                    </p>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '9px' }}>
-                      <span style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>
-                        Hoy tiene <b style={{ color: 'var(--black)' }}>{plural(d.saldo, 'clase', 'clases')}</b>
-                      </span>
-                      <ArrowRight size={13} color="var(--on-surface-variant)" />
-                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: acento }}>
-                        quedaría en {plural(d.saldo_sugerido, 'clase', 'clases')}
-                      </span>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)' }}>
-                        · {(d.plan || '').replace('Plan ', '') || 'sin plan'}
-                      </span>
+                    <div style={{ fontSize: '0.84rem', color: 'var(--black)', margin: '6px 0 10px' }}>
+                      {d.clase} · {fmtDia(d.fecha_clase)}{d.hora_clase ? ` · ${d.hora_clase}` : ''}
+                      <span style={{ color: 'var(--on-surface-variant)' }}> — hoy tiene {plural(d.saldo, 'clase', 'clases')}</span>
                     </div>
-
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                      <button onClick={() => openFix(d.user_id, d.nombre || d.email, d.saldo, d.saldo_sugerido, motivo)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '5px', border: 'none', borderRadius: '10px', padding: '7px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, background: 'rgba(255,145,77,0.14)', color: PRIMARY }}>
-                        <Pencil size={13} /> {sinCobro ? 'Descontarle esa clase' : 'Devolverle esa clase'}
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <button onClick={() => openFix(d.user_id, d.nombre || d.email, d.saldo, d.saldo_sugerido, motivo)} style={{ ...btnSec, background: 'rgba(255,145,77,0.14)', color: PRIMARY }}>
+                        <Pencil size={13} /> {sinCobro ? 'Descontar 1' : 'Devolver 1'}
                       </button>
-                      <button onClick={() => setLedgerUserId(d.user_id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--on-surface-variant)', fontWeight: 700, fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                        Ver sus movimientos <ArrowRight size={12} />
+                      <button onClick={() => verHistorialDe(d.user_id)} style={{ ...btnSec, background: 'rgba(0,0,0,0.04)', color: 'var(--black)' }}>
+                        Ver su historial <ArrowRight size={12} />
                       </button>
                     </div>
                   </div>
                 );
               })}
             </div>
-          </>
-        )}
-      </div>
-
-      {/* ── 2. MOVIMIENTOS (ledger) — CONSULTA, no pendientes ──
-          Colapsado a propósito: es la parte de "explorar datos", y mezclarla con
-          la de "arreglar cosas" es lo que enseñó a leer cualquier número como
-          una tarea. El historial por clienta ahora vive en su ficha. */}
-      <div style={card}>
-        <button onClick={() => setVerMovimientos(v => !v)}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', border: 'none', background: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
-          <ScrollText size={18} color="var(--on-surface-variant)" />
-          <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--on-surface-variant)', fontFamily: 'var(--font-display)' }}>
-            Movimientos de todo el estudio
-          </span>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', background: 'rgba(0,0,0,0.05)', borderRadius: '999px', padding: '3px 9px' }}>consulta</span>
-          <ChevronDown size={16} color="var(--on-surface-variant)" style={{ marginLeft: 'auto', transform: verMovimientos ? 'rotate(180deg)' : 'none', transition: 'transform .18s' }} />
-        </button>
-        <p style={{ ...hint, margin: '10px 0 0' }}>
-          Esto <b>no son pendientes</b>. Para el historial de UNA clienta, ábrela en <b>Clientas → Clases</b>.
-        </p>
-      <div style={{ display: verMovimientos ? 'block' : 'none', marginTop: '16px', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '16px' }}>
-        <h3 style={h3}><ScrollText size={18} color={PRIMARY} /> Movimientos de saldo
-          <button onClick={fetchLedger} disabled={ledgerLoading} style={{ marginLeft: 'auto', border: 'none', background: 'rgba(0,0,0,0.05)', borderRadius: '10px', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 700, color: 'var(--black)' }}>
-            <RefreshCw size={13} style={ledgerLoading ? { animation: 'spin 1s linear infinite' } : {}} /> Actualizar
-          </button>
-        </h3>
-        <p style={hint}>
-          Historial automático de <b>cada</b> cambio de clases o membresía: reservas, cancelaciones, cobros,
-          ajustes manuales y Stripe — con quién lo hizo. Registra desde el 14 de julio de 2026 (lo anterior no existe).
-        </p>
-        <div style={{ maxWidth: '420px', marginBottom: '12px' }}>
-          <SearchableClientSelect clients={allUsers || []} value={ledgerUserId} onChange={setLedgerUserId} placeholder="Filtrar por clienta (o deja vacío: últimos movimientos)…" />
+          )}
         </div>
-        {nombreLedger && (
-          <p style={{ ...hint, marginTop: '-4px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <span>Mostrando movimientos de <b>{nombreLedger}</b>.</span>
-            <button onClick={() => {
-              const u = (allUsers || []).find(x => x.id === ledgerUserId);
-              openFix(ledgerUserId, nombreLedger, u?.classes_remaining ?? 0, u?.classes_remaining ?? 0);
-            }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', border: 'none', borderRadius: '9px', padding: '5px 9px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: 'rgba(255,145,77,0.12)', color: PRIMARY }}>
-              <Pencil size={12} /> Ajustar saldo
-            </button>
-          </p>
-        )}
-        {ledger.length === 0 ? (
-          <p style={{ ...hint, margin: 0 }}>{ledgerLoading ? 'Cargando…' : 'Sin movimientos registrados todavía.'}</p>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr>
-                <th style={thStyle}>Cuándo</th>{!ledgerUserId && <th style={thStyle}>Clienta</th>}<th style={thStyle}>Cambio</th>
-                <th style={thStyle}>Saldo</th><th style={thStyle}>Origen</th><th style={thStyle}>Hecho por</th><th style={thStyle}>Nota</th>
-              </tr></thead>
-              <tbody>
-                {ledger.map(m => {
-                  const f = FUENTES[m.source] || FUENTES.desconocido;
-                  return (
-                    <tr key={m.id}>
-                      <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{fmtFecha(m.created_at)}</td>
-                      {!ledgerUserId && <td style={tdStyle}><b>{m.user_name || m.user_email || '—'}</b></td>}
-                      <td style={{ ...tdStyle, fontWeight: 800, color: m.delta > 0 ? '#059669' : m.delta < 0 ? '#DC2626' : 'var(--on-surface-variant)' }}>
-                        {m.delta > 0 ? `+${m.delta}` : m.delta}
-                      </td>
-                      <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{m.balance_before ?? '—'} → {m.balance_after ?? '—'}</td>
-                      <td style={tdStyle}><span style={chip(f.color + '1a', f.color)}>{f.label}</span></td>
-                      <td style={tdStyle}>{m.actor_name || (m.db_role === 'service_role' ? 'Servidor' : '—')}</td>
-                      <td style={{ ...tdStyle, fontSize: '0.78rem', color: 'var(--on-surface-variant)' }}>{m.note || ''}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-      </div>
+      )}
 
-      {/* ── 3. VENTAS SOSPECHOSAS ── */}
-      <div style={card}>
-        <h3 style={h3}><Receipt size={18} color={PRIMARY} /> Ventas por revisar
-          <button onClick={fetchSales} disabled={salesLoading} style={{ marginLeft: 'auto', border: 'none', background: 'rgba(0,0,0,0.05)', borderRadius: '10px', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 700, color: 'var(--black)' }}>
-            <RefreshCw size={13} style={salesLoading ? { animation: 'spin 1s linear infinite' } : {}} /> Actualizar
-          </button>
-        </h3>
-        <p style={hint}>
-          Cobros registrados a cuentas que ya se borraron y cobros repetidos del mismo plan a la misma clienta
-          en menos de 30 minutos (doble click o re-cobro). <b>Anular</b> una venta la saca del dashboard financiero
-          sin borrarla — úsalo con las duplicadas para que el ingreso del mes sea el real.
-        </p>
-        {montoFantasma > 0 && (
-          <p style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#B45309', background: 'rgba(245,158,11,0.1)', borderRadius: '12px', padding: '10px 14px' }}>
-            <AlertTriangle size={16} /> Hay ${montoFantasma.toLocaleString('es-MX')} en ventas por revisar que hoy cuentan como ingreso.
-          </p>
-        )}
-        {ventasSospechosas.length === 0 ? (
-          <p style={{ ...hint, color: '#059669', fontWeight: 700, margin: 0 }}>{salesLoading ? 'Cargando…' : 'Nada sospechoso ✓'}</p>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr>
-                <th style={thStyle}>Fecha</th><th style={thStyle}>Clienta</th><th style={thStyle}>Plan</th>
-                <th style={thStyle}>Monto</th><th style={thStyle}>Método</th><th style={thStyle}>Motivo</th><th style={thStyle}></th>
-              </tr></thead>
-              <tbody>
-                {ventasSospechosas.map(s => (
-                  <tr key={s.id} style={s.voided ? { opacity: 0.45 } : {}}>
-                    <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{fmtFecha(s.created_at)}</td>
-                    <td style={tdStyle}><b>{s.client_name || 'Cuenta borrada'}</b>{s.client_email ? <div style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)' }}>{s.client_email}</div> : null}</td>
-                    <td style={tdStyle}>{s.plan_name}</td>
-                    <td style={tdStyle}><b>${s.amount}</b></td>
-                    <td style={tdStyle}>{s.method}</td>
-                    <td style={{ ...tdStyle, fontSize: '0.78rem' }}>{s.voided ? <span style={chip('rgba(107,114,128,0.12)', '#6B7280')}>ANULADA</span> : s.motivo}</td>
-                    <td style={tdStyle}>
-                      <button onClick={() => toggleVoid(s)} disabled={voidBusy === s.id}
-                        style={{ display: 'flex', alignItems: 'center', gap: '5px', border: 'none', borderRadius: '10px', padding: '6px 10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: s.voided ? 'rgba(5,150,105,0.1)' : 'rgba(220,38,38,0.08)', color: s.voided ? '#059669' : '#DC2626' }}>
-                        {s.voided ? <><Undo2 size={13} /> Restaurar</> : <><Ban size={13} /> Anular</>}
-                      </button>
-                    </td>
-                  </tr>
+      {/* ── COBROS DOBLES ── */}
+      {tabActiva === 'dobles' && (
+        <div>
+          <p style={{ ...hint, marginBottom: '6px' }}>A la misma clienta se le registró el mismo plan dos veces en menos de 30 minutos.</p>
+          {queEs(<>
+            Si fue <b>un solo pago capturado dos veces</b>, anula la repetida: deja de contar como ingreso (no se borra).
+            Si fueron <b>dos pagos distintos</b>, márcalos como revisados y dejan de salir aquí.
+          </>)}
+          {salesLoading && sales.length === 0 ? <p style={hint}>Cargando…</p> : doblesPendientes.length === 0 ? vacio('No hay cobros dobles por revisar.') : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {doblesPendientes.map((g, gi) => {
+                const primera = g.ventas[0];
+                return (
+                  <div key={gi} style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.07)', borderRadius: '14px', padding: '13px 14px' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--black)' }}>{primera.client_name || 'Cuenta borrada'}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', marginBottom: '10px' }}>{primera.plan_name} · ${primera.amount}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+                      {g.ventas.map((v, i) => (
+                        <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 11px', borderRadius: '11px', background: 'rgba(0,0,0,0.03)', opacity: v.voided ? 0.5 : 1 }}>
+                          <div style={{ flex: 1, minWidth: 0, fontSize: '0.84rem' }}>
+                            <b>{i === 0 ? '1er cobro' : `${i + 1}º cobro`}</b> · {fmtFecha(v.created_at)} · {v.method}
+                            {v.voided && <span style={{ ...chip('rgba(107,114,128,0.12)', '#6B7280'), marginLeft: '6px' }}>Anulada</span>}
+                          </div>
+                          {i > 0 && (
+                            <button onClick={() => toggleVoid(v)} disabled={voidBusy === v.id}
+                              style={{ ...btnSec, padding: '6px 10px', background: v.voided ? 'rgba(5,150,105,0.1)' : 'rgba(220,38,38,0.08)', color: v.voided ? '#059669' : '#DC2626' }}>
+                              {v.voided ? <><Undo2 size={13} /> Restaurar</> : <><Ban size={13} /> Anular</>}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <button onClick={() => marcarRevisadas(g)} style={{ ...btnSec, background: 'rgba(5,150,105,0.1)', color: '#047857' }}>
+                      <CheckCircle2 size={14} /> Eran pagos distintos
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {ventasHuerfanas.length > 0 && (
+            <details style={{ marginTop: '18px' }}>
+              <summary style={{ cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700, color: 'var(--on-surface-variant)' }}>
+                {plural(ventasHuerfanas.length, 'venta de una cuenta borrada', 'ventas de cuentas borradas')} — no hay que hacer nada
+              </summary>
+              <p style={{ ...hint, margin: '8px 0 10px' }}>El dinero sí entró; solo que esa cuenta ya no existe. Se quedan contando como ingreso.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {ventasHuerfanas.slice(0, 60).map(v => (
+                  <div key={v.id} style={{ fontSize: '0.8rem', padding: '8px 10px', borderRadius: '10px', background: 'rgba(0,0,0,0.03)' }}>
+                    <b>{v.client_name || 'Sin nombre'}</b> · {v.plan_name} · ${v.amount} · {fmtDia(v.created_at)}
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* ── 4. CUENTAS DUPLICADAS ── */}
-      <div style={card}>
-        <h3 style={h3}><Users size={18} color={PRIMARY} /> Posibles cuentas duplicadas</h3>
-        <p style={hint}>
-          Clientas con nombre casi idéntico o el mismo teléfono. El riesgo: cobrar el plan en una cuenta mientras
-          la clienta reserva desde la otra. Antes de borrar una, revisa en «Movimientos» cuál usa de verdad —
-          y mejor dala de baja en lugar de borrarla (borrar deja las ventas sin nombre).
-        </p>
-        {gruposDuplicados.length === 0 ? (
-          <p style={{ ...hint, color: '#059669', fontWeight: 700, margin: 0 }}>Sin duplicados aparentes ✓</p>
-        ) : gruposDuplicados.map((grupo, gi) => (
-          <div key={gi} style={{ border: '1px dashed rgba(0,0,0,0.15)', borderRadius: '14px', padding: '12px 14px', marginBottom: '10px' }}>
-            {grupo.map(u => (
-              <div key={u.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', padding: '5px 0' }}>
-                <b style={{ fontSize: '0.9rem', color: 'var(--black)' }}>{u.full_name}</b>
-                <span style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)' }}>{u.email}</span>
-                <span style={chip('rgba(0,0,0,0.05)', 'var(--on-surface-variant)')}>{u.membership_plan || 'Sin plan'}</span>
-                <span style={chip('rgba(255,145,77,0.12)', PRIMARY)}>{(u.classes_remaining ?? 0) >= 9000 ? '∞' : (u.classes_remaining ?? 0)} clases</span>
-                <button onClick={() => setLedgerUserId(u.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: PRIMARY, fontWeight: 700, fontSize: '0.75rem' }}>Ver movimientos →</button>
               </div>
-            ))}
+            </details>
+          )}
+        </div>
+      )}
+
+      {/* ── CUENTAS DUPLICADAS ── */}
+      {tabActiva === 'cuentas' && (
+        <div>
+          <p style={{ ...hint, marginBottom: '6px' }}>Clientas que parecen tener dos cuentas (nombre casi igual o mismo teléfono).</p>
+          {queEs(<>El riesgo: cobrarle en una cuenta mientras reserva desde la otra. Revisa el historial de cada una para ver cuál usa, y mejor <b>da de baja</b> la que sobra en vez de borrarla (borrar deja sus ventas sin nombre).</>)}
+          {gruposDuplicados.length === 0 ? vacio('No hay cuentas duplicadas aparentes.') : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {gruposDuplicados.map((grupo, gi) => (
+                <div key={gi} style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.07)', borderRadius: '14px', padding: '6px 14px' }}>
+                  {grupo.map((u, i) => (
+                    <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderTop: i ? '1px solid rgba(0,0,0,0.06)' : 'none' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--black)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.full_name}</div>
+                        <div style={{ fontSize: '0.76rem', color: 'var(--on-surface-variant)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+                        <div style={{ fontSize: '0.76rem', color: 'var(--on-surface-variant)', marginTop: '2px' }}>
+                          {u.membership_plan || 'Sin plan'} · {(u.classes_remaining ?? 0) >= 9000 ? 'ilimitadas' : plural(u.classes_remaining ?? 0, 'clase', 'clases')}
+                        </div>
+                      </div>
+                      <button onClick={() => verHistorialDe(u.id)} style={{ ...btnSec, flexShrink: 0, background: 'rgba(0,0,0,0.04)', color: 'var(--black)' }}>
+                        Historial <ArrowRight size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── HISTORIAL (consulta) ── */}
+      {tabActiva === 'historial' && (
+        <div>
+          <p style={{ ...hint, marginBottom: '10px' }}>Cada cambio de clases o membresía, con quién lo hizo. Es consulta: no son pendientes.</p>
+          <div style={{ marginBottom: '12px' }}>
+            <SearchableClientSelect clients={allUsers || []} value={ledgerUserId} onChange={setLedgerUserId} placeholder="Buscar una clienta (vacío = lo más reciente)…" />
           </div>
-        ))}
-      </div>
+          {nombreLedger && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+              <span style={{ fontSize: '0.84rem', color: 'var(--on-surface-variant)' }}>Movimientos de <b style={{ color: 'var(--black)' }}>{nombreLedger}</b></span>
+              <button onClick={() => {
+                const u = (allUsers || []).find(x => x.id === ledgerUserId);
+                openFix(ledgerUserId, nombreLedger, u?.classes_remaining ?? 0, u?.classes_remaining ?? 0);
+              }} style={{ ...btnSec, padding: '6px 10px', background: 'rgba(255,145,77,0.12)', color: PRIMARY }}>
+                <Pencil size={12} /> Ajustar saldo
+              </button>
+            </div>
+          )}
+          {ledger.length === 0 ? (
+            <p style={{ ...hint, margin: 0 }}>{ledgerLoading ? 'Cargando…' : 'Sin movimientos registrados.'}</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {ledger.map(m => {
+                const f = FUENTES[m.source] || FUENTES.desconocido;
+                return (
+                  <div key={m.id} style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '12px', padding: '10px 12px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                    <div style={{ width: '40px', flexShrink: 0, textAlign: 'center', fontWeight: 900, fontSize: '1rem',
+                                  color: m.delta > 0 ? '#059669' : m.delta < 0 ? '#DC2626' : 'var(--on-surface-variant)' }}>
+                      {m.delta > 0 ? `+${m.delta}` : m.delta}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {!ledgerUserId && <div style={{ fontWeight: 800, fontSize: '0.86rem', color: 'var(--black)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.user_name || m.user_email || '—'}</div>}
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', margin: '2px 0' }}>
+                        <span style={chip(f.color + '1a', f.color)}>{f.label}</span>
+                        <span style={{ fontSize: '0.76rem', color: 'var(--on-surface-variant)' }}>queda en {m.balance_after ?? '—'}</span>
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: 'var(--on-surface-variant)' }}>
+                        {fmtFecha(m.created_at)} · {m.actor_name || (m.db_role === 'service_role' ? 'Sistema' : '—')}
+                      </div>
+                      {m.note && <div style={{ fontSize: '0.76rem', color: 'var(--on-surface-variant)', marginTop: '3px', lineHeight: 1.4 }}>{m.note}</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── MODAL: corregir saldo ── */}
       {fixTarget && (

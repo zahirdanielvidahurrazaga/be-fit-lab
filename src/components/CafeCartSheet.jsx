@@ -8,7 +8,7 @@ const fmtTime = (iso) => {
   return d.toLocaleString('es-MX', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
 };
 
-export default function CafeCartSheet({ cart, products, onUpdateQty, onRemove, onOpenProduct, onCheckout }) {
+export default function CafeCartSheet({ cart, products, onUpdateQty, onRemove, onOpenProduct, onCheckout, onVerMenu }) {
   const [noStraw, setNoStraw] = useState(false);
   const [isGift, setIsGift] = useState(false);
   const [giftName, setGiftName] = useState('');
@@ -33,39 +33,48 @@ export default function CafeCartSheet({ cart, products, onUpdateQty, onRemove, o
   const nowLocal = (() => { const d = new Date(Date.now() + 15 * 60000); d.setSeconds(0, 0); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); })();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', fontFamily: 'var(--font-body)' }}>
-      <div style={{ textAlign: 'center', marginBottom: '4px' }}>
-        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2.4rem', fontWeight: 800, color: '#2B211C', margin: '0' }}>Tu Carrito</h2>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: 'var(--font-body)' }}>
+      {/* El título "Tu carrito" ahora lo pone el encabezado de la pestaña (con la flecha de salida). */}
 
       {cart.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: '#A89A8E' }}>
+        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--c-muted)' }}>
           <ShoppingBag size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-          <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#7D7068' }}>Aún no hay nada aquí</p>
+          <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--c-muted)' }}>Aún no hay nada aquí</p>
           <p style={{ margin: '8px 0 0', fontSize: '0.9rem' }}>Agrega tus bebidas favoritas desde el menú.</p>
+          {onVerMenu && (
+            <button type="button" onClick={onVerMenu}
+              style={{ marginTop: '18px', padding: '12px 26px', borderRadius: '999px', border: 'none', background: 'var(--c-ink)', color: 'var(--c-bg)', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 8px 20px rgba(20,14,10,0.22)' }}>
+              Ver el menú
+            </button>
+          )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {cart.map(item => (
-            <div key={item.lineId} style={{ display: 'flex', flexDirection: 'column', padding: '18px', background: '#fff', borderRadius: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                <div style={{ flex: 1, paddingRight: '12px' }}>
-                  <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#2B211C', lineHeight: 1.2 }}>{item.name}</div>
-                  {item.optionsDisplay?.length > 0 && (
-                    <div style={{ fontSize: '0.85rem', color: '#A89A8E', marginTop: '6px', lineHeight: 1.3 }}>{item.optionsDisplay.map(o => o.name).join(' · ')}</div>
-                  )}
-                  {item.notes && <div style={{ fontSize: '0.85rem', color: '#FF914D', marginTop: '6px', fontStyle: 'italic' }}>“{item.notes}”</div>}
-                </div>
-                <div style={{ fontWeight: 800, fontSize: '1.15rem', color: '#2B211C' }}>${item.lineTotal}</div>
+            <div key={item.lineId} style={{ display: 'flex', gap: '14px', padding: '10px', background: 'var(--c-card)', borderRadius: '22px', border: '1px solid var(--c-line)' }}>
+              <div style={{ width: '76px', height: '76px', borderRadius: '16px', background: 'var(--c-soft)', overflow: 'hidden', flexShrink: 0 }}>
+                {item.image_url && <img src={item.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', background: '#FAF8F5', borderRadius: '14px', padding: '6px', width: 'fit-content' }}>
-                <button onClick={() => item.qty > 1 ? onUpdateQty(item.lineId, -1) : onRemove(item.lineId)} style={{ border: 'none', background: '#fff', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                  {item.qty > 1 ? <Minus size={16} color="#2B211C" /> : <Trash2 size={16} color="#EF4444" />}
-                </button>
-                <span style={{ fontWeight: 700, fontSize: '1rem', width: '36px', textAlign: 'center', color: '#2B211C' }}>{item.qty}</span>
-                <button onClick={() => onUpdateQty(item.lineId, 1)} style={{ border: 'none', background: '#fff', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                  <Plus size={16} color="#2B211C" />
-                </button>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', padding: '2px 4px 0 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'baseline' }}>
+                  <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--c-ink)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
+                  <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--c-ink)', flexShrink: 0 }}>${item.lineTotal}</div>
+                </div>
+                {item.optionsDisplay?.length > 0 && (
+                  <div style={{ fontSize: '0.8rem', color: 'var(--c-muted)', marginTop: '3px', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.optionsDisplay.map(o => o.name).join(' · ')}</div>
+                )}
+                {item.notes && <div style={{ fontSize: '0.8rem', color: 'var(--c-muted)', marginTop: '2px', fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>“{item.notes}”</div>}
+                <div style={{ marginTop: 'auto', paddingTop: '8px', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid var(--c-line)', borderRadius: '999px', padding: '3px', width: 'fit-content' }}>
+                  <button type="button" aria-label={item.qty > 1 ? 'Quitar uno' : 'Eliminar del carrito'} onClick={() => item.qty > 1 ? onUpdateQty(item.lineId, -1) : onRemove(item.lineId)}
+                    style={{ border: 'none', background: 'transparent', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    {item.qty > 1 ? <Minus size={15} color="var(--c-ink)" /> : <Trash2 size={15} color="var(--c-muted)" />}
+                  </button>
+                  <span style={{ fontWeight: 800, fontSize: '0.92rem', minWidth: '18px', textAlign: 'center', color: 'var(--c-ink)' }}>{item.qty}</span>
+                  <button type="button" aria-label="Agregar uno" onClick={() => onUpdateQty(item.lineId, 1)}
+                    style={{ border: 'none', background: 'var(--c-ink)', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    <Plus size={15} color="var(--c-bg)" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -74,19 +83,23 @@ export default function CafeCartSheet({ cart, products, onUpdateQty, onRemove, o
 
       {/* Complementos */}
       {complementos.length > 0 && cart.length > 0 && (
-        <div style={{ marginTop: '8px' }}>
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0 0 16px', color: '#2B211C', fontFamily: 'var(--font-display)' }}>¿Algo más?</h3>
-          <div style={{ display: 'flex', gap: '12px', overflowX: 'scroll', scrollbarWidth: 'none', msOverflowStyle: 'none', paddingBottom: '12px', margin: '0 -24px', paddingLeft: '24px', paddingRight: '24px' }}>
+        <div>
+          <h3 style={{ fontFamily: 'var(--c-font)', fontWeight: 800, letterSpacing: '-0.025em', fontSize: '1rem', margin: '0 0 12px', color: 'var(--c-ink)' }}>¿Algo más?</h3>
+          <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none', paddingBottom: '4px', margin: '0 -20px', paddingLeft: '20px', paddingRight: '20px' }}>
             <style>{`div::-webkit-scrollbar { display: none; }`}</style>
             {complementos.map(p => (
-              <button key={p.id} onClick={() => onOpenProduct(p)} style={{ flex: '0 0 auto', width: '150px', minHeight: '95px', textAlign: 'left', background: '#fff', border: 'none', borderRadius: '20px', padding: '16px', paddingRight: '60px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'relative', zIndex: 2 }}>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#2B211C', lineHeight: 1.3, whiteSpace: 'normal', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textShadow: '0 0 10px rgba(255,255,255,0.9), 0 0 5px rgba(255,255,255,0.9)' }}>{p.name}</div>
-                  <div style={{ fontSize: '0.9rem', color: '#FF914D', fontWeight: 800, marginTop: '4px' }}>+ ${p.price}</div>
-                </div>
-                {p.image_url && (
-                  <img src={p.image_url} alt="" style={{ position: 'absolute', right: '-30px', top: '50%', transform: 'translateY(-50%)', width: '116px', height: '116px', objectFit: 'contain', zIndex: 1, mixBlendMode: 'multiply' }} />
-                )}
+              <button key={p.id} type="button" onClick={() => onOpenProduct(p)}
+                style={{ flex: '0 0 auto', width: '196px', display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left', background: 'var(--c-card)', border: '1px solid var(--c-line)', borderRadius: '18px', padding: '8px 10px 8px 8px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <span style={{ width: '50px', height: '50px', borderRadius: '12px', background: 'var(--c-soft)', overflow: 'hidden', flexShrink: 0 }}>
+                  {p.image_url && <img src={p.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: '0.86rem', fontWeight: 700, color: 'var(--c-ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>
+                  <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--c-muted)', fontWeight: 600, marginTop: '2px' }}>${p.price}</span>
+                </span>
+                <span aria-hidden="true" style={{ width: '26px', height: '26px', borderRadius: '50%', background: 'var(--c-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Plus size={14} color="var(--c-bg)" strokeWidth={2.6} />
+                </span>
               </button>
             ))}
           </div>
@@ -96,42 +109,42 @@ export default function CafeCartSheet({ cart, products, onUpdateQty, onRemove, o
       {cart.length > 0 && (
         <>
           {/* Opciones - Estilo Lista iOS */}
-          <div style={{ background: '#fff', borderRadius: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--c-card)', borderRadius: '22px', border: '1px solid var(--c-line)', overflow: 'hidden' }}>
             
             {/* Sin popote */}
-            <div onClick={() => setNoStraw(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '18px 20px', cursor: 'pointer', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: noStraw ? 'rgba(34,197,94,0.1)' : '#FAF8F5', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
-                <Leaf size={20} color={noStraw ? '#16A34A' : '#A89A8E'} />
+            <div onClick={() => setNoStraw(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '18px 20px', cursor: 'pointer', borderBottom: '1px solid var(--c-line)' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--c-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                <Leaf size={20} color={noStraw ? 'var(--c-ink)' : 'var(--c-muted)'} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#2B211C' }}>Sin popote</div>
-                <div style={{ fontSize: '0.8rem', color: '#A89A8E', marginTop: '2px' }}>Cuida el planeta</div>
+                <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--c-ink)' }}>Sin popote</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--c-muted)', marginTop: '2px' }}>Cuida el planeta</div>
               </div>
-              <div style={{ width: '50px', height: '30px', borderRadius: '30px', background: noStraw ? '#22C55E' : '#E5E0D8', position: 'relative', transition: 'all 0.3s ease' }}>
-                <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: noStraw ? '22px' : '2px', transition: 'all 0.3s ease', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
+              <div style={{ width: '50px', height: '30px', borderRadius: '30px', background: noStraw ? 'var(--c-ink)' : 'var(--c-seg)', position: 'relative', transition: 'all 0.3s ease' }}>
+                <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: 'var(--c-card)', position: 'absolute', top: '2px', left: noStraw ? '22px' : '2px', transition: 'all 0.3s ease', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
               </div>
             </div>
 
             {/* Regalo */}
-            <div style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+            <div style={{ borderBottom: '1px solid var(--c-line)' }}>
               <div onClick={() => setIsGift(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '18px 20px', cursor: 'pointer' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: isGift ? 'rgba(255,145,77,0.1)' : '#FAF8F5', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
-                  <Gift size={20} color={isGift ? '#FF914D' : '#A89A8E'} />
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--c-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                  <Gift size={20} color={isGift ? 'var(--c-ink)' : 'var(--c-muted)'} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#2B211C' }}>Es un regalo</div>
-                  <div style={{ fontSize: '0.8rem', color: '#A89A8E', marginTop: '2px' }}>Para alguien especial</div>
+                  <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--c-ink)' }}>Es un regalo</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--c-muted)', marginTop: '2px' }}>Para alguien especial</div>
                 </div>
-                <div style={{ width: '50px', height: '30px', borderRadius: '30px', background: isGift ? '#FF914D' : '#E5E0D8', position: 'relative', transition: 'all 0.3s ease' }}>
-                  <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: isGift ? '22px' : '2px', transition: 'all 0.3s ease', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
+                <div style={{ width: '50px', height: '30px', borderRadius: '30px', background: isGift ? 'var(--c-ink)' : 'var(--c-seg)', position: 'relative', transition: 'all 0.3s ease' }}>
+                  <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: 'var(--c-card)', position: 'absolute', top: '2px', left: isGift ? '22px' : '2px', transition: 'all 0.3s ease', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
                 </div>
               </div>
               <AnimatePresence>
                 {isGift && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden' }}>
                     <div style={{ padding: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <input value={giftName} onChange={e => setGiftName(e.target.value)} placeholder="¿Para quién? (nombre)" style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1px solid rgba(0,0,0,0.06)', fontSize: '0.95rem', background: '#FAF8F5', fontFamily: 'inherit', boxSizing: 'border-box' }} />
-                      <textarea value={giftMsg} onChange={e => setGiftMsg(e.target.value)} maxLength={120} rows={2} placeholder="Mensaje (opcional)" style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1px solid rgba(0,0,0,0.06)', fontSize: '0.95rem', resize: 'none', fontFamily: 'inherit', background: '#FAF8F5', boxSizing: 'border-box' }} />
+                      <input value={giftName} onChange={e => setGiftName(e.target.value)} placeholder="¿Para quién? (nombre)" style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1px solid var(--c-line)', color: 'var(--c-ink)', fontSize: '0.95rem', background: 'var(--c-bg)', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                      <textarea value={giftMsg} onChange={e => setGiftMsg(e.target.value)} maxLength={120} rows={2} placeholder="Mensaje (opcional)" style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1px solid var(--c-line)', color: 'var(--c-ink)', fontSize: '0.95rem', resize: 'none', fontFamily: 'inherit', background: 'var(--c-bg)', boxSizing: 'border-box' }} />
                     </div>
                   </motion.div>
                 )}
@@ -141,22 +154,22 @@ export default function CafeCartSheet({ cart, products, onUpdateQty, onRemove, o
             {/* Hora de recogida */}
             <div>
               <div onClick={() => setSchedule(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '18px 20px', cursor: 'pointer' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: schedule ? 'rgba(255,145,77,0.1)' : '#FAF8F5', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
-                  <Clock size={20} color={schedule ? '#FF914D' : '#A89A8E'} />
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--c-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                  <Clock size={20} color={schedule ? 'var(--c-ink)' : 'var(--c-muted)'} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#2B211C' }}>{schedule ? 'Programar recogida' : 'Lo antes posible'}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#A89A8E', marginTop: '2px' }}>{schedule && pickup ? fmtTime(new Date(pickup).toISOString()) : 'Toca para programar hora'}</div>
+                  <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--c-ink)' }}>{schedule ? 'Programar recogida' : 'Lo antes posible'}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--c-muted)', marginTop: '2px' }}>{schedule && pickup ? fmtTime(new Date(pickup).toISOString()) : 'Toca para programar hora'}</div>
                 </div>
-                <div style={{ width: '50px', height: '30px', borderRadius: '30px', background: schedule ? '#FF914D' : '#E5E0D8', position: 'relative', transition: 'all 0.3s ease' }}>
-                  <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: schedule ? '22px' : '2px', transition: 'all 0.3s ease', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
+                <div style={{ width: '50px', height: '30px', borderRadius: '30px', background: schedule ? 'var(--c-ink)' : 'var(--c-seg)', position: 'relative', transition: 'all 0.3s ease' }}>
+                  <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: 'var(--c-card)', position: 'absolute', top: '2px', left: schedule ? '22px' : '2px', transition: 'all 0.3s ease', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
                 </div>
               </div>
               <AnimatePresence>
                 {schedule && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden' }}>
                     <div style={{ padding: '0 20px 20px' }}>
-                      <input type="datetime-local" value={pickup} min={nowLocal} onChange={e => setPickup(e.target.value)} style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1px solid rgba(0,0,0,0.06)', fontSize: '0.95rem', boxSizing: 'border-box', background: '#FAF8F5', fontFamily: 'inherit' }} />
+                      <input type="datetime-local" value={pickup} min={nowLocal} onChange={e => setPickup(e.target.value)} style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1px solid var(--c-line)', color: 'var(--c-ink)', fontSize: '0.95rem', boxSizing: 'border-box', background: 'var(--c-bg)', fontFamily: 'inherit' }} />
                     </div>
                   </motion.div>
                 )}
@@ -166,26 +179,26 @@ export default function CafeCartSheet({ cart, products, onUpdateQty, onRemove, o
 
           {/* Footer total + finalizar */}
           <div style={{ marginTop: '12px', paddingTop: '16px' }}>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0 0 12px', color: '#2B211C', fontFamily: 'var(--font-display)' }}>Método de pago</h3>
+            <h3 style={{ fontFamily: 'var(--c-font)', fontWeight: 800, letterSpacing: '-0.025em', fontSize: '0.95rem', margin: '0 0 12px', color: 'var(--c-ink)' }}>Método de pago</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
-              <button onClick={() => setPaymentMethod('card')} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '18px', border: `2px solid ${paymentMethod === 'card' ? '#FF914D' : 'rgba(0,0,0,0.04)'}`, background: paymentMethod === 'card' ? 'rgba(255,145,77,0.05)' : '#fff', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left' }}>
-                <CreditCard size={22} color={paymentMethod === 'card' ? '#FF914D' : '#A89A8E'} />
-                <span style={{ flex: 1, color: paymentMethod === 'card' ? '#2B211C' : '#7D7068', fontWeight: paymentMethod === 'card' ? 700 : 500, fontSize: '0.95rem' }}>Pago con tarjeta</span>
-                {paymentMethod === 'card' && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#FF914D' }} />}
+              <button onClick={() => setPaymentMethod('card')} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '18px', border: `1.5px solid ${paymentMethod === 'card' ? 'var(--c-ink)' : 'var(--c-line)'}`, background: 'var(--c-card)', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left' }}>
+                <CreditCard size={22} color={paymentMethod === 'card' ? 'var(--c-ink)' : 'var(--c-muted)'} />
+                <span style={{ flex: 1, color: paymentMethod === 'card' ? 'var(--c-ink)' : 'var(--c-muted)', fontWeight: paymentMethod === 'card' ? 700 : 500, fontSize: '0.95rem' }}>Pago con tarjeta</span>
+                <span style={{ width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${paymentMethod === 'card' ? 'var(--c-ink)' : 'var(--c-line)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{paymentMethod === 'card' && <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--c-ink)' }} />}</span>
               </button>
-              <button onClick={() => setPaymentMethod('cash')} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '18px', border: `2px solid ${paymentMethod === 'cash' ? '#FF914D' : 'rgba(0,0,0,0.04)'}`, background: paymentMethod === 'cash' ? 'rgba(255,145,77,0.05)' : '#fff', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left' }}>
-                <Banknote size={22} color={paymentMethod === 'cash' ? '#FF914D' : '#A89A8E'} />
-                <span style={{ flex: 1, color: paymentMethod === 'cash' ? '#2B211C' : '#7D7068', fontWeight: paymentMethod === 'cash' ? 700 : 500, fontSize: '0.95rem' }}>Efectivo al recoger</span>
-                {paymentMethod === 'cash' && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#FF914D' }} />}
+              <button onClick={() => setPaymentMethod('cash')} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '18px', border: `1.5px solid ${paymentMethod === 'cash' ? 'var(--c-ink)' : 'var(--c-line)'}`, background: 'var(--c-card)', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left' }}>
+                <Banknote size={22} color={paymentMethod === 'cash' ? 'var(--c-ink)' : 'var(--c-muted)'} />
+                <span style={{ flex: 1, color: paymentMethod === 'cash' ? 'var(--c-ink)' : 'var(--c-muted)', fontWeight: paymentMethod === 'cash' ? 700 : 500, fontSize: '0.95rem' }}>Efectivo al recoger</span>
+                <span style={{ width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${paymentMethod === 'cash' ? 'var(--c-ink)' : 'var(--c-line)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{paymentMethod === 'cash' && <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--c-ink)' }} />}</span>
               </button>
             </div>
             
-            <div style={{ background: '#fff', padding: '24px', borderRadius: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+            <div style={{ background: 'var(--c-card)', padding: '20px', borderRadius: '22px', border: '1px solid var(--c-line)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' }}>
-                <span style={{ fontSize: '1.1rem', color: '#7D7068', fontWeight: 600 }}>Total a pagar</span>
-                <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#2B211C', fontFamily: 'var(--font-display)' }}>${subtotal}</span>
+                <span style={{ fontSize: '1.1rem', color: 'var(--c-muted)', fontWeight: 600 }}>Total a pagar</span>
+                <span style={{ fontFamily: 'var(--c-font)', fontWeight: 800, letterSpacing: '-0.025em', fontSize: '1.6rem', color: 'var(--c-ink)' }}>${subtotal}</span>
               </div>
-              <button onClick={finalize} style={{ width: '100%', padding: '18px', borderRadius: '100px', border: 'none', background: '#FF914D', color: '#fff', fontWeight: 800, fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(255,145,77,0.3)', transition: 'transform 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontFamily: 'var(--font-body)' }} onMouseEnter={e => e.currentTarget.style.transform='scale(1.02)'} onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
+              <button onClick={finalize} style={{ width: '100%', padding: '18px', borderRadius: '100px', border: 'none', background: 'var(--c-ink)', color: 'var(--c-bg)', fontWeight: 800, fontSize: '1.05rem', cursor: 'pointer', boxShadow: '0 12px 28px rgba(20,14,10,0.25)', transition: 'transform 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontFamily: 'var(--font-body)' }} onMouseEnter={e => e.currentTarget.style.transform='scale(1.02)'} onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
                 {paymentMethod === 'card' ? 'Pagar ahora' : 'Confirmar pedido'}
                 <ChevronRight size={20} />
               </button>

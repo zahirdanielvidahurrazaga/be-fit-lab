@@ -155,6 +155,25 @@ serve(async (req) => {
         return new Response('ok');
       }
 
+      // INSCRIPCIÓN ANUAL / CLASE SUELTA pagadas en la web (stripe-pago-unico).
+      // Respaldo de la confirmación que hace la app al volver; la BD es
+      // idempotente por PaymentIntent (pagos_extra.ref), así que no duplica.
+      if (session.metadata?.type === 'inscripcion' || session.metadata?.type === 'clase_suelta') {
+        const piId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id;
+        if (!supabase_user_id || !piId) {
+          console.error('Pago único sin usuaria o sin PaymentIntent:', session.id);
+          return new Response('ok');
+        }
+        const { error } = await supabase.rpc('aplicar_pago_extra_stripe', {
+          p_user: supabase_user_id, p_tipo: session.metadata.type,
+          p_monto: (session.amount_total ?? 0) / 100, p_ref: piId,
+        });
+        // Si falla, 500 → Stripe reintenta (la BD no aplicó nada: es atómica).
+        if (error) { console.error('aplicar_pago_extra_stripe:', error.message); return new Response('error', { status: 500 }); }
+        console.log(`✅ ${session.metadata.type} aplicado para ${supabase_user_id}`);
+        return new Response('ok');
+      }
+
       // Pago de INSCRIPCIÓN A EVENTO → inscribir a la clienta
       if (session.metadata?.type === 'event') {
         const eventId = session.metadata.event_id;
@@ -366,6 +385,26 @@ serve(async (req) => {
     // avisa a la clienta (qué pasó, cuándo se reintenta, qué puede hacer) y a las
     // administradoras. ⚠️ Requiere que el endpoint de Stripe mande
     // `invoice.payment_failed` (Developers → Webhooks → el endpoint → eventos).
+    // ── INSCRIPCIÓN / CLASE SUELTA pagadas con la hoja NATIVA ───────────────
+    // La hoja de la app no crea Checkout Session, así que el bloque de arriba no
+    // la ve. Si la app se cierra justo después del cobro, esto la aplica igual.
+    // Idempotente por PaymentIntent (pagos_extra.ref). Los pagos web también
+    // disparan este evento: se aplican una sola vez por el mismo candado.
+    // ⚠️ Requiere el evento `payment_intent.succeeded` en el endpoint de Stripe.
+    if (event.type === 'payment_intent.succeeded') {
+      const pi = event.data.object as Stripe.PaymentIntent;
+      const tipo = pi.metadata?.type;
+      if (tipo !== 'inscripcion' && tipo !== 'clase_suelta') return new Response('ok');
+      const uid = pi.metadata?.supabase_user_id;
+      if (!uid) { console.error('PaymentIntent de pago único sin usuaria:', pi.id); return new Response('ok'); }
+      const { error } = await supabase.rpc('aplicar_pago_extra_stripe', {
+        p_user: uid, p_tipo: tipo, p_monto: (pi.amount_received ?? 0) / 100, p_ref: pi.id,
+      });
+      if (error) { console.error('aplicar_pago_extra_stripe (PI):', error.message); return new Response('error', { status: 500 }); }
+      console.log(`✅ ${tipo} aplicado (PI) para ${uid}`);
+      return new Response('ok');
+    }
+
     if (event.type === 'invoice.payment_failed') {
       const invoice = event.data.object as Stripe.Invoice;
       const subDetails = (invoice as any).parent?.subscription_details ?? null;

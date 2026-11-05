@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DollarSign, TrendingUp, Users, Coffee, CalendarDays, Award, CreditCard, Gift, Activity, Crown, Receipt, BarChart3, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { mexicoTodayStr } from '../lib/dates';
 
 const money = (n) => `$${Math.round(n || 0).toLocaleString('es-MX')}`;
 const PRIMARY = '#FF914D';
@@ -15,7 +16,38 @@ const SUBTABS = [
   ['coaches', 'Coaches', Award],
   ['cafeteria', 'Cafetería', Coffee],
 ];
-const RANGES = [['7d', '7 días', 7], ['30d', '30 días', 30], ['90d', '90 días', 90], ['1y', '1 año', 365]];
+const RANGES = [['7d', '7 días', 7], ['30d', '30 días', 30], ['mes', 'Este mes'], ['mes_pasado', 'Mes pasado'], ['90d', '90 días', 90], ['1y', '1 año', 365], ['custom', 'Elegir fechas']];
+
+// ── Periodos en HORA DE MÉXICO ─────────────────────────────────────────────
+// Todo periodo se reduce a { from, to } ('YYYY-MM-DD', ambos incluidos). Brenda
+// pidió poder ver "del 1 al 30 de octubre": antes solo había "últimos N días".
+const MX = '-06:00'; // México sin horario de verano desde 2022
+const sumarDias = (ymd, n) => new Date(Date.parse(`${ymd}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+function periodoDe(id, custom) {
+  const hoy = mexicoTodayStr();
+  const [y, m] = hoy.split('-').map(Number);
+  const ini = (yy, mm) => `${yy}-${String(mm).padStart(2, '0')}-01`;
+  switch (id) {
+    case 'mes': return { from: ini(y, m), to: hoy };
+    case 'mes_pasado': {
+      const py = m === 1 ? y - 1 : y, pm = m === 1 ? 12 : m - 1;
+      return { from: ini(py, pm), to: sumarDias(ini(y, m), -1) };
+    }
+    case 'custom': return custom;
+    default: {
+      const d = (RANGES.find(r => r[0] === id) || [])[2] || 30;
+      return { from: sumarDias(hoy, -(d - 1)), to: hoy };
+    }
+  }
+}
+const fmtCorta = (ymd, conAnio) => new Date(`${ymd}T12:00:00`).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', ...(conAnio ? { year: 'numeric' } : {}) });
+function etiquetaPeriodo(id, p) {
+  if (id !== 'custom' && id !== 'mes_pasado' && id !== 'mes') return (RANGES.find(r => r[0] === id) || [, ''])[1];
+  if (!p) return '';
+  const mismoAnio = p.from.slice(0, 4) === p.to.slice(0, 4) && p.to.slice(0, 4) === mexicoTodayStr().slice(0, 4);
+  return p.from === p.to ? fmtCorta(p.from, !mismoAnio) : `${fmtCorta(p.from, !mismoAnio)} – ${fmtCorta(p.to, !mismoAnio)}`;
+}
+const TIPO_LABEL = { membresia: 'Membresía', cafeteria: 'Cafetería', evento: 'Evento', mostrador: 'Mostrador', inscripcion: 'Inscripción', clase_suelta: 'Clase suelta' };
 
 // ---- Liquid glass pill ----
 function Pill({ active, onClick, children }) {
@@ -103,7 +135,11 @@ const SectionTitle = ({ children }) => (
 export default function AdminReportes() {
   const { allUsers, coaches } = useAuth();
   const [subtab, setSubtab] = useState('resumen');
-  const [range, setRange] = useState(30); // días
+  const [rangeId, setRangeId] = useState('30d');
+  // Rango libre: arranca en el mes en curso para que "Elegir fechas" no se abra vacío.
+  const [custom, setCustom] = useState(() => periodoDe('mes'));
+  const periodo = useMemo(() => periodoDe(rangeId, custom), [rangeId, custom]);
+  const periodoValido = !!periodo?.from && !!periodo?.to && periodo.from <= periodo.to;
   const [fin, setFin] = useState(null);
   const [finErr, setFinErr] = useState(false);
   const [finLoading, setFinLoading] = useState(true);
@@ -112,11 +148,19 @@ export default function AdminReportes() {
   const [loading, setLoading] = useState(true);
   const [datosErr, setDatosErr] = useState(false);
 
-  // Datos locales (una vez)
+  // Datos locales: se traen desde el inicio del periodo (mínimo el último año).
+  // Si eligen un rango más viejo que lo ya traído, se vuelve a pedir.
+  const [cargadoDesde, setCargadoDesde] = useState(null);
+  const necesitaDesde = useMemo(() => {
+    const unAnio = sumarDias(mexicoTodayStr(), -366);
+    return periodoValido && periodo.from < unAnio ? periodo.from : unAnio;
+  }, [periodo, periodoValido]);
   useEffect(() => {
+    if (cargadoDesde && cargadoDesde <= necesitaDesde) return;
+    let vigente = true; // si cambian de fechas rápido, una carga vieja no pisa a la nueva
     (async () => {
-      // Solo hace falta lo que cubre el rango más largo (1 año).
-      const desde = new Date(Date.now() - 366 * 86400000).toISOString();
+      setLoading(true); setDatosErr(false);
+      const desde = new Date(`${necesitaDesde}T00:00:00${MX}`).toISOString();
       try {
         const [resv, orders] = await Promise.all([
           traerTodo(() => supabase.from('reservations')
@@ -129,28 +173,37 @@ export default function AdminReportes() {
             .gte('created_at', desde)
             .order('created_at', { ascending: false }).order('id')),
         ]);
+        if (!vigente) return;
         setReservations(resv);
         setCafeOrders(orders);
+        setCargadoDesde(necesitaDesde);
       } catch (e) {
+        if (!vigente) return;
         console.error('AdminReportes: no se pudieron cargar los datos', e);
         setDatosErr(true);
       } finally {
-        setLoading(false);
+        if (vigente) setLoading(false);
       }
     })();
-  }, []);
+    return () => { vigente = false; };
+  }, [necesitaDesde]); // eslint-disable-line
 
   // Finanzas (Stripe) — se re-consulta al cambiar el rango
   useEffect(() => {
+    if (!periodoValido) return;
+    let vigente = true; // si cambian de periodo rápido, gana la última respuesta
     setFinLoading(true); setFinErr(false);
-    supabase.functions.invoke('admin-analytics', { body: { days: range } })
-      .then(({ data, error }) => { if (error || data?.error) setFinErr(true); else setFin(data); })
-      .catch(() => setFinErr(true))
-      .finally(() => setFinLoading(false));
-  }, [range]);
+    supabase.functions.invoke('admin-analytics', { body: { from: periodo.from, to: periodo.to } })
+      .then(({ data, error }) => { if (!vigente) return; if (error || data?.error) setFinErr(true); else setFin(data); })
+      .catch(() => { if (vigente) setFinErr(true); })
+      .finally(() => { if (vigente) setFinLoading(false); });
+    return () => { vigente = false; };
+  }, [periodo.from, periodo.to, periodoValido]); // eslint-disable-line
 
-  const since = useMemo(() => Date.now() - range * 86400000, [range]);
-  const inRange = (iso) => iso && new Date(iso).getTime() >= since;
+  // Límites del periodo en instantes de México
+  const since = useMemo(() => periodoValido ? Date.parse(`${periodo.from}T00:00:00${MX}`) : 0, [periodo, periodoValido]);
+  const until = useMemo(() => periodoValido ? Date.parse(`${sumarDias(periodo.to, 1)}T00:00:00${MX}`) : 0, [periodo, periodoValido]);
+  const inRange = (iso) => { if (!iso) return false; const t = new Date(iso).getTime(); return t >= since && t < until; };
 
   const coachById = useMemo(() => { const m = new Map(); (coaches || []).forEach(c => m.set(c.id, c)); return m; }, [coaches]);
 
@@ -163,7 +216,7 @@ export default function AdminReportes() {
       m.set(t, e);
     });
     return [...m.entries()].map(([title, v]) => ({ title, ...v })).sort((a, b) => b.asistencias - a.asistencias || b.reservas - a.reservas);
-  }, [reservations, since]); // eslint-disable-line
+  }, [reservations, since, until]); // eslint-disable-line
 
   const coachRank = useMemo(() => {
     const m = new Map();
@@ -177,7 +230,7 @@ export default function AdminReportes() {
       m.set(key, e);
     });
     return [...m.values()].sort((a, b) => b.asistencias - a.asistencias || b.reservas - a.reservas);
-  }, [reservations, coachById, since]); // eslint-disable-line
+  }, [reservations, coachById, since, until]); // eslint-disable-line
 
   const cafe = useMemo(() => {
     const prod = new Map(); let revenue = 0, gifts = 0; let n = 0;
@@ -192,17 +245,17 @@ export default function AdminReportes() {
     });
     const ranking = [...prod.entries()].map(([name, v]) => ({ name, ...v })).sort((a, b) => b.qty - a.qty);
     return { revenue, orders: n, gifts, ranking, avg: n ? Math.round(revenue / n) : 0 };
-  }, [cafeOrders, since]); // eslint-disable-line
+  }, [cafeOrders, since, until]); // eslint-disable-line
 
   const members = useMemo(() => {
     const clients = (allUsers || []).filter(u => u.role === 'CLIENT');
     const active = clients.filter(u => u.membership_status === 'ACTIVE');
     const nuevas = clients.filter(u => inRange(u.created_at)).length;
     return { total: clients.length, active: active.length, nuevas };
-  }, [allUsers, since]); // eslint-disable-line
+  }, [allUsers, since, until]); // eslint-disable-line
 
-  const totalAsistencias = useMemo(() => reservations.filter(r => r.checked_in && inRange(r.created_at)).length, [reservations, since]); // eslint-disable-line
-  const rangeLabel = (RANGES.find(r => r[2] === range) || [, ''])[1];
+  const totalAsistencias = useMemo(() => reservations.filter(r => r.checked_in && inRange(r.created_at)).length, [reservations, since, until]); // eslint-disable-line
+  const rangeLabel = etiquetaPeriodo(rangeId, periodo);
 
   return (
     <section>
@@ -216,11 +269,26 @@ export default function AdminReportes() {
       </div>
 
       {/* Filtro de fechas (glass) */}
-      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '22px' }}>
-        {RANGES.map(([id, label, d]) => (
-          <Pill key={id} active={range === d} onClick={() => setRange(d)}>{label}</Pill>
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: rangeId === 'custom' ? '10px' : '22px' }}>
+        {RANGES.map(([id, label]) => (
+          <Pill key={id} active={rangeId === id} onClick={() => setRangeId(id)}>{label}</Pill>
         ))}
       </div>
+      {rangeId === 'custom' && (
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '22px', padding: '14px', background: '#fff', borderRadius: '18px', border: '1px solid rgba(0,0,0,0.05)' }}>
+          {[['from', 'Desde'], ['to', 'Hasta']].map(([k, label]) => (
+            <label key={k} style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: '1 1 140px', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--on-surface-variant)' }}>
+              {label}
+              <input type="date" value={custom[k]} max={mexicoTodayStr()}
+                onChange={e => e.target.value && setCustom(c => ({ ...c, [k]: e.target.value }))}
+                style={{ padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '0.92rem', fontWeight: 600, color: INK, background: 'var(--surface, #fff)', fontFamily: 'inherit' }} />
+            </label>
+          ))}
+          {!periodoValido && (
+            <div style={{ flexBasis: '100%', fontSize: '0.8rem', fontWeight: 700, color: '#DC2626' }}>La fecha "Desde" tiene que ser antes o igual que "Hasta".</div>
+          )}
+        </div>
+      )}
 
       <AnimatePresence mode="wait">
         <motion.div key={subtab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
@@ -281,13 +349,15 @@ export default function AdminReportes() {
                   <SectionTitle>Por tipo de venta</SectionTitle>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {(() => {
-                      const tot = Math.max(1, fin.byType.membresia + fin.byType.cafeteria + (fin.byType.evento || 0) + (fin.byType.mostrador || 0));
+                      const tot = Math.max(1, Object.values(fin.byType || {}).reduce((a, b) => a + (b || 0), 0));
                       return [
-                        { name: 'Membresías (online)', v: fin.byType.membresia },
-                        { name: 'Mostrador', v: fin.byType.mostrador || 0 },
-                        { name: 'Cafetería', v: fin.byType.cafeteria },
+                        { name: 'Membresías (online)', v: fin.byType.membresia || 0 },
+                        { name: 'Mostrador (membresías en el estudio)', v: fin.byType.mostrador || 0 },
+                        { name: 'Inscripciones', v: fin.byType.inscripcion || 0, siempre: true },
+                        { name: 'Clases sueltas', v: fin.byType.clase_suelta || 0, siempre: true },
+                        { name: 'Cafetería', v: fin.byType.cafeteria || 0 },
                         { name: 'Eventos', v: fin.byType.evento || 0 },
-                      ].sort((a, b) => b.v - a.v).map((x, i) => (
+                      ].filter(x => x.v > 0 || x.siempre).sort((a, b) => b.v - a.v).map((x, i) => (
                         <RankRow key={x.name} rank={i + 1} top={i === 0} title={x.name} value={money(x.v)} sub={`${Math.round((x.v / tot) * 100)}% de los ingresos`} pct={(x.v / tot) * 100} />
                       ));
                     })()}
@@ -299,7 +369,7 @@ export default function AdminReportes() {
                 </div>
 
                 <div>
-                  <SectionTitle>Transacciones recientes</SectionTitle>
+                  <SectionTitle>{fin.recent.length >= 60 ? 'Últimas 60 transacciones del periodo' : 'Transacciones del periodo'}</SectionTitle>
                   <div style={{ background: '#fff', borderRadius: '18px', border: '1px solid rgba(0,0,0,0.05)', overflow: 'hidden' }}>
                     {fin.recent.length === 0 ? <div style={{ padding: '20px', textAlign: 'center', color: 'var(--on-surface-variant)' }}>Sin transacciones</div>
                     : fin.recent.map((t, i) => (
@@ -308,7 +378,7 @@ export default function AdminReportes() {
                           {t.type === 'cafeteria' ? <Coffee size={16} /> : t.type === 'evento' ? <Sparkles size={16} /> : t.type === 'mostrador' ? <DollarSign size={16} /> : <Crown size={16} />}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: INK, textTransform: 'capitalize' }}>{t.type}</div>
+                          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: INK }}>{TIPO_LABEL[t.type] || t.type}</div>
                           <div style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.email || 'Sin correo'} · {new Date(t.created * 1000).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</div>
                         </div>
                         <div style={{ fontWeight: 800, color: t.status === 'refunded' ? '#E17055' : INK, fontSize: '0.92rem' }}>{t.status === 'refunded' ? '-' : ''}{money(t.amount)}</div>

@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence, Reorder, useDragControls } from 'framer-motion';
 import { Plus, Pencil, Trash2, CheckCircle2, X, Infinity as InfinityIcon, Eye, EyeOff, AlertTriangle, GripVertical } from 'lucide-react';
+import MenuAcciones from './MenuAcciones';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
+import { ConfigInscripcion } from './AdminInscripcion';
 
 // Quita acentos y deja un slug seguro para el lookup_key de Stripe.
 const slugify = (s) => (s || '')
@@ -19,7 +22,21 @@ const label = { fontSize: '0.74rem', fontWeight: 800, color: 'var(--on-surface-v
 const input = { width: '100%', boxSizing: 'border-box', padding: '13px 14px', borderRadius: '13px', border: '1px solid rgba(55,61,59,0.12)', background: 'var(--surface-lowest)', fontFamily: 'var(--font-body)', fontSize: '0.9rem', outline: 'none' };
 
 export default function AdminPlanes() {
-  const { allPlans, createPlan, updatePlan, deletePlan } = useAuth();
+  const { allPlans, createPlan, updatePlan, deletePlan, fetchPlans } = useAuth();
+  // Orden local mientras se arrastra; se guarda al soltar.
+  const [orden, setOrden] = useState(allPlans || []);
+  useEffect(() => { setOrden(allPlans || []); }, [allPlans]);
+  const guardarOrden = async () => {
+    const cambios = orden.map((p, i) => ({ p, nuevo: i + 1 })).filter(({ p, nuevo }) => p.id && p.sort_order !== nuevo);
+    if (!cambios.length) return;
+    setBusy(true);
+    const res = await Promise.all(cambios.map(({ p, nuevo }) =>
+      supabase.from('membership_plans').update({ sort_order: nuevo }).eq('id', p.id)));
+    setBusy(false);
+    await fetchPlans();
+    if (res.some(r => r.error)) toast('error', 'No se pudo guardar el orden. Intenta de nuevo.');
+    else toast('success', 'Orden guardado. Así se ven en el sitio y en la app.');
+  };
   const [draft, setDraft] = useState(null);     // plan en edición/creación o null
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);         // { type, text }
@@ -196,13 +213,18 @@ export default function AdminPlanes() {
         )}
       </AnimatePresence>
 
-      {/* LISTA */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {(allPlans || []).map(p => {
+      {/* LISTA — se reordena arrastrando desde ⠿ (también con el dedo).
+          Antes el ícono era solo decoración: el orden se cambiaba escribiendo
+          un número dentro de "Editar". */}
+      <p style={{ margin: '0 0 10px', fontSize: '0.78rem', color: 'var(--on-surface-variant)' }}>Mantén presionado <GripVertical size={13} style={{ verticalAlign: '-2px' }} /> y arrastra para cambiar el orden en el sitio y la app.</p>
+      <Reorder.Group axis="y" values={orden} onReorder={setOrden} style={{ display: 'flex', flexDirection: 'column', gap: '10px', listStyle: 'none', padding: 0, margin: 0 }}>
+        {orden.map(p => (
+          <FilaPlan key={p.id || p.name} p={p} onSoltar={guardarOrden}>
+          {(() => {
           const archived = p.active === false;
           return (
-            <div key={p.id || p.name} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', background: 'var(--app-surface-solid, #fff)', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', opacity: archived ? 0.62 : 1 }}>
-              <GripVertical size={16} color="var(--on-surface-variant)" style={{ flexShrink: 0 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', background: 'var(--app-surface-solid, #fff)', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', opacity: archived ? 0.62 : 1 }}>
+              <AsaArrastre />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <strong style={{ fontSize: '1rem', fontFamily: 'var(--font-display)' }}>{p.title}</strong>
@@ -219,19 +241,49 @@ export default function AdminPlanes() {
                 {archived ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
               <button title="Editar" onClick={() => startEdit(p)} style={iconBtn}><Pencil size={16} /></button>
-              <button title="Eliminar" onClick={() => remove(p)} disabled={busy} style={{ ...iconBtn, color: '#c81e1e', background: 'rgba(255,77,77,0.1)' }}><Trash2 size={16} /></button>
+              <MenuAcciones size={36} acciones={[{ label: 'Eliminar plan', icon: <Trash2 size={15} />, peligro: true, disabled: busy, onClick: () => remove(p) }]} />
             </div>
           );
-        })}
+        })()}
+          </FilaPlan>
+        ))}
+      </Reorder.Group>
+      <div>
         {(!allPlans || allPlans.length === 0) && (
           <p style={{ textAlign: 'center', color: 'var(--on-surface-variant)', fontStyle: 'italic', padding: '24px' }}>No hay planes. Crea el primero.</p>
         )}
       </div>
+
+      {/* Cobros que no son membresía */}
+      <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--on-surface-variant)', margin: '30px 0 12px' }}>Otros cobros</h3>
+      <ConfigInscripcion />
     </div>
   );
 }
 
 const iconBtn = { flexShrink: 0, width: '36px', height: '36px', borderRadius: '11px', border: 'none', background: 'rgba(0,0,0,0.05)', color: 'var(--on-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' };
+
+// Fila arrastrable: solo se arrastra desde el asa (⠿), así el resto de la fila
+// se puede tocar y hacer scroll normal en el celular.
+const ContextoAsa = React.createContext(null);
+function FilaPlan({ p, onSoltar, children }) {
+  const controles = useDragControls();
+  return (
+    <Reorder.Item value={p} dragListener={false} dragControls={controles} onDragEnd={onSoltar}
+      style={{ listStyle: 'none', position: 'relative' }} whileDrag={{ scale: 1.02, boxShadow: '0 12px 30px rgba(0,0,0,0.15)', zIndex: 5 }}>
+      <ContextoAsa.Provider value={controles}>{children}</ContextoAsa.Provider>
+    </Reorder.Item>
+  );
+}
+function AsaArrastre() {
+  const controles = React.useContext(ContextoAsa);
+  return (
+    <span onPointerDown={(e) => { e.preventDefault(); controles?.start(e); }} aria-label="Arrastrar para reordenar" title="Arrastrar para reordenar"
+      style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '36px', marginLeft: '-6px', cursor: 'grab', touchAction: 'none', color: 'var(--on-surface-variant)' }}>
+      <GripVertical size={18} />
+    </span>
+  );
+}
 
 function Tag({ children }) {
   return <span style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--on-surface-variant)', background: 'rgba(0,0,0,0.05)', padding: '2px 8px', borderRadius: '20px' }}>{children}</span>;

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Check, ClipboardCheck, Clock, DoorOpen } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, Clock, DoorOpen } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -43,7 +43,11 @@ function SummaryCard({ label, value, color }) {
 // Pase de lista / Asistencias: por día, muestra cada clase con su lista de
 // alumnas que RESERVARON y marca quién hizo CHECK-IN con el QR (asistió).
 export default function AdminAsistencias() {
-  const { globalClasses } = useAuth();
+  const { globalClasses, coaches } = useAuth();
+  // Nombre de la coach desde su PERFIL (por coach_id). El texto `instructor`
+  // lo teclea la dueña y sale de mil formas ("MARLENE YANELI", "Pili", …).
+  const coachPorId = React.useMemo(() => new Map((coaches || []).map(c => [c.id, c.full_name])), [coaches]);
+  const nombreCoach = (c) => (c.coach_id && coachPorId.get(c.coach_id)) || c.instructor || '';
   const [date, setDate] = useState(localToday());
   // Clases del día traídas a propósito cuando la fecha elegida cae fuera de la
   // ventana que carga el contexto. Sin esto, abrir una fecha vieja mostraba el
@@ -153,7 +157,6 @@ export default function AdminAsistencias() {
   return (
     <motion.div key="asistencias" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-        <ClipboardCheck size={26} color={PRIMARY} />
         <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: 0, fontWeight: 800, color: INK }}>Pase de lista</h2>
       </div>
 
@@ -172,7 +175,7 @@ export default function AdminAsistencias() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '16px' }}>
         <SummaryCard label="Clases" value={dayClasses.length} />
         <SummaryCard label="Reservas" value={totals.reservas} />
-        <SummaryCard label="Asistieron" value={totals.asistieron} color="#16A34A" />
+        <SummaryCard label="Asistieron" value={totals.asistieron} color={totals.asistieron > 0 ? '#16A34A' : 'var(--on-surface-variant)'} />
       </div>
 
       <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--on-surface-variant)', cursor: 'pointer' }}>
@@ -200,11 +203,11 @@ export default function AdminAsistencias() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 800, color: INK, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title}</div>
                     <div style={{ fontSize: '0.76rem', color: 'var(--on-surface-variant)', fontWeight: 600, marginTop: '2px' }}>
-                      <Clock size={11} style={{ verticalAlign: '-1px' }} /> {c.time}{c.instructor ? ` · ${c.instructor}` : ''}
+                      <Clock size={11} style={{ verticalAlign: '-1px' }} /> {c.time}{nombreCoach(c) ? ` · ${nombreCoach(c)}` : ''}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 900, color: '#16A34A' }}>{attended} <span style={{ color: 'var(--on-surface-variant)', fontWeight: 600, fontSize: '0.72rem' }}>asist.</span></div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 900, color: attended > 0 ? '#16A34A' : 'var(--on-surface-variant)' }}>{attended} <span style={{ color: 'var(--on-surface-variant)', fontWeight: 600, fontSize: '0.72rem' }}>asist.</span></div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{roster.length} {roster.length === 1 ? 'reserva' : 'reservas'}</div>
                     {wl.length > 0 && <div style={{ fontSize: '0.7rem', color: '#9AA0A6', fontWeight: 700 }}>{wl.length} en espera</div>}
                     {lib.length > 0 && <div style={{ fontSize: '0.7rem', color: '#C2410C', fontWeight: 700 }}>{lib.length} liberó tarde</div>}

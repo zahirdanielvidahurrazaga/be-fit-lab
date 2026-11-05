@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import PaseQR from '../components/PaseQR';
+import BarraGlass from '../components/BarraGlass';
 import { ChevronRight, Users, Activity, QrCode, User, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { todayLocalStr } from '../lib/dates';
@@ -402,59 +404,13 @@ function Coach() {
       </main>
 
       {/* Nav — solo el QR del coach (un único calendario, sin pestañas) */}
-      <nav className={`ios-bottom-nav ${scrolled ? 'scrolled' : ''}`} style={{ justifyContent: 'center' }}>
-        <button className="nav-qr-button" onClick={() => setShowQR(true)}>
-          <QrCode size={24} strokeWidth={2.5} />
-        </button>
-      </nav>
+      <BarraGlass grupo="coach" items={[]}
+        centro={{ label: 'Mi código QR', Icono: QrCode, onClick: () => setShowQR(true) }} />
 
 
       {/* QR Bottom Sheet */}
       <AnimatePresence>
-        {showQR && (
-          <>
-            <div className="qr-sheet-overlay" onClick={() => setShowQR(false)} />
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              drag="y"
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.2}
-              onDragEnd={(_, info) => { if (info.offset.y > 100 || info.velocity.y > 500) setShowQR(false); }}
-              className="qr-bottom-sheet"
-              style={{ padding: '12px 24px 20px', background: 'var(--surface)' }}
-            >
-              <div className="sheet-handle" />
-              <button onClick={() => setShowQR(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '14px', right: '16px', width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.06)', color: 'var(--on-surface)', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 5 }}>✕</button>
-              <div className="wallet-card" style={{ background: 'var(--surface-low)', boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-subtle)', position: 'relative', overflow: 'hidden', margin: '0 auto 10px', width: '100%', borderRadius: '30px' }}>
-                <div style={{ position: 'absolute', top: 0, left: '-100%', width: '50%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)', transform: 'skewX(-20deg)' }} />
-                <div className="wallet-header" style={{ borderBottom: 'none', paddingBottom: 0, paddingTop: '20px', paddingLeft: '20px', paddingRight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(255,139,66,0.18)' }}><img src={ESTUDIO.marca.logo} alt={ESTUDIO.nombre} style={{ height: '24px', width: 'auto', objectFit: 'contain', display: 'block' }} /></div>
-                  </div>
-                  <QrCode size={20} color="var(--primary)" opacity={0.8} />
-                </div>
-                <div className="wallet-body" style={{ padding: '25px 20px', textAlign: 'center' }}>
-                  <div style={{ background: 'white', padding: '12px', borderRadius: '20px', display: 'inline-block', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
-                    <QRCodeCanvas value={user?.id || 'befit-coach-id'} size={160} level="H" includeMargin={false} fgColor="#000000" />
-                  </div>
-                </div>
-                <div className="wallet-footer" style={{ borderTop: '1px dashed rgba(0,0,0,0.05)', paddingTop: '20px', paddingBottom: '20px', justifyContent: 'center' }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>ESTADO</div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>COACH <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--primary)' }}>activo</span></div>
-                  </div>
-                </div>
-              </div>
-              <div className="sheet-user-info" style={{ marginTop: '10px' }}>
-                <div className="user-name">{user?.user_metadata?.full_name || `Coach ${ESTUDIO.nombre}`}</div>
-                <div>{user?.email}</div>
-              </div>
-            </motion.div>
-          </>
-        )}
+        <PaseQR modo="coach" open={showQR} onClose={() => setShowQR(false)} />
       </AnimatePresence>
 
       {/* Roster — alumnas inscritas en la clase tocada */}

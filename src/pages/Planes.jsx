@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Check, X, Calendar, Wallet, AlertCircle, Loader2, PauseCircle, PlayCircle } from 'lucide-react';
+import { Check, X, Calendar, Wallet, AlertCircle, Loader2, PauseCircle, PlayCircle, ArrowLeft } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase, errorDeFuncion } from '../lib/supabase';
@@ -10,11 +10,48 @@ import { Capacitor } from '@capacitor/core';
 import { Stripe } from '@capacitor-community/stripe';
 import { Browser } from '@capacitor/browser';
 import { ESTUDIO } from '../config/estudio';
+import { pagarUnico, confirmarPagoUnicoPendiente } from '../lib/pagoUnico';
 
 function Planes() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, refreshUserData, plan, classesRemaining, membershipStatus, planStartedAt, planExpiresAt, membershipRenewal, hasSubscription } = useAuth();
+  const { user, logout, refreshUserData, plan, classesRemaining, membershipStatus, planStartedAt, planExpiresAt, membershipRenewal, hasSubscription, inscripcion, fetchInscripcion } = useAuth();
+  // ── CLASE SUELTA ($150): suma 1 clase, no reemplaza el saldo como un plan.
+  const [sueltaPagando, setSueltaPagando] = useState(false);
+  const [sueltaMsg, setSueltaMsg] = useState(null);
+  const precioSuelta = Number(inscripcion?.clase_suelta_monto) || null;
+  const esIlimitada = (classesRemaining ?? 0) >= 9000;
+  // Misma regla que ProtectedRoute para entrar al portal.
+  const puedeEntrar = membershipStatus === 'ACTIVE';
+  const necesitaRenovar = membershipStatus !== 'ACTIVE' || isPlanExpired(planExpiresAt) || (!esIlimitada && (classesRemaining ?? 0) <= 0);
+  const comprarSuelta = async () => {
+    if (sueltaPagando) return;
+    setSueltaPagando(true); setSueltaMsg(null);
+    try {
+      const r = await pagarUnico('clase_suelta', '/planes');
+      if (r.estado === 'pagado') {
+        await refreshUserData();
+        setSueltaMsg({ ok: true, text: '¡Listo! Se sumó 1 clase a tu cuenta.' });
+      } else if (r.estado === 'navegador') {
+        setSueltaMsg({ ok: true, text: 'Cuando termines de pagar en el navegador, tu clase se suma sola.' });
+      }
+    } catch (e) {
+      setSueltaMsg({ ok: false, text: e?.message || 'No se pudo procesar el pago.' });
+    } finally {
+      setSueltaPagando(false);
+    }
+  };
+  // Al volver del Checkout web de la clase suelta (?pago_unico=ok&session_id=…)
+  useEffect(() => {
+    if (!user?.id || !window.location.search.includes('pago_unico=')) return;
+    confirmarPagoUnicoPendiente(window.location.search).then((r) => {
+      window.history.replaceState({}, '', window.location.pathname);
+      if (r === 'aplicado') {
+        refreshUserData(); fetchInscripcion?.();
+        setSueltaMsg({ ok: true, text: '¡Listo! Se sumó 1 clase a tu cuenta.' });
+      }
+    });
+  }, [user?.id]); // eslint-disable-line
   const expired = isPlanExpired(planExpiresAt);
   const daysLeft = daysUntilExpiry(planExpiresAt);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -298,8 +335,14 @@ function Planes() {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--app-bg)', padding: '4rem 2rem', fontFamily: 'var(--font-body)' }}>
-      <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--app-bg)', padding: 'calc(env(safe-area-inset-top) + 1.2rem) 1.25rem 4rem', fontFamily: 'var(--font-body)' }}>
+      {user && puedeEntrar && (
+        <button type="button" onClick={() => navigate('/portal')} aria-label="Regresar a Inicio"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.05)', cursor: 'pointer', marginBottom: '1rem' }}>
+          <ArrowLeft size={20} color="var(--black)" />
+        </button>
+      )}
+      <div style={{ textAlign: 'center', marginBottom: '2.5rem', marginTop: user && puedeEntrar ? 0 : '2.5rem' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', color: 'var(--black)' }}>
           {user ? 'Mi Membresía' : 'Elige tu Plan BE FIT'}
         </h1>
@@ -381,13 +424,14 @@ function Planes() {
                 onClick={() => setShowCarousel(true)}
                 style={{ 
                   width: '100%', padding: '14px', borderRadius: '16px', 
-                  background: 'var(--app-surface-solid)', color: 'var(--black)', 
-                  border: '1px solid var(--border-subtle)', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer',
+                  // Con el plan vencido o sin clases, renovar es LA acción: va en naranja.
+                  background: necesitaRenovar ? 'var(--primary)' : 'var(--app-surface-solid)', color: necesitaRenovar ? '#fff' : 'var(--black)',
+                  border: necesitaRenovar ? 'none' : '1px solid var(--border-subtle)', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer',
                   display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)', transition: 'all 0.2s', marginTop: '16px'
+                  boxShadow: necesitaRenovar ? '0 8px 20px rgba(255,145,77,0.3)' : '0 4px 10px rgba(0,0,0,0.02)', transition: 'all 0.2s', marginTop: '16px'
                 }}
               >
-                <Wallet size={18} color="var(--primary)" /> Renovar o Cambiar Plan
+                <Wallet size={18} color={necesitaRenovar ? '#fff' : 'var(--primary)'} /> {necesitaRenovar ? 'Renovar mi plan' : 'Renovar o cambiar plan'}
               </button>
 
               {/* GESTIONAR MEMBRESÍA — pausar / cancelar / reactivar */}
@@ -449,6 +493,35 @@ function Planes() {
         </div>
       )}
 
+      {user && precioSuelta && !esIlimitada && (
+        <div style={{ maxWidth: '520px', margin: '1.6rem auto 0', padding: '18px 20px', borderRadius: '22px',
+                      background: 'var(--surface, #fff)', border: '1px solid rgba(255,145,77,0.35)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px' }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--black)' }}>Clase suelta</div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', marginTop: '3px', lineHeight: 1.45 }}>
+                {membershipStatus === 'ACTIVE' && !isPlanExpired(planExpiresAt)
+                  ? 'Se suma 1 clase a tu saldo y vence junto con tu plan.'
+                  : `1 clase para usar en los próximos ${inscripcion?.clase_suelta_dias || 30} días.`}
+              </div>
+            </div>
+            <div style={{ fontWeight: 900, fontSize: '1.4rem', color: 'var(--black)', fontFamily: 'var(--font-display)' }}>${precioSuelta.toLocaleString('es-MX')}</div>
+          </div>
+          <button onClick={comprarSuelta} disabled={sueltaPagando}
+            style={{ width: '100%', marginTop: '12px', borderRadius: '14px', padding: '12px', fontWeight: 800, fontSize: '0.92rem',
+                     // Si hay que renovar, la clase suelta es la opción SECUNDARIA.
+                     border: necesitaRenovar && !sueltaPagando ? '1.5px solid #FF914D' : 'none',
+                     background: sueltaPagando ? 'rgba(0,0,0,0.08)' : necesitaRenovar ? 'transparent' : '#FF914D',
+                     color: sueltaPagando ? 'var(--on-surface-variant)' : necesitaRenovar ? '#E8661A' : '#fff',
+                     cursor: sueltaPagando ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            {sueltaPagando ? <><Loader2 size={17} style={{ animation: 'spin 1s linear infinite' }} /> Abriendo pago…</> : 'Comprar clase suelta'}
+          </button>
+          {sueltaMsg && (
+            <p style={{ margin: '9px 0 0', fontSize: '0.8rem', fontWeight: 600, textAlign: 'center', color: sueltaMsg.ok ? '#16A34A' : '#EF4444' }}>{sueltaMsg.text}</p>
+          )}
+        </div>
+      )}
+
       {(!user || showingCarousel) && (
         <div style={{ marginTop: '2rem' }}>
           <PricingCarousel onSelectPlan={(plan) => handleOpenCheckout({ title: `Plan ${plan.title}`, price: plan.price.replace('$', '') })} />
@@ -458,9 +531,12 @@ function Planes() {
       <div style={{ textAlign: 'center', marginTop: '4rem' }}>
         <button
           onClick={async () => {
-            // Si está logueada (clienta sin plan que llegó aquí por el rebote/deep
-            // link), "Volver" no tiene historial atrás → cerramos sesión y la
-            // llevamos a Welcome para que no quede atrapada en el paywall.
+            // Con acceso a la app (estado ACTIVO, la misma regla que ProtectedRoute)
+            // "Volver" la regresa a Inicio. Antes cerraba la sesión a CUALQUIER
+            // clienta que entrara a "Mi Membresía" desde su perfil.
+            if (user && puedeEntrar) { navigate('/portal'); return; }
+            // Sin plan (llegó por el rebote/deep link): no hay a dónde regresar →
+            // cerramos sesión y la llevamos a Welcome para que no quede atrapada.
             if (user) {
               try { await logout(); } catch (e) { /* logout limpia el estado igual */ }
               navigate('/welcome', { replace: true });

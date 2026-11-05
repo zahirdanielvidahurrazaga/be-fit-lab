@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom';
+import BarraGlass from '../components/BarraGlass';
 import React, { useState, useEffect, useRef } from 'react';
 import { todayLocalStr } from '../lib/dates';
 import { LogOut, Users, Activity, QrCode, CheckCircle2, Plus, Minus, Calendar, CalendarPlus, ChevronRight, BarChart3, Phone, Mail, TrendingUp, DollarSign, Utensils, Award, Pencil, Menu } from 'lucide-react';
@@ -24,20 +26,14 @@ import ScheduleStoryExport from '../components/ScheduleStoryExport';
 import AdminCategoryManager from '../components/AdminCategoryManager';
 import AdminWeekTemplates from '../components/AdminWeekTemplates';
 import SearchableClientSelect from '../components/SearchableClientSelect';
+import CobroMostrador from '../components/CobroMostrador';
+import InicioHoy from '../components/InicioHoy';
+import MenuAcciones from '../components/MenuAcciones';
+import { useConfigCobros } from '../components/AdminInscripcion';
 import { DEFAULT_CATEGORIES, PASTEL_PALETTE, resolveCatColor, categoryLabel } from '../lib/categories';
 import { Coffee, Bell, UserCog, Sparkles, Copy, Trash2, Tag, LayoutTemplate, MoreHorizontal, Dumbbell, CreditCard, ClipboardCheck, Cake, Scale, Camera } from 'lucide-react';
 import { ESTUDIO, moduloActivo } from '../config/estudio';
-import { cobrarPlanAClienta } from '../lib/cobrarPlan';
 
-const daysOfWeek = [
-  { num: 1, label: 'Lunes' },
-  { num: 2, label: 'Martes' },
-  { num: 3, label: 'Miércoles' },
-  { num: 4, label: 'Jueves' },
-  { num: 5, label: 'Viernes' },
-  { num: 6, label: 'Sábado' },
-  { num: 0, label: 'Domingo' }
-];
 
 // Colores para el resaltado de clases especiales (humo + pill). El 1º (naranja) es el default.
 const SPECIAL_COLORS = ['#FF914D', '#E0679C', '#9B7BEA', '#4AA6E8', '#33BFA6', '#E0A83F'];
@@ -46,7 +42,7 @@ const SPECIAL_COLORS = ['#FF914D', '#E0679C', '#9B7BEA', '#4AA6E8', '#33BFA6', '
 // las pestañas que el personal de recepción necesita (QR, Clases y Ventas).
 // Oculta el resto de la navegación y rebranda el header. Ver /recepcion.
 function Admin({ recepcion = false }) {
-  const { user, logout, globalClasses, recipes, updateClassSpots, checkInClient, addClass, deleteClass, updateClass, addRecipe, deleteRecipe, allUsers, coaches, activatePlan, fetchAllUsers, fetchClassesByDayOfWeek, fetchGlobalClasses, assignCustomBadge, removeCustomBadge, badgeConfigs, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig, addMultipleClasses, setNotifOpen,
+  const { logout, globalClasses, recipes, updateClassSpots, checkInClient, addClass, deleteClass, updateClass, addRecipe, deleteRecipe, allUsers, coaches, fetchAllUsers, fetchClassesByDayOfWeek, fetchGlobalClasses, assignCustomBadge, removeCustomBadge, badgeConfigs, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig, addMultipleClasses, setNotifOpen,
     categories, addCategory, updateCategory, deleteCategory,
     classTemplates, saveTemplate, deleteTemplate, applyTemplate,
     disciplines, plans, allPlans, createPlan, updatePlan, deletePlan } = useAuth();
@@ -72,13 +68,15 @@ function Admin({ recepcion = false }) {
   const [newBirth, setNewBirth] = useState('');
   const [newInscPlan, setNewInscPlan] = useState(''); // '' = sin plan
   const [newPayMethod, setNewPayMethod] = useState('efectivo');
+  // Inscripción anual al inscribir: marcada si el cobro de inscripción está encendido.
+  const [cfgCobros] = useConfigCobros();
+  const [cobrarInscNueva, setCobrarInscNueva] = useState(false);
+  useEffect(() => { setCobrarInscNueva(!!cfgCobros?.inscripcion_activa); }, [cfgCobros?.inscripcion_activa]);
   const [tempPass, setTempPass] = useState(() => ESTUDIO.prefijoContrasena + Math.floor(1000 + Math.random() * 9000));
   const [inscribiendo, setInscribiendo] = useState(false);
   const [inscDone, setInscDone] = useState(null); // { email, password }
 
   // Pagos
-  const [selectedPayMethod, setSelectedPayMethod] = useState('efectivo');
-  const [showPaySuccess, setShowPaySuccess] = useState(false);
 
   // Formularios de Creación
   const [showAddClass, setShowAddClass] = useState(false);
@@ -168,9 +166,6 @@ function Admin({ recepcion = false }) {
   const todayStr = todayLocalStr();
   const todayClasses = getClassesForDate(todayStr);
   
-  const totalAlumnasHoy = todayClasses.reduce((acc, c) => acc + ((c.max_spots || 10) - c.spots), 0);
-  const totalMaxSpots = todayClasses.reduce((acc, c) => acc + (c.max_spots || 10), 0);
-  const avgOccupancy = totalMaxSpots > 0 ? Math.round((totalAlumnasHoy / totalMaxSpots) * 100) : 0;
 
   // Alumnas reales de DB
   const alumnas = allUsers.map(u => ({
@@ -183,16 +178,19 @@ function Admin({ recepcion = false }) {
     status: u.membership_status?.toLowerCase() || 'inactive'
   }));
 
-  const [selectedAlumnaId, setSelectedAlumnaId] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState('Plan Fit');
-  const [charging, setCharging] = useState(false); // candado anti doble-cobro
 
   const handleInscribir = async () => {
     const nombre = newName.trim(), correo = newEmail.trim();
     if (!nombre || !correo) { alert('Falta el nombre o el correo.'); return; }
     if (!tempPass || tempPass.length < 6) { alert('La contraseña temporal debe tener al menos 6 caracteres.'); return; }
-    setInscribiendo(true);
     const planInfo = newInscPlan ? PLAN_BY_NAME[newInscPlan] : null;
+    const montoInsc = cobrarInscNueva ? Number(cfgCobros?.inscripcion_monto || 0) : 0;
+    const total = (planInfo?.amount || 0) + montoInsc;
+    if (total > 0) {
+      const partes = [planInfo ? `${planInfo.title || planInfo.name} $${planInfo.amount}` : null, montoInsc ? `Inscripción anual $${montoInsc}` : null].filter(Boolean);
+      if (!window.confirm(`Inscribir a ${nombre} y cobrar en ${newPayMethod}:\n\n${partes.join('\n')}\n\nTOTAL: $${total.toLocaleString('es-MX')}`)) return;
+    }
+    setInscribiendo(true);
     const { data, error } = await supabase.functions.invoke('admin-create-client', {
       body: {
         name: nombre, email: correo, password: tempPass, phone: newPhone.trim(),
@@ -220,41 +218,20 @@ function Admin({ recepcion = false }) {
       alert(motivo || error?.message || 'No se pudo inscribir.');
       return;
     }
-    setInscDone({ email: correo, password: tempPass });
+    // Inscripción anual en el mismo paso (si se marcó). La cuenta ya existe: si
+    // esto falla, se avisa y se cobra después desde Cobrar.
+    let inscOk = null;
+    if (montoInsc > 0 && data?.userId) {
+      const { error: eInsc } = await supabase.rpc('registrar_pago_extra', { p_user: data.userId, p_tipo: 'inscripcion', p_metodo: newPayMethod });
+      inscOk = !eInsc;
+      if (eInsc) alert(`La clienta SÍ quedó inscrita${planInfo ? ' con su plan' : ''}, pero la inscripción anual NO se cobró:\n\n${eInsc.message}\n\nCóbrala desde Cobrar → Inscripción.`);
+    }
+    setInscDone({ email: correo, password: tempPass, phone: newPhone.trim(), nombre,
+                  cobrado: (planInfo?.amount || 0) + (inscOk ? montoInsc : 0) });
     fetchAllUsers?.();
     // Limpiar el formulario y preparar una nueva contraseña
     setNewName(''); setNewEmail(''); setNewPhone(''); setNewBirth(''); setNewInscPlan('');
     setTempPass(ESTUDIO.prefijoContrasena + Math.floor(1000 + Math.random() * 9000));
-  };
-
-  const handlePago = async () => {
-    if (!selectedAlumnaId || charging) return; // candado: un cobro a la vez
-    const planDetails = PLAN_BY_NAME[selectedPlan];
-    if (!planDetails) return;
-
-    setCharging(true);
-    try {
-      // Toda la lógica (confirmaciones, aviso de saldo que se pisa, candado
-      // anti-duplicado y registro de la venta) vive en src/lib/cobrarPlan.js,
-      // porque desde el 27-ago también se cobra desde la ficha de la clienta y
-      // tener dos copias sería pedir que una pierda los candados.
-      const { ok } = await cobrarPlanAClienta({
-        clienta: (allUsers || []).find(u => u.id === selectedAlumnaId),
-        plan: planDetails,
-        metodo: selectedPayMethod,
-        vendedorId: user.id,
-        activatePlan,
-      });
-      if (!ok) { setCharging(false); return; }
-
-      setShowPaySuccess(true);
-      setTimeout(() => {
-        setShowPaySuccess(false);
-        setSelectedAlumnaId('');
-      }, 2500);
-    } finally {
-      setCharging(false);
-    }
   };
 
   // Toast notification state
@@ -442,6 +419,8 @@ function Admin({ recepcion = false }) {
   };
 
   const handleDeleteRuleBadge = async (id) => {
+    const b = (badgeConfigs || []).find(x => x.id === id);
+    if (!window.confirm(`¿Eliminar la insignia "${b?.label || 'sin nombre'}"? Las clientas que ya la ganaron dejan de verla.`)) return;
     const res = await deleteBadgeConfig(id);
     if (res.success) showToast("Regla eliminada");
   };
@@ -523,75 +502,71 @@ function Admin({ recepcion = false }) {
               <Menu size={20} color={showTopMenu ? 'white' : 'var(--black)'} />
             </div>
             
-            <AnimatePresence>
-              {showTopMenu && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }} 
-                  animate={{ opacity: 1, y: 0, scale: 1 }} 
-                  exit={{ opacity: 0, y: 10, scale: 0.95 }} 
-                  transition={{ duration: 0.2 }}
-                  style={{ position: 'absolute', top: '50px', right: 0, background: 'white', borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.15)', padding: '8px', width: '200px', border: '1px solid rgba(0,0,0,0.05)', zIndex: 100 }}
-                >
-                  {!recepcion && (<>
-                  <div onClick={() => { setActiveTab('reportes'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
-                    <BarChart3 size={18} color="var(--primary)" /> Reportes
-                  </div>
-                  <div onClick={() => { setActiveTab('clientas'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
-                    <UserCog size={18} color="var(--primary)" /> Clientas
-                  </div>
-                  <div onClick={() => { setActiveTab('asistencias'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
-                    <ClipboardCheck size={18} color="var(--primary)" /> Pase de lista
-                  </div>
-                  {moduloActivo('insignias') && (
-                  <div onClick={() => { setActiveTab('insignias'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
-                    <Award size={18} color="var(--primary)" /> Insignias
-                  </div>
-                  )}
-                  {moduloActivo('cumpleanos') && (
-                  <div onClick={() => { setActiveTab('cumpleanos'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
-                    <Cake size={18} color="var(--primary)" /> Cumpleaños
-                  </div>
-                  )}
-                  <div onClick={() => { setActiveTab('auditoria'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
-                    <Scale size={18} color="var(--primary)" /> Auditoría
-                  </div>
-                  {moduloActivo('nutricion') && (
-                  <div onClick={() => { setActiveTab('nutricion'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
-                    <Utensils size={18} color="var(--primary)" /> Comida
-                  </div>
-                  )}
-                  {moduloActivo('fotosProgreso') && (
-                  <div onClick={() => { setActiveTab('progreso'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
-                    <Camera size={18} color="var(--primary)" /> Progreso
-                  </div>
-                  )}
-                  {moduloActivo('cafeteria') && (
-                  <div onClick={() => { setActiveTab('cafeteria'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
-                    <Coffee size={18} color="var(--primary)" /> Cafetería
-                  </div>
-                  )}
-                  <div onClick={() => { setActiveTab('disciplinas'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
-                    <Dumbbell size={18} color="var(--primary)" /> Disciplinas
-                  </div>
-                  {moduloActivo('eventos') && (
-                  <div onClick={() => { setActiveTab('eventos'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
-                    <Sparkles size={18} color="var(--primary)" /> Eventos
-                  </div>
-                  )}
-                  <div onClick={() => { setActiveTab('membresias'); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
-                    <CreditCard size={18} color="var(--primary)" /> Membresías
-                  </div>
-                  <div onClick={() => { setNotifOpen(true); setShowTopMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: 'var(--black)', fontWeight: 600 }}>
-                    <Bell size={18} color="var(--primary)" /> Enviar aviso
-                  </div>
-                  <div style={{ height: '1px', background: 'rgba(0,0,0,0.05)', margin: '8px' }} />
-                  </>)}
-                  <div onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderRadius: '10px', color: '#ff3b30', fontWeight: 600 }}>
-                    <LogOut size={18} /> Cerrar Sesión
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {showTopMenu && (() => {
+                // Menú agrupado (antes: 14 opciones sueltas en una cajita de 200 px).
+                // Horario, QR y Ventas ya están en la barra de abajo.
+                const ir = (tab) => { setActiveTab(tab); setShowTopMenu(false); };
+                const grupos = recepcion ? [] : [
+                  ['Día a día', [
+                    ['asistencias', 'Pase de lista', ClipboardCheck],
+                    ['clientas', 'Clientas', UserCog],
+                    ['auditoria', 'Auditoría', Scale],
+                  ]],
+                  ['Negocio', [
+                    ['reportes', 'Reportes', BarChart3],
+                    ['membresias', 'Membresías', CreditCard],
+                    ['__aviso', 'Enviar aviso', Bell],
+                  ]],
+                  ['Contenido', [
+                    ['disciplinas', 'Catálogo de clases', Dumbbell],
+                    moduloActivo('eventos') && ['eventos', 'Eventos', Sparkles],
+                    moduloActivo('cafeteria') && ['cafeteria', 'Cafetería', Coffee],
+                    moduloActivo('nutricion') && ['nutricion', 'Nutrición', Utensils],
+                    moduloActivo('insignias') && ['insignias', 'Insignias', Award],
+                    moduloActivo('cumpleanos') && ['cumpleanos', 'Cumpleaños', Cake],
+                    moduloActivo('fotosProgreso') && ['progreso', 'Fotos de progreso', Camera],
+                  ].filter(Boolean)],
+                ];
+                // En portal sobre <body>: dentro del encabezado quedaba DEBAJO de la
+                // barra flotante de abajo y tapaba "Cerrar sesión".
+                return createPortal(
+                  <>
+                    <motion.div key="velo" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      onClick={() => setShowTopMenu(false)}
+                      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.28)', zIndex: 2999 }} />
+                    <motion.div key="panel"
+                      initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}
+                      style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top) + 74px)', left: '12px', right: '12px', maxHeight: 'calc(100dvh - env(safe-area-inset-top) - 96px)', overflowY: 'auto',
+                               background: '#fff', borderRadius: '22px', boxShadow: '0 18px 50px rgba(0,0,0,0.2)', padding: '14px', zIndex: 3000 }}>
+                      {grupos.map(([titulo, items]) => (
+                        <div key={titulo} style={{ marginBottom: '12px' }}>
+                          <div style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--on-surface-variant)', margin: '2px 4px 8px' }}>{titulo}</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                            {items.map(([id, label, Icono]) => {
+                              const activo = activeTab === id;
+                              return (
+                                <button key={id} type="button"
+                                  onClick={() => id === '__aviso' ? (setNotifOpen(true), setShowTopMenu(false)) : ir(id)}
+                                  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', borderRadius: '14px', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                                           background: activo ? 'rgba(255,145,77,0.14)' : 'rgba(0,0,0,0.035)', color: 'var(--black)', fontWeight: 700, fontSize: '0.86rem', minWidth: 0 }}>
+                                  <Icono size={18} color="var(--primary)" style={{ flexShrink: 0 }} />
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                      <button type="button" onClick={handleLogout}
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '14px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                                 background: 'rgba(255,59,48,0.07)', color: '#E0352B', fontWeight: 700, fontSize: '0.88rem', marginTop: '4px' }}>
+                        <LogOut size={17} /> Cerrar sesión
+                      </button>
+                    </motion.div>
+                  </>,
+                  document.body,
+                );
+              })()}
           </div>
         </div>
       </header>
@@ -609,7 +584,7 @@ function Admin({ recepcion = false }) {
           </div>
           <div onClick={() => setActiveTab('clases')} className={`sidebar-nav-item ${activeTab === 'clases' ? 'active' : ''}`}>
             <Calendar size={20} />
-            <span>Clases</span>
+            <span>Horario</span>
           </div>
           <div onClick={() => setActiveTab('ventas')} className={`sidebar-nav-item ${activeTab === 'ventas' ? 'active' : ''}`}>
             <DollarSign size={20} />
@@ -648,7 +623,7 @@ function Admin({ recepcion = false }) {
           )}
           <div onClick={() => setActiveTab('disciplinas')} className={`sidebar-nav-item ${activeTab === 'disciplinas' ? 'active' : ''}`}>
             <Dumbbell size={20} />
-            <span>Disciplinas</span>
+            <span>Catálogo de clases</span>
           </div>
           {moduloActivo('eventos') && (
           <div onClick={() => setActiveTab('eventos')} className={`sidebar-nav-item ${activeTab === 'eventos' ? 'active' : ''}`}>
@@ -698,18 +673,7 @@ function Admin({ recepcion = false }) {
             {activeTab === 'mostrador' && (
               <motion.div key="mostrador" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
                 <QrCheckIn sideContent={
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                    <div style={{ padding: '20px', background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
-                      <div style={{ color: 'var(--primary)', marginBottom: '12px', background: 'rgba(255,145,77,0.1)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={20} /></div>
-                      <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{totalAlumnasHoy}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, marginTop: '5px' }}>Reservas ({daysOfWeek.find(d=>d.num===selectedDay)?.label})</div>
-                    </div>
-                    <div style={{ padding: '20px', background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.02)' }}>
-                      <div style={{ color: 'var(--accent)', marginBottom: '12px', background: 'rgba(238,186,137,0.2)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Activity size={20} /></div>
-                      <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--black)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{avgOccupancy}<span style={{fontSize: '1.2rem', color: 'var(--on-surface-variant)'}}>%</span></div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', fontWeight: 700, marginTop: '5px' }}>Ocupación Prom.</div>
-                    </div>
-                  </div>
+                  <InicioHoy todayClasses={todayClasses} coaches={coaches} allUsers={allUsers} onIr={setActiveTab} />
                 } />
                 {/* Registro de entrada del personal (coaches/staff) por QR.
                     Visible en Mostrador → lo ven Admin y Recepción. */}
@@ -724,13 +688,13 @@ function Admin({ recepcion = false }) {
                   {calendarView === 'month' ? (
                     <>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', gap: '10px', flexWrap: 'wrap' }}>
-                        <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: 0, fontWeight: 800 }}>Calendario</h2>
+                        <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: 0, fontWeight: 800 }}>Horario</h2>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <ScheduleStoryExport
                             classes={globalClasses}
                             coaches={coaches}
                             selectedDateStr={todayStr}
-                            buttonLabel="Horarios"
+                            buttonLabel="Compartir"
                             buttonStyle={{ background: 'rgba(255,145,77,0.12)', color: 'var(--primary)', border: '1px solid rgba(255,145,77,0.3)', padding: '8px 14px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'var(--font-body)' }}
                           />
                           <button
@@ -816,14 +780,26 @@ function Admin({ recepcion = false }) {
                                   fontWeight: isToday ? 800 : (hasClasses ? 700 : 500)
                                 }}
                               >
-                                <span style={{ fontSize: '1rem' }}>{dayNum}</span>
-                                {hasClasses && (
-                                  <div style={{ display: 'flex', gap: '2px', position: 'absolute', bottom: '6px' }}>
-                                    {classesOnDay.slice(0, 3).map((_, idx) => (
-                                      <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', background: isToday ? 'white' : 'var(--primary)' }} />
-                                    ))}
-                                  </div>
-                                )}
+                                <span style={{ fontSize: '1rem', lineHeight: 1 }}>{dayNum}</span>
+                                {hasClasses && (() => {
+                                  // Antes eran 3 puntitos fijos sin importar cuántas clases
+                                  // hubiera. Ahora: cuántas clases y qué tan llenas van.
+                                  const ocupados = classesOnDay.reduce((a, c) => a + Math.max(0, (c.max_spots || 10) - (c.spots ?? 0)), 0);
+                                  const cupo = classesOnDay.reduce((a, c) => a + (c.max_spots || 10), 0);
+                                  const pct = cupo ? Math.min(100, Math.round((ocupados / cupo) * 100)) : 0;
+                                  return (
+                                    <>
+                                      <span style={{ fontSize: '0.62rem', fontWeight: 700, marginTop: '3px', opacity: isToday ? 0.9 : 0.6 }}>
+                                        {classesOnDay.length}<span className="cal-palabra"> {classesOnDay.length === 1 ? 'clase' : 'clases'}</span>
+                                      </span>
+                                      <div title={`${ocupados}/${cupo} lugares (${pct}%)`}
+                                        style={{ position: 'absolute', bottom: '6px', left: '22%', right: '22%', height: '3px', borderRadius: '2px',
+                                                 background: isToday ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+                                        <div style={{ width: `${pct}%`, height: '100%', background: isToday ? 'white' : 'var(--primary)' }} />
+                                      </div>
+                                    </>
+                                  );
+                                })()}
                               </motion.button>
                             );
                           })}
@@ -1152,6 +1128,15 @@ function Admin({ recepcion = false }) {
             {activeTab === 'ventas' && (
               <motion.div key="ventas" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} transition={{duration:0.3}}>
                 <div className="admin-double-column">
+                  {/* Cobrar va PRIMERO: es lo que recepción hace varias veces al día;
+                      inscribir una clienta nueva es mucho menos frecuente. */}
+                  {/* SECCIÓN COBROS */}
+                  <section style={{ width: '100%' }}>
+                    <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', marginBottom: '20px' }}>Cobrar</h2>
+                    {/* Membresía · clase suelta · inscripción: mismo componente que la ficha de la clienta */}
+                    <CobroMostrador />
+                  </section>
+
                   {/* SECCIÓN INSCRIBIR CLIENTA NUEVA (todo en uno: cuenta + plan + cobro) */}
                   <section style={{ width: '100%' }}>
                     <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', marginBottom: '20px' }}>Inscribir clienta</h2>
@@ -1159,6 +1144,7 @@ function Admin({ recepcion = false }) {
                       <div className="ios-glass-card" style={{ background: 'var(--surface)', border: 'none', padding: '22px', margin: 0, textAlign: 'center' }}>
                         <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}><CheckCircle2 size={30} color="#16A34A" /></div>
                         <h3 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: '1.2rem' }}>¡Clienta inscrita!</h3>
+                        {inscDone.cobrado > 0 && <p style={{ margin: '0 0 6px', fontWeight: 800, color: '#16A34A', fontSize: '0.9rem' }}>Cobrado: ${inscDone.cobrado.toLocaleString('es-MX')}</p>}
                         <p style={{ margin: '0 0 16px', color: 'var(--on-surface-variant)', fontSize: '0.88rem' }}>Comparte estos datos de acceso con la clienta:</p>
                         <div style={{ textAlign: 'left', background: 'var(--surface-lowest)', borderRadius: '14px', padding: '14px', marginBottom: '14px' }}>
                           <div style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>Correo</div>
@@ -1166,6 +1152,13 @@ function Admin({ recepcion = false }) {
                           <div style={{ fontSize: '0.72rem', color: 'var(--on-surface-variant)', fontWeight: 700 }}>Contraseña temporal</div>
                           <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>{inscDone.password}</div>
                         </div>
+                        {inscDone.phone && (
+                          <a href={`https://wa.me/52${inscDone.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(`¡Hola ${inscDone.nombre.split(' ')[0]}! Ya tienes tu cuenta en ${ESTUDIO.nombre}.\nDescarga la app e inicia sesión con:\nCorreo: ${inscDone.email}\nContraseña: ${inscDone.password}\n(Puedes cambiarla después desde tu perfil.)`)}`}
+                            target="_blank" rel="noreferrer"
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '12px', background: '#16A34A', color: '#fff', fontWeight: 800, textDecoration: 'none', marginBottom: '8px' }}>
+                            Enviar por WhatsApp
+                          </a>
+                        )}
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button onClick={() => navigator.clipboard?.writeText(`Acceso ${ESTUDIO.nombre}\nCorreo: ${inscDone.email}\nContraseña: ${inscDone.password}`)} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', background: 'var(--surface)', fontWeight: 700, cursor: 'pointer' }}>Copiar</button>
                           <button onClick={() => setInscDone(null)} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Inscribir otra</button>
@@ -1194,17 +1187,28 @@ function Admin({ recepcion = false }) {
                         </div>
                         <div style={{ marginBottom: '14px' }}>
                           <label style={labelStyle}>Membresía</label>
-                          <select value={newInscPlan} onChange={(e) => setNewInscPlan(e.target.value)} style={{ ...inputStyle, WebkitAppearance: 'none' }}>
+                          <select value={newInscPlan} onChange={(e) => setNewInscPlan(e.target.value)} style={{ ...inputStyle, WebkitAppearance: 'none', paddingRight: '40px', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center', backgroundSize: '14px', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23786C62' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")" }}>
                             <option value="">Sin plan (solo registrar)</option>
                             {PLANS.map(p => <option key={p.name} value={p.name}>{p.title} — {p.unlimited ? 'ilimitadas' : p.classes + ' clases'} ({p.price})</option>)}
                           </select>
                         </div>
-                        {newInscPlan && (
+                        {cfgCobros && (
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', padding: '12px 13px', borderRadius: '13px', cursor: 'pointer',
+                                          background: cobrarInscNueva ? 'rgba(255,145,77,0.1)' : 'var(--surface-lowest)', fontSize: '0.88rem', fontWeight: 700, color: 'var(--black)' }}>
+                            <input type="checkbox" checked={cobrarInscNueva} onChange={e => setCobrarInscNueva(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: '#FF914D' }} />
+                            <span style={{ flex: 1 }}>Cobrar inscripción anual</span>
+                            <span style={{ color: 'var(--on-surface-variant)' }}>+${Number(cfgCobros.inscripcion_monto || 0).toLocaleString('es-MX')}</span>
+                          </label>
+                        )}
+                        {(newInscPlan || cobrarInscNueva) && (
                           <div style={{ marginBottom: '14px' }}>
                             <label style={labelStyle}>Método de pago</label>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                              {['efectivo', 'tarjeta', 'transferencia'].map(m => (
-                                <div key={m} onClick={() => setNewPayMethod(m)} style={{ padding: '12px 8px', textAlign: 'center', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem', background: newPayMethod === m ? 'var(--primary)' : 'var(--surface-lowest)', color: newPayMethod === m ? 'white' : 'var(--on-surface-variant)', border: newPayMethod === m ? '1px solid var(--primary)' : '1px solid rgba(55,61,59,0.08)' }}>{m.toUpperCase()}</div>
+                            <div role="radiogroup" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', padding: '4px', borderRadius: '14px', background: 'rgba(55,61,59,0.06)' }}>
+                              {[['efectivo', 'Efectivo'], ['tarjeta', 'Tarjeta'], ['transferencia', 'Transferencia']].map(([m, t]) => (
+                                <button key={m} type="button" role="radio" aria-checked={newPayMethod === m} onClick={() => setNewPayMethod(m)}
+                                  style={{ border: 'none', borderRadius: '11px', padding: '10px 4px', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'inherit',
+                                           background: newPayMethod === m ? '#fff' : 'transparent', color: newPayMethod === m ? 'var(--black)' : 'var(--on-surface-variant)',
+                                           boxShadow: newPayMethod === m ? '0 2px 8px rgba(0,0,0,0.08)' : 'none' }}>{t}</button>
                               ))}
                             </div>
                           </div>
@@ -1217,48 +1221,15 @@ function Admin({ recepcion = false }) {
                           </div>
                         </div>
                         <button onClick={handleInscribir} disabled={inscribiendo} style={{ width: '100%', padding: '15px', borderRadius: '14px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '0.95rem', opacity: inscribiendo ? 0.7 : 1 }}>
-                          {inscribiendo ? 'Inscribiendo…' : 'Inscribir clienta'}
+                          {inscribiendo ? 'Inscribiendo…' : (() => {
+                            const t = (newInscPlan ? (PLAN_BY_NAME[newInscPlan]?.amount || 0) : 0) + (cobrarInscNueva ? Number(cfgCobros?.inscripcion_monto || 0) : 0);
+                            return t > 0 ? `Inscribir y cobrar $${t.toLocaleString('es-MX')}` : 'Inscribir clienta';
+                          })()}
                         </button>
                       </div>
                     )}
                   </section>
-  
-                  {/* SECCIÓN COBROS */}
-                  <section style={{ width: '100%' }}>
-                    <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', marginBottom: '20px' }}>Cobro de Membresía</h2>
-                    {showPaySuccess ? (
-                      <SuccessCard message="Pago confirmado y clases asignadas." />
-                    ) : (
-                      <div className="ios-glass-card" style={{ background: 'var(--surface)', border: 'none', padding: '22px', margin: 0 }}>
-                        <div style={{ marginBottom: '16px' }}>
-                          <label style={labelStyle}>Alumna</label>
-                          <SearchableClientSelect clients={alumnas} value={selectedAlumnaId} onChange={setSelectedAlumnaId} placeholder="Buscar alumna por nombre o correo…" />
-                        </div>
-                        <div style={{ marginBottom: '16px' }}>
-                          <label style={labelStyle}>Membresía</label>
-                          <select value={selectedPlan} onChange={(e)=>setSelectedPlan(e.target.value)} style={{ ...inputStyle, WebkitAppearance: 'none' }}>
-                            {PLANS.map(p => <option key={p.name} value={p.name}>{p.title} — {p.unlimited ? 'ilimitadas' : p.classes + ' clases'} ({p.price})</option>)}
-                          </select>
-                        </div>
-                        <div style={{ marginBottom: '22px' }}>
-                          <label style={labelStyle}>Método</label>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                            {['efectivo', 'tarjeta', 'transferencia'].map(m => (
-                              <div key={m} onClick={() => setSelectedPayMethod(m)} style={{ 
-                                padding: '12px 8px', textAlign: 'center', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem',
-                                background: selectedPayMethod === m ? 'var(--primary)' : 'var(--surface-lowest)',
-                                color: selectedPayMethod === m ? 'white' : 'var(--on-surface-variant)',
-                                border: selectedPayMethod === m ? '1px solid var(--primary)' : '1px solid rgba(55,61,59,0.08)'
-                              }}>{m.toUpperCase()}</div>
-                            ))}
-                          </div>
-                        </div>
-                        <button onClick={handlePago} disabled={charging} style={{ width: '100%', padding: '15px', borderRadius: '14px', background: 'var(--primary)', color: 'white', fontWeight: 700, border: 'none', cursor: charging ? 'wait' : 'pointer', fontSize: '0.95rem', opacity: charging ? 0.6 : 1 }}>
-                          {charging ? 'Procesando…' : 'Confirmar Transacción'}
-                        </button>
-                      </div>
-                    )}
-                  </section>
+
                 </div>
               </motion.div>
             )}
@@ -1352,23 +1323,25 @@ function Admin({ recepcion = false }) {
                     <h2 style={{ fontSize: '1.1rem', fontFamily: 'var(--font-display)', marginBottom: '15px' }}>Reglas Activas</h2>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {badgeConfigs.map(badge => (
-                        <div key={badge.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface)', padding: '15px', borderRadius: '14px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span style={{ fontSize: '1.8rem' }}>{badge.icon}</span>
-                            <div>
-                              <div style={{ fontWeight: 700, color: 'var(--black)', fontSize: '0.95rem' }}>{badge.label}</div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>
-                                {getRuleDescription(badge.rule_type, badge.rule_value)}
+                        <div key={badge.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', background: 'var(--surface)', padding: '14px', borderRadius: '14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                            {/* Algunas insignias traen una IMAGEN (URL) como ícono: pintarla
+                                como texto desbordaba la pantalla con la dirección completa. */}
+                            {/^https?:\/\//.test(badge.icon || '')
+                              ? <img src={badge.icon} alt="" style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                              : <span style={{ fontSize: '1.8rem', flexShrink: 0, width: '38px', textAlign: 'center' }}>{badge.icon}</span>}
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, color: badge.label ? 'var(--black)' : 'var(--on-surface-variant)', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{badge.label || 'Sin nombre'}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {getRuleDescription(badge.rule_type, badge.rule_value) || `Tipo: ${badge.rule_type || '—'}`}
                               </div>
                             </div>
                           </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button onClick={() => handleEditRuleBadge(badge)} style={{ background: 'rgba(255,139,66,0.1)', color: 'var(--primary)', border: 'none', width: '32px', height: '32px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                              <Pencil size={14} />
+                          <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                            <button onClick={() => handleEditRuleBadge(badge)} aria-label="Editar" style={{ background: 'rgba(0,0,0,0.04)', color: 'var(--black)', border: 'none', width: '34px', height: '34px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                              <Pencil size={15} />
                             </button>
-                            <button onClick={() => handleDeleteRuleBadge(badge.id)} style={{ background: '#FF4D4D15', color: '#FF4D4D', border: 'none', width: '32px', height: '32px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                              <Minus size={16} />
-                            </button>
+                            <MenuAcciones acciones={[{ label: 'Eliminar insignia', icon: <Trash2 size={15} />, peligro: true, onClick: () => handleDeleteRuleBadge(badge.id) }]} />
                           </div>
                         </div>
                       ))}
@@ -1473,28 +1446,12 @@ function Admin({ recepcion = false }) {
       </main>
 
       {/* ====== BOTTOM NAV PREMIUM — INSTAGRAM STYLE ====== */}
-      <nav className={`ios-bottom-nav mobile-only-nav ${isScrolled ? 'scrolled' : ''}`}>
-        <div onClick={() => setActiveTab('clases')} className={`nav-item ${activeTab === 'clases' ? 'active' : ''}`}>
-          <Calendar size={22} strokeWidth={2.5} />
-          <span>Clases</span>
-        </div>
-        
-        <button 
-          className="nav-qr-button" 
-          onClick={() => setActiveTab('mostrador')}
-          style={activeTab === 'mostrador' ? {
-            background: 'linear-gradient(135deg, #FF914D, #FF6B00)',
-            boxShadow: '0 0 25px rgba(255, 145, 77, 0.8), 0 0 0 4px rgba(255, 255, 255, 1)'
-          } : {}}
-        >
-          <QrCode size={24} strokeWidth={2.5} />
-        </button>
-
-        <div onClick={() => setActiveTab('ventas')} className={`nav-item ${activeTab === 'ventas' ? 'active' : ''}`}>
-          <DollarSign size={22} strokeWidth={2.5} />
-          <span>Ventas</span>
-        </div>
-      </nav>
+      <BarraGlass grupo="admin" className="mobile-only-nav"
+        items={[
+          { id: 'clases', label: 'Horario', Icono: Calendar, activo: activeTab === 'clases', onClick: () => setActiveTab('clases') },
+          { id: 'ventas', label: 'Ventas', Icono: DollarSign, activo: activeTab === 'ventas', onClick: () => setActiveTab('ventas') },
+        ]}
+        centro={{ label: 'Mostrador QR', Icono: QrCode, activo: activeTab === 'mostrador', onClick: () => setActiveTab('mostrador') }} />
 
       {/* PREMIUM TOAST NOTIFICATION */}
       {toast.show && (
@@ -1548,18 +1505,6 @@ function Admin({ recepcion = false }) {
         onApply={applyTemplate}
         showToast={showToast}
       />
-    </div>
-  );
-}
-
-function SuccessCard({ message }) {
-  return (
-    <div className="ios-glass-card" style={{ padding: '40px 20px', textAlign: 'center', background: 'var(--surface)', border: 'none' }}>
-      <div style={{ width: '60px', height: '60px', background: 'rgba(34,197,94,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
-        <CheckCircle2 size={30} color="#22C55E" />
-      </div>
-      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', marginBottom: '5px' }}>¡Éxito!</h3>
-      <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.85rem' }}>{message}</p>
     </div>
   );
 }

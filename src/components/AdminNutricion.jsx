@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, Pencil, Utensils, CalendarDays, ImagePlus, Loader2, Camera, X, Search, ChevronLeft, ChevronRight, Flame, Clock, Check, Save, Salad } from 'lucide-react';
+import MenuAcciones from './MenuAcciones';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { uploadImage } from '../lib/cafeImage';
@@ -230,7 +231,7 @@ function Recetas() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
                 <button onClick={() => startEdit(r)} style={{ width: '32px', height: '32px', borderRadius: '9px', border: 'none', background: 'rgba(255,145,77,0.12)', color: PRIMARY, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Pencil size={15} /></button>
-                <button onClick={() => del(r)} style={{ width: '32px', height: '32px', borderRadius: '9px', border: 'none', background: 'rgba(186,26,26,0.08)', color: '#ba1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Trash2 size={15} /></button>
+                <MenuAcciones size={32} acciones={[{ label: 'Eliminar receta', icon: <Trash2 size={15} />, peligro: true, onClick: () => del(r) }]} />
               </div>
             </div>
           ))}

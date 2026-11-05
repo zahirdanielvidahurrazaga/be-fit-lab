@@ -115,8 +115,8 @@ const TOUR_STEPS = [
   },
   {
     icon: <TrendingUp size={38} color="var(--primary)" />,
-    title: 'Metas 📈',
-    description: 'Toca la pestaña "Metas" para ver tu progreso, fotos e insignias.',
+    title: 'Progreso 📈',
+    description: 'Toca la pestaña "Progreso" para ver tus metas, fotos e insignias.',
     selector: '.ios-bottom-nav a[href="/evolucion"]',
     requireClick: true,
     targetSelector: '.ios-bottom-nav a[href="/evolucion"]',

@@ -72,6 +72,10 @@ export const AuthProvider = ({ children }) => {
   // es la que manda (trigger guard_reservation_window); aquí solo sirve para
   // avisar antes de tocar "Reservar". null = sin límite.
   const [bookingWindowDays, setBookingWindowDays] = useState(7);
+  // Inscripción anual + precio de clase suelta (RPC mi_inscripcion). null =
+  // aún no se sabe o la BD todavía no tiene la función (versión vieja): en ese
+  // caso la app se comporta como antes y la BD decide al reservar.
+  const [inscripcion, setInscripcion] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [monthlyGoal, setMonthlyGoal] = useState(0); // meta de clases/mes (users.target_monthly_classes)
 
@@ -488,6 +492,18 @@ export const AuthProvider = ({ children }) => {
       setCoaches(data || []);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const fetchInscripcion = async () => {
+    try {
+      const { data, error } = await supabase.rpc('mi_inscripcion');
+      if (error) throw error;
+      setInscripcion(data || null);
+      return data || null;
+    } catch (err) {
+      console.warn('No se pudo leer la inscripción:', err?.message || err);
+      return null;
     }
   };
 
@@ -1152,6 +1168,7 @@ export const AuthProvider = ({ children }) => {
       }
       // Intentos frenados que quedaron en cola sin red → se mandan ahora.
       vaciarColaIntentos(currentUser?.id);
+      fetchInscripcion();
     } catch (err) {
       console.error("Error obteniendo datos del usuario:", err);
       setRole('CLIENT');
@@ -1365,6 +1382,8 @@ export const AuthProvider = ({ children }) => {
       fetchUserData(user);
       // La clase todavía no abre (máximo N días antes): la Agenda lo explica.
       if (String(err?.message || '').includes('FUERA_DE_VENTANA')) return 'fuera_de_ventana';
+      // Falta la inscripción anual: la Agenda ofrece pagarla ahí mismo.
+      if (String(err?.message || '').includes('INSCRIPCION_PENDIENTE')) { fetchInscripcion(); return 'inscripcion_pendiente'; }
       return false;
     }
   };
@@ -1993,7 +2012,7 @@ export const AuthProvider = ({ children }) => {
       favoriteRecipeIds, toggleRecipeFavorite,
       todayLog, todayConsumed, calorieGoal, planCalories, logFood, removeFoodLog, updateCalorieGoal,
       login, logout, forceCleanSession, fetchAllUsers, refreshUserData,
-      bookClass, cancelClass, releaseSpot, bookingWindowDays, acceptOffer, declineOffer, setWaitlistAutoClaim, checkInClient, checkInReservation, updateClassSpots, updateReservationCalendarId,
+      bookClass, cancelClass, releaseSpot, bookingWindowDays, inscripcion, fetchInscripcion, acceptOffer, declineOffer, setWaitlistAutoClaim, checkInClient, checkInReservation, updateClassSpots, updateReservationCalendarId,
       activatePlan, addClass, deleteClass, addRecipe, deleteRecipe,
       fetchClassReservations, fetchClassesByDayOfWeek, fetchGlobalClasses,
       assignCustomBadge, removeCustomBadge, createBadgeConfig, updateBadgeConfig, deleteBadgeConfig,

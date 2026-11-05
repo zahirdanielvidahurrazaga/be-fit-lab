@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, Check, Coffee, Sliders, ImagePlus, Loader2, ChevronDown, Camera } from 'lucide-react';
+import MenuAcciones from './MenuAcciones';
 import { useAuth } from '../context/AuthContext';
 import AdminCafeOptions from './AdminCafeOptions';
 import AdminCafeCovers from './AdminCafeCovers';
@@ -79,13 +80,24 @@ function ProductCard({ p, onSave, onPatch, onToggle, onDelete }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
               <span style={{ fontWeight: 800, color: 'var(--on-surface-variant)' }}>$</span>
-              <input type="number" value={draft.price} onChange={e => setDraft({ ...draft, price: e.target.value })} onKeyDown={e => { if (e.key === 'Enter') save(); }} style={{ ...inputStyle, width: '90px', flex: 'none' }} />
+              <input type="number" inputMode="numeric" value={draft.price} onChange={e => setDraft({ ...draft, price: e.target.value })}
+                onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setDraft({ name: p.name, price: String(p.price) }); }}
+                // La ruedita del mouse cambiaba el precio sin querer al pasar por encima.
+                onWheel={e => e.currentTarget.blur()}
+                style={{ ...inputStyle, width: '90px', flex: 'none' }} />
             </div>
             <AnimatePresence>
               {dirty && (
-                <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} onClick={save} disabled={saving}
+                <motion.button key="guardar" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} onClick={save} disabled={saving}
                   style={{ background: '#22C55E', color: 'white', border: 'none', padding: '9px 12px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <Check size={15} /> {saving ? '...' : 'Guardar'}
+                </motion.button>
+              )}
+              {dirty && !saving && (
+                <motion.button key="deshacer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  onClick={() => setDraft({ name: p.name, price: String(p.price) })}
+                  style={{ background: 'transparent', color: 'var(--on-surface-variant)', border: 'none', padding: '9px 6px', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}>
+                  Deshacer
                 </motion.button>
               )}
             </AnimatePresence>
@@ -100,9 +112,9 @@ function ProductCard({ p, onSave, onPatch, onToggle, onDelete }) {
         <button onClick={() => setOpen(o => !o)} style={{ background: 'rgba(0,0,0,0.04)', color: 'var(--on-surface-variant)', border: 'none', padding: '8px 12px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
           Detalles <motion.span animate={{ rotate: open ? 180 : 0 }} style={{ display: 'flex' }}><ChevronDown size={15} /></motion.span>
         </button>
-        <button onClick={() => onDelete(p)} aria-label="Eliminar" style={{ marginLeft: 'auto', background: 'rgba(186,26,26,0.1)', color: '#ba1a1a', border: 'none', padding: '9px', borderRadius: '10px', cursor: 'pointer', display: 'flex' }}>
-          <Trash2 size={16} />
-        </button>
+        <div style={{ marginLeft: 'auto' }}>
+          <MenuAcciones acciones={[{ label: 'Eliminar del menú', icon: <Trash2 size={15} />, peligro: true, onClick: () => onDelete(p) }]} />
+        </div>
       </div>
 
       <AnimatePresence initial={false}>
@@ -151,21 +163,30 @@ function AdminCafeteria() {
     if (success) { setNp({ name: '', price: '', category: 'coffee', description: '', cals: '', protein: '', image_url: '' }); setShowAdd(false); }
   };
 
+  // Pestañas como selector segmentado de ancho completo: antes eran 3 botones
+  // sueltos junto al título y en celular se partían en dos renglones.
   const Tab = ({ id, label, Icon }) => (
-    <button onClick={() => setSubtab(id)} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '9px 16px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem',
-      background: subtab === id ? 'var(--primary)' : 'rgba(0,0,0,0.05)', color: subtab === id ? '#fff' : 'var(--on-surface-variant)' }}>
-      <Icon size={17} /> {label}
+    <button onClick={() => setSubtab(id)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px 6px', borderRadius: '11px', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '0.84rem', fontFamily: 'inherit', minWidth: 0,
+      background: subtab === id ? '#fff' : 'transparent', color: subtab === id ? 'var(--black)' : 'var(--on-surface-variant)',
+      boxShadow: subtab === id ? '0 2px 8px rgba(0,0,0,0.08)' : 'none' }}>
+      <Icon size={15} style={{ flexShrink: 0 }} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
     </button>
   );
+  const [catActiva, setCatActiva] = useState('all');
 
   return (
     <section>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
-        <h2 style={{ fontSize: '1.3rem', fontFamily: 'var(--font-display)', margin: '0 8px 0 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Coffee size={20} color="var(--primary)" /> Cafetería
-        </h2>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+        <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: 0, flex: 1 }}>Cafetería</h2>
+        {subtab === 'products' && (
+          <button onClick={() => setShowAdd(s => !s)} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '9px 14px', borderRadius: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <Plus size={16} /> {showAdd ? 'Cerrar' : 'Nuevo'}
+          </button>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: '4px', padding: '4px', borderRadius: '14px', background: 'rgba(0,0,0,0.05)', marginBottom: '18px' }}>
         <Tab id="products" label="Productos" Icon={Coffee} />
-        <Tab id="options" label="Personalización" Icon={Sliders} />
+        <Tab id="options" label="Opciones" Icon={Sliders} />
         <Tab id="covers" label="Portada" Icon={ImagePlus} />
       </div>
 
@@ -173,11 +194,25 @@ function AdminCafeteria() {
         <AdminCafeCovers />
       ) : subtab === 'products' ? (
         <>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
-            <button onClick={() => setShowAdd(s => !s)} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-              <Plus size={16} /> Nuevo producto
-            </button>
-          </div>
+          {/* Saltar de categoría sin recorrer todo el menú */}
+          {(() => {
+            const conProductos = CATEGORIES.filter(c => (cafeProducts || []).some(p => p.category === c.value));
+            if (conProductos.length < 2) return null;
+            const chip = (id, texto, n) => (
+              <button key={id} onClick={() => setCatActiva(id)}
+                style={{ flexShrink: 0, padding: '8px 13px', borderRadius: '999px', border: catActiva === id ? '1px solid var(--primary)' : '1px solid rgba(0,0,0,0.08)',
+                         background: catActiva === id ? 'rgba(255,145,77,0.12)' : '#fff', color: catActiva === id ? 'var(--primary)' : 'var(--on-surface-variant)',
+                         fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                {texto} <span style={{ opacity: 0.6 }}>{n}</span>
+              </button>
+            );
+            return (
+              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '14px', WebkitOverflowScrolling: 'touch' }}>
+                {chip('all', 'Todo', (cafeProducts || []).length)}
+                {conProductos.map(c => chip(c.value, c.label, (cafeProducts || []).filter(p => p.category === c.value).length))}
+              </div>
+            );
+          })()}
 
           <AnimatePresence>
             {showAdd && (
@@ -206,13 +241,13 @@ function AdminCafeteria() {
             )}
           </AnimatePresence>
 
-          {CATEGORIES.map(cat => {
+          {CATEGORIES.filter(cat => catActiva === 'all' || cat.value === catActiva).map(cat => {
             const items = (cafeProducts || []).filter(p => p.category === cat.value);
             if (items.length === 0) return null;
             return (
               <div key={cat.value} style={{ marginBottom: '24px' }}>
                 <h3 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--on-surface-variant)', marginBottom: '10px' }}>{cat.label}</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {items.map(p => (
                     <ProductCard key={p.id} p={p} onSave={saveRow} onPatch={patchRow} onToggle={toggleAvailable} onDelete={removeProduct} />
                   ))}

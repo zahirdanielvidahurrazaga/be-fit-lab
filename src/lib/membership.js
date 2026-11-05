@@ -26,3 +26,29 @@ export function formatPlanDate(d, short = false) {
     year: 'numeric',
   });
 }
+
+/**
+ * ¿Puede reservar hoy, o qué le falta? Una sola regla para Inicio y Clases:
+ * antes invitaban a "Agendar ahora" a una clienta vencida o sin clases, y al
+ * intentarlo rebotaba.
+ * @returns {null | { tipo: 'vencido'|'sin_clases', titulo: string, texto: string, cta: string }}
+ */
+export function bloqueoParaReservar({ membershipStatus, planExpiresAt, classesRemaining }) {
+  if (membershipStatus !== 'ACTIVE' || isPlanExpired(planExpiresAt)) {
+    return {
+      tipo: 'vencido',
+      titulo: 'Tu plan ya venció',
+      texto: planExpiresAt ? `Venció el ${formatPlanDate(planExpiresAt)}. Renuévalo para volver a reservar.` : 'Elige un plan para empezar a reservar.',
+      cta: 'Renovar mi plan',
+    };
+  }
+  if ((classesRemaining ?? 0) <= 0) {
+    return {
+      tipo: 'sin_clases',
+      titulo: 'Ya usaste todas tus clases',
+      texto: 'Compra un paquete o una clase suelta para seguir reservando.',
+      cta: 'Comprar clases',
+    };
+  }
+  return null;
+}

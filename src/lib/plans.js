@@ -53,6 +53,9 @@ export let PLAN_BY_NAME = Object.fromEntries(DEFAULT_PLANS.map(p => [p.name, p])
 // Convierte una fila de la tabla membership_plans al shape que usa el front.
 export function dbRowToPlan(r) {
   return {
+    // Sin el id, editar/ocultar/eliminar un plan desde admin no lo encontraba
+    // (el formulario lo tomaba como plan NUEVO → "Ya existe un plan llamado…").
+    id: r.id,
     name: r.name,
     title: r.title,
     subtitle: r.subtitle || '',

@@ -1,14 +1,17 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import BarraGlass from '../components/BarraGlass';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { Stripe } from '@capacitor-community/stripe';
-import { ShoppingCart, ChevronLeft, ChevronRight, Info, Coffee, X, Receipt, Check, CreditCard, AlertCircle, Plus, Flame, Home, Gift, Star } from 'lucide-react';
+import { ShoppingCart, ChevronLeft, ChevronRight, Info, Coffee, X, Receipt, Check, CreditCard, AlertCircle, Plus, Flame, Home, Gift, Star, Search, RotateCcw } from 'lucide-react';
 import { supabase, errorDeFuncion } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import CafeProductSheet from '../components/CafeProductSheet';
 import CafeCartSheet from '../components/CafeCartSheet';
 import CafeOrderHistory from '../components/CafeOrderHistory';
+import CafeSplash from '../components/CafeSplash';
+import LenteVidrio from '../components/LenteVidrio';
 import { CafeMenuSkeleton } from '../components/Skeleton';
 import { resolveCafeImage } from '../lib/cafeImage';
 import { ESTUDIO } from '../config/estudio';
@@ -26,14 +29,20 @@ const CafeImage = ({ src, alt }) => {
   const [error, setError] = useState(false);
   if (!src || error) {
     return (
-      <div style={{ width: '100%', height: '100%', background: '#F5F0E6', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '16px' }}>
+      <div style={{ width: '100%', height: '100%', background: 'var(--c-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '16px' }}>
         <Coffee size={32} color="#DCD4C7" />
       </div>
     );
   }
   
   const isMango = src.includes('mango_matcha');
-  return <img src={src} alt={alt} onError={() => setError(true)} loading="eager" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: needsMultiply(src) ? 'multiply' : 'normal', transform: isMango ? 'scale(1.4)' : 'scale(1.15)' }} />;
+  // Recorte PNG (sin fondo): contenido y un poco más grande. FOTO real: llena el
+  // recuadro (antes salía angosta con bandas crema a los lados).
+  const recorte = needsMultiply(src);
+  return <img src={src} alt={alt} onError={() => setError(true)} loading="eager" decoding="async"
+    style={recorte
+      ? { width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'multiply', transform: isMango ? 'scale(1.4)' : 'scale(1.15)' }
+      : { width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />;
 };
 
 function Cafeteria() {
@@ -66,6 +75,20 @@ function Cafeteria() {
   const [processing, setProcessing] = useState(false);
   const [activeOrders, setActiveOrders] = useState([]);          // pedidos en curso del usuario
   const [activeTab, setActiveTab] = useState('home');            // home, order, rewards, history
+  // Pantalla de entrada de Coffee Lab: completa la 1ª vez en la sesión, rápida después.
+  // Al volver de un pago (?payment=) no se muestra, para ver el resultado de inmediato.
+  const [splash, setSplash] = useState(() => {
+    if (/[?&]payment=/.test(window.location.search)) return null;
+    let visto = false;
+    try { visto = sessionStorage.getItem('befit_cafe_splash') === '1'; sessionStorage.setItem('befit_cafe_splash', '1'); } catch { /* sin storage: completa */ }
+    return visto ? 'rapido' : 'completo';
+  });
+  // La pestaña del navegador también dice que estás en otra "app".
+  useEffect(() => {
+    const antes = document.title;
+    document.title = `${ESTUDIO.nombreCafeteria} · ${ESTUDIO.nombre}`;
+    return () => { document.title = antes; };
+  }, []);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);   // pide registrarse/login para comprar
   const [returnedFromPay, setReturnedFromPay] = useState(false); // volvió del checkout web (Stripe)
@@ -73,7 +96,10 @@ function Cafeteria() {
   // Portadas de "Novedades", editables desde Admin → Cafetería (tabla cafe_covers).
   // Antes estaban hardcodeadas aquí, lo que obligaba a recompilar la app para
   // cambiar una imagen. Ahora la dueña las cambia sola y se ven al instante.
-  const [covers, setCovers] = useState([]);
+  // Portadas: se pintan al instante con la última copia guardada; sin copia, se espera
+  // a la base (antes salía un segundo el anuncio viejo de respaldo y luego cambiaba).
+  const [covers, setCovers] = useState(() => { try { return JSON.parse(localStorage.getItem('befit_cafe_covers')) || []; } catch { return []; } });
+  const [coversCargadas, setCoversCargadas] = useState(false);
   const [coverIndex, setCoverIndex] = useState(0);
 
 
@@ -122,6 +148,7 @@ function Cafeteria() {
   ];
   const visibleTabs = TABS.filter(t => t.items.length > 0);
   const [activeCat, setActiveCat] = useState('temporada');
+  const [busqueda, setBusqueda] = useState('');
   // Si la categoría activa no tiene productos (al cargar), saltar a la primera disponible
   useEffect(() => {
     const keys = visibleTabs.map(t => t.key);
@@ -135,7 +162,9 @@ function Cafeteria() {
         .select('*').eq('active', true)
         .order('sort_order', { ascending: true });
       setCovers(data || []);
+      setCoversCargadas(true);
       setCoverIndex(0);
+      try { localStorage.setItem('befit_cafe_covers', JSON.stringify(data || [])); } catch { /* sin storage */ }
     };
     load();
     const ch = supabase.channel('public:cafe_covers')
@@ -188,6 +217,16 @@ function Cafeteria() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cafe_orders', filter: `user_id=eq.${user.id}` }, fetchActive)
       .subscribe();
     return () => supabase.removeChannel(ch);
+  }, [user?.id]);
+
+  // "Pide de nuevo": los productos de su último pedido que siguen en el menú.
+  const [ultimoPedido, setUltimoPedido] = useState([]);
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from('cafe_orders').select('items').eq('user_id', user.id)
+      .in('status', ['paid', 'preparing', 'ready', 'completed'])
+      .order('created_at', { ascending: false }).limit(1)
+      .then(({ data }) => setUltimoPedido(((data?.[0]?.items) || []).map(it => it.name).filter(Boolean)));
   }, [user?.id]);
 
   const orderStatusLabel = (s) => s === 'preparing' ? 'Preparándose' : s === 'ready' ? '¡Listo para recoger!' : 'Confirmado';
@@ -247,7 +286,20 @@ function Cafeteria() {
 
   // Carrito
   const openProduct = (item) => setSelectedProduct(item);
-  const addToCart = (line) => { setCart(c => [...c, line]); setSelectedProduct(null); };
+  // Al agregar: el número del carrito salta y sube un aviso con la foto y "Ver carrito"
+  // (antes se cerraba la ficha sin ninguna señal de que se agregó).
+  const [agregado, setAgregado] = useState(null);
+  useEffect(() => {
+    if (!agregado) return;
+    const t = setTimeout(() => setAgregado(null), 2800);
+    return () => clearTimeout(t);
+  }, [agregado]);
+  const addToCart = (line) => {
+    setCart(c => [...c, line]);
+    setSelectedProduct(null);
+    setAgregado({ ...line, t: Date.now() });
+    try { navigator.vibrate?.(12); } catch { /* sin vibración */ }
+  };
   const updateQty = (lineId, delta) => setCart(c => c.map(i => i.lineId === lineId ? { ...i, qty: Math.max(1, i.qty + delta), lineTotal: i.unitPrice * Math.max(1, i.qty + delta) } : i));
   const removeItem = (lineId) => setCart(c => c.filter(i => i.lineId !== lineId));
 
@@ -340,6 +392,142 @@ function Cafeteria() {
     }
   };
 
+  // ── Piezas compartidas de las pestañas (rediseño 4-nov) ───────────────────
+  const padTab = isNative ? 'calc(env(safe-area-inset-top, 44px) + 16px) 20px 40px' : '28px 20px 40px';
+  const nombreCorto = user?.user_metadata?.full_name ? user.user_metadata.full_name.split(' ')[0] : 'hola';
+  const tarjeta = { background: 'var(--c-card)', borderRadius: '22px', boxShadow: '0 8px 24px rgba(0,0,0,0.04)', border: '1px solid var(--c-line)' };
+  const tituloTab = { fontFamily: 'var(--c-font)', fontWeight: 800, fontSize: '2.2rem', lineHeight: 1.05, color: 'var(--c-ink)', margin: 0, letterSpacing: '-0.03em' };
+  const tituloSeccion = { display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--c-font)', fontWeight: 800, fontSize: '1.2rem', letterSpacing: '-0.02em', color: 'var(--c-ink)', margin: '0 0 12px' };
+  const carrusel = { display: 'flex', gap: '12px', overflowX: 'auto', margin: '0 -20px 24px', padding: '2px 20px 8px', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' };
+  // Regreso a Be Fit Lab con transición: un círculo con los colores del estudio se abre
+  // desde el botón, aparece el durazno y, ya en el portal, se desvanece. La capa vive en
+  // <body> (fuera de React) para sobrevivir al cambio de pantalla.
+  const saliendoRef = React.useRef(false);
+  const portadaRef = React.useRef(null); // la foto que el botón de vidrio refracta
+  const salirABeFit = (e) => {
+    const destino = user ? '/portal' : '/';
+    if (saliendoRef.current) return;
+    const reducir = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    if (reducir || typeof document.body.animate !== 'function') { irA(destino); return; }
+    saliendoRef.current = true;
+    const r = e?.currentTarget?.getBoundingClientRect?.();
+    const cx = r ? r.left + r.width / 2 : window.innerWidth - 60;
+    const cy = r ? r.top + r.height / 2 : 44;
+    const radio = Math.hypot(Math.max(cx, window.innerWidth - cx), Math.max(cy, window.innerHeight - cy));
+    const capa = document.createElement('div');
+    capa.setAttribute('aria-hidden', 'true');
+    capa.style.cssText = 'position:fixed;inset:0;z-index:7000;background:var(--app-bg,#EFE9E4);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;pointer-events:none;';
+    const logo = document.createElement('img');
+    logo.src = '/favicon_peach.png'; logo.width = 64; logo.height = 64; logo.alt = '';
+    const nombre = document.createElement('div');
+    nombre.textContent = (ESTUDIO.nombre || '').toUpperCase();
+    nombre.style.cssText = 'font-family:Inter,sans-serif;font-weight:700;font-size:12px;letter-spacing:0.32em;color:var(--app-on-surface-variant,#5E5343);';
+    capa.append(logo, nombre);
+    document.body.appendChild(capa);
+    const curva = 'cubic-bezier(0.76, 0, 0.24, 1)';
+    capa.animate([{ clipPath: `circle(0px at ${cx}px ${cy}px)` }, { clipPath: `circle(${radio}px at ${cx}px ${cy}px)` }], { duration: 560, easing: curva, fill: 'forwards' });
+    logo.animate([{ opacity: 0, transform: 'scale(0.6)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 420, delay: 220, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'both' });
+    nombre.animate([{ opacity: 0, letterSpacing: '0.6em' }, { opacity: 1, letterSpacing: '0.32em' }], { duration: 480, delay: 300, easing: 'ease-out', fill: 'both' });
+    setTimeout(() => {
+      irA(destino);
+      setTimeout(() => {
+        const fuera = capa.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(1.04)' }], { duration: 420, easing: 'ease-out', fill: 'forwards' });
+        fuera.onfinish = () => capa.remove();
+        setTimeout(() => capa.remove(), 900); // por si onfinish no llega
+      }, 280);
+    }, 820);
+  };
+
+  // Zoom lento de la portada; lo comparten la foto y su copia dentro del botón de vidrio.
+  const ANIM_PORTADA = { initial: { opacity: 0, scale: 1.12 }, animate: { opacity: 1, scale: [1.12, 1.02] }, transition: { opacity: { duration: 0.8 }, scale: { duration: 9, ease: 'easeOut' } } };
+  const VELO_PORTADA = 'linear-gradient(to top, rgba(18,12,8,0.78) 0%, rgba(18,12,8,0.25) 42%, transparent 64%), linear-gradient(to bottom, rgba(18,12,8,0.25), transparent 26%)';
+
+  // Barra de marca en TODAS las pestañas: Coffee Lab se siente como su propia app,
+  // con una salida clara de regreso a Be Fit Lab (antes era solo una flecha).
+  const encabezado = (contenido) => (
+    <div style={{ marginBottom: '20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--c-ink)' }}>
+          <svg viewBox="22 24 76 118" width="14" height="22" aria-hidden="true" style={{ display: 'block', marginTop: '-2px' }}>
+            <path d="M33 62 L40 130 Q41 137 48 137 L72 137 Q79 137 80 130 L87 62 Z" fill="#C98A55" opacity="0.9" />
+            <path d="M33 62 L40 130 Q41 137 48 137 L72 137 Q79 137 80 130 L87 62 M28 62 L92 62 M66 92 L80 30 L92 30" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span style={{ fontFamily: 'var(--c-font)', fontWeight: 800, letterSpacing: '-0.02em', fontSize: '1rem', lineHeight: 1 }}>{ESTUDIO.nombreCafeteria}</span>
+        </div>
+        <button onClick={salirABeFit} aria-label={`Regresar a ${ESTUDIO.nombre}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px 8px 10px', borderRadius: '999px', background: 'var(--c-card)', border: '1px solid var(--c-line)', cursor: 'pointer', color: 'var(--c-ink)', fontFamily: 'var(--c-font)', fontSize: '1rem', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1, boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }}>
+          <ChevronLeft size={16} />
+          <img src="/favicon_peach.png" alt="" width="16" height="16" />
+          {ESTUDIO.nombre}
+        </button>
+      </div>
+      {contenido}
+    </div>
+  );
+  const sellos = (loyalty?.stamps || 0) % 12;
+  const faltanSellos = 12 - sellos;
+  const pideDeNuevo = useMemo(() => {
+    const vistos = new Set();
+    return ultimoPedido.map(n => available.find(p => p.name === n)).filter(p => p && !vistos.has(p.id) && vistos.add(p.id));
+  }, [ultimoPedido, available]); // eslint-disable-line
+  const listaMenu = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
+    if (q) return available.filter(p => `${p.name} ${p.description || ''}`.toLowerCase().includes(q));
+    return activeCat === 'coffee' ? coffeeItems : activeCat === 'smoothie' ? smoothieItems : temporadaItems;
+  }, [busqueda, activeCat, available]); // eslint-disable-line
+
+  const FilaSellos = ({ llenos, chica }) => (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: chica ? '6px' : '10px' }}>
+      {Array.from({ length: 12 }).map((_, i) => {
+        const lleno = i < llenos;
+        const t = chica ? 30 : 42;
+        return (
+          <motion.div key={i} initial={false} animate={{ scale: lleno ? 1 : 0.94 }}
+            style={{ width: t, height: t, justifySelf: 'center', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                     background: lleno ? 'linear-gradient(135deg, #FFB37A, #FF914D)' : (chica ? 'var(--c-soft)' : 'rgba(255,255,255,0.08)'),
+                     border: lleno ? 'none' : `1.5px dashed ${chica ? 'var(--c-line)' : 'rgba(247,237,228,0.3)'}`,
+                     boxShadow: lleno ? '0 4px 10px rgba(255,145,77,0.35)' : 'none' }}>
+            {i === 11 && !lleno
+              ? <Gift size={chica ? 14 : 18} color={chica ? 'var(--c-muted)' : 'rgba(247,237,228,0.6)'} />
+              : <Coffee size={chica ? 13 : 17} color={lleno ? '#fff' : (chica ? 'var(--c-muted)' : 'rgba(247,237,228,0.45)')} />}
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+
+  const MiniProducto = ({ p }) => (
+    <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => openProduct(p)}
+      style={{ ...tarjeta, flexShrink: 0, width: '148px', padding: '10px', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', scrollSnapAlign: 'start' }}>
+      <div style={{ width: '100%', aspectRatio: '1', borderRadius: '16px', background: 'var(--c-soft)', overflow: 'hidden', boxSizing: 'border-box' }}>
+        <CafeImage src={p.image_url} alt={p.name} />
+      </div>
+      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--c-ink)', margin: '8px 2px 2px', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+      <div style={{ fontWeight: 700, fontSize: '0.86rem', color: 'var(--c-accent-ink)', margin: '0 2px' }}>${p.price}</div>
+    </motion.button>
+  );
+
+  // Menú en LISTA (Zahir prefirió la lista a la cuadrícula grande): foto mediana,
+  // nombre, UNA línea de descripción y el precio con el "+" en el mismo renglón.
+  const FilaProducto = ({ item }) => (
+    <motion.div variants={cardItem} onClick={() => openProduct(item)} whileTap={{ scale: 0.985 }}
+      style={{ background: 'var(--c-card)', borderRadius: '22px', border: '1px solid var(--c-line)', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'stretch', gap: '14px' }}>
+      <div style={{ width: '92px', height: '92px', borderRadius: '16px', background: 'var(--c-soft)', flexShrink: 0, overflow: 'hidden', boxSizing: 'border-box' }}>
+        <CafeImage src={item.image_url} alt={item.name} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, padding: '4px 6px 2px 0' }}>
+        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--c-ink)', lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</h3>
+        {item.description && <p style={{ margin: '3px 0 0', fontSize: '0.8rem', color: 'var(--c-muted)', lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.description}</p>}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
+          <span style={{ fontWeight: 800, color: 'var(--c-ink)', fontSize: '1rem' }}>${item.price}</span>
+          <span aria-hidden="true" style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--c-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Plus size={17} color="var(--c-bg)" strokeWidth={2.6} />
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
@@ -351,279 +539,255 @@ function Cafeteria() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FAF8F5', color: '#2B211C', fontFamily: 'var(--font-body)', overflowX: 'hidden', paddingBottom: '90px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--c-bg)', color: 'var(--c-ink)', fontFamily: 'var(--font-body)', overflowX: 'hidden', paddingBottom: '110px' }}>
       
-      {/* HEADER (solo en order y history) - ELIMINADO para mantener consistencia de Pestañas grandes sin botón de volver */}
+      <AnimatePresence>
+        {agregado && activeTab !== 'cart' && (
+          <motion.div key={agregado.t} role="status"
+            initial={{ opacity: 0, y: 30, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+            style={{ position: 'fixed', left: '16px', right: '16px', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 96px)', zIndex: 3500, maxWidth: '440px', margin: '0 auto',
+                     display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 10px 10px 10px', borderRadius: '20px',
+                     background: 'var(--c-ink)', color: 'var(--c-bg)', boxShadow: '0 14px 34px rgba(0,0,0,0.25)' }}>
+            <div style={{ width: '44px', height: '44px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0, background: 'rgba(255,255,255,0.1)' }}>
+              {agregado.image_url && <CafeImage src={agregado.image_url} alt="" />}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, opacity: 0.7 }}>Agregado al carrito</div>
+              <div style={{ fontWeight: 800, fontSize: '0.98rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {agregado.qty > 1 ? `${agregado.qty}× ` : ''}{agregado.name}
+              </div>
+            </div>
+            <button type="button" onClick={() => { setAgregado(null); setActiveTab('cart'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              style={{ flexShrink: 0, border: 'none', borderRadius: '14px', padding: '10px 14px', background: 'var(--c-accent)', color: '#fff', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+              Ver carrito
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {splash && <CafeSplash rapido={splash === 'rapido'} onDone={() => setSplash(null)} />}
+      </AnimatePresence>
 
 
       <AnimatePresence mode="wait">
         
         {/* --- PESTAÑA: HOME --- */}
         {activeTab === 'home' && (
-          <motion.div key="home" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} style={{ padding: isNative ? 'calc(env(safe-area-inset-top, 44px) + 20px) 24px 40px' : '40px 24px' }}>
-            
-            {/* Header del Home (Rediseñado - Saludo Arriba a la Derecha) */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
-              <div style={{ paddingTop: '6px' }}>
-                <button onClick={() => irA(user ? '/portal' : '/')} style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#fff', border: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,0,0,0.04)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform='scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
-                  <ChevronLeft size={22} color="#2B211C" />
-                </button>
-              </div>
-              
-              <div style={{ textAlign: 'right' }}>
-                <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.3rem', fontWeight: 800, color: '#2B211C', margin: '0 0 4px', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                  {getGreeting()},<br/>
-                  <span style={{ color: '#FF914D' }}>{user?.user_metadata?.full_name ? user.user_metadata.full_name.split(' ')[0] : 'Cliente'}</span>.
-                </h1>
-                <p style={{ color: '#7D7068', fontSize: '1.05rem', margin: 0, fontWeight: 500 }}>¿Qué se te antoja hoy?</p>
-              </div>
-            </div>
+          <motion.div key="home" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} style={{ padding: padTab }}>
+            {encabezado(<>
+              <h1 style={{ fontFamily: 'var(--c-font)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: '2.3rem', color: 'var(--c-ink)', margin: 0, lineHeight: 1.05 }}>
+                {getGreeting()},<br /><span style={{ color: 'var(--c-accent-ink)' }}>{nombreCorto}</span>
+              </h1>
+              <p style={{ color: 'var(--c-muted)', fontSize: '0.95rem', margin: '6px 0 0', fontWeight: 600 }}>¿Qué se te antoja hoy?</p>
+            </>)}
 
-            {/* Atajo Rewards */}
-            {user && (
-              <motion.div whileTap={{ scale: 0.98 }} onClick={() => setActiveTab('rewards')} style={{ background: '#fff', borderRadius: '24px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 12px 30px rgba(0,0,0,0.03)', marginBottom: '40px', cursor: 'pointer', border: '1px solid rgba(0,0,0,0.02)' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, #FAF8F5, #F5F0E6)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                  <motion.div animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.8, 0.4] }} transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }} style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,145,77,0.2) 0%, transparent 70%)' }} />
-                  <svg width="46" height="46" viewBox="0 0 36 36" style={{ position: 'absolute' }}>
-                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,145,77,0.15)" strokeWidth="3" />
-                    <motion.path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#FF914D" strokeWidth="3" strokeDasharray="100, 100" initial={{ strokeDashoffset: 100 }} animate={{ strokeDashoffset: 100 - Math.min(100, ((loyalty?.stamps || 0) / 12) * 100) }} transition={{ duration: 1.5, ease: "easeOut" }} />
-                  </svg>
-                  <Coffee size={20} color="#FF914D" style={{ position: 'relative', zIndex: 1 }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#2B211C', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>{ESTUDIO.nombreCafeteria} Rewards</div>
-                  <div style={{ color: '#7D7068', fontSize: '0.95rem' }}>{Math.min(100, Math.round(((loyalty?.stamps || 0) / 12) * 100))} de 100 puntos para tu regalo.</div>
-                </div>
-                <ChevronRight size={20} color="#CCC0B6" />
-              </motion.div>
+            {/* Pedido en curso: lo primero que quiere ver quien ya pidió */}
+            {activeOrders.length > 0 && (
+              <motion.button type="button" whileTap={{ scale: 0.98 }} onClick={() => setActiveTab('history')}
+                style={{ ...tarjeta, width: '100%', display: 'flex', alignItems: 'center', gap: '14px', padding: '16px', marginBottom: '16px', border: '1.5px solid rgba(255,145,77,0.45)', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+                <span style={{ position: 'relative', width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,145,77,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <motion.span animate={{ scale: [1, 1.35], opacity: [0.6, 0] }} transition={{ repeat: Infinity, duration: 1.8 }}
+                    style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(255,145,77,0.35)' }} />
+                  <Coffee size={20} color="#FF914D" />
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontWeight: 800, color: 'var(--c-ink)', fontSize: '0.98rem' }}>{orderStatusLabel(activeOrders[0].status)}</span>
+                  <span style={{ display: 'block', color: 'var(--c-muted)', fontSize: '0.82rem' }}>{activeOrders.length > 1 ? `Tienes ${activeOrders.length} pedidos en curso` : 'Toca para ver tu pedido'}</span>
+                </span>
+                <ChevronRight size={20} color="var(--c-muted)" />
+              </motion.button>
             )}
 
-            {/* Carrusel Featured */}
-            <div style={{ marginBottom: '20px' }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, color: '#2B211C', margin: '0 0 16px' }}>Novedades</h2>
-              {(() => {
-                // Portada activa. Si Admin todavía no subió ninguna, se cae a la
-                // que venía empaquetada, para que la sección nunca quede vacía.
-                const cover = covers[coverIndex] || { image_url: ESTUDIO.portadas.cafeteriaPromo, eyebrow: 'Temporada', title: 'Recién hecho\npara ti', cta: 'Pedir Ahora' };
-                return (
-                  <div style={{ position: 'relative', width: '100%', aspectRatio: '4/5', borderRadius: '28px', overflow: 'hidden', background: '#DCD4C7', cursor: 'pointer' }} onClick={() => setActiveTab('order')}>
-                    <AnimatePresence mode="wait">
-                      <motion.img key={cover.image_url} src={cover.image_url} alt={cover.title || 'Novedades'} decoding="async" fetchPriority="high"
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}
-                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </AnimatePresence>
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)' }} />
-                    <div style={{ position: 'absolute', bottom: '24px', left: '24px', right: '24px' }}>
-                      {cover.eyebrow && <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>{cover.eyebrow}</div>}
-                      {cover.title && <div style={{ color: '#fff', fontSize: '1.8rem', fontWeight: 800, fontFamily: 'var(--font-display)', lineHeight: 1.1, marginBottom: '16px', whiteSpace: 'pre-line' }}>{cover.title}</div>}
-                      <button style={{
-                        width: '100%', padding: '16px', borderRadius: '100px',
-                        background: 'rgba(255, 255, 255, 0.25)',
-                        backdropFilter: 'blur(16px) saturate(180%)',
-                        WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-                        border: '1px solid rgba(255, 255, 255, 0.5)',
-                        color: '#fff',
-                        fontWeight: 800, fontSize: '1.05rem', cursor: 'pointer',
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-                        textShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                      }}>{cover.cta || 'Pedir Ahora'}</button>
-                    </div>
+            {/* PORTADA protagonista (pedido de Zahir 4-nov: Home limpia y muy visual, como
+                las referencias de apps de café). Ocupa casi toda la pantalla, la foto
+                respira con un zoom lento y el botón va encima. Los sellos viven en
+                Recompensas; los recomendados, en el Menú. */}
+            {(() => {
+              const cover = covers[coverIndex] || (coversCargadas ? null : { image_url: '', eyebrow: '', title: '', cta: '' }) || { image_url: ESTUDIO.portadas.cafeteriaPromo, eyebrow: 'Temporada', title: 'Recién hecho\npara ti', cta: 'Pedir ahora' };
+              return (
+                <div ref={portadaRef} onClick={() => setActiveTab('order')}
+                  style={{ position: 'relative', width: '100%', height: 'clamp(290px, min(calc((100vw - 40px) * 1.25), calc(100dvh - 290px)), 620px)', borderRadius: '30px', overflow: 'hidden', background: 'var(--c-soft)', cursor: 'pointer', marginBottom: '22px', boxShadow: '0 24px 48px rgba(40,24,14,0.18)' }}>
+                  <AnimatePresence mode="sync">
+                    {cover.image_url && <motion.img key={cover.image_url} src={cover.image_url} alt={cover.title || 'Temporada'} decoding="async" fetchPriority="high"
+                      {...ANIM_PORTADA} exit={{ opacity: 0 }}
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+                  </AnimatePresence>
+                  <div style={{ position: 'absolute', inset: 0, background: VELO_PORTADA }} />
 
-                    {/* Puntos: solo si la dueña subió más de una portada */}
-                    {covers.length > 1 && (
-                      <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '6px' }}>
-                        {covers.map((c, i) => (
-                          <div key={c.id} onClick={(e) => { e.stopPropagation(); setCoverIndex(i); }}
-                            style={{ width: i === coverIndex ? '20px' : '7px', height: '7px', borderRadius: '10px', background: i === coverIndex ? '#fff' : 'rgba(255,255,255,0.5)', transition: 'width 0.3s', cursor: 'pointer' }} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
+                  {/* Etiqueta arriba */}
+                  {cover.eyebrow && (
+                    <span style={{ position: 'absolute', top: '16px', left: '16px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderRadius: '999px', background: 'rgba(255,255,255,0.22)', backdropFilter: 'blur(14px) saturate(160%)', WebkitBackdropFilter: 'blur(14px) saturate(160%)', border: '1px solid rgba(255,255,255,0.45)', color: '#fff', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                      ✦ {cover.eyebrow}
+                    </span>
+                  )}
+                  {covers.length > 1 && (
+                    <div style={{ position: 'absolute', top: '26px', right: '20px', display: 'flex', gap: '6px' }}>
+                      {covers.map((c, i) => (
+                        <div key={c.id} onClick={(e) => { e.stopPropagation(); setCoverIndex(i); }}
+                          style={{ width: i === coverIndex ? '18px' : '7px', height: '7px', borderRadius: '10px', background: i === coverIndex ? '#fff' : 'rgba(255,255,255,0.5)', transition: 'width 0.3s', cursor: 'pointer' }} />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Titular + botón encima de la foto */}
+                  {cover.image_url && <div style={{ position: 'absolute', left: '20px', right: '20px', bottom: '18px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', textAlign: 'right' }}>
+                    <AnimatePresence mode="wait">
+                      <motion.div key={cover.title || cover.image_url}
+                        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                        style={{ fontFamily: 'var(--c-font)', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.02, fontSize: 'clamp(1.6rem, 6.6vw, 2rem)', color: '#fff', whiteSpace: 'pre-line', marginBottom: '12px', maxWidth: '80%', textShadow: '0 2px 18px rgba(0,0,0,0.25)' }}>
+                        {cover.title || 'Recién hecho para ti'}
+                      </motion.div>
+                    </AnimatePresence>
+                    <LenteVidrio fuenteRef={portadaRef} src={cover.image_url} animImg={ANIM_PORTADA} capaEncima={VELO_PORTADA}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '5px 5px 5px 18px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.4)', boxShadow: '0 8px 22px rgba(0,0,0,0.2)', color: '#fff', fontWeight: 800, fontSize: '0.92rem', textShadow: '0 1px 6px rgba(0,0,0,0.25)' }}>
+                      {cover.cta || 'Pedir ahora'}
+                      <span style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <ChevronRight size={17} color="#1C1410" />
+                      </span>
+                    </LenteVidrio>
+                  </div>}
+                </div>
+              );
+            })()}
+
+            {/* Pide de nuevo */}
+            {pideDeNuevo.length > 0 && (
+              <>
+                <h2 style={tituloSeccion}><RotateCcw size={17} color="var(--c-accent)" /> Pide de nuevo</h2>
+                <div style={carrusel}>{pideDeNuevo.map(p => <MiniProducto key={p.id} p={p} />)}</div>
+              </>
+            )}
+
           </motion.div>
         )}
 
         {/* --- PESTAÑA: MENU --- */}
         {activeTab === 'order' && (
-          <motion.div key="order" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} style={{ padding: isNative ? 'calc(env(safe-area-inset-top, 44px) + 20px) 24px 40px' : '40px 24px' }}>
-            
-            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2.4rem', fontWeight: 800, color: '#2B211C', margin: '0' }}>Menú</h2>
-            </div>
+          <motion.div key="order" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} style={{ padding: padTab }}>
+            {encabezado(<h2 style={tituloTab}>Menú</h2>)}
+
+            {/* Buscador */}
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderRadius: '16px', background: 'var(--c-card)', border: '1px solid var(--c-line)', marginBottom: '14px' }}>
+              <Search size={18} color="var(--c-muted)" />
+              <input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Buscar en el menú…" aria-label="Buscar en el menú"
+                style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', color: 'var(--c-ink)', fontSize: '0.98rem', fontFamily: 'inherit' }} />
+              {busqueda && <button type="button" onClick={() => setBusqueda('')} aria-label="Borrar búsqueda" style={{ border: 'none', background: 'var(--c-soft)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={14} color="var(--c-muted)" /></button>}
+            </label>
 
             {!cafeProductsLoaded && (cafeProducts || []).length === 0 && <CafeMenuSkeleton />}
-            
-            {/* Filtros - Estilo Segmented Control iOS */}
-            <div style={{ margin: '0 0 24px', background: 'rgba(219, 210, 198, 0.4)', padding: '4px', borderRadius: '100px', display: 'flex', position: 'relative' }}>
-              {[
-                { id: 'temporada', label: 'Especiales' },
-                { id: 'coffee', label: 'Ice Coffee' },
-                { id: 'smoothie', label: ESTUDIO.nombreCafeteria }
-              ].map(cat => {
-                const active = activeCat === cat.id;
-                return (
-                  <button key={cat.id} onClick={() => setActiveCat(cat.id)}
-                    style={{
-                      flex: 1,
-                      padding: '12px 16px',
-                      borderRadius: '100px',
-                      border: 'none',
-                      fontWeight: active ? 800 : 600,
-                      fontSize: '0.9rem',
-                      whiteSpace: 'nowrap',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
-                      background: active ? '#FFFFFF' : 'transparent',
-                      color: active ? '#2B211C' : '#7D7068',
-                      boxShadow: active ? '0 4px 12px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.1)' : 'none'
-                    }}>
-                    {cat.label}
-                  </button>
-                );
-              })}
-            </div>
 
-            {/* CONTENIDO DE LA PESTAÑA ACTIVA */}
+            {!busqueda && (
+              <div style={{ margin: '0 0 18px', background: 'var(--c-seg)', padding: '4px', borderRadius: '100px', display: 'flex' }}>
+                {[{ id: 'temporada', label: 'Especiales' }, { id: 'coffee', label: 'Ice Coffee' }, { id: 'smoothie', label: ESTUDIO.nombreCafeteria }].map(cat => {
+                  const active = activeCat === cat.id;
+                  return (
+                    <button key={cat.id} onClick={() => setActiveCat(cat.id)}
+                      style={{ flex: 1, minWidth: 0, padding: '11px 8px', borderRadius: '100px', border: 'none', fontWeight: active ? 800 : 600, fontSize: '0.86rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer', fontFamily: 'inherit',
+                               transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', background: active ? 'var(--c-card)' : 'transparent', color: active ? 'var(--c-ink)' : 'var(--c-muted)',
+                               boxShadow: active ? '0 4px 12px rgba(0,0,0,0.08)' : 'none' }}>
+                      {cat.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             <AnimatePresence mode="wait">
-            <motion.div key={activeCat} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.24 }}>
-            {activeCat === 'coffee' && coffeeItems.length > 0 && (
-            <motion.div variants={gridStagger} initial="hidden" animate="visible" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {coffeeItems.map(item => (
-                  <motion.div variants={cardItem} key={item.id} onClick={() => openProduct(item)}
-                    style={{ background: '#fff', borderRadius: '24px', overflow: 'hidden', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', padding: '12px 16px', gap: '16px' }}>
-                    <div style={{ width: '90px', height: '90px', borderRadius: '16px', background: '#F5F0E6', flexShrink: 0, overflow: 'hidden', padding: '10px' }}>
-                      <CafeImage src={item.image_url} alt={item.name} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                      <h3 style={{ margin: '0 0 4px', fontSize: '1.05rem', fontWeight: 800, color: '#2B211C', lineHeight: 1.2 }}>{item.name}</h3>
-                      <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#7D7068', opacity: 0.9, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
-                      <span style={{ fontWeight: 800, color: '#2B211C', fontSize: '1rem' }}>${item.price}</span>
-                    </div>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(43, 33, 28, 0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 4px 12px rgba(43,33,28,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: 'auto' }}>
-                      <Plus size={20} color="#fff" strokeWidth={3} />
-                    </div>
-                  </motion.div>
-                ))}
-            </motion.div>
-            )}
-
-            {activeCat === 'smoothie' && smoothieItems.length > 0 && (
-            <motion.div variants={gridStagger} initial="hidden" animate="visible" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {smoothieItems.map(item => (
-                  <motion.div variants={cardItem} key={item.id} onClick={() => openProduct(item)}
-                    style={{ background: '#fff', borderRadius: '24px', overflow: 'hidden', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', padding: '12px 16px', gap: '16px' }}>
-                    <div style={{ width: '90px', height: '90px', borderRadius: '16px', background: '#F5F0E6', flexShrink: 0, overflow: 'hidden', padding: '10px' }}>
-                      <CafeImage src={item.image_url} alt={item.name} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                      <h3 style={{ margin: '0 0 4px', fontSize: '1.05rem', fontWeight: 800, color: '#2B211C', lineHeight: 1.2 }}>{item.name}</h3>
-                      <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#7D7068', opacity: 0.9, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
-                      <span style={{ fontWeight: 800, color: '#2B211C', fontSize: '1rem' }}>${item.price}</span>
-                    </div>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(43, 33, 28, 0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 4px 12px rgba(43,33,28,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: 'auto' }}>
-                      <Plus size={20} color="#fff" strokeWidth={3} />
-                    </div>
-                  </motion.div>
-                ))}
-            </motion.div>
-            )}
-
-            {activeCat === 'temporada' && temporadaItems.length > 0 && (
-            <motion.div variants={gridStagger} initial="hidden" animate="visible" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {temporadaItems.map(item => (
-                  <motion.div variants={cardItem} key={item.id} onClick={() => openProduct(item)}
-                    style={{ background: '#fff', borderRadius: '24px', overflow: 'hidden', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', padding: '12px 16px', gap: '16px', position: 'relative' }}>
-                    <div style={{ width: '90px', height: '90px', borderRadius: '16px', background: '#F5F0E6', flexShrink: 0, overflow: 'hidden', padding: '10px' }}>
-                      <CafeImage src={item.image_url} alt={item.name} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                      <div style={{ background: '#FF914D', color: '#fff', fontSize: '0.65rem', fontWeight: 800, padding: '2px 6px', borderRadius: '6px', width: 'fit-content', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Especial</div>
-                      <h3 style={{ margin: '0 0 4px', fontSize: '1.05rem', fontWeight: 800, color: '#2B211C', lineHeight: 1.2 }}>{item.name}</h3>
-                      <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#7D7068', opacity: 0.9, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
-                      <span style={{ fontWeight: 800, color: '#2B211C', fontSize: '1rem' }}>${item.price}</span>
-                    </div>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(43, 33, 28, 0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 4px 12px rgba(43,33,28,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: 'auto' }}>
-                      <Plus size={20} color="#fff" strokeWidth={3} />
-                    </div>
-                  </motion.div>
-                ))}
-            </motion.div>
-            )}
-            </motion.div>
+              <motion.div key={busqueda ? 'busqueda' : activeCat} variants={gridStagger} initial="hidden" animate="visible" exit={{ opacity: 0 }}
+                style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {listaMenu.map(item => <FilaProducto key={item.id} item={item} />)}
+                {busqueda && listaMenu.length === 0 && (
+                  <p style={{ textAlign: 'center', color: 'var(--c-muted)', padding: '30px 10px' }}>No encontramos “{busqueda}”. Prueba con otra palabra.</p>
+                )}
+              </motion.div>
             </AnimatePresence>
-            <div style={{ height: '40px' }} />
           </motion.div>
         )}
 
-        {/* --- PESTAÑA: REWARDS --- */}
+        {/* --- PESTAÑA: REWARDS (tarjeta de sellos) --- */}
         {activeTab === 'rewards' && (
-          <motion.div key="rewards" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} style={{ padding: '40px 24px' }}>
-            <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2.4rem', fontWeight: 800, color: '#2B211C', margin: '0 0 8px' }}>Mis Puntos</h2>
-              <p style={{ color: '#7D7068', fontSize: '1.05rem', margin: 0 }}>Acumula puntos con cada compra para ganar premios.</p>
-            </div>
-            
-            {user ? (
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ maxWidth: '600px', margin: '0 auto' }}>
-                {/* Dashboard Principal de Puntos - Light Premium */}
-                <div style={{ background: '#fff', borderRadius: '32px', padding: '40px 30px', boxShadow: '0 20px 40px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02)', position: 'relative', overflow: 'hidden', textAlign: 'center' }}>
-                  
-                  {/* Círculo Gigante de Puntos Animado */}
-                  <div style={{ position: 'relative', width: '200px', height: '200px', margin: '0 auto 30px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    {/* Aura de luz pulsante */}
-                    <motion.div animate={{ scale: [1, 1.08, 1], opacity: [0.5, 0.9, 0.5] }} transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }} style={{ position: 'absolute', top: '50%', left: '50%', width: '160px', height: '160px', background: 'radial-gradient(circle, rgba(255,145,77,0.15) 0%, transparent 70%)', borderRadius: '50%', marginLeft: '-80px', marginTop: '-80px' }} />
-                    <svg width="200" height="200" style={{ position: 'absolute', top: 0, left: 0, transform: 'rotate(-90deg)' }}>
-                      {/* Fondo */}
-                      <circle cx="100" cy="100" r="90" fill="none" stroke="#F5F0E6" strokeWidth="12" />
-                      {/* Progreso Animado */}
-                      <motion.circle cx="100" cy="100" r="90" fill="none" stroke="url(#orange-grad)" strokeWidth="12" strokeLinecap="round" strokeDasharray="565.48" initial={{ strokeDashoffset: 565.48 }} animate={{ strokeDashoffset: 565.48 - (565.48 * (Math.min(100, ((loyalty?.stamps || 0) / 12) * 100) / 100)) }} transition={{ duration: 1.5, ease: "easeOut" }} />
-                      <defs>
-                        <linearGradient id="orange-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#FFD194" />
-                          <stop offset="100%" stopColor="#FF914D" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                    <motion.div animate={{ rotate: [0, -10, 10, 0] }} transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }} style={{ position: 'relative', zIndex: 1, marginBottom: '4px' }}>
-                      <Star size={40} color="#FF914D" fill="#FF914D" />
-                    </motion.div>
-                    <div style={{ fontSize: '3.2rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: '#2B211C', lineHeight: 1, position: 'relative', zIndex: 1 }}>{Math.min(100, Math.round(((loyalty?.stamps || 0) / 12) * 100))}</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#7D7068', textTransform: 'uppercase', letterSpacing: '0.1em', position: 'relative', zIndex: 1 }}>Puntos</div>
-                  </div>
+          <motion.div key="rewards" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} style={{ padding: padTab }}>
+            {encabezado(<h2 style={tituloTab}>Recompensas</h2>)}
 
-                  <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#2B211C', margin: '0 0 8px' }}>¡Te faltan {100 - Math.min(100, Math.round(((loyalty?.stamps || 0) / 12) * 100))} puntos!</h3>
-                  <p style={{ color: '#7D7068', fontSize: '0.95rem', margin: 0, lineHeight: 1.5 }}>Llega a 100 puntos (12 compras) para desbloquear un regalo sorpresa.</p>
-                </div>
+            {user ? (
+              <>
+                {/* Tarjeta de sellos: lo mismo que calcula el sistema (1 sello por
+                    compra, regalo cada 12), dicho en claro. Antes se disfrazaba de
+                    "puntos" (cada compra = 8.3) y no se entendía. */}
+                <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
+                  style={{ position: 'relative', overflow: 'hidden', borderRadius: '28px', padding: '24px 20px', marginBottom: '16px',
+                           background: 'linear-gradient(150deg, #4A3328 0%, #3E2B22 60%, #33231B 100%)', color: '#F7EDE4', boxShadow: '0 16px 34px rgba(30,18,10,0.25)' }}>
+                  <img src="/favicon_peach.png" alt="" aria-hidden="true" style={{ position: 'absolute', right: '-40px', top: '-30px', width: '170px', opacity: 0.1, filter: 'grayscale(1) brightness(3)' }} />
+                  <div style={{ position: 'relative', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.7 }}>Tarjeta de sellos</div>
+                  <div style={{ fontFamily: 'var(--c-font)', fontWeight: 800, letterSpacing: '-0.025em', position: 'relative', fontSize: '1.1rem', color: '#fff', margin: '8px 0 20px', lineHeight: 1.1 }}>
+                    {sellos === 0 ? 'Tu primer sello te espera' : faltanSellos === 1 ? '¡Te falta 1 para tu regalo!' : `Te faltan ${faltanSellos} para tu regalo`}
+                  </div>
+                  <div style={{ position: 'relative' }}><FilaSellos llenos={sellos} /></div>
+                  <div style={{ position: 'relative', marginTop: '16px', fontSize: '0.84rem', color: 'rgba(247,237,228,0.75)' }}>
+                    1 sello por cada compra · al llegar a 12, tu siguiente bebida va por nuestra cuenta.
+                  </div>
+                </motion.div>
 
                 <AnimatePresence>
                   {(loyalty?.gifts_available || 0) > 0 && (
-                    <motion.div initial={{ opacity: 0, height: 0, marginTop: 0 }} animate={{ opacity: 1, height: 'auto', marginTop: 30 }} style={{ background: 'linear-gradient(135deg, #FF914D, #E07A9C)', borderRadius: '24px', padding: '24px', boxShadow: '0 15px 30px rgba(255,145,77,0.2)', display: 'flex', alignItems: 'center', gap: '20px' }}>
-                      <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Gift size={28} color="#FF914D" />
+                    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                      style={{ background: 'linear-gradient(135deg, #FF914D, #E07A9C)', borderRadius: '24px', padding: '20px', boxShadow: '0 15px 30px rgba(255,145,77,0.25)', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Gift size={26} color="#FF914D" />
                       </div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 800, color: '#fff', fontSize: '1.3rem', marginBottom: '4px' }}>Tienes {loyalty?.gifts_available || 0} Regalo{(loyalty?.gifts_available || 0) > 1 ? 's' : ''} Sorpresa</div>
-                        <div style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.9)' }}>Muéstrale esta pantalla a tu barista para canjear tu premio.</div>
+                        <div style={{ fontWeight: 800, color: '#fff', fontSize: '1.1rem', marginBottom: '2px' }}>
+                          {loyalty.gifts_available === 1 ? 'Tienes 1 regalo listo' : `Tienes ${loyalty.gifts_available} regalos listos`}
+                        </div>
+                        <div style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.92)' }}>Muéstrale esta pantalla a tu barista para canjearlo.</div>
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </motion.div>
+
+                {/* Cómo funciona: llena el hueco bajo la tarjeta y explica el canje sin letra chiquita */}
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+                  style={{ marginTop: '16px', background: 'var(--c-card)', border: '1px solid var(--c-line)', borderRadius: '22px', padding: '18px 18px 6px' }}>
+                  <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--c-ink)', marginBottom: '12px' }}>Cómo funciona</div>
+                  {[
+                    { Icono: Coffee, t: 'Pide y paga en la app', d: 'Cada pedido suma 1 sello, sin importar cuántas bebidas lleve.' },
+                    { Icono: Star, t: 'Junta 12 sellos', d: 'Se suman solos al pagar; no tienes que enseñar nada en caja.' },
+                    { Icono: Gift, t: 'Canjea tu bebida', d: 'Al completar la tarjeta te aparece aquí tu regalo. Enséñaselo a tu barista.' },
+                  ].map(({ Icono, t, d }, i, arr) => (
+                    <div key={t} style={{ display: 'flex', gap: '12px', paddingBottom: '14px', marginBottom: i < arr.length - 1 ? '14px' : 0, borderBottom: i < arr.length - 1 ? '1px solid var(--c-line)' : 'none' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'var(--c-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Icono size={18} color="var(--c-accent-ink)" />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--c-ink)' }}>{t}</div>
+                        <div style={{ fontSize: '0.84rem', color: 'var(--c-muted)', lineHeight: 1.45, marginTop: '2px' }}>{d}</div>
+                      </div>
+                    </div>
+                  ))}
+                </motion.div>
+
+                <motion.button type="button" whileTap={{ scale: 0.98 }} onClick={() => { setActiveTab('history'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  style={{ marginTop: '12px', width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 18px', background: 'var(--c-card)', border: '1px solid var(--c-line)', borderRadius: '18px', cursor: 'pointer', textAlign: 'left' }}>
+                  <Receipt size={20} color="var(--c-accent-ink)" />
+                  <span style={{ flex: 1, fontWeight: 700, fontSize: '0.95rem', color: 'var(--c-ink)' }}>Mis pedidos</span>
+                  <ChevronRight size={18} color="var(--c-muted)" />
+                </motion.button>
+                {/* espacio para que la barra flotante no tape lo último */}
+                <div style={{ height: '72px' }} />
+              </>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px 30px', maxWidth: '600px', margin: '0 auto', background: 'linear-gradient(135deg, #1A1C1E 0%, #0F1011 100%)', borderRadius: '32px', boxShadow: '0 30px 60px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.1)', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: '-50%', left: '-20%', width: '150%', height: '150%', background: 'radial-gradient(circle at top left, rgba(255,145,77,0.15) 0%, transparent 60%)', pointerEvents: 'none' }}></div>
-                <div style={{ position: 'relative', zIndex: 1 }}>
-                  <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: '0 15px 30px rgba(255,145,77,0.3)' }}>
-                    <Coffee size={32} color="#fff" strokeWidth={2.5} />
-                  </div>
-                  <h1 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', color: '#fff', marginBottom: '12px', letterSpacing: '-0.02em' }}>Coffee Lab Rewards</h1>
-                  <p style={{ color: 'rgba(255,255,255,0.6)', margin: '0 auto 30px', fontSize: '0.95rem', maxWidth: '300px', lineHeight: 1.5 }}>Únete y recibe un regalo sorpresa cada 12 compras.</p>
-                  <button onClick={() => { localStorage.setItem('befit_redirect_after_auth', '/cafeteria'); irA('/registro'); }} style={{ padding: '16px 36px', borderRadius: '100px', background: '#FF914D', color: '#fff', fontWeight: 800, fontSize: '1rem', border: 'none', cursor: 'pointer', boxShadow: '0 10px 25px rgba(255,145,77,0.4)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform='scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
-                    Crear cuenta
-                  </button>
+              <div style={{ textAlign: 'center', padding: '36px 26px', background: 'linear-gradient(135deg, #1A1C1E 0%, #0F1011 100%)', borderRadius: '28px', boxShadow: '0 30px 60px rgba(0,0,0,0.15)' }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                  <Coffee size={30} color="#fff" strokeWidth={2.5} />
                 </div>
+                <h3 style={{ fontFamily: 'var(--c-font)', fontWeight: 800, letterSpacing: '-0.025em', fontSize: '1.25rem', color: '#fff', margin: '0 0 10px' }}>{ESTUDIO.nombreCafeteria} Rewards</h3>
+                <p style={{ color: 'rgba(255,255,255,0.65)', margin: '0 auto 24px', fontSize: '0.92rem', maxWidth: '280px', lineHeight: 1.5 }}>Crea tu cuenta y junta sellos: cada 12 compras, una bebida de regalo.</p>
+                <button onClick={() => { localStorage.setItem('befit_redirect_after_auth', '/cafeteria'); irA('/registro'); }} style={{ padding: '14px 32px', borderRadius: '100px', background: '#FF914D', color: '#fff', fontWeight: 800, fontSize: '1rem', border: 'none', cursor: 'pointer' }}>
+                  Crear cuenta
+                </button>
               </div>
             )}
           </motion.div>
@@ -642,48 +806,22 @@ function Cafeteria() {
 
         {/* --- PESTAÑA: CART --- */}
         {activeTab === 'cart' && (
-          <motion.div key="cart" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} style={{ padding: isNative ? 'calc(env(safe-area-inset-top, 44px) + 20px) 24px 40px' : '40px 24px' }}>
-            <CafeCartSheet cart={cart} products={available} onUpdateQty={updateQty} onRemove={removeItem} onOpenProduct={(p) => { setActiveTab('order'); setSelectedProduct(p); }} onCheckout={startCheckout} />
+          <motion.div key="cart" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} style={{ padding: padTab }}>
+            {encabezado(<h2 style={tituloTab}>Tu carrito</h2>)}
+            <CafeCartSheet onVerMenu={() => setActiveTab('order')} cart={cart} products={available} onUpdateQty={updateQty} onRemove={removeItem} onOpenProduct={(p) => { setActiveTab('order'); setSelectedProduct(p); }} onCheckout={startCheckout} />
           </motion.div>
         )}
 
       </AnimatePresence>
 
       {/* NAVEGACIÓN INFERIOR (Estilo App Nativa) */}
-      <nav className={`ios-bottom-nav ${isScrolled ? 'scrolled' : ''}`}>
-        <div className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={() => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-          <Home />
-          <span>Inicio</span>
-        </div>
-        <div className={`nav-item ${activeTab === 'order' ? 'active' : ''}`} onClick={() => { setActiveTab('order'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-          <Coffee />
-          <span>Menú</span>
-        </div>
-        
-        {/* Carrito en la barra de navegación */}
-        <div className={`nav-item ${activeTab === 'cart' ? 'active' : ''}`} onClick={() => { setActiveTab('cart'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ position: 'relative' }}>
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ShoppingCart color={cartCount > 0 ? '#FF914D' : 'currentColor'} />
-            <AnimatePresence>
-              {cartCount > 0 && (
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} style={{ position: 'absolute', top: '-6px', right: '-12px', background: '#FF914D', color: '#fff', fontSize: '0.65rem', fontWeight: 900, width: '18px', height: '18px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
-                  {cartCount}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          <span style={{ color: cartCount > 0 ? '#FF914D' : 'inherit', fontWeight: cartCount > 0 ? 700 : 500 }}>Carrito</span>
-        </div>
-
-        <div className={`nav-item ${activeTab === 'rewards' ? 'active' : ''}`} onClick={() => { setActiveTab('rewards'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-          <Gift />
-          <span>Rewards</span>
-        </div>
-        <div className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => { setActiveTab('history'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-          <Receipt />
-          <span>Pedidos</span>
-        </div>
-      </nav>
+      <BarraGlass grupo="cafeteria"
+        items={[
+          { id: 'home', label: 'Inicio', Icono: Home, activo: activeTab === 'home', onClick: () => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); } },
+          { id: 'order', label: 'Menú', Icono: Coffee, activo: activeTab === 'order', onClick: () => { setActiveTab('order'); window.scrollTo({ top: 0, behavior: 'smooth' }); } },
+          { id: 'cart', label: cartCount > 0 ? `Carrito (${cartCount})` : 'Carrito', Icono: ShoppingCart, badge: cartCount || null, activo: activeTab === 'cart', onClick: () => { setActiveTab('cart'); window.scrollTo({ top: 0, behavior: 'smooth' }); } },
+          { id: 'rewards', label: 'Recompensas', Icono: Gift, activo: activeTab === 'rewards', onClick: () => { setActiveTab('rewards'); window.scrollTo({ top: 0, behavior: 'smooth' }); } },
+        ]} />
 
 
       {/* FICHA / PERSONALIZACIÓN */}
@@ -705,9 +843,9 @@ function Cafeteria() {
                   strokeDasharray={2 * Math.PI * 52}
                   initial={{ strokeDashoffset: 0 }} animate={{ strokeDashoffset: 2 * Math.PI * 52 }} transition={{ duration: 5, ease: 'linear' }} />
               </svg>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.6rem', fontWeight: 900, color: '#fff', fontFamily: 'var(--font-display)' }}>{countdown}</div>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.6rem', fontWeight: 800, color: '#fff', fontFamily: 'var(--c-font)' }}>{countdown}</div>
             </div>
-            <h2 style={{ color: '#fff', margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: '1.5rem' }}>Confirmando tu pedido…</h2>
+            <h2 style={{ fontFamily: 'var(--c-font)', fontWeight: 800, letterSpacing: '-0.025em', color: '#fff', margin: '0 0 6px', fontSize: '1.3rem' }}>Confirmando tu pedido…</h2>
             <p style={{ color: 'rgba(255,255,255,0.8)', margin: '0 0 28px', fontSize: '0.95rem' }}>¿Te arrepentiste? Aún puedes cancelar.</p>
             <button onClick={cancelCheckout} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.4)', padding: '14px 40px', borderRadius: '16px', fontWeight: 800, fontSize: '1rem', cursor: 'pointer' }}>
               Cancelar
@@ -725,19 +863,19 @@ function Cafeteria() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAuthPrompt(false)}
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 4600, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
             <motion.div onClick={(e) => e.stopPropagation()} initial={{ scale: 0.85, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', damping: 20, stiffness: 240 }}
-              style={{ width: 'min(360px, 100%)', background: '#fff', borderRadius: '28px', padding: '34px 26px', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.3)', position: 'relative' }}>
+              style={{ width: 'min(360px, 100%)', background: 'var(--c-card)', borderRadius: '28px', padding: '34px 26px', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.3)', position: 'relative' }}>
               <button onClick={() => setShowAuthPrompt(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '16px', right: '16px', width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                 <X size={16} color="#1A1C1E" />
               </button>
               <div style={{ width: '76px', height: '76px', borderRadius: '50%', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', boxShadow: '0 10px 25px rgba(255,145,77,0.4)' }}>
                 <Coffee size={38} color="#fff" strokeWidth={2.2} />
               </div>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.55rem', margin: '0 0 8px', color: '#1A1C1E' }}>Crea tu cuenta para pedir</h2>
+              <h2 style={{ fontFamily: 'var(--c-font)', fontWeight: 800, letterSpacing: '-0.025em', fontSize: '1.3rem', margin: '0 0 8px', color: '#1A1C1E' }}>Crea tu cuenta para pedir</h2>
               <p style={{ margin: '0 0 24px', fontSize: '0.95rem', color: '#6B7280', lineHeight: 1.5 }}>Es gratis y rápido — no necesitas membresía. Así puedes seguir tu pedido en vivo y recibir avisos cuando esté listo.</p>
               <button onClick={() => { localStorage.setItem('befit_redirect_after_auth', '/cafeteria'); localStorage.setItem('befit_cafe_resume', '1'); irA('/registro'); }} style={{ width: '100%', padding: '15px', borderRadius: '16px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 25px rgba(255,145,77,0.35)', marginBottom: '10px' }}>
                 Registrarme
               </button>
-              <button onClick={() => { localStorage.setItem('befit_redirect_after_auth', '/cafeteria'); localStorage.setItem('befit_cafe_resume', '1'); irA('/login'); }} style={{ width: '100%', padding: '13px', borderRadius: '16px', border: '1.5px solid rgba(0,0,0,0.12)', background: '#fff', color: '#1A1C1E', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>
+              <button onClick={() => { localStorage.setItem('befit_redirect_after_auth', '/cafeteria'); localStorage.setItem('befit_cafe_resume', '1'); irA('/login'); }} style={{ width: '100%', padding: '13px', borderRadius: '16px', border: '1.5px solid rgba(0,0,0,0.12)', background: 'var(--c-card)', color: '#1A1C1E', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>
                 Ya tengo cuenta
               </button>
             </motion.div>
@@ -765,7 +903,7 @@ function Cafeteria() {
       {showThanks && (
         <div onClick={() => setShowThanks(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
           <motion.div onClick={(e) => e.stopPropagation()} initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', damping: 18, stiffness: 220 }}
-            style={{ width: 'min(360px, 100%)', background: '#fff', borderRadius: '28px', padding: '34px 26px', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.3)', position: 'relative' }}>
+            style={{ width: 'min(360px, 100%)', background: 'var(--c-card)', borderRadius: '28px', padding: '34px 26px', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.3)', position: 'relative' }}>
             <button onClick={() => setShowThanks(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '16px', right: '16px', width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <X size={16} color="#1A1C1E" />
             </button>
@@ -773,7 +911,7 @@ function Cafeteria() {
               style={{ width: '76px', height: '76px', borderRadius: '50%', background: 'linear-gradient(135deg, #FF914D, #E07A9C)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', boxShadow: '0 10px 25px rgba(255,145,77,0.4)' }}>
               <CheckCircle2 size={42} color="#fff" strokeWidth={2.5} />
             </motion.div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.9rem', margin: '0 0 8px', color: '#1A1C1E' }}>¡Gracias!</h2>
+            <h2 style={{ fontFamily: 'var(--c-font)', fontWeight: 800, letterSpacing: '-0.025em', fontSize: '1.7rem', margin: '0 0 8px', color: '#1A1C1E' }}>¡Gracias!</h2>
             <p style={{ margin: '0 0 24px', fontSize: '0.95rem', color: '#6B7280', lineHeight: 1.5 }}>Tu pedido fue procesado. Pásalo a recoger a la cafetería.</p>
             <button onClick={() => setShowThanks(false)} style={{ width: '100%', padding: '15px', borderRadius: '16px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 25px rgba(255,145,77,0.35)' }}>
               ¡Listo!

@@ -8,7 +8,7 @@ const STATUS = {
   paid:      { label: 'Confirmado',  color: '#FF914D', tint: 'rgba(255,145,77,0.12)' },
   preparing: { label: 'Preparando', color: '#3B82F6', tint: 'rgba(59,130,246,0.12)' },
   ready:     { label: 'Listo',      color: '#16A34A', tint: 'rgba(22,163,74,0.12)' },
-  completed: { label: 'Entregado',  color: '#6B5B50', tint: 'rgba(107,91,80,0.1)' },
+  completed: { label: 'Entregado',  color: 'var(--c-muted)', tint: 'rgba(107,91,80,0.1)' },
   cancelled: { label: 'Cancelado',  color: '#9CA3AF', tint: 'rgba(156,163,175,0.12)' },
 };
 const ACTIVE = ['paid', 'preparing', 'ready'];
@@ -24,7 +24,8 @@ const fmtDate = (iso) => {
 
 export default function CafeOrderHistory({ userId }) {
   const [orders, setOrders] = useState(null);
-  const [trackingOrderId, setTrackingOrderId] = useState(null);
+  // Solo en desarrollo: ?estado_demo=… abre el seguimiento sin pedido real (ver CafeOrderTracking).
+  const [trackingOrderId, setTrackingOrderId] = useState(() => (import.meta.env.DEV && new URLSearchParams(window.location.search).get('estado_demo')) ? 'demo' : null);
 
   useEffect(() => {
     if (!userId) { setOrders([]); return; }
@@ -79,9 +80,9 @@ export default function CafeOrderHistory({ userId }) {
 
   return (
     <>
-      <div style={{ padding: 'calc(env(safe-area-inset-top, 44px) + 30px) 24px 120px', flex: 1, background: '#FAF8F5', minHeight: '100vh', fontFamily: 'var(--font-body)' }}>
+      <div style={{ padding: 'calc(env(safe-area-inset-top, 44px) + 30px) 24px 120px', flex: 1, background: 'var(--c-bg)', minHeight: '100vh', fontFamily: 'var(--font-body)' }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2.4rem', fontWeight: 800, color: '#2B211C', margin: '0' }}>Mis Pedidos</h2>
+          <h2 style={{ fontFamily: 'var(--c-font)', fontWeight: 800, letterSpacing: '-0.025em', fontSize: '2rem', color: 'var(--c-ink)', margin: '0' }}>Mis Pedidos</h2>
         </div>
 
         {orders === null ? (
@@ -89,7 +90,7 @@ export default function CafeOrderHistory({ userId }) {
           ) : orders.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9CA3AF' }}>
               <Receipt size={54} strokeWidth={1.5} style={{ opacity: 0.35, marginBottom: '20px' }} />
-              <p style={{ margin: 0, fontWeight: 700, color: '#6B5B50', fontSize: '1.2rem' }}>Aún no tienes pedidos</p>
+              <p style={{ margin: 0, fontWeight: 700, color: 'var(--c-muted)', fontSize: '1.2rem' }}>Aún no tienes pedidos</p>
               <p style={{ margin: '8px 0 0', fontSize: '0.95rem', opacity: 0.8 }}>Tus compras de la cafetería aparecerán aquí.</p>
             </div>
           ) : (
@@ -117,7 +118,7 @@ export default function CafeOrderHistory({ userId }) {
                       gap: '14px', 
                       alignItems: 'center', 
                       padding: '20px', 
-                      background: '#fff', 
+                      background: 'var(--c-card)', 
                       borderRadius: '24px', 
                       border: isActive ? `1.5px solid ${st.color}55` : '1px solid rgba(0,0,0,0.04)',
                       boxShadow: isActive ? `0 12px 30px ${st.color}15` : '0 8px 24px rgba(43,33,28,0.04)',
@@ -140,7 +141,7 @@ export default function CafeOrderHistory({ userId }) {
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', gap: '6px' }}>
-                      <div style={{ fontWeight: 800, fontSize: '1.15rem', color: '#1A1C1E', fontFamily: 'var(--font-display)' }}>
+                      <div style={{ fontWeight: 800, fontSize: '1.15rem', color: '#1A1C1E' }}>
                         ${o.total}
                       </div>
                       {clickable && <ChevronRight size={20} strokeWidth={2.5} color="#DCD4C7" />}

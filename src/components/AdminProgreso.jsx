@@ -71,7 +71,7 @@ export default function AdminProgreso() {
   return (
     <div>
       <div style={{ marginBottom: '20px' }}>
-        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', fontWeight: 800, color: 'var(--on-surface)', margin: '0 0 6px' }}>Fotos de progreso</h2>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 800, color: 'var(--on-surface)', margin: '0 0 6px' }}>Fotos de progreso</h2>
         <p style={{ color: 'var(--on-surface-variant)', fontSize: '0.9rem', margin: 0 }}>
           {conFotos === 0
             ? 'Todavía ninguna clienta ha registrado fotos.'

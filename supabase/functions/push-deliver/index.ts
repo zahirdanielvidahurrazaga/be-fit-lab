@@ -31,6 +31,8 @@ const CRITICOS_POR_KIND = new Set([
   // se cae, el sistema avisa, y quien no tiene push no se entera de nada.
   // 29 socias activas no tienen ningún aparato registrado.
   'payment_failed',
+  // "Tu inscripción anual está pendiente": sin ella no podrá reservar.
+  'inscripcion_pendiente',
 ]);
 
 function esCritico(type: unknown, data: Record<string, unknown> | null | undefined): boolean {

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&family=DM+Sans:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600;700;800&family=DM+Sans:wght@400;700;900&display=swap');
 
 :root {
   /* Tonal Layering - BEFIT LAB MEGA PREMIUM (Apple-like) */
@@ -743,7 +743,8 @@ h1, h2, h3, h4, h5 {
 }
 
 .ios-header {
-  padding: env(safe-area-inset-top, 44px) 20px 10px;
+  /* En la web env() vale 0 y el título quedaba pegado al borde de arriba. */
+  padding: max(env(safe-area-inset-top, 44px), 18px) 20px 10px;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -1257,7 +1258,8 @@ h1, h2, h3, h4, h5 {
 }
 
 .ios-header {
-  padding: env(safe-area-inset-top, 44px) 20px 10px;
+  /* En la web env() vale 0 y el título quedaba pegado al borde de arriba. */
+  padding: max(env(safe-area-inset-top, 44px), 18px) 20px 10px;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -1382,6 +1384,10 @@ h1, h2, h3, h4, h5 {
   gap: 24px;
   width: 100%;
 }
+/* Sin esto, una columna no encoge por debajo de su contenido más ancho y el
+   formulario de Insignias se salía de la pantalla en celular. */
+.admin-double-column > * { min-width: 0; }
+.admin-double-column input, .admin-double-column select, .admin-double-column textarea { min-width: 0; max-width: 100%; }
 
 @media (min-width: 768px) {
   .admin-double-column {
@@ -1744,34 +1750,43 @@ h1, h2, h3, h4, h5 {
   }
 }
 
-/* Lista de clientas (admin). En pantallas angostas el estado no cabe junto al
-   nombre y salía cortado ("Activa · 10 clas…"), que con planes reales
-   ("Plan Esencial · 0 clases") se comía media frase. Baja a su propio renglón. */
-.fila-clienta .fc-estado { text-align: right; }
+/* Lista de clientas (admin). El acomodo vive AQUÍ y no en línea: un estilo
+   en línea gana siempre y en celular dejaba el estado partido en 3 renglones
+   a la derecha con el "···" colgando abajo.
+   Escritorio: avatar · nombre/correo · estado (a la derecha) · ···
+   Celular / panel abierto: avatar · [nombre / correo / estado en una línea] · ··· */
+.fila-clienta { display: flex; align-items: center; gap: 12px; }
+.fila-clienta .fc-id { flex: 2 1 190px; }
+.fila-clienta .fc-estado { flex: 1 1 150px; text-align: right; display: flex; flex-direction: column; }
+.fila-clienta .fc-plan, .fila-clienta .fc-vence { display: block; }
 
 @media (max-width: 720px) {
-  .fila-clienta { flex-wrap: wrap; row-gap: 2px; }
-  .fila-clienta .fc-id { flex: 1 1 auto; }
-  .fila-clienta .fc-estado {
-    flex: 1 0 100%;
-    text-align: left;
-    padding-left: 50px; /* alinea bajo el nombre, no bajo el avatar */
+  .fila-clienta {
+    display: grid; grid-template-columns: 38px minmax(0, 1fr) auto;
+    grid-template-areas: "av id menu" "av est menu";
+    column-gap: 12px; row-gap: 3px; align-items: center;
   }
 }
+.fila-clienta.es-compacta {
+  display: grid; grid-template-columns: 38px minmax(0, 1fr) auto;
+  grid-template-areas: "av id menu" "av est menu";
+  column-gap: 12px; row-gap: 3px; align-items: center;
+}
+@media (max-width: 720px) {
+  .fila-clienta .fc-av { grid-area: av; align-self: start; margin-top: 2px; }
+  .fila-clienta .fc-id { grid-area: id; }
+  .fila-clienta .fc-menu { grid-area: menu; }
+  .fila-clienta .fc-estado { grid-area: est; text-align: left; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 0 6px; }
+  .fila-clienta .fc-vence::before { content: "· "; color: var(--on-surface-variant); font-weight: 500; }
+}
+.fila-clienta.es-compacta .fc-av { grid-area: av; align-self: start; margin-top: 2px; }
+.fila-clienta.es-compacta .fc-id { grid-area: id; }
+.fila-clienta.es-compacta .fc-menu { grid-area: menu; }
+.fila-clienta.es-compacta .fc-estado { grid-area: est; text-align: left; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 0 6px; }
+.fila-clienta.es-compacta .fc-vence::before { content: "· "; color: var(--on-surface-variant); font-weight: 500; }
 
 /* Ficha de la clienta como PANEL al lado de la lista (no modal centrado). */
 .clientas-split .col-ficha { align-self: stretch; }
-
-/* Con el panel abierto la columna de la lista queda angosta aunque la ventana
-   sea ancha, así que la media query de viewport no basta: el estado se apila
-   por CLASE, no por ancho de pantalla. */
-.fila-clienta.es-compacta { flex-wrap: wrap; row-gap: 2px; }
-.fila-clienta.es-compacta .fc-id { flex: 1 1 auto; }
-.fila-clienta.es-compacta .fc-estado {
-  flex: 1 0 100%;
-  text-align: left;
-  padding-left: 50px;
-}
 
 /* En pantallas angostas el panel manda: ocupa todo y la lista se esconde. */
 @media (max-width: 900px) {
@@ -1780,9 +1795,19 @@ h1, h2, h3, h4, h5 {
   .clientas-split .col-ficha .ficha-panel { max-height: none; position: static; }
 }
 
+/* Ficha: en escritorio es un panel fijo al lado de la lista con su propio
+   scroll; en celular ocupa la pantalla y se desplaza con la página. */
+.ficha-panel { max-height: calc(100vh - 40px); position: sticky; top: 16px; }
+.ficha-panel .ficha-cuerpo { overflow-y: auto; }
+
 /* El botón de volver solo existe donde el panel tapa la lista. */
 @media (max-width: 900px) {
   .ficha-panel .ficha-volver { display: flex !important; }
+  .ficha-panel .ficha-cerrar { display: none !important; }
+  .clientas-split .col-ficha .ficha-panel { max-height: none; position: static; }
+  .ficha-panel .ficha-cuerpo { overflow: visible; }
+  /* Con la ficha abierta, el título de la sección solo estorba. */
+  section:has(.col-ficha) > .clientas-encabezado { display: none !important; }
 }
 
 
@@ -1845,3 +1870,235 @@ html[data-temporada='muertos'] .nav-qr-button::after {
 }
 :root:not([data-theme='dark']) .ios-bottom-nav .nav-item { color: #43382F; opacity: 0.78; }
 :root:not([data-theme='dark']) .ios-bottom-nav .nav-item.active { color: #E8661A; opacity: 1; } /* un tono más profundo que --primary: sobre fotos cálidas el durazno se perdía */
+
+/* Horario (admin): en celular la celda es chica → solo el número de clases. */
+@media (max-width: 480px) { .cal-palabra { display: none; } }
+
+/* ═════ BARRA DE LA CLIENTA — "Liquid Glass" (BarraClienta.jsx) ═════════════
+   Píldora flotante de solo íconos. Capas: vidrio (desenfoque + saturación),
+   filo de luz arriba, sombra interna abajo, brillo especular (.lg-brillo) y la
+   burbuja del activo que se desliza (framer layoutId). La refracción de bordes
+   (.lg-refracta) solo se activa en Chromium; WebKit no la soporta. */
+.lg-barra {
+  --lg-vidrio: rgba(255, 255, 255, 0.38);
+  --lg-filo: rgba(255, 255, 255, 0.85);
+  --lg-borde: rgba(255, 255, 255, 0.55);
+  --lg-icono: #3A3029;
+  --lg-activo: #E8661A;
+  --lg-burbuja: rgba(255, 255, 255, 0.62);
+  position: fixed;
+  left: 50%;
+  bottom: max(22px, calc(env(safe-area-inset-bottom) + 8px));
+  transform: translateX(-50%);
+  width: min(calc(100% - 48px), 380px);
+  height: 64px;
+  padding: 0 8px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-radius: 999px;
+  background: var(--lg-vidrio);
+  -webkit-backdrop-filter: blur(16px) saturate(190%) brightness(1.06);
+  backdrop-filter: blur(16px) saturate(190%) brightness(1.06);
+  border: 1px solid var(--lg-borde);
+  box-shadow:
+    0 12px 34px rgba(30, 20, 10, 0.16),
+    0 2px 6px rgba(30, 20, 10, 0.06),
+    inset 0 1px 0 var(--lg-filo),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.05),
+    inset 0 0 18px rgba(255, 255, 255, 0.22);
+  z-index: 2000;
+  isolation: isolate;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), height 0.45s cubic-bezier(0.16, 1, 0.3, 1), width 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* La refracción (solo Chromium) se pone en línea desde BarraGlass, con el id de su filtro. */
+.lg-barra.lg-compacta { height: 58px; width: min(calc(100% - 72px), 340px); }
+
+/* Brillo especular: luz que entra por arriba-izquierda. */
+.lg-brillo {
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(120% 90% at 18% -10%, rgba(255, 255, 255, 0.55), transparent 55%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 45%, rgba(255, 255, 255, 0.06));
+  mix-blend-mode: soft-light;
+}
+
+.lg-item {
+  position: relative; z-index: 1;
+  flex: 1; height: 50px; min-width: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--lg-icono); opacity: 0.72; text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+.lg-item:active { transform: scale(0.9); }
+.lg-item.activo { color: var(--lg-activo); opacity: 1; }
+.lg-icono { position: relative; z-index: 1; display: flex; }
+.lg-avatar { width: 27px; height: 27px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.12); }
+.lg-item.activo .lg-avatar { box-shadow: 0 0 0 2px var(--lg-activo); }
+
+/* La burbuja del activo: una gota de vidrio más clara dentro del vidrio. */
+.lg-burbuja {
+  position: absolute; z-index: 0;
+  inset: 0 6px; border-radius: 999px;
+  background: var(--lg-burbuja);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.06),
+    0 4px 12px rgba(30, 20, 10, 0.1);
+}
+
+/* QR: el botón principal, un disco naranja con su propio vidrio encima. */
+.lg-qr {
+  position: relative; z-index: 4; /* encima de la burbuja-lupa cuando pasa por el centro */ flex-shrink: 0;
+  width: 50px; height: 50px; margin: 0 4px; border-radius: 50%; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+  background:
+    radial-gradient(110% 80% at 30% 0%, rgba(255, 255, 255, 0.45), transparent 55%),
+    linear-gradient(145deg, #FF9A5A, #E8661A);
+  box-shadow:
+    0 6px 16px rgba(232, 102, 26, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -2px 4px rgba(120, 40, 0, 0.22);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease;
+}
+.lg-qr:active { transform: scale(0.92); }
+
+/* Modo oscuro de la clienta: vidrio ahumado. */
+[data-theme='dark'] .lg-barra {
+  --lg-vidrio: rgba(30, 24, 20, 0.5);
+  --lg-filo: rgba(255, 255, 255, 0.18);
+  --lg-borde: rgba(255, 255, 255, 0.1);
+  --lg-icono: #E9DED4;
+  --lg-activo: #FF9A5A;
+  --lg-burbuja: rgba(255, 255, 255, 0.14);
+}
+[data-theme='dark'] .lg-brillo { opacity: 0.35; }
+
+@media (prefers-reduced-transparency: reduce) {
+  .lg-barra { background: rgba(255, 255, 255, 0.94); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  [data-theme='dark'] .lg-barra { background: rgba(30, 24, 20, 0.96); }
+}
+
+/* ═════ PASE QR (PaseQR.jsx) ══════════════════════════════════════════════
+   Boleto flotante sobre el fondo difuminado (sin hoja detrás). Dos piezas que
+   se unen al abrir: .pq-arriba (cacao, nombre y datos) y .pq-talon (QR).
+   Las muescas son un RECORTE real (mask) para que la sombra siga la forma. */
+.pq-fondo {
+  position: fixed; inset: 0; z-index: 3000;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  padding: calc(env(safe-area-inset-top) + 24px) 20px calc(env(safe-area-inset-bottom) + 24px);
+  background: rgba(40, 26, 18, 0.32);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  backdrop-filter: blur(18px) saturate(120%);
+}
+.pq-cerrar {
+  position: absolute; top: calc(env(safe-area-inset-top) + 16px); right: 16px;
+  width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.5); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+  background: rgba(255, 255, 255, 0.22); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+}
+.pq {
+  --pq-cacao: #3E2B22; --pq-crema: #FBF5EE;
+  width: min(100%, 320px);
+  /* Sin filter: drop-shadow — la sombra del conjunto se metía DENTRO de las
+     muescas y las volvía negras. Cada pieza lleva su propia sombra (abajo). */
+  touch-action: none;
+}
+.pq-arriba {
+  position: relative; overflow: hidden; text-align: center; padding: 22px 20px 20px; border-radius: 26px 26px 0 0;
+  background:
+    radial-gradient(120% 70% at 100% 0%, rgba(240, 138, 98, 0.3), transparent 60%),
+    linear-gradient(160deg, #4A3328 0%, var(--pq-cacao) 60%, #33231B 100%);
+  color: #F7EDE4;
+  /* Sombra hacia arriba y a los lados; casi nada hacia abajo (ahí van las muescas). */
+  box-shadow: 0 -8px 24px -8px rgba(30, 18, 10, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.pq-marca-agua { position: absolute; right: -50px; bottom: -48px; width: 220px; opacity: 0.1; filter: grayscale(1) brightness(3); pointer-events: none; }
+.pq-durazno { position: relative; width: 44px; height: 44px; margin: 0 auto 12px; border-radius: 50%; background: var(--pq-crema); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+.pq-durazno img { width: 28px; height: 28px; object-fit: contain; }
+.pq-nombre { position: relative; font-family: var(--font-display); font-size: 1.45rem; font-weight: 800; color: #fff; line-height: 1.15; overflow-wrap: anywhere; }
+.pq-plan { position: relative; margin-top: 2px; font-size: 0.82rem; font-weight: 700; color: rgba(247, 237, 228, 0.65); }
+.pq-chips { position: relative; display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.pq-chip { padding: 6px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.16); font-size: 0.78rem; font-weight: 700; color: #fff; }
+.pq-chip.pq-chip-vencida { background: rgba(240, 138, 98, 0.22); border-color: rgba(255, 177, 153, 0.35); color: #FFC2AE; }
+
+/* El talón NO lleva fondo propio: si lo tuviera, se vería detrás de las muescas y las taparía. */
+.pq-talon { background: none; }
+.pq-corte {
+  position: relative; height: 26px; background: var(--pq-crema);
+  -webkit-mask:
+    radial-gradient(circle 13px at 0 50%, transparent 12.5px, #000 13px) left / 51% 100% no-repeat,
+    radial-gradient(circle 13px at 100% 50%, transparent 12.5px, #000 13px) right / 51% 100% no-repeat;
+          mask:
+    radial-gradient(circle 13px at 0 50%, transparent 12.5px, #000 13px) left / 51% 100% no-repeat,
+    radial-gradient(circle 13px at 100% 50%, transparent 12.5px, #000 13px) right / 51% 100% no-repeat;
+}
+.pq-corte span { position: absolute; left: 20px; right: 20px; top: 50%; border-top: 2px dashed rgba(62, 43, 34, 0.2); }
+.pq-qr { display: flex; justify-content: center; padding: 6px 0 22px; background: var(--pq-crema); border-radius: 0 0 26px 26px; box-shadow: 0 18px 34px -10px rgba(30, 18, 10, 0.35); }
+.pq-qr canvas { display: block; width: min(210px, 56vw) !important; height: auto !important; }
+
+.pq-pie { width: min(100%, 320px); }
+.pq-wallet {
+  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+  padding: 14px; border-radius: 14px; border: none; cursor: pointer; color: #fff; font-weight: 700; font-size: 0.95rem; font-family: var(--font-body);
+}
+.pq-error { margin: 8px 0 0; font-size: 0.78rem; color: #fff; text-align: center; }
+@media (prefers-reduced-motion: reduce) { .pq-arriba, .pq-talon { transition: none !important; } }
+
+/* Barra de vidrio: botones (no links) sin estilo de botón; badge (carrito);
+   barras cortas (2-3 elementos) más angostas; QR activo (admin: Mostrador). */
+button.lg-item { background: none; border: none; padding: 0; cursor: pointer; font: inherit; }
+.lg-badge {
+  animation: lg-badge-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: absolute; top: -7px; right: -11px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px;
+  background: #E8661A; color: #fff; font-size: 0.64rem; font-weight: 900; display: flex; align-items: center; justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+}
+.lg-barra.lg-corta { width: min(calc(100% - 48px), 260px); }
+.lg-barra.lg-corta.lg-compacta { width: min(calc(100% - 72px), 236px); }
+.lg-qr.activo { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9), 0 8px 22px rgba(232, 102, 26, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.6); }
+@media (min-width: 768px) { .lg-barra.mobile-only-nav { display: none; } }
+
+/* Modo oscuro: los controles nativos (fecha, hora, selects) en esquema oscuro.
+   Sin esto el ícono del calendario del input de fecha salía negro sobre negro. */
+[data-theme='dark'] input, [data-theme='dark'] select, [data-theme='dark'] textarea { color-scheme: dark; }
+
+/* Pase QR en modo oscuro: el cacao se perdía contra el fondo oscuro. Parte de
+   arriba en caramelo y un filo de luz para que el boleto se despegue. */
+[data-theme='dark'] .pq-fondo { background: rgba(0, 0, 0, 0.45); }
+[data-theme='dark'] .pq-arriba {
+  background:
+    radial-gradient(120% 70% at 100% 0%, rgba(255, 170, 120, 0.35), transparent 60%),
+    linear-gradient(160deg, #8A5A3E 0%, #6E4630 60%, #5A3826 100%);
+  box-shadow: 0 -8px 24px -8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* ═════ CAFETERÍA — paleta propia con modo oscuro ═══════════════════════════
+   Antes todos los colores estaban escritos a mano y la cafetería se quedaba
+   clara siempre. Claro = crema/café de siempre; oscuro = espresso. */
+:root {
+  --c-bg: #F7F2EB; --c-card: #FFFFFF; --c-ink: #2B211C; --c-muted: #7D7068;
+  --c-soft: #F5F0E6; --c-seg: rgba(219, 210, 198, 0.4); --c-line: rgba(43, 33, 28, 0.08);
+  --c-plus: rgba(43, 33, 28, 0.88); --c-accent: #FF914D; --c-accent-ink: #E8661A;
+  /* Títulos de Coffee Lab: Inter (la misma letra del saludo y del resto de la app),
+     peso 800 y letras juntas. Se probaron y descartaron Fraunces, Instrument Serif y
+     Archivo ancha en mayúsculas (4-nov). */
+  --c-font: 'Inter', sans-serif;
+  --c-cream: #F3EADF;
+}
+[data-theme='dark'] {
+  --c-bg: #15110E; --c-card: #221B16; --c-ink: #F3E9E0; --c-muted: #B8A99C;
+  --c-soft: #2E251F; --c-seg: rgba(255, 255, 255, 0.07); --c-line: rgba(255, 255, 255, 0.08);
+  --c-plus: #FF914D; --c-accent: #FF9A5A; --c-accent-ink: #FFAD7A;
+  --c-cream: #1C1612;
+}
+/* Pase de COACH: parte de arriba en verde salvia (la hoja del durazno). */
+.pq.pq-coach .pq-arriba {
+  background:
+    radial-gradient(120% 70% at 100% 0%, rgba(200, 220, 190, 0.28), transparent 60%),
+    linear-gradient(160deg, #5E7458 0%, #4C6047 60%, #3E4F3A 100%);
+}
+
+/* El número del carrito "salta" cada vez que cambia (se remonta con key). */
+@keyframes lg-badge-pop { 0% { transform: scale(0.4); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .lg-badge { animation: none; } }

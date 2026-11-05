@@ -47,13 +47,13 @@ export default function MisClasesMovimientos({ abierto, onCerrar, saldoActual, u
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={onCerrar}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)', zIndex: 1400 }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)', zIndex: 3000 }}
           />
           <motion.div
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 32, stiffness: 320 }}
             style={{
-              position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1401,
+              position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 3001,
               maxHeight: '85vh', display: 'flex', flexDirection: 'column',
               background: 'var(--app-surface-solid, #fff)',
               borderTopLeftRadius: '26px', borderTopRightRadius: '26px',

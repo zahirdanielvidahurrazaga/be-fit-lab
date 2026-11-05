@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext';
 // membresía, cuenta, ajustes y cerrar sesión.
 function ProfileMenu() {
   const navigate = useNavigate();
-  const { avatarUrl, profileName, role, membershipStatus, logout, unreadCount, setNotifOpen } = useAuth();
+  const { avatarUrl, profileName, role, membershipStatus, planExpiresAt, logout, unreadCount, setNotifOpen } = useAuth();
   const [open, setOpen] = useState(false);
 
   const statusLabel =
@@ -17,7 +17,10 @@ function ProfileMenu() {
     : role === 'COACH' ? 'Coach'
     : role === 'BARISTA' ? 'Barista'
     : role === 'RECEPCION' ? 'Recepción'
-    : membershipStatus === 'ACTIVE' ? 'Socia Activa'
+    // "Activa" solo si el plan está VIGENTE: antes decía "Socia Activa" con el
+    // plan vencido hace un mes.
+    : membershipStatus === 'ACTIVE' && (!planExpiresAt || new Date(planExpiresAt) > new Date()) ? 'Socia activa'
+    : membershipStatus === 'ACTIVE' ? 'Plan vencido'
     : 'Socia';
 
   const go = (path) => { setOpen(false); navigate(path); };

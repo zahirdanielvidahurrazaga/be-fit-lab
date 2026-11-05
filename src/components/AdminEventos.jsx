@@ -112,7 +112,19 @@ export default function AdminEventos() {
     setRegView(v => ({ ...v, [id]: data || [] }));
   };
   const [nm, setNm] = useState(null); // modal de aviso { ev, stage, result, error, recipients, loadingRec }
-  const avisar = (ev) => setNm({ ev, stage: 'confirm' });
+  // Antes de reenviar, decir cuándo salió el mismo aviso: el de un evento se
+  // llegó a mandar 4 veces. Se busca en el buzón propio (a la dueña también le
+  // llega), que es lo único que su sesión puede leer.
+  const avisar = async (ev) => {
+    setNm({ ev, stage: 'confirm' });
+    const { data: { user: yo } } = await supabase.auth.getUser();
+    if (!yo) return;
+    const { data } = await supabase.from('notification_logs').select('sent_at')
+      .eq('user_id', yo.id).eq('title', '✨ Nuevo evento: ' + ev.title)
+      .order('sent_at', { ascending: false }).limit(1);
+    const ultimo = data?.[0]?.sent_at;
+    if (ultimo) setNm(m => (m && m.ev === ev ? { ...m, ultimo } : m));
+  };
   const doNotify = async () => {
     const ev = nm.ev;
     setNm(m => ({ ...m, stage: 'sending' }));
@@ -163,7 +175,7 @@ export default function AdminEventos() {
   return (
     <section>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-        <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: 0, color: INK, display: 'flex', alignItems: 'center', gap: '8px' }}><Sparkles size={20} color={PRIMARY} /> Eventos</h2>
+        <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: 0, color: INK }}>Eventos</h2>
         {!form && <button onClick={() => setForm({ ...blank })} style={{ background: PRIMARY, color: 'white', border: 'none', padding: '9px 15px', borderRadius: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}><Plus size={16} /> Nuevo evento</button>}
       </div>
 
@@ -208,8 +220,16 @@ export default function AdminEventos() {
       {events.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '46px', color: 'var(--on-surface-variant)' }}><Sparkles size={34} style={{ opacity: 0.3, marginBottom: '12px' }} /><p style={{ margin: 0, fontWeight: 700, color: INK }}>Sin eventos todavía</p></div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' }}>
-          {events.map(e => (
+        (() => {
+          // Próximos arriba (el más cercano primero); los pasados se pliegan.
+          // Antes el de septiembre salía igual que uno vigente.
+          const corte = Date.now() - 6 * 3600000; // sigue como "próximo" el mismo día
+          const esPasado = (e) => e.event_date && new Date(e.event_date).getTime() < corte;
+          const proximos = events.filter(e => !esPasado(e))
+            .sort((x, y) => new Date(x.event_date || 8640000000000000) - new Date(y.event_date || 8640000000000000));
+          const pasados = events.filter(esPasado);
+          const rejilla = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' };
+          const tarjeta = (e) => (
             <div key={e.id} style={{ background: '#fff', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)', padding: '12px' }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                 {e.image_url ? <img src={e.image_url} alt="" style={{ width: '64px', height: '64px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 }} /> : <div style={{ width: '64px', height: '64px', borderRadius: '12px', background: 'rgba(255,145,77,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Sparkles size={24} color={PRIMARY} /></div>}
@@ -252,8 +272,24 @@ export default function AdminEventos() {
                 </div>
               )}
             </div>
-          ))}
-        </div>
+          );
+          return (
+            <>
+              <h3 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--on-surface-variant)', margin: '4px 0 12px' }}>Próximos</h3>
+              {proximos.length === 0
+                ? <p style={{ margin: '0 0 18px', fontSize: '0.88rem', color: 'var(--on-surface-variant)' }}>No hay eventos próximos. Crea uno con "Nuevo evento".</p>
+                : <div style={rejilla}>{proximos.map(tarjeta)}</div>}
+              {pasados.length > 0 && (
+                <details style={{ marginTop: '24px' }}>
+                  <summary style={{ cursor: 'pointer', fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--on-surface-variant)', marginBottom: '12px' }}>
+                    Pasados · {pasados.length}
+                  </summary>
+                  <div style={{ ...rejilla, opacity: 0.8 }}>{pasados.map(tarjeta)}</div>
+                </details>
+              )}
+            </>
+          );
+        })()
       )}
 
       {/* Panel de control del evento: boletos, dinero, contacto y asistencia */}
@@ -280,6 +316,15 @@ export default function AdminEventos() {
                   <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'linear-gradient(135deg, #FF914D, #E68245)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 10px 24px rgba(255,145,77,0.4)' }}><Bell size={30} color="#fff" /></div>
                   <h2 style={{ margin: '0 0 8px', fontFamily: 'var(--font-display)', fontSize: '1.45rem', color: INK }}>Enviar aviso</h2>
                   <p style={{ margin: '0 0 22px', color: 'var(--on-surface-variant)', fontSize: '0.95rem', lineHeight: 1.5 }}>Se notificará a <strong style={{ color: INK }}>todas las clientas</strong> (in-app + push) sobre el evento <strong style={{ color: PRIMARY }}>{nm.ev.title}</strong>.</p>
+                  {nm.ultimo && (() => {
+                    const dias = Math.floor((Date.now() - new Date(nm.ultimo).getTime()) / 86400000);
+                    const cuando = dias <= 0 ? 'hoy' : dias === 1 ? 'ayer' : `hace ${dias} días`;
+                    return (
+                      <div style={{ margin: '-8px 0 18px', padding: '10px 12px', borderRadius: '12px', background: 'rgba(234,88,12,0.08)', color: '#9A3412', fontSize: '0.84rem', fontWeight: 700, lineHeight: 1.45 }}>
+                        Este mismo aviso ya se mandó {cuando} ({new Date(nm.ultimo).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}). Si lo reenvías, a todas les llega otra vez.
+                      </div>
+                    );
+                  })()}
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button onClick={() => setNm(null)} style={{ flex: 1, padding: '13px', borderRadius: '14px', border: '1.5px solid rgba(0,0,0,0.1)', background: '#fff', color: INK, fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>Cancelar</button>
                     <button onClick={doNotify} style={{ flex: 1.4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', padding: '13px', borderRadius: '14px', border: 'none', background: PRIMARY, color: '#fff', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer', boxShadow: '0 10px 24px rgba(255,145,77,0.35)' }}><Send size={16} /> Enviar aviso</button>
