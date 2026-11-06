@@ -73,7 +73,7 @@ export function Contador({ to, suffix = '', prefix = '' }) {
  *                  (va con una 'hoja' en la siguiente sección).
  * (Se probó una cinta de palabras con borde en curva: descartada por Zahir.)
  * ───────────────────────────────────────────────────────────────────────── */
-export function Escena({ children, fondo = 'transparent', z = 1, entrada = 'normal', salida = 'normal' }) {
+export function Escena({ children, fondo = 'transparent', z = 1, entrada = 'normal', salida = 'normal', stickyTactil = false }) {
   const reduce = useReducedMotion();
   const ref = useRef(null);
   const [m, setM] = useState({ vh: typeof window !== 'undefined' ? window.innerHeight : 800, origen: '50% 50%' });
@@ -116,7 +116,9 @@ export function Escena({ children, fondo = 'transparent', z = 1, entrada = 'norm
   // Celular: la versión NATIVA (position: sticky): la sección se queda quieta y la
   // siguiente sube encima sin JavaScript de por medio → no tiembla. Las secciones que
   // siguen son opacas y de z-index mayor, así que la tapan aunque se quede pegada.
-  else if (!reduce && tactil && salida === 'apilar') Object.assign(estilo, { position: 'sticky', top: m.top ?? 0 });
+  // Solo donde se pide (la portada) y dentro de un contenedor que termina con los números:
+  // pegada a toda la página se asomaba más abajo, y en las reseñas peleaba con su GSAP (tirón).
+  else if (!reduce && tactil && salida === 'apilar' && stickyTactil) Object.assign(estilo, { position: 'sticky', top: m.top ?? 0 });
   // En táctil no: con la portada pegada atrás, los costados del recorte dejaban ver
   // franjas oscuras en las orillas al hacer scroll.
   if (!reduce && !tactil && entrada === 'expandir') estilo.clipPath = clipPath;

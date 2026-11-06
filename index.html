@@ -100,6 +100,18 @@
       @media (prefers-reduced-motion: reduce) { #arranque * { animation: none !important; } }
     </style>
     <script>
+      // Alto de pantalla FIJO para la portada en celular (Chrome iOS cambia el alto al
+      // esconder su barra y la foto se estiraba). Solo se actualiza al girar el teléfono.
+      (function () {
+        // --wa-abajo: el WhatsApp flotante queda a la altura de los botones de la portada
+        // aunque la pantalla crezca al esconderse la barra (se mide contra el alto fijo).
+        var raiz = document.documentElement.style, alto = window.innerHeight;
+        var wa = function () { raiz.setProperty('--wa-abajo', Math.max(16, window.innerHeight - alto + 34) + 'px'); };
+        var fijar = function () { alto = window.innerHeight; raiz.setProperty('--alto-inicial', alto + 'px'); wa(); };
+        fijar();
+        window.addEventListener('resize', wa);
+        window.addEventListener('orientationchange', function () { setTimeout(fijar, 300); });
+      })();
       (function () {
         try {
           var nativo = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());

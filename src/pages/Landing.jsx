@@ -133,6 +133,23 @@ const ParallaxTestimonials = () => {
   // En móvil desactivamos los efectos caros (blobs animados + backdrop-filter +
   // animaciones flotantes infinitas) que causaban lentitud; en PC se mantienen.
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  // WhatsApp flotante (celular): a la MISMA altura que los botones de la portada, midiendo
+  // el botón real (la portada es más alta que la pantalla inicial y la barra del navegador
+  // cambia el alto visible). Solo se mide mientras la portada está arriba.
+  useEffect(() => {
+    if (window.innerWidth > 768) return undefined;
+    const medir = () => {
+      const hero = document.querySelector('.hero-portada');
+      const btn = document.querySelector('.hero-portada-botones');
+      if (!hero || !btn || hero.getBoundingClientRect().top < -1) return;
+      const abajo = window.innerHeight - btn.getBoundingClientRect().bottom;
+      if (abajo > 8) document.documentElement.style.setProperty('--wa-abajo', `${Math.round(abajo)}px`);
+    };
+    const t = setTimeout(medir, 2600); // después de que entran los botones
+    window.addEventListener('resize', medir);
+    return () => { clearTimeout(t); window.removeEventListener('resize', medir); };
+  }, []);
+
   useEffect(() => {
     const onR = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', onR);
@@ -481,7 +498,10 @@ export default function Landing() {
 
       {/* Cada sección es una ESCENA con su propia entrada/salida (hoja, expandir o normal),
           variadas a propósito para que el recorrido no repita siempre lo mismo. */}
-      <Escena z={1} fondo="var(--app-bg)" salida="apilar">
+      {/* Portada + números juntos: la portada solo se queda pegada (celular) mientras
+          suben los números; después se va normal. */}
+      <div className="escenas-portada">
+      <Escena z={1} fondo="var(--app-bg)" salida="apilar" stickyTactil>
       {/* ════════════════════════════════════════════════════════════ */}
       {/* HERO — ACTUALIZADO CON NUEVA FOTO                           */}
       {/* ════════════════════════════════════════════════════════════ */}
@@ -554,6 +574,7 @@ export default function Landing() {
       <LandingEvento />
 
       </Escena>
+      </div>
       <Escena z={3} fondo="#FFFFFF">
       {/* ── El Método ─────────────────────────────────────────────── */}
       <section id="metodo" style={{ padding:'var(--esp-seccion) 5%', background:'var(--surface-lowest)', position:'relative', overflow:'hidden' }}>

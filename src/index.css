@@ -2158,7 +2158,9 @@ button.lg-item { background: none; border: none; padding: 0; cursor: pointer; fo
      vertical extendida, encuadrada para que las caras queden DEBAJO de la barra. */
   .hero-portada { height: 100vh; height: 100svh; }
   .hero-portada-foto { background-image: url('/fotos-hero/hero-equipo-v2.jpg'); background-position: 50% 62%; }
-  .hero-portada-texto { left: 28px; right: 28px; bottom: 34px; }
+  /* Título y botones en la parte que SIEMPRE se ve al abrir (aunque la barra esté visible):
+     34 px sobre la orilla de la pantalla inicial. */
+  .hero-portada-texto { left: 28px; right: 28px; bottom: 34px; bottom: max(34px, calc(100lvh - var(--alto-inicial, 100svh) - 6px)); }
   .hero-portada-h1 { font-size: clamp(2rem, 9.2vw, 2.9rem); line-height: 0.95; }
   .hero-portada-botones { margin-top: 1.5rem; }
   /* El 2º botón al ancho de su texto: si no, el botón flotante de WhatsApp se le encima. */
@@ -2354,4 +2356,16 @@ button.lg-item { background: none; border: none; padding: 0; cursor: pointer; fo
   /* Menú en dos columnas (los renglones a todo lo ancho quedaban largos y vacíos). */
   .cafe-lista-menu { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px !important; }
   .cafe-lista-menu > p { grid-column: 1 / -1; }
+}
+
+/* ── Ajustes de celular (6-nov) ── */
+@media (max-width: 768px) {
+  /* La foto manda: los números entran DESPUÉS de la portada, sin montarse en ella. */
+  .escenas-portada .escena-hoja { margin-top: 0; }
+  /* Alto FIJO al abrir (Chrome iOS cambia el alto al esconder su barra y estiraba la foto). */
+  /* Alto = pantalla GRANDE (lvh, con la barra del navegador escondida): es una unidad
+     fija, no cambia al hacer scroll (no estira la foto) y la foto llena toda la pantalla. */
+  .hero-portada { height: 100vh; height: 100lvh; }
+  /* WhatsApp alineado con los botones de la portada: misma altura y mismo margen a la orilla. */
+  .wa-flotante { right: 28px !important; bottom: var(--wa-abajo, 34px) !important; }
 }
