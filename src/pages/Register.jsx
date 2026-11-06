@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { irConTransicion } from '../components/TransicionesWeb';
 import { supabase } from '../lib/supabase';
 import { User, Mail, Lock, ArrowRight, ChevronLeft, CheckCircle2, Eye, EyeOff, Cake, Ruler, MailCheck } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { motion } from 'framer-motion';
 import { signupRedirect } from '../lib/authRedirect';
 import { ESTUDIO } from '../config/estudio';
+import AuthLayout from '../components/AuthLayout';
 
 function Register() {
   const [name, setName] = useState('');
@@ -131,40 +133,7 @@ function Register() {
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%', overflowX: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'url("/fotos-hero/_DSC0444.jpg")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-      
-      {/* Overlay */}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.25) 35%, rgba(0,0,0,0.55) 65%, rgba(0,0,0,0.85) 100%)', backdropFilter: 'blur(8px)', zIndex: 0 }}></div>
-
-      {/* BOTÓN VOLVER */}
-      <div 
-        onClick={() => navigate('/')} 
-        style={{ 
-          position: 'absolute', top: 'calc(env(safe-area-inset-top, 20px) + 15px)', left: '20px', zIndex: 10,
-          display: 'flex', alignItems: 'center', gap: '6px',
-          padding: '10px 18px', borderRadius: '50px',
-          background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(20px)',
-          color: 'white', fontSize: '0.85rem', fontWeight: 600,
-          cursor: 'pointer', border: '1px solid rgba(255,255,255,0.2)',
-          transition: 'all 0.3s ease'
-        }}>
-        <ChevronLeft size={18} />
-        {isNative ? 'Atrás' : 'Volver al sitio'}
-      </div>
-
-      <motion.div initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }} animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }} transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isNative ? '20px 16px' : '40px 20px', zIndex: 1 }}>
-        <div style={{ 
-          width: '100%', 
-          maxWidth: '380px', 
-          background: 'rgba(255, 255, 255, 0.65)', 
-          backdropFilter: 'blur(30px)', 
-          WebkitBackdropFilter: 'blur(30px)',
-          padding: isNative ? '1.8rem 1.2rem' : '2.2rem 1.8rem', 
-          borderRadius: '28px',
-          border: '1px solid rgba(255,255,255,0.5)',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-          boxSizing: 'border-box'
-        }}>
+    <AuthLayout onVolver={(e) => irConTransicion('/', e)} textoVolver={isNative ? 'Atrás' : 'Volver al sitio'}>
           
           {sentTo ? (
             /* PANTALLA: REVISA TU CORREO */
@@ -172,7 +141,7 @@ function Register() {
               <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'rgba(255,145,77,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
                 <MailCheck size={36} color="var(--primary)" />
               </div>
-              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.9rem', color: '#1A1C1E', marginBottom: '0.6rem', lineHeight: 1.15 }}>Revisa tu correo</h1>
+              <h1 className="auth-titulo" style={{ textAlign: 'center' }}>Revisa tu <span>correo.</span></h1>
               <p style={{ color: '#374151', fontWeight: 500, lineHeight: 1.5 }}>
                 Te enviamos un enlace de confirmación a<br />
                 <strong style={{ color: '#1A1C1E' }}>{sentTo}</strong>
@@ -187,13 +156,13 @@ function Register() {
               {resendMsg && <p style={{ color: '#374151', fontSize: '0.82rem', marginTop: '10px' }}>{resendMsg}</p>}
 
               <div style={{ textAlign: 'center', marginTop: '1.4rem', color: '#4B5563', fontSize: '0.9rem' }}>
-                ¿Ya confirmaste? <span onClick={() => navigate('/login')} style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }}>Inicia Sesión</span>
+                ¿Ya confirmaste? <span onClick={(e) => irConTransicion('/login', e)} style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }}>Inicia Sesión</span>
               </div>
             </div>
           ) : (
           <>
           {/* FORMULARIO DE REGISTRO */}
-          <div style={{ textAlign: 'center', marginBottom: '1.8rem' }}>
+          <div className="auth-encabezado">
             {purchasedPlan ? (
                <>
                  <div style={{ display: 'inline-block', padding: '6px 12px', background: 'rgba(238,186,137,0.2)', color: 'var(--accent)', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '10px' }}>
@@ -203,7 +172,7 @@ function Register() {
                </>
             ) : (
                <>
-                 <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.2rem', color: '#1A1C1E', marginBottom: '0.5rem' }}>Crea tu Cuenta</h1>
+                 <h1 className="auth-titulo">Crea tu <span>cuenta.</span></h1>
                  <p style={{ color: '#4B5563', fontWeight: 500 }}>El primer paso hacia tu transformación.</p>
                </>
             )}
@@ -340,14 +309,12 @@ function Register() {
           </form>
 
           <div style={{ textAlign: 'center', marginTop: '1.5rem', color: '#4B5563', fontSize: '0.9rem' }}>
-            ¿Ya tienes una cuenta? <span onClick={() => navigate('/login')} style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }}>Inicia Sesión</span>
+            ¿Ya tienes una cuenta? <span onClick={(e) => irConTransicion('/login', e)} style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }}>Inicia Sesión</span>
           </div>
           </>
           )}
 
-        </div>
-      </motion.div>
-    </div>
+    </AuthLayout>
   );
 }
 

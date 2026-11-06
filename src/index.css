@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600;700;800&family=DM+Sans:wght@400;700;900&display=swap');
 
 :root {
+  /* Aire vertical ÚNICO entre secciones del sitio (antes cada una tenía el suyo: 7–14rem). */
+  --esp-seccion: clamp(4.5rem, 8vw, 7.5rem);
   /* Tonal Layering - BEFIT LAB MEGA PREMIUM (Apple-like) */
   --surface: #EFE9E4; 
   --surface-low: #F5F2F0;
@@ -1736,6 +1738,11 @@ h1, h2, h3, h4, h5 {
   background-size: cover;
   background-position: center 53%;   /* desktop */
 }
+/* Computadora: recorte de la foto ORIGINAL (IMG_5383, 2164×1600; la de 1065 px de
+   ancho se veía borrosa estirada). Sin la persona que se quitó en la versión editada. */
+@media (min-width: 769px) {
+  .hero-bg-main { background-image: url('/fotos-hero/hero-equipo-escritorio.jpg') !important; background-position: center 32%; }
+}
 
 @media (max-width: 768px) {
   .hero-bg-main {
@@ -2104,3 +2111,247 @@ button.lg-item { background: none; border: none; padding: 0; cursor: pointer; fo
 /* El número del carrito "salta" cada vez que cambia (se remonta con key). */
 @keyframes lg-badge-pop { 0% { transform: scale(0.4); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .lg-badge { animation: none; } }
+
+/* ===== SITIO INMERSIVO (Landing) ===== */
+/* Disciplinas: en computadora la foto se acerca al pasar el mouse. */
+.disc-frente .disc-foto { transition: transform 1.2s cubic-bezier(.16,1,.3,1); }
+@media (hover: hover) and (pointer: fine) {
+  .disc-frente:hover .disc-foto { transform: scale(1.08); }
+}
+
+/* "En clase ahora": punto que late. */
+.en-vivo-punto { width: 7px; height: 7px; border-radius: 50%; background: #EA580C; position: relative; }
+.en-vivo-punto::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: #EA580C; animation: enVivoPulso 1.6s ease-out infinite; }
+@keyframes enVivoPulso { from { transform: scale(1); opacity: .7; } to { transform: scale(2.8); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .en-vivo-punto::after { animation: none; }
+  .disc-frente .disc-foto { transition: none; }
+}
+
+/* Mientras carga una pantalla: el durazno respira (mismo de la pantalla de entrada). */
+.carga-respira { display: block; animation: cargaRespira 1.6s ease-in-out infinite; }
+@keyframes cargaRespira { 0%,100% { transform: scale(1); opacity: .85; } 50% { transform: scale(1.08); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .carga-respira { animation: none; } }
+
+
+/* Escenas del sitio (ver Escena en Inmersivo.jsx): solo la entrada 'hoja' redondea y se monta. */
+.escena { overflow: clip; }
+.escena-hoja { border-radius: 36px 36px 0 0; margin-top: -36px; box-shadow: 0 -18px 50px rgba(0,0,0,0.10); }
+@media (max-width: 768px) {
+  .escena-hoja { border-radius: 26px 26px 0 0; margin-top: -26px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .escena-hoja { margin-top: 0; border-radius: 0; box-shadow: none; }
+}
+
+/* Portada del sitio (HeroEscritorio.jsx) — computadora y celular. */
+.hero-portada { position: relative; background: var(--app-bg); height: max(100vh, calc((100vw - 28px) / 1.75 + 28px)); }
+.hero-portada-foto { background-image: url('/fotos-hero/hero-equipo-escritorio.jpg'); background-size: cover; background-position: 50% 30%; }
+.hero-portada-texto { position: absolute; left: 56px; bottom: 64px; z-index: 5; }
+.hero-portada-h1 { font-size: min(8.2vw, 15vh); line-height: 0.9; letter-spacing: -0.06em; font-weight: 800; color: #fff; margin: 0; }
+.hero-portada-botones { display: flex; align-items: center; gap: 12px; margin-top: 2rem; }
+/* Mismo ALTO (52 px); cada uno con su largo. */
+.hero-portada-botones .glass-button { height: 52px; box-sizing: border-box; justify-content: center; }
+@media (max-width: 768px) {
+  /* Celular: alto VISIBLE (svh: sin brincar con la barra del navegador) y la foto
+     vertical extendida, encuadrada para que las caras queden DEBAJO de la barra. */
+  .hero-portada { height: 100vh; height: 100svh; }
+  .hero-portada-foto { background-image: url('/fotos-hero/hero-equipo-v2.jpg'); background-position: 50% 62%; }
+  .hero-portada-texto { left: 28px; right: 28px; bottom: 34px; }
+  .hero-portada-h1 { font-size: clamp(2rem, 9.2vw, 2.9rem); line-height: 0.95; }
+  .hero-portada-botones { margin-top: 1.5rem; }
+  /* El 2º botón al ancho de su texto: si no, el botón flotante de WhatsApp se le encima. */
+  /* Celular: "Descubre la App" como círculo de vidrio junto a la píldora (una sola fila). */
+  .hero-portada-botones .boton-app { width: 52px; height: 52px; padding: 0; border-radius: 50%; flex-shrink: 0; }
+  .hero-portada-botones .boton-texto { display: none; }
+}
+
+/* Barra del SITIO en vidrio líquido (misma receta que .lg-barra de la app). */
+.lg-nav {
+  /* safe-area: con la web instalada en el iPhone (PWA) la página llega hasta arriba y la
+     barra quedaba bajo la Dynamic Island / el notch. En Safari normal y en compu vale 0. */
+  position: fixed; top: calc(env(safe-area-inset-top, 0px) + 14px);
+  left: max(14px, 2.5%, env(safe-area-inset-left, 0px)); right: max(14px, 2.5%, env(safe-area-inset-right, 0px)); z-index: 1000;
+  height: 66px; padding: 0 10px 0 22px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(255, 255, 255, 0.38);
+  -webkit-backdrop-filter: blur(16px) saturate(190%) brightness(1.06);
+  backdrop-filter: blur(16px) saturate(190%) brightness(1.06);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 12px 34px rgba(30, 20, 10, 0.16), 0 2px 6px rgba(30, 20, 10, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 -1px 1px rgba(0, 0, 0, 0.05), inset 0 0 18px rgba(255, 255, 255, 0.22);
+  isolation: isolate;
+}
+.lg-nav > *:not(.lg-brillo) { position: relative; z-index: 1; }
+@media (max-width: 768px) { .lg-nav { height: 58px; top: calc(env(safe-area-inset-top, 0px) + 10px); padding: 0 18px 0 16px; } }
+@media (prefers-reduced-transparency: reduce) { .lg-nav { background: rgba(255, 255, 255, 0.94); } }
+
+/* Sección Coaches del sitio (SeccionCoaches.jsx): lista editorial. */
+.coaches-lista { border-bottom: 1px solid rgba(26,23,20,0.12); }
+.coach-fila { display: grid; grid-template-columns: 3.2rem 1fr auto; align-items: baseline; gap: 1rem;
+  padding: clamp(0.7rem, 1.4vw, 1.1rem) 0; border-top: 1px solid rgba(26,23,20,0.12); cursor: default; }
+.coach-num { font-size: 0.8rem; font-weight: 600; color: var(--on-surface-variant); font-variant-numeric: tabular-nums; }
+.coach-nombre { font-size: clamp(2.2rem, 5.6vw, 4.6rem); font-weight: 800; letter-spacing: -0.045em; line-height: 1; color: var(--black);
+  transition: color .35s ease, transform .5s cubic-bezier(.16,1,.3,1); }
+.coach-disc { font-size: 0.82rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-surface-variant); text-align: right; transition: color .35s ease; }
+.coach-fila.on .coach-nombre { color: var(--primary); transform: translateX(14px); }
+.coach-fila.on .coach-disc { color: var(--black); }
+.coach-flotante { position: fixed; left: 0; top: 0; width: 240px; height: 300px; margin: -150px 0 0 48px; pointer-events: none; z-index: 900;
+  border-radius: 20px; overflow: hidden; box-shadow: 0 30px 70px rgba(30,20,10,0.28); }
+.coach-flotante-img { position: absolute; inset: 0; }
+.coach-flotante-img img, .coach-flotante-img span, .coach-foto-movil img, .coach-foto-movil span { width: 100%; height: 100%; object-fit: cover; display: flex; align-items: center; justify-content: center; }
+.coach-flotante-img span, .coach-foto-movil span { background: linear-gradient(135deg, #FFD3B5, #FF914D); color: #fff; font-weight: 800; font-size: 4rem; }
+.coach-abierta { grid-column: 1 / -1; overflow: hidden; }
+.coach-foto-movil { width: 150px; height: 190px; border-radius: 16px; overflow: hidden; margin: 0.9rem 0 0.4rem 4.2rem; box-shadow: 0 16px 34px rgba(30,20,10,0.18); }
+@media (max-width: 768px) {
+  .coach-fila { grid-template-columns: 2.2rem 1fr; cursor: pointer; }
+  .coach-disc { grid-column: 2; text-align: left; margin-top: -0.2rem; font-size: 0.72rem; }
+  .coach-foto-movil { margin-left: 3.2rem; }
+}
+@media (prefers-reduced-motion: reduce) { .coach-nombre { transition: none; } }
+
+/* Barra del sitio en computadora: 3 columnas iguales a los lados para que los enlaces
+   queden centrados de verdad (con flex + space-between los empujaba el bloque derecho,
+   que es más ancho que el logo). */
+@media (min-width: 851px) {
+  .lg-nav { display: grid; grid-template-columns: 1fr auto 1fr; }
+  .lg-nav .desktop-actions { justify-self: end; }
+}
+
+/* Menú de celular del sitio (MenuMovil.jsx). */
+.menu-movil { position: fixed; inset: 0; z-index: 999; background: #F6EFE8; display: flex; flex-direction: column; justify-content: space-between;
+  padding: calc(env(safe-area-inset-top) + 92px) 26px calc(env(safe-area-inset-bottom) + 28px); overflow: hidden; }
+.menu-movil-lista { display: flex; flex-direction: column; border-bottom: 1px solid rgba(26,23,20,0.12); position: relative; }
+.menu-movil-item { display: flex; align-items: center; gap: 14px; background: none; border: none; border-top: 1px solid rgba(26,23,20,0.12);
+  padding: 0.62rem 0; cursor: pointer; color: var(--black); font-family: var(--font-body); font-size: clamp(2rem, 9vw, 2.6rem); font-weight: 800; letter-spacing: -0.045em; line-height: 1.05; }
+.menu-movil-item:active { color: var(--primary); }
+.menu-movil-num { font-size: 0.75rem; font-weight: 600; letter-spacing: 0; color: var(--on-surface-variant); width: 1.6rem; flex-shrink: 0; align-self: center; }
+.menu-movil-flecha { color: var(--primary); flex-shrink: 0; opacity: 0.85; }
+.menu-movil-pie { display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: relative; }
+.menu-movil-pie a, .menu-movil-pie button { color: var(--black); text-decoration: none; }
+.menu-movil-cta { background: var(--primary); color: #fff !important; padding: 0.95rem 1.5rem; border-radius: 999px; font-weight: 800; font-size: 1rem; box-shadow: 0 12px 28px rgba(255,145,77,0.35); }
+@media (max-height: 640px) { .menu-movil-item { font-size: 1.75rem; padding: 0.45rem 0; } .menu-movil { padding-top: calc(env(safe-area-inset-top) + 80px); } }
+
+.menu-movil-redes { display: flex; gap: 0.6rem; align-items: center; }
+.menu-movil-redes a, .menu-movil-redes button { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(26,23,20,0.14); background: rgba(255,255,255,0.55); color: var(--black); cursor: pointer; padding: 0; }
+.menu-movil-cta { height: 52px; display: inline-flex; align-items: center; padding: 0 1.6rem !important; }
+
+/* ═════ PANTALLAS DE CUENTA (AuthLayout.jsx): login, registro, recuperar ═════
+   Estilo de siempre (foto difuminada + tarjeta) con el vidrio líquido de la barra. */
+.auth { --primary: #C9520F; position: relative; min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; overflow-x: hidden; }
+.auth-fondo { position: fixed; inset: 0; z-index: 0; background: url('/fotos-hero/_DSC0444.jpg') center / cover no-repeat; }
+.auth-fondo::after { content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.16) 40%, rgba(0,0,0,0.32) 75%, rgba(0,0,0,0.55) 100%);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.auth-centro { position: relative; z-index: 1; flex: 1; display: flex; align-items: center; justify-content: center; padding: 90px 18px 40px; }
+/* Vidrio líquido (misma receta que .lg-nav / .lg-barra) */
+.auth-tarjeta, .auth-volver {
+  background: rgba(255, 255, 255, 0.64);
+  -webkit-backdrop-filter: blur(22px) saturate(180%) brightness(1.04); backdrop-filter: blur(22px) saturate(180%) brightness(1.04);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 24px 60px rgba(20, 12, 6, 0.28), 0 2px 6px rgba(20, 12, 6, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 1px rgba(0, 0, 0, 0.05), inset 0 0 22px rgba(255, 255, 255, 0.25);
+  isolation: isolate; position: relative; }
+.auth-tarjeta { width: 100%; max-width: 400px; box-sizing: border-box; border-radius: 30px; padding: 2.3rem 1.9rem;
+  /* Más vidrio y menos "gris": tinte cálido, más brillo/saturación de lo de atrás. */
+  background: linear-gradient(160deg, rgba(255,250,245,0.62) 0%, rgba(255,246,238,0.42) 55%, rgba(255,240,230,0.36) 100%);
+  -webkit-backdrop-filter: blur(20px) saturate(210%) brightness(1.18); backdrop-filter: blur(20px) saturate(210%) brightness(1.18); }
+/* Filo de luz en las orillas (lo que hace que se lea como vidrio líquido): borde
+   degradado, brillante arriba-izquierda y abajo-derecha. */
+.auth-tarjeta::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; pointer-events: none; z-index: 2;
+  background: linear-gradient(140deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.15) 30%, rgba(255,255,255,0.05) 60%, rgba(255,255,255,0.7) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+.auth-tarjeta .lg-brillo { background: radial-gradient(110% 70% at 15% -5%, rgba(255,255,255,0.6), transparent 55%), radial-gradient(80% 50% at 100% 105%, rgba(255,255,255,0.25), transparent 60%); mix-blend-mode: soft-light; }
+.auth-contenido { position: relative; z-index: 1; }
+.auth-volver { position: absolute; top: calc(env(safe-area-inset-top) + 18px); left: 18px; z-index: 5; display: inline-flex; align-items: center; gap: 4px;
+  padding: 10px 16px 10px 10px; border-radius: 999px; color: var(--black); font-size: 0.86rem; font-weight: 700; cursor: pointer; }
+.auth-volver > *:not(.lg-brillo) { position: relative; z-index: 1; }
+.auth-encabezado { text-align: center; margin-bottom: 1.7rem; }
+.auth-encabezado p { color: #3F3A36 !important; font-weight: 500; }
+.auth-titulo { font-family: var(--font-body); font-size: clamp(2.1rem, 8vw, 2.5rem); font-weight: 800; letter-spacing: -0.045em; line-height: 1.02; color: #1A1714; margin: 0 0 0.6rem; }
+.auth-titulo span { font-family: 'Playfair Display', serif; font-style: italic; font-weight: 500; color: var(--primary); letter-spacing: -0.03em; }
+/* Campos: blancos translúcidos dentro del vidrio (y sin el azul del autocompletado). */
+.auth .premium-input { background: rgba(255,255,255,0.42); border: 1px solid rgba(255,255,255,0.75);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 2px 8px rgba(30,20,10,0.05); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.auth .premium-input::placeholder { color: rgba(40,34,30,0.55); }
+.auth .premium-input:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(232,102,26,0.14); }
+.auth .premium-input:-webkit-autofill, .auth .premium-input:-webkit-autofill:hover, .auth .premium-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 100px #fff inset !important; -webkit-text-fill-color: #1A1714 !important; caret-color: #1A1714; }
+.auth .premium-input-group label { color: #3F3A36; }
+@media (max-width: 480px) { .auth-tarjeta { padding: 2rem 1.3rem; border-radius: 26px; } }
+
+/* VIDRIO NARANJA de la marca: la receta del botón flotante de WhatsApp (mismo
+   #FF914D que los títulos). La usan el deslizable, "Contáctanos" y "Cómo llegar". */
+.vidrio-naranja {
+  background: linear-gradient(135deg, rgba(255,145,77,0.9), rgba(230,130,69,0.92));
+  -webkit-backdrop-filter: blur(14px) saturate(180%); backdrop-filter: blur(14px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.45);
+  box-shadow: 0 10px 28px rgba(255,145,77,0.42), inset 0 1px 0 rgba(255,255,255,0.55);
+  color: #fff; }
+
+/* Botón deslizable de la portada (BotonDeslizable.jsx). */
+.deslizable { position: relative; height: 52px; width: auto; max-width: 100%; border-radius: 999px; cursor: pointer; user-select: none; -webkit-user-select: none;
+  display: flex; align-items: center; overflow: hidden; touch-action: pan-y; }
+.deslizable:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.deslizable-texto { position: relative; z-index: 1; padding-right: 20px; font-weight: 800; font-size: 0.98rem; letter-spacing: -0.01em; white-space: nowrap; text-align: left; color: #fff; }
+/* Bolita de vidrio líquido con LUPA: por dentro lleva su propio fondo naranja (tapa
+   las letras de atrás) y encima la copia agrandada del texto; luego reflejo y flecha. */
+.deslizable-perilla { position: absolute; z-index: 2; border-radius: 50%; overflow: hidden; color: #fff; cursor: grab;
+  background: linear-gradient(135deg, #FF9A5A, #EE8448);
+  border: 1px solid rgba(255,255,255,0.85);
+  box-shadow: 0 8px 20px rgba(160,70,20,0.3), inset 0 1.5px 0 rgba(255,255,255,0.95), inset 0 -3px 8px rgba(255,255,255,0.2); }
+.deslizable-perilla:active { cursor: grabbing; }
+.deslizable-reflejo { position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(90% 70% at 30% 15%, rgba(255,255,255,0.55), rgba(255,255,255,0.08) 50%, transparent 70%),
+              radial-gradient(60% 40% at 70% 95%, rgba(255,255,255,0.25), transparent 70%);
+  box-shadow: inset 0 0 12px rgba(255,255,255,0.35); }
+.deslizable-flecha { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(120,45,5,0.35)); }
+
+
+/* Sección "Ven a conocernos" (Landing). */
+.ubicacion-grid { max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: clamp(2.5rem, 6vw, 5rem); align-items: center; position: relative; z-index: 1; }
+.contacto-lista { display: flex; flex-direction: column; margin-bottom: 2.4rem; border-bottom: 1px solid rgba(26,23,20,0.10); }
+.contacto-fila { display: flex; gap: 16px; align-items: center; padding: 16px 0; border-top: 1px solid rgba(26,23,20,0.10); }
+.contacto-icono { width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255,145,77,0.35); background: rgba(255,145,77,0.08); }
+.contacto-etiqueta { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--on-surface-variant); margin-bottom: 3px; }
+.contacto-dato { font-size: 1.02rem; font-weight: 600; color: var(--black); line-height: 1.45; }
+.contacto-cta { display: inline-flex; align-items: center; gap: 10px; padding: 1.05rem 2rem; border-radius: 999px; text-decoration: none; font-weight: 800; font-size: 1rem; }
+.ubicacion-mapa { height: 480px; }
+@media (max-width: 768px) {
+  .contacto-cta { width: 100%; justify-content: center; box-sizing: border-box; }
+  .ubicacion-mapa { height: 340px; }
+}
+
+/* Celular: la esfera de WhatsApp del mismo tamaño que el círculo de "Descubre la App" (52 px). */
+@media (max-width: 768px) { .wa-flotante { width: 52px !important; height: 52px !important; } }
+
+/* Carrusel de Disciplinas: orillas que se desvanecen. */
+.disc-viewport { -webkit-mask-image: linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%); }
+@media (max-width: 768px) {
+  .disc-viewport { -webkit-mask-image: linear-gradient(to right, transparent 0, #000 6%, #000 94%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 6%, #000 94%, transparent 100%); }
+}
+
+/* ═════ COFFEE LAB en computadora (en celular/app no cambia nada) ═════ */
+.cafe-ver-menu { display: none; }
+.cafe-home-texto { margin-bottom: 20px; }
+/* El encabezado ya trae su margen: en celular el saludo queda exactamente donde estaba. */
+.cafe-home-grid { margin-top: -20px; }
+@media (min-width: 900px) {
+  .cafe-tab { max-width: 1080px; margin: 0 auto; box-sizing: border-box; padding-left: 40px !important; padding-right: 40px !important; }
+  .cafe-home-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 440px); gap: 64px; align-items: center; margin: 12px 0 36px; }
+  .cafe-home-texto { margin-bottom: 0; }
+  .cafe-saludo { font-size: clamp(3rem, 5vw, 4.4rem) !important; letter-spacing: -0.045em !important; line-height: 0.98 !important; }
+  .cafe-home-texto > p { font-size: 1.15rem !important; margin-top: 14px !important; }
+  .cafe-ver-menu { display: inline-flex; align-items: center; gap: 6px; margin-top: 28px; padding: 14px 22px; border-radius: 999px; border: none; cursor: pointer;
+    background: var(--c-ink); color: var(--c-bg); font-family: var(--c-font); font-weight: 800; font-size: 1rem; }
+  .cafe-portada { height: auto !important; aspect-ratio: 4 / 5; max-height: calc(100vh - 220px); margin-bottom: 0 !important; justify-self: end; }
+  /* Menú en dos columnas (los renglones a todo lo ancho quedaban largos y vacíos). */
+  .cafe-lista-menu { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px !important; }
+  .cafe-lista-menu > p { grid-column: 1 / -1; }
+}

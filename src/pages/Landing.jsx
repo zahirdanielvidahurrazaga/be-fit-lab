@@ -1,4 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
+import { CursorGlow, Contador, useEsEscritorio, Escena, irASeccion, FraseEncendida } from '../components/landing/Inmersivo';
+import { irConTransicion } from '../components/TransicionesWeb';
+import HeroEscritorio from '../components/landing/HeroEscritorio';
+import SeccionCoaches from '../components/landing/SeccionCoaches';
+import { BotonMenu, MenuMovil } from '../components/landing/MenuMovil';
+import { mapaRefraccion } from '../lib/lente';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 gsap.registerPlugin(ScrollTrigger);
@@ -8,7 +15,7 @@ import { ArrowRight, Flame, Heart, PlayCircle, Smartphone, Menu, X, Calendar, Tr
          Utensils, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, MapPin, Phone, MessageCircle, Star, LogOut } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { motion, AnimatePresence, useScroll, useTransform, useInView, useSpring as useMotionSpring } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform, useSpring as useMotionSpring, useMotionValueEvent } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 import PolaroidGallery from '../components/PolaroidGallery';
 import LandingEvento from '../components/LandingEvento';
@@ -84,19 +91,6 @@ const Blob = ({ style }) => (
   />
 );
 
-// ── CountUp ───────────────────────────────────────────────────────────────────
-function CountUp({ to, suffix = '', prefix = '', duration = 1.8 }) {
-  const ref  = useRef(null);
-  const inView = useInView(ref, { once: true });
-  const raw   = useMotionSpring(0, { stiffness: 50, damping: 20 });
-  const [display, setDisplay] = useState(0);
-
-  useEffect(() => { if (inView) raw.set(to); }, [inView, to, raw]);
-  useEffect(() => raw.on('change', v => setDisplay(Math.round(v))), [raw]);
-
-  return <span ref={ref}>{prefix}{display}{suffix}</span>;
-}
-
 // ── Data ──────────────────────────────────────────────────────────────────────
 const CAFE_PRODUCTS = [
   { id:1, name:'Agua de Jamaica',  price:'$45', desc:'Fresca, sin azúcar añadida. Antioxidante natural.',        emoji:'🌺', bg:'rgba(255,180,160,0.25)' },
@@ -134,7 +128,6 @@ const ParallaxTestimonials = () => {
   const cardsRef    = useRef(null);
   const cardRefs    = useRef([]);
 
-  const rotations   = [-2.5, 2, -1.5];
   const alignments  = ['flex-start', 'flex-end', 'center'];
 
   // En móvil desactivamos los efectos caros (blobs animados + backdrop-filter +
@@ -226,19 +219,11 @@ const ParallaxTestimonials = () => {
   return (
     <section
       ref={sectionRef}
-      style={{ background: '#E8F2FA', position: 'relative', overflow: 'clip', minHeight: '140vh', paddingBottom: '10vh' }}
+      style={{ background: '#F6EFE8', position: 'relative', overflow: 'clip', minHeight: '140vh', paddingBottom: '10vh' }}
     >
       {/* Blobs decorativos — animados solo en PC (en móvil estáticos y con menos blur) */}
-      <motion.div
-        animate={isMobile ? undefined : { x: ['-10%', '10%', '-10%'], y: ['-10%', '20%', '-10%'], scale: [1, 1.2, 1] }}
-        transition={isMobile ? undefined : { duration: 15, repeat: Infinity, ease: 'easeInOut' }}
-        style={{ position: 'absolute', top: '-10%', left: '-10%', width: '70vw', height: '70vw', background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)', filter: isMobile ? 'blur(40px)' : 'blur(80px)', opacity: 0.9, pointerEvents: 'none', zIndex: 0 }}
-      />
-      <motion.div
-        animate={isMobile ? undefined : { x: ['10%', '-15%', '10%'], y: ['20%', '-10%', '20%'], scale: [1.2, 1, 1.2] }}
-        transition={isMobile ? undefined : { duration: 20, repeat: Infinity, ease: 'easeInOut' }}
-        style={{ position: 'absolute', top: '20%', right: '-10%', width: '80vw', height: '80vw', background: 'radial-gradient(circle, rgba(212,230,241,0.9) 0%, rgba(212,230,241,0) 70%)', filter: isMobile ? 'blur(45px)' : 'blur(100px)', opacity: 0.8, pointerEvents: 'none', zIndex: 0 }}
-      />
+      {/* Luz suave y QUIETA (antes: manchas azules moviéndose sin parar). */}
+      <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: '70vw', height: '70vw', background: 'radial-gradient(circle, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 70%)', filter: 'blur(60px)', pointerEvents: 'none', zIndex: 0 }} />
 
       {/* Título — se mueve lento (GSAP lo anima) */}
       <div
@@ -274,22 +259,25 @@ const ParallaxTestimonials = () => {
             }}
           >
             {/* Floating idle animation — solo en PC; en móvil rotación estática */}
+            {/* Tarjeta derecha y quieta (antes giraba y flotaba sin parar); la subida
+                al bajar (GSAP) se conserva. */}
             <motion.div
-              animate={isMobile ? undefined : { y: [0, -12, 0], rotate: [rotations[i % rotations.length], rotations[i % rotations.length] + 0.8, rotations[i % rotations.length]] }}
-              transition={isMobile ? undefined : { duration: 5 + i, repeat: Infinity, ease: 'easeInOut', delay: i * 0.7 }}
-              whileHover={isMobile ? undefined : { scale: 1.04, transition: { duration: 0.25 } }}
-              style={{ width: '100%', maxWidth: '420px', transform: isMobile ? `rotate(${rotations[i % rotations.length]}deg)` : undefined }}
+              whileHover={isMobile ? undefined : { y: -4, transition: { duration: 0.3 } }}
+              style={{ width: '100%', maxWidth: '420px' }}
             >
-              <div style={{ background: isMobile ? '#ffffff' : 'rgba(255,255,255,0.65)', border: '1px solid rgba(255,255,255,0.9)', borderRadius: '32px', padding: '32px', ...(isMobile ? {} : { backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }), boxShadow: '0 20px 45px rgba(0,0,0,0.08), inset 0 0 20px rgba(255,255,255,0.5)' }}>
-                <div style={{ display: 'flex', gap: '4px', marginBottom: '20px' }}>
-                  {[...Array(t.stars)].map((_, s) => <Star key={s} size={16} color="var(--primary)" fill="var(--primary)" />)}
+              <div style={{ background: '#ffffff', border: '1px solid rgba(26,23,20,0.08)', borderRadius: '24px', padding: '30px 32px', boxShadow: '0 18px 40px rgba(60,35,20,0.07)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                  <span aria-hidden="true" style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '3.2rem', lineHeight: 0.6, color: 'var(--primary)', paddingTop: '18px' }}>“</span>
+                  <div style={{ display: 'flex', gap: '3px' }}>
+                    {[...Array(t.stars)].map((_, s) => <Star key={s} size={13} color="var(--primary)" fill="var(--primary)" />)}
+                  </div>
                 </div>
-                <p style={{ color: 'var(--on-surface)', fontSize: '1rem', lineHeight: 1.65, margin: '0 0 28px', fontWeight: 500 }}>"{t.text}"</p>
+                <p style={{ color: 'var(--on-surface)', fontSize: '1.02rem', lineHeight: 1.65, margin: '0 0 24px', fontWeight: 500 }}>{t.text}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'white', flexShrink: 0, fontSize: '1.1rem' }}>{t.name.charAt(0)}</div>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--app-bg)', color: 'var(--black)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, flexShrink: 0, fontSize: '1rem' }}>{t.name.charAt(0)}</div>
                   <div>
                     <div style={{ fontWeight: 700, color: 'var(--black)', fontSize: '0.95rem' }}>{t.name}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>Socia desde {t.since}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>Reseña en Google · {t.since.toLowerCase()}</div>
                   </div>
                 </div>
               </div>
@@ -305,7 +293,36 @@ export default function Landing() {
   const navigate  = useNavigate();
   const location  = useLocation();
   const { user, role, membershipStatus, globalClasses, coaches, badgeConfigs, logout, disciplines } = useAuth();
+  // Montos de clase suelta e inscripción: los mismos que cobra el servidor (app_config, lectura pública).
+  const [precios, setPrecios] = useState({ claseSuelta: null, inscripcion: null });
+  useEffect(() => {
+    let vivo = true;
+    supabase.from('app_config').select('clase_suelta_monto, inscripcion_monto').eq('id', 1).single()
+      .then(({ data }) => { if (vivo && data) setPrecios({ claseSuelta: Number(data.clase_suelta_monto) || null, inscripcion: Number(data.inscripcion_monto) || null }); });
+    return () => { vivo = false; };
+  }, []);
+  const escritorio = useEsEscritorio();
+  // Mapa de refracción de la barra de vidrio (solo Chromium, como la barra de la app).
+  const navRef = useRef(null);
+  const [mapaNav, setMapaNav] = useState(null);
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    if (!/Chrome|Chromium|Edg\//.test(ua) || /iPhone|iPad|iPod|CriOS/.test(ua)) return undefined;
+    let ultimo = '';
+    const medir = () => {
+      const el = navRef.current; if (!el) return;
+      const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight);
+      if (w < 50 || h < 30 || `${w}x${h}` === ultimo) return;
+      ultimo = `${w}x${h}`;
+      try { setMapaNav({ url: mapaRefraccion(w, h, h / 2, 16), w, h }); } catch { setMapaNav(null); }
+    };
+    medir();
+    window.addEventListener('resize', medir);
+    return () => window.removeEventListener('resize', medir);
+  }, []);
+  const [discActiva, setDiscActiva] = useState(0);
   const [menuOpen,   setMenuOpen]   = useState(false);
+  const [origenMenu, setOrigenMenu] = useState(null);
   const [showToast,  setShowToast]  = useState(false);
   const [scrolled,   setScrolled]   = useState(false);
   const [openFAQ,    setOpenFAQ]    = useState(null);
@@ -314,6 +331,13 @@ export default function Landing() {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: 'center' });
   const scrollPrev = useCallback(() => { if (emblaApi) emblaApi.scrollPrev(); }, [emblaApi]);
   const scrollNext = useCallback(() => { if (emblaApi) emblaApi.scrollNext(); }, [emblaApi]);
+  // Disciplina al centro del carrusel (en celular se resalta sola).
+  useEffect(() => {
+    if (!emblaApi) return undefined;
+    const fn = () => setDiscActiva(emblaApi.selectedScrollSnap());
+    emblaApi.on('select', fn); emblaApi.on('reInit', fn);
+    return () => { emblaApi.off('select', fn); emblaApi.off('reInit', fn); };
+  }, [emblaApi]);
 
   useEffect(() => {
     if (location.state?.registered) { setShowToast(true); const t = setTimeout(() => setShowToast(false), 5000); return () => clearTimeout(t); }
@@ -325,9 +349,14 @@ export default function Landing() {
     return () => window.removeEventListener('scroll', fn);
   }, []);
 
-  document.body.style.overflow = menuOpen ? 'hidden' : 'unset';
+  // Bloqueo de scroll con el menú abierto, en un efecto: se libera al cerrar Y al salir
+  // de esta pantalla (antes, ir a Login desde el menú dejaba la siguiente pantalla sin scroll).
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [menuOpen]);
 
-  const scrollTo = (id) => { setMenuOpen(false); if(id === 'cafeteria') { navigate('/cafeteria'); return; } document.getElementById(id)?.scrollIntoView({ behavior:'smooth', block:'start' }); };
+  const scrollTo = (id) => { setMenuOpen(false); if(id === 'cafeteria') { navigate('/cafeteria'); return; } irASeccion(id); };
 
   // Schedule
   const DAYS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -338,7 +367,8 @@ export default function Landing() {
   })).filter(d => d.classes.length > 0);
 
   return (
-    <div style={{ fontFamily:'var(--font-body)', overflowX:'hidden' }}>
+    <div style={{ fontFamily:'var(--font-body)', overflowX:'clip' /* 'hidden' rompería el sticky de las secciones inmersivas */ }}>
+      <CursorGlow />
 
       {/* ── Toast ─────────────────────────────────────────────────── */}
       <AnimatePresence>
@@ -356,19 +386,28 @@ export default function Landing() {
       </AnimatePresence>
 
       {/* ── Nav ───────────────────────────────────────────────────── */}
+      {/* Barra de vidrio líquido (la misma familia que la barra de la app): píldora
+          flotante con desenfoque, filo de luz y brillo; en Chrome además dobla el fondo
+          en las orillas (refracción con filtro SVG, ver lib/lente.js). */}
+      {mapaNav && (
+        <svg width="0" height="0" style={{ position:'absolute' }} aria-hidden="true">
+          <filter id="lg-refraccion-sitio" x="0" y="0" width="100%" height="100%" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+            <feImage href={mapaNav.url} x="0" y="0" width={mapaNav.w} height={mapaNav.h} result="mapa" preserveAspectRatio="none" />
+            <feDisplacementMap in="SourceGraphic" in2="mapa" scale="34" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </svg>
+      )}
       <motion.nav
+        ref={navRef}
+        className="lg-nav"
         initial={{ y: -80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ ...SPRING, delay: 0.2 }}
-        style={{
-          position:'fixed', top:0, left:0, right:0, zIndex:1000,
-          display:'flex', alignItems:'center', justifyContent:'space-between',
-          padding:'0 5%', height:'90px',
-          ...(scrolled ? { ...glass, borderRadius:0 } : { background:'transparent', backdropFilter:'none', border:'none', boxShadow:'none' }),
-          transition:'background 0.4s ease, backdrop-filter 0.4s ease, box-shadow 0.4s ease',
-        }}>
-        <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.97 }} onClick={() => window.scrollTo({ top:0, behavior:'smooth' })} style={{ background:'none', border:'none', cursor:'pointer', padding:0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '70px' }}>
-          <img src={ESTUDIO.marca.logo} alt={ESTUDIO.nombre} style={{ height:'100%', width:'auto', objectFit: 'contain' }}/>
+        style={mapaNav ? { backdropFilter:'url(#lg-refraccion-sitio) blur(12px) saturate(190%) brightness(1.06)' } : undefined}>
+        <span className="lg-brillo" aria-hidden="true" />
+        <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.97 }} onClick={() => window.scrollTo({ top:0, behavior:'smooth' })} style={{ background:'none', border:'none', cursor:'pointer', padding:0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%' }}>
+          {/* Solo el durazno (pedido de Zahir); el logo completo queda en el pie de página. */}
+          <img src={ESTUDIO.marca.icono} alt={ESTUDIO.nombre} style={{ height:'40px', width:'auto', objectFit: 'contain' }}/>
         </motion.button>
 
         <div className="desktop-links" style={{ display:'flex', gap:'2rem', alignItems:'center' }}>
@@ -391,41 +430,31 @@ export default function Landing() {
               </>
             : <Link to="/login" style={{ fontSize:'0.88rem', fontWeight:500, textDecoration:'none', color:'var(--on-surface)' }}>Iniciar Sesión</Link>
           }
-          <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.96 }} onClick={() => document.getElementById('precios')?.scrollIntoView({ behavior: 'smooth' })} className="btn-primary" style={{ padding:'0.55rem 1.6rem', fontSize:'0.88rem' }}>
+          <motion.button whileHover={{ scale:1.05 }} whileTap={{ scale:0.96 }} onClick={() => irASeccion('precios')} className="btn-primary" style={{ padding:'0.55rem 1.6rem', fontSize:'0.88rem' }}>
             Comenzar
           </motion.button>
         </div>
 
-        <button className="mobile-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label="Menú">
-          {menuOpen ? <X size={28}/> : <Menu size={28}/>}
-        </button>
+        <BotonMenu abierto={menuOpen} onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setOrigenMenu({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+          setMenuOpen(!menuOpen);
+        }} />
       </motion.nav>
 
-      {/* Mobile menu */}
-      <AnimatePresence>
-        {menuOpen && (
-          <motion.div initial={{ opacity:0, x:'100%' }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:'100%' }} transition={{ ...SPRING }}
-            style={{ position:'fixed', inset:0, zIndex:999, ...glass, backdropFilter:'blur(40px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'2.2rem' }}>
-            {[['Clases','clases'],['Horarios','horarios'],['Precios','precios'],['Studio','estudio'],['Cafetería','cafeteria'],['FAQ','faq'],['Contacto','ubicacion']].map(([label,id],i) => (
-              <motion.button key={id} initial={{ opacity:0, x:30 }} animate={{ opacity:1, x:0 }} transition={{ ...SPRING, delay: i*0.05 }}
-                whileHover={{ scale:1.05 }} whileTap={{ scale:0.96 }} onClick={() => scrollTo(id)}
-                style={{ background:'none', border:'none', cursor:'pointer', fontSize:'1.3rem', fontWeight:700, color:'var(--black)', fontFamily:'var(--font-body)' }}>
-                {label}
-              </motion.button>
-            ))}
-            <div style={{ width:'50px', height:'1px', background:'rgba(0,0,0,0.1)' }}/>
-            <Link to={user?(role==='ADMIN'?'/admin':'/portal'):'/login'} onClick={() => setMenuOpen(false)} style={{ fontSize:'1.2rem', fontWeight:700, color:'var(--primary)', textDecoration:'none' }}>
-              {user ? 'Mi Portal' : 'Iniciar Sesión'}
-            </Link>
-            {user && (
-              <button onClick={() => { setMenuOpen(false); logout(); }}
-                style={{ display:'flex', alignItems:'center', gap:'8px', background:'none', border:'none', cursor:'pointer', fontSize:'1.05rem', fontWeight:600, color:'#6B7280', fontFamily:'var(--font-body)' }}>
-                <LogOut size={18} /> Cerrar sesión
-              </button>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Menú de celular: círculo que se abre desde el botón + lista editorial (MenuMovil.jsx). */}
+      <MenuMovil
+        abierto={menuOpen}
+        origen={origenMenu}
+        items={[['Clases','clases'],['Horarios','horarios'],['Precios','precios'],['Coaches','coaches'],['Studio','estudio'],['Cafetería','cafeteria'],['Contacto','ubicacion']]}
+        onIr={scrollTo}
+        onCerrar={() => setMenuOpen(false)}
+        user={user}
+        destinoCuenta={user ? (role==='ADMIN' ? '/admin' : '/portal') : '/login'}
+        onLogout={() => { setMenuOpen(false); logout(); }}
+        whatsapp={WA_NUMBER}
+        instagram={ESTUDIO.contacto.instagramUrl}
+      />
 
       {/* ── Membership banner ─────────────────────────────────────── */}
       {user && role==='CLIENT' && membershipStatus!=='ACTIVE' && (
@@ -450,36 +479,24 @@ export default function Landing() {
         </motion.div>
       )}
 
+      {/* Cada sección es una ESCENA con su propia entrada/salida (hoja, expandir o normal),
+          variadas a propósito para que el recorrido no repita siempre lo mismo. */}
+      <Escena z={1} fondo="var(--app-bg)" salida="apilar">
       {/* ════════════════════════════════════════════════════════════ */}
       {/* HERO — ACTUALIZADO CON NUEVA FOTO                           */}
       {/* ════════════════════════════════════════════════════════════ */}
-      <section style={{ minHeight:'100vh', display:'flex', alignItems:'flex-end', padding:'10rem 5% 6rem', position:'relative', overflow:'hidden' }}>
-        {/* Fondo a Color — la foto del equipo está extendida (techo/piso generados) para
-            cubrir pantallas altas sin cortar a nadie ni dejar barras. */}
-        <div className="hero-bg-main" style={{ position:'absolute', inset:0, zIndex:0, backgroundImage:'url("/fotos-hero/hero-equipo-v2.jpg")', pointerEvents:'none' }} />
-        {/* Gradiente sutil inferior para legibilidad del texto */}
-        <div style={{ position:'absolute', inset:0, zIndex:1, background:'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%)', pointerEvents:'none' }} />
-        
-        <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.8, ease:'easeOut' }} className="hero-text-container" style={{ position:'relative', zIndex:2, maxWidth:'850px', width:'100%' }}>
-          <div className="badge-peach" style={{ background:'var(--surface-lowest)' }}>
-            {user ? `¡Hola de nuevo, ${user.email.split('@')[0]}!` : 'Fuerza • Comunidad • Crecimiento'}
-          </div>
-          <h1 style={{ fontSize:'clamp(3rem,8vw,6.5rem)', lineHeight:1.05, marginBottom:'2.5rem', color:'white' }}>
-            {user ? (<>Bienvenida a<br/><span style={{ color:'var(--primary)', fontFamily:"'Playfair Display', serif", fontStyle:'italic', fontWeight:500 }}>tu espacio VIP.</span></>) : (<>Mujer, tu salud es<br/><span style={{ color:'var(--primary)', fontFamily:"'Playfair Display', serif", fontStyle:'italic', fontWeight:500 }}>tu mejor inversión.</span></>)}
-          </h1>
-          <div className="hero-buttons">
-            {user ? (
-              <Link to={role==='ADMIN' ? '/admin' : membershipStatus==='ACTIVE' ? '/portal' : '/planes'} className="glass-button" style={{ background:'white', color:'black', textDecoration:'none' }}>Ir a mi Portal <ArrowRight size={20}/></Link>
-            ) : (
-              <>
-                <button className="glass-button" style={{ background:'white', color:'black' }} onClick={() => document.getElementById('precios')?.scrollIntoView({ behavior: 'smooth' })}>Comenzar Transformación <ArrowRight size={20}/></button>
-                <button className="glass-button" style={{ color:'white' }} onClick={() => scrollTo('agenda-info')}><Smartphone size={20}/> Descubre la App</button>
-              </>
-            )}
-          </div>
-        </motion.div>
-      </section>
+      {/* Portada: foto con marco y título gigante abajo a la izquierda (HeroEscritorio). */}
+      <HeroEscritorio
+        user={user}
+        destinoPortal={role==='ADMIN' ? '/admin' : membershipStatus==='ACTIVE' ? '/portal' : '/planes'}
+        precioClase={precios.claseSuelta}
+        onPrimeraClase={(e) => { try { localStorage.setItem('befit_redirect_after_auth', '/planes?comprar=clase_suelta'); } catch { /* sin storage */ } irConTransicion('/registro', e); }}
+        onApp={() => scrollTo('agenda-info')}
+        onEntrar={(destino) => irConTransicion(destino)}
+      />
 
+      </Escena>
+      <Escena z={2} fondo="var(--app-bg)" entrada="hoja">
       {/* ── Stats bar — Clean Editorial ──────────────────────────────── */}
       <section style={{ padding:'5rem 5% 4rem', borderBottom:'1px solid rgba(0,0,0,0.05)', marginTop: '-1rem' }}>
         <div style={{ maxWidth:'1200px', margin:'0 auto' }}>
@@ -513,7 +530,7 @@ export default function Landing() {
                   letterSpacing:'-0.04em',
                   marginBottom:'0.8rem',
                 }}>
-                  <CountUp to={to} suffix={suffix}/>
+                  <Contador to={to} suffix={suffix}/>
                 </div>
                 <div style={{
                   fontSize:'0.75rem',
@@ -536,17 +553,21 @@ export default function Landing() {
       {/* Solo se pinta si hay un evento con inscripción abierta. */}
       <LandingEvento />
 
+      </Escena>
+      <Escena z={3} fondo="#FFFFFF">
       {/* ── El Método ─────────────────────────────────────────────── */}
-      <section id="metodo" style={{ padding:'12rem 5%', background:'var(--surface-lowest)', position:'relative', overflow:'hidden' }}>
+      <section id="metodo" style={{ padding:'var(--esp-seccion) 5%', background:'var(--surface-lowest)', position:'relative', overflow:'hidden' }}>
         <div style={{ maxWidth:'1200px', margin:'0 auto', display:'flex', flexWrap:'wrap', gap:'6rem', alignItems:'center' }}>
           <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ flex:'1 1 500px' }}>
             <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Nuestro método</span>
             <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', lineHeight:1.05, margin:'1.5rem 0 2rem', letterSpacing:'-0.04em', color:'var(--black)' }}>
               Glúteos.<br/>Fuerza.<br/><span style={{ color:'var(--primary)', fontFamily:"'Playfair Display', serif", fontStyle:'italic', fontWeight:500 }}>Transformación real.</span>
             </h2>
-            <p style={{ fontSize:'1.25rem', color:'var(--on-surface-variant)', lineHeight:1.6, marginBottom:'3rem', maxWidth:'480px', fontWeight:400 }}>
-              Aquí, no solo entrenamos cuerpos; nutrimos intenciones y construimos comunidades para silenciar el ruido del mundo. Entrenar es la meditación en movimiento que te devuelve la calma y la claridad que necesitas para tomar las riendas de tu día. Bienvenida a tu mejor versión.
-            </p>
+            {/* Se enciende palabra por palabra al bajar (ref. Dhun). */}
+            <FraseEncendida
+              texto="Aquí, no solo entrenamos cuerpos; nutrimos intenciones y construimos comunidades para silenciar el ruido del mundo. Entrenar es la meditación en movimiento que te devuelve la calma y la claridad que necesitas para tomar las riendas de tu día. Bienvenida a tu mejor versión."
+              acento={['comunidades', 'calma', 'versión']}
+              style={{ fontSize:'1.35rem', lineHeight:1.55, marginBottom:'3rem', maxWidth:'500px', fontWeight:600, letterSpacing:'-0.01em' }} />
             <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }} onClick={() => scrollTo('clases')} className="btn-primary" style={{ padding:'1.1rem 2.5rem', borderRadius:'40px', fontSize:'1rem' }}>
               Descubrir disciplinas <ArrowRight size={18}/>
             </motion.button>
@@ -578,6 +599,8 @@ export default function Landing() {
         </div>
       </section>
 
+      </Escena>
+      <Escena z={4} fondo="#FFFFFF" entrada="expandir">
       {/* ── Clases ────────────────────────────────────────────────── */}
       {(() => {
         // Catálogo curado desde el admin (disciplinas marcadas "featured"). Si la BD
@@ -602,7 +625,7 @@ export default function Landing() {
 
         return (
           <>
-            <section id="clases" style={{ padding:'10rem 5%', backgroundColor:'var(--surface-lowest)', position:'relative', overflow:'hidden' }}>
+            <section id="clases" style={{ padding:'var(--esp-seccion) 5%', backgroundColor:'var(--surface-lowest)', position:'relative', overflow:'hidden' }}>
               {/* ── Aurora Animated Background ── */}
               <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' }}>
                 <motion.div
@@ -634,9 +657,11 @@ export default function Landing() {
                 
                 {/* Embla Viewport */}
                 <motion.div variants={stagger(0.1)} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ position: 'relative' }}>
-                  <div ref={emblaRef} style={{ overflow: 'hidden', cursor: 'grab', paddingBottom: '2rem' }}>
+                  {/* Orillas difuminadas: las tarjetas se desvanecen al entrar/salir (se nota que sigue). */}
+                  <div ref={emblaRef} className="disc-viewport" style={{ overflow: 'hidden', cursor: 'grab', paddingBottom: '2rem' }}>
                     <div style={{ display: 'flex', marginLeft: '-1.5rem', backfaceVisibility: 'hidden', touchAction: 'pan-y' }}>
-                      {DISCIPLINES.map(d => {
+                      {DISCIPLINES.map((d, di) => {
+                        const enfocada = escritorio || di === discActiva;
                         const isFlipped = selectedDiscipline === d.id;
                         const hasTopText = !d.bottomText && d.title;
                         const hasBottomText = d.bottomText || d.bottomTitle;
@@ -651,6 +676,13 @@ export default function Landing() {
                               paddingLeft: '1.5rem' 
                             }}
                           >
+                            {/* Capa aparte para el resalte: mezclarlo con los variants del padre lo anulaba. */}
+                            <motion.div
+                              initial={false}
+                              animate={{ scale: enfocada ? 1 : 0.92, opacity: enfocada ? 1 : 0.55 }}
+                              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                              style={{ height: '100%' }}
+                            >
                             <motion.div 
                               variants={scaleIn}
                               style={{ 
@@ -673,17 +705,17 @@ export default function Landing() {
                         >
                           {/* Front Face */}
                           <motion.div 
-                            whileHover={{ scale: 1.02 }}
+                            className="disc-frente"
                             style={{
                               position: 'absolute', inset: 0,
                               backfaceVisibility: 'hidden',
                               borderRadius: '24px', overflow: 'hidden',
-                              background: `url("${d.image}")`,
                               backgroundColor: 'var(--surface-low)',
-                              backgroundSize: 'cover', backgroundPosition: 'center',
                               boxShadow: '0 20px 40px rgba(0,0,0,0.06)'
                             }}
                           >
+                            {/* Foto en su propia capa: en computadora se acerca al pasar el mouse. */}
+                            <div className="disc-foto" style={{ position: 'absolute', inset: 0, backgroundImage: `url("${d.image}")`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
                             {/* Gradient overlays depending on text position */}
                             {hasTopText && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 40%)' }} />}
                             {hasBottomText && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 50%)' }} />}
@@ -777,6 +809,7 @@ export default function Landing() {
                           </div>
                         </motion.div>
                       </motion.div>
+                            </motion.div>
                     </div>
                   );
                 })}
@@ -820,13 +853,21 @@ export default function Landing() {
       })()}
 
 
+      </Escena>
+      <Escena z={5} fondo="#FFFFFF">
+      {/* ── Coaches (fotos redondas; datos públicos de coach_directory) ── */}
+      <SeccionCoaches clases={globalClasses} />
+
       {/* ── El Estudio · Galería Polaroid ─────────────────────────── */}
       <PolaroidGallery />
 
+      {/* Cinta de marca: corta el ritmo a la mitad de la página. */}
+      </Escena>
+      <Escena z={7} fondo="var(--app-bg)">
       {/* ── Horarios ──────────────────────────────────────────────── */}
-      <section id="horarios" style={{ padding:'12rem 5%', background:'var(--surface)', position:'relative', overflow:'hidden' }}>
+      <section id="horarios" style={{ padding:'var(--esp-seccion) 5%', background:'var(--surface)', position:'relative', overflow:'hidden' }}>
         <div style={{ maxWidth:'1200px', margin:'0 auto', position:'relative', zIndex:1 }}>
-          <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ textAlign:'center', marginBottom:'6rem' }}>
+          <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ textAlign:'center', marginBottom:'3.5rem' }}>
             <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Horarios</span>
             <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0', color:'var(--black)', letterSpacing:'-0.04em' }}>Tu tiempo es ahora.</h2>
           </motion.div>
@@ -834,13 +875,17 @@ export default function Landing() {
             globalClasses={globalClasses} 
             coaches={coaches} 
             badgeConfigs={badgeConfigs}
-            onReserve={() => navigate('/login')} 
+            onReserve={() => irConTransicion('/login')} 
+            abrirEnDia
+            marcarEnVivo
           />
         </div>
       </section>
 
+      </Escena>
+      <Escena z={8} fondo="#FFF8F4">
       {/* ── Precios (Rediseño Pastel Glass) ───────────────────────── */}
-      <section id="precios" style={{ padding:'10rem 5%', background:'#FFF8F4', position:'relative', overflow:'visible' }}>
+      <section id="precios" style={{ padding:'var(--esp-seccion) 5%', background:'#FFF8F4', position:'relative', overflow:'visible' }}>
         
         {/* Decoraciones de fondo pastel */}
         <div style={{ position:'absolute', top:'-10%', left:'-5%', width:'400px', height:'400px', background:'var(--primary)', filter:'blur(150px)', opacity:0.1, borderRadius:'50%', pointerEvents:'none' }} />
@@ -859,9 +904,9 @@ export default function Landing() {
               // La clase suelta abre el pago directo al llegar a Mi Membresía
               // (?comprar=clase_suelta). Sin sesión: tras el login regresa ahí.
               ? (user
-                  ? navigate('/planes?comprar=clase_suelta')
-                  : (localStorage.setItem('befit_redirect_after_auth', '/planes?comprar=clase_suelta'), navigate('/login')))
-              : navigate(user ? '/planes' : '/login', { state: { selectedPlan: { title: `Plan ${plan.title}`, price: plan.price.replace('$','') } } })} />
+                  ? irConTransicion('/planes?comprar=clase_suelta')
+                  : (localStorage.setItem('befit_redirect_after_auth', '/planes?comprar=clase_suelta'), irConTransicion('/login')))
+              : irConTransicion(user ? '/planes' : '/login', undefined, { selectedPlan: { title: `Plan ${plan.title}`, price: plan.price.replace('$','') } })} />
 
             {/* Panel de Beneficios y Costos Adicionales */}
             <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-50px" }}
@@ -945,12 +990,12 @@ export default function Landing() {
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '1.2rem', borderBottom: '1px dashed rgba(0,0,0,0.1)' }}>
-                        <span style={{ fontWeight: 600, color: 'var(--black)', fontSize: '1.05rem' }}>Clase Muestra</span>
-                        <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1.4rem' }}>$150</span>
+                        <span style={{ fontWeight: 600, color: 'var(--black)', fontSize: '1.05rem' }}>Clase suelta</span>
+                        <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1.4rem' }}>${(precios.claseSuelta || 150).toLocaleString('es-MX')}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontWeight: 600, color: 'var(--black)', fontSize: '1.05rem' }}>Inscripción Anual</span>
-                        <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1.4rem' }}>$500</span>
+                        <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1.4rem' }}>${(precios.inscripcion || 500).toLocaleString('es-MX')}</span>
                       </div>
                     </div>
                   </div>
@@ -965,13 +1010,19 @@ export default function Landing() {
       </section>
 
 
+      </Escena>
+      <Escena z={9} fondo="#F6EFE8" salida="apilar">
       <ParallaxTestimonials />
+      </Escena>
 
       {/* ── App Download (mockup de teléfono con scroll cinemático) ─── */}
+      <Escena z={10} fondo="#3A2A20" entrada="hoja">
       <AppShowcase />
+      </Escena>
 
+      <Escena z={11} fondo="#FFF6F0">
       {/* ── FAQ ───────────────────────────────────────────────────── */}
-      <section id="faq" style={{ padding:'12rem 5%', background:'linear-gradient(180deg, #FFF6F0 0%, #FDF1EA 100%)', position:'relative', overflow:'hidden' }}>
+      <section id="faq" style={{ padding:'var(--esp-seccion) 5%', background:'linear-gradient(180deg, #FFF6F0 0%, #FDF1EA 100%)', position:'relative', overflow:'hidden' }}>
         <div style={{ maxWidth:'800px', margin:'0 auto', position:'relative', zIndex:1 }}>
           <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ textAlign:'center', marginBottom:'6rem' }}>
             <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Preguntas frecuentes</span>
@@ -987,26 +1038,28 @@ export default function Landing() {
         </div>
       </section>
 
+      </Escena>
+      <Escena z={12} fondo="#FFFFFF" entrada="expandir">
       {/* ── Ubicación ─────────────────────────────────────────────── */}
-      <section id="ubicacion" style={{ padding:'12rem 5%', background:'var(--surface-lowest)', position:'relative', overflow:'hidden' }}>
-        <div style={{ maxWidth:'1200px', margin:'0 auto', display:'flex', flexWrap:'wrap', gap:'6rem', alignItems:'flex-start', position:'relative', zIndex:1 }}>
+      <section id="ubicacion" style={{ padding:'var(--esp-seccion) 5%', background:'var(--surface-lowest)', position:'relative', overflow:'hidden' }}>
+        <div className="ubicacion-grid">
           <motion.div variants={slideRight} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ flex:'1 1 400px' }}>
             <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>Encuéntranos</span>
             <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0 2.5rem', lineHeight:1.05, color:'var(--black)', letterSpacing:'-0.04em' }}>Ven a<br/><span style={{ color:'var(--primary)', fontFamily:"'Playfair Display', serif", fontStyle:'italic', fontWeight:500 }}>conocernos.</span></h2>
-            <div style={{ display:'flex', flexDirection:'column', gap:'24px', marginBottom:'3rem' }}>
-              {[{icon:<MapPin size={24} color="var(--primary)"/>,label:'Dirección',val:<a href={ESTUDIO.contacto.mapaLink} target="_blank" rel="noopener noreferrer" style={{ color:'var(--on-surface-variant)', textDecoration:'none' }}>{ESTUDIO.contacto.direccion.map((l,i) => <React.Fragment key={l}>{i > 0 && <br/>}{l}</React.Fragment>)}</a>},{icon:<Phone size={24} color="var(--primary)"/>,label:'Teléfono / WhatsApp',val:<a href={`tel:${ESTUDIO.contacto.telefono.replace(/\s/g,'')}`} style={{ color:'var(--on-surface-variant)', textDecoration:'none' }}>{ESTUDIO.contacto.telefono}</a>},{icon:<InstagramIcon size={24} color="var(--primary)"/>,label:'Instagram',val:<a href={ESTUDIO.contacto.instagramUrl} target="_blank" rel="noopener noreferrer" style={{ color:'var(--primary)', fontWeight:700, textDecoration:'none' }}>{ESTUDIO.contacto.instagram}</a>}].map(({icon,label,val}) => (
-                <motion.div key={label} whileHover={{ x:6 }} transition={SPRING} style={{ display:'flex', gap:'20px', alignItems:'flex-start' }}>
-                  <div style={{ background:'var(--surface)', width:'56px', height:'56px', borderRadius:'16px', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{icon}</div>
+            {/* Datos como lista limpia: ícono en círculo, etiqueta chica, dato y una línea fina. */}
+            <div className="contacto-lista">
+              {[{icon:<MapPin size={20} color="var(--primary)"/>,label:'Dirección',val:<a href={ESTUDIO.contacto.mapaLink} target="_blank" rel="noopener noreferrer" style={{ color:'inherit', textDecoration:'none' }}>{ESTUDIO.contacto.direccion.map((l,i) => <React.Fragment key={l}>{i > 0 && <br/>}{l}</React.Fragment>)}</a>},{icon:<Phone size={20} color="var(--primary)"/>,label:'Teléfono / WhatsApp',val:<a href={`tel:${ESTUDIO.contacto.telefono.replace(/\s/g,'')}`} style={{ color:'inherit', textDecoration:'none' }}>{ESTUDIO.contacto.telefono}</a>},{icon:<InstagramIcon size={20} color="var(--primary)"/>,label:'Instagram',val:<a href={ESTUDIO.contacto.instagramUrl} target="_blank" rel="noopener noreferrer" style={{ color:'var(--primary)', fontWeight:700, textDecoration:'none' }}>{ESTUDIO.contacto.instagram}</a>}].map(({icon,label,val}) => (
+                <div key={label} className="contacto-fila">
+                  <div className="contacto-icono">{icon}</div>
                   <div>
-                    <div style={{ fontWeight:700, marginBottom:'4px', color:'var(--black)', fontSize:'1.05rem' }}>{label}</div>
-                    <div style={{ fontSize:'1rem', color:'var(--on-surface-variant)', lineHeight:1.5 }}>{val}</div>
+                    <div className="contacto-etiqueta">{label}</div>
+                    <div className="contacto-dato">{val}</div>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
-            <motion.a whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }}
-              href={`https://wa.me/${WA_NUMBER}?text=Hola%20Be%20Fit%20Lab%2C%20quisiera%20m%C3%A1s%20informaci%C3%B3n`} target="_blank" rel="noopener noreferrer"
-              style={{ display:'inline-flex', alignItems:'center', gap:'10px', background:'var(--primary)', color:'white', padding:'1.1rem 2.5rem', borderRadius:'40px', textDecoration:'none', fontWeight:700, fontSize:'1rem' }}>
+            <motion.a whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }} className="vidrio-naranja contacto-cta"
+              href={`https://wa.me/${WA_NUMBER}?text=Hola%20Be%20Fit%20Lab%2C%20quisiera%20m%C3%A1s%20informaci%C3%B3n`} target="_blank" rel="noopener noreferrer">
               <MessageCircle size={20}/> Contáctanos por WhatsApp
             </motion.a>
           </motion.div>
@@ -1014,11 +1067,11 @@ export default function Landing() {
             {/* Mapa oficial de Google Maps (embed pb, sin API key, no se bloquea) + botón a Google Maps */}
             <div style={{ position:'relative' }}>
               <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3772.076391246044!2d-98.1957961!3d19.0163552!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85cfc1f60e34723f%3A0xe268a04e8e4ab501!2sBe%20Fit%20Lab!5e0!3m2!1ses!2smx!4v1780353480943!5m2!1ses!2smx"
-                width="100%" height="500" style={{ border:0, borderRadius:'32px', boxShadow:'0 30px 80px rgba(0,0,0,0.05)', display:'block' }}
+                width="100%" className="ubicacion-mapa" style={{ border:0, borderRadius:'28px', boxShadow:'0 24px 60px rgba(60,35,20,0.10)', display:'block' }}
                 allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title={`${ESTUDIO.nombre} — ${ESTUDIO.ciudad}`}/>
-              <motion.a whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }}
+              <motion.a whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} className="vidrio-naranja"
                 href="https://maps.app.goo.gl/RFUhTHGG5cQuVoST8" target="_blank" rel="noopener noreferrer"
-                style={{ position:'absolute', bottom:'20px', left:'50%', transform:'translateX(-50%)', display:'inline-flex', alignItems:'center', gap:'8px', background:'linear-gradient(135deg, rgba(255,145,77,0.92), rgba(230,130,69,0.94))', backdropFilter:'blur(14px) saturate(180%)', WebkitBackdropFilter:'blur(14px) saturate(180%)', border:'1px solid rgba(255,255,255,0.45)', color:'white', padding:'0.85rem 1.6rem', borderRadius:'40px', textDecoration:'none', fontWeight:700, fontSize:'0.95rem', boxShadow:'0 10px 28px rgba(255,145,77,0.4), inset 0 1px 0 rgba(255,255,255,0.5)' }}>
+                style={{ position:'absolute', bottom:'20px', left:'50%', x:'-50%', display:'inline-flex', alignItems:'center', gap:'8px', padding:'0.85rem 1.6rem', borderRadius:'40px', textDecoration:'none', fontWeight:700, fontSize:'0.95rem', whiteSpace:'nowrap' }}>
                 <MapPin size={18}/> Cómo llegar
               </motion.a>
             </div>
@@ -1070,19 +1123,21 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+      </Escena>
 
       {/* ── WhatsApp flotante ─────────────────────────────────────── */}
+      {/* Se esconde con el menú de celular abierto (el menú trae su propio WhatsApp). */}
       <motion.a
         initial={{ scale:0, opacity:0 }}
-        animate={{ scale:1, opacity:1 }}
-        transition={{ ...BOUNCE, delay:1.5 }}
+        animate={menuOpen ? { scale:0.6, opacity:0 } : { scale:1, opacity:1 }}
+        transition={menuOpen ? { duration:0.2 } : { ...BOUNCE, delay: origenMenu ? 0.3 : 1.5 }}
         whileHover={{ scale:1.12 }}
         whileTap={{ scale:0.95 }}
         href={`https://wa.me/${WA_NUMBER}?text=Hola%20Be%20Fit%20Lab%2C%20quisiera%20m%C3%A1s%20informaci%C3%B3n`}
         target="_blank" rel="noopener noreferrer"
-        style={{ position:'fixed', bottom:'28px', right:'24px', zIndex:999, width:'58px', height:'58px', background:'linear-gradient(135deg, rgba(255,145,77,0.9), rgba(230,130,69,0.92))', backdropFilter:'blur(14px) saturate(180%)', WebkitBackdropFilter:'blur(14px) saturate(180%)', border:'1px solid rgba(255,255,255,0.45)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 10px 28px rgba(255,145,77,0.45), inset 0 1px 0 rgba(255,255,255,0.55)', textDecoration:'none' }}
-        aria-label="WhatsApp">
-        <MessageCircle size={26} color="white"/>
+        style={{ pointerEvents: menuOpen ? 'none' : 'auto', position:'fixed', bottom:'28px', right:'24px', zIndex:999, width:'58px', height:'58px', background:'linear-gradient(135deg, rgba(255,145,77,0.9), rgba(230,130,69,0.92))', backdropFilter:'blur(14px) saturate(180%)', WebkitBackdropFilter:'blur(14px) saturate(180%)', border:'1px solid rgba(255,255,255,0.45)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 10px 28px rgba(255,145,77,0.45), inset 0 1px 0 rgba(255,255,255,0.55)', textDecoration:'none' }}
+        aria-label="WhatsApp" className="wa-flotante">
+        <MessageCircle size={24} color="white"/>
       </motion.a>
     </div>
   );
@@ -1108,38 +1163,50 @@ function AppShowcase() {
   const scale = useMotionSpring(scaleRaw, { stiffness: 120, damping: 28, mass: 0.4 });
   const y     = useMotionSpring(yRaw,     { stiffness: 120, damping: 28, mass: 0.4 });
 
-  // Carrusel automático de capturas reales de clienta (se pausa al interactuar).
+  // El fondo pasa de claro a cacao al entrar y regresa a claro al salir (hacia el FAQ).
+  // Los textos usan --sf/--sf2, que cambian junto con el fondo.
+  const fondo = useTransform(scrollYProgress, [0, 0.14, 0.86, 1], ['#FDFBF8', '#3A2A20', '#3A2A20', '#FFF6F0']);
+  const tinta = useTransform(scrollYProgress, [0, 0.14, 0.86, 1], ['#1A1714', '#FBF6F1', '#FBF6F1', '#1A1714']);
+  const tinta2 = useTransform(scrollYProgress, [0, 0.14, 0.86, 1], ['#6B625B', '#BFB3A8', '#BFB3A8', '#6B625B']);
+
+  // Pantallas del teléfono: en computadora las mueve el scroll; en celular rotan solas.
+  const escritorio = useEsEscritorio();
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  useMotionValueEvent(scrollYProgress, 'change', (v) => {
+    if (!escritorio) return;
+    const t = (v - 0.3) / 0.38;
+    setActive(Math.max(0, Math.min(APP_SCREENS.length - 1, Math.floor(t * APP_SCREENS.length))));
+  });
   useEffect(() => {
-    if (paused) return undefined;
+    if (paused || escritorio) return undefined;
     const t = setInterval(() => setActive(a => (a + 1) % APP_SCREENS.length), 3200);
     return () => clearInterval(t);
-  }, [paused]);
+  }, [paused, escritorio]);
   const select = (i) => setActive(i);
 
   return (
-    <section ref={sectionRef} id="agenda-info" style={{ padding:'14rem 5%', background:'var(--surface-lowest)', position:'relative', overflow:'hidden' }}>
+    <motion.section ref={sectionRef} id="agenda-info" style={{ padding:'var(--esp-seccion) 5%', background: fondo, '--sf': tinta, '--sf2': tinta2, position:'relative', overflow:'hidden' }}>
       <div onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}
         style={{ maxWidth:'1200px', margin:'0 auto', display:'flex', flexWrap:'wrap', gap:'5rem', alignItems:'center', justifyContent:'center' }}>
         {/* Texto + features que cambian con la pantalla activa */}
         <motion.div variants={slideRight} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-100px" }} style={{ flex:'1 1 460px' }}>
-          <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--on-surface-variant)' }}>{ESTUDIO.nombre} App</span>
-          <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0', lineHeight:1.05, color:'var(--black)', letterSpacing:'-0.04em' }}>Todo tu estudio,<br/><span style={{ color:'var(--primary)', fontFamily:"'Playfair Display', serif", fontStyle:'italic', fontWeight:500 }}>en la palma de tu mano.</span></h2>
-          <p style={{ fontSize:'1.2rem', color:'var(--on-surface-variant)', lineHeight:1.6, marginBottom:'2.5rem', fontWeight:400, maxWidth:'480px' }}>Reserva, entrena y sigue tu evolución desde una sola App, diseñada exclusivamente para nuestras socias.</p>
+          <span style={{ fontSize:'0.85rem', fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--sf2)' }}>{ESTUDIO.nombre} App</span>
+          <h2 style={{ fontSize:'clamp(3rem,6vw,4.5rem)', margin:'1.5rem 0', lineHeight:1.05, color:'var(--sf)', letterSpacing:'-0.04em' }}>Todo tu estudio,<br/><span style={{ color:'var(--primary)', fontFamily:"'Playfair Display', serif", fontStyle:'italic', fontWeight:500 }}>en la palma de tu mano.</span></h2>
+          <p style={{ fontSize:'1.2rem', color:'var(--sf2)', lineHeight:1.6, marginBottom:'2.5rem', fontWeight:400, maxWidth:'480px' }}>Reserva, entrena y sigue tu evolución desde una sola App, diseñada exclusivamente para nuestras socias.</p>
 
           {/* Lista de features sincronizada con el carrusel del teléfono */}
           <div style={{ display:'flex', flexDirection:'column', gap:'10px', marginBottom:'2.5rem' }}>
             {APP_SCREENS.map((s, i) => {
               const on = i === active;
               return (
-                <button key={s.src} onClick={() => select(i)} style={{ display:'flex', alignItems:'center', gap:'14px', textAlign:'left', border:'none', cursor:'pointer', borderRadius:'16px', padding:'12px 14px', background: on ? 'var(--app-surface-solid)' : 'transparent', boxShadow: on ? '0 10px 30px rgba(0,0,0,0.06)' : 'none', transition:'background 0.3s, box-shadow 0.3s' }}>
+                <button key={s.src} onClick={() => select(i)} style={{ display:'flex', alignItems:'center', gap:'14px', textAlign:'left', border:'none', cursor:'pointer', borderRadius:'16px', padding:'12px 14px', background: on ? 'rgba(255,255,255,0.08)' : 'transparent', boxShadow: on ? 'inset 0 0 0 1px rgba(255,255,255,0.10)' : 'none', transition:'background 0.3s, box-shadow 0.3s' }}>
                   <div style={{ flexShrink:0, width:'42px', height:'42px', borderRadius:'12px', display:'flex', alignItems:'center', justifyContent:'center', background: on ? 'var(--primary)' : 'rgba(255,145,77,0.12)', transition:'background 0.3s' }}>
                     <s.Icon size={20} color={on ? '#fff' : 'var(--primary)'} />
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:'1rem', fontWeight:800, color:'var(--black)' }}>{s.title}</div>
-                    <div style={{ fontSize:'0.85rem', color:'var(--on-surface-variant)', fontWeight:500, opacity: on ? 1 : 0.7 }}>{s.desc}</div>
+                    <div style={{ fontSize:'1rem', fontWeight:800, color:'var(--sf)' }}>{s.title}</div>
+                    <div style={{ fontSize:'0.85rem', color:'var(--sf2)', fontWeight:500, opacity: on ? 1 : 0.7 }}>{s.desc}</div>
                   </div>
                 </button>
               );
@@ -1157,9 +1224,9 @@ function AppShowcase() {
         </motion.div>
 
         {/* Teléfono con carrusel de capturas reales */}
-        <div style={{ flex:'1 1 360px', display:'flex', flexDirection:'column', alignItems:'center', gap:'1.5rem', position:'relative' }}>
+        <div style={{ flex:'1 1 360px', display:'flex', flexDirection:'column', alignItems:'center', gap:'1.5rem', position:'relative', marginTop: escritorio ? 0 : '4.5rem' }}>
           {/* Resplandor de marca detrás del teléfono */}
-          <div style={{ position:'absolute', top:'45%', width:'70%', height:'70%', background:'radial-gradient(circle, rgba(255,145,77,0.22) 0%, transparent 70%)', filter:'blur(50px)', pointerEvents:'none', transform:'translateY(-50%)' }} />
+          <div style={{ position:'absolute', top:'45%', width:'70%', height:'70%', background:'radial-gradient(circle, rgba(255,145,77,0.38) 0%, transparent 70%)', filter:'blur(60px)', pointerEvents:'none', transform:'translateY(-50%)' }} />
           <motion.div style={{ scale, y, willChange:'transform' }}>
             {/* Marco del iPhone */}
             <div style={{ width:'300px', maxWidth:'78vw', aspectRatio:'9 / 19.5', background:'#0D0D0C', borderRadius:'52px', padding:'11px', boxShadow:'0 50px 100px rgba(0,0,0,0.28), 0 0 0 2.5px #232323, inset 0 0 0 2px rgba(255,255,255,0.04)', position:'relative' }}>
@@ -1178,12 +1245,12 @@ function AppShowcase() {
           <div style={{ display:'flex', gap:'8px', zIndex:1 }}>
             {APP_SCREENS.map((s, i) => (
               <button key={s.src} aria-label={s.title} onClick={() => select(i)}
-                style={{ width: i === active ? '24px' : '8px', height:'8px', borderRadius:'4px', border:'none', cursor:'pointer', padding:0, background: i === active ? 'var(--primary)' : 'rgba(0,0,0,0.15)', transition:'all 0.3s' }} />
+                style={{ width: i === active ? '24px' : '8px', height:'8px', borderRadius:'4px', border:'none', cursor:'pointer', padding:0, background: i === active ? 'var(--primary)' : 'rgba(255,255,255,0.25)', transition:'all 0.3s' }} />
             ))}
           </div>
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 }
 

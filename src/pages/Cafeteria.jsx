@@ -539,7 +539,7 @@ function Cafeteria() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--c-bg)', color: 'var(--c-ink)', fontFamily: 'var(--font-body)', overflowX: 'hidden', paddingBottom: '110px' }}>
+    <div className="cafe-raiz" style={{ minHeight: '100vh', background: 'var(--c-bg)', color: 'var(--c-ink)', fontFamily: 'var(--font-body)', overflowX: 'hidden', paddingBottom: '110px' }}>
       
       <AnimatePresence>
         {agregado && activeTab !== 'cart' && (
@@ -575,13 +575,18 @@ function Cafeteria() {
         
         {/* --- PESTAÑA: HOME --- */}
         {activeTab === 'home' && (
-          <motion.div key="home" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} style={{ padding: padTab }}>
-            {encabezado(<>
-              <h1 style={{ fontFamily: 'var(--c-font)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: '2.3rem', color: 'var(--c-ink)', margin: 0, lineHeight: 1.05 }}>
+          <motion.div key="home" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} className="cafe-tab" style={{ padding: padTab }}>
+            {encabezado(null)}
+
+            {/* Computadora: saludo a la izquierda y portada VERTICAL a la derecha (antes la
+                portada 4:5 se estiraba a lo ancho y se pixeleaba). Celular: una columna. */}
+            <div className="cafe-home-grid">
+            <div className="cafe-home-texto">
+              <h1 className="cafe-saludo" style={{ fontFamily: 'var(--c-font)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: '2.3rem', color: 'var(--c-ink)', margin: 0, lineHeight: 1.05 }}>
                 {getGreeting()},<br /><span style={{ color: 'var(--c-accent-ink)' }}>{nombreCorto}</span>
               </h1>
               <p style={{ color: 'var(--c-muted)', fontSize: '0.95rem', margin: '6px 0 0', fontWeight: 600 }}>¿Qué se te antoja hoy?</p>
-            </>)}
+              <button type="button" className="cafe-ver-menu" onClick={() => setActiveTab('order')}>Ver el menú <ChevronRight size={18} /></button>
 
             {/* Pedido en curso: lo primero que quiere ver quien ya pidió */}
             {activeOrders.length > 0 && (
@@ -600,6 +605,8 @@ function Cafeteria() {
               </motion.button>
             )}
 
+            </div>
+
             {/* PORTADA protagonista (pedido de Zahir 4-nov: Home limpia y muy visual, como
                 las referencias de apps de café). Ocupa casi toda la pantalla, la foto
                 respira con un zoom lento y el botón va encima. Los sellos viven en
@@ -607,7 +614,7 @@ function Cafeteria() {
             {(() => {
               const cover = covers[coverIndex] || (coversCargadas ? null : { image_url: '', eyebrow: '', title: '', cta: '' }) || { image_url: ESTUDIO.portadas.cafeteriaPromo, eyebrow: 'Temporada', title: 'Recién hecho\npara ti', cta: 'Pedir ahora' };
               return (
-                <div ref={portadaRef} onClick={() => setActiveTab('order')}
+                <div ref={portadaRef} onClick={() => setActiveTab('order')} className="cafe-portada"
                   style={{ position: 'relative', width: '100%', height: 'clamp(290px, min(calc((100vw - 40px) * 1.25), calc(100dvh - 290px)), 620px)', borderRadius: '30px', overflow: 'hidden', background: 'var(--c-soft)', cursor: 'pointer', marginBottom: '22px', boxShadow: '0 24px 48px rgba(40,24,14,0.18)' }}>
                   <AnimatePresence mode="sync">
                     {cover.image_url && <motion.img key={cover.image_url} src={cover.image_url} alt={cover.title || 'Temporada'} decoding="async" fetchPriority="high"
@@ -652,6 +659,7 @@ function Cafeteria() {
                 </div>
               );
             })()}
+            </div>
 
             {/* Pide de nuevo */}
             {pideDeNuevo.length > 0 && (
@@ -666,7 +674,7 @@ function Cafeteria() {
 
         {/* --- PESTAÑA: MENU --- */}
         {activeTab === 'order' && (
-          <motion.div key="order" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} style={{ padding: padTab }}>
+          <motion.div key="order" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} className="cafe-tab" style={{ padding: padTab }}>
             {encabezado(<h2 style={tituloTab}>Menú</h2>)}
 
             {/* Buscador */}
@@ -697,7 +705,7 @@ function Cafeteria() {
 
             <AnimatePresence mode="wait">
               <motion.div key={busqueda ? 'busqueda' : activeCat} variants={gridStagger} initial="hidden" animate="visible" exit={{ opacity: 0 }}
-                style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                className="cafe-lista-menu" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {listaMenu.map(item => <FilaProducto key={item.id} item={item} />)}
                 {busqueda && listaMenu.length === 0 && (
                   <p style={{ textAlign: 'center', color: 'var(--c-muted)', padding: '30px 10px' }}>No encontramos “{busqueda}”. Prueba con otra palabra.</p>
@@ -709,7 +717,7 @@ function Cafeteria() {
 
         {/* --- PESTAÑA: REWARDS (tarjeta de sellos) --- */}
         {activeTab === 'rewards' && (
-          <motion.div key="rewards" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} style={{ padding: padTab }}>
+          <motion.div key="rewards" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} className="cafe-tab" style={{ padding: padTab }}>
             {encabezado(<h2 style={tituloTab}>Recompensas</h2>)}
 
             {user ? (
@@ -806,7 +814,7 @@ function Cafeteria() {
 
         {/* --- PESTAÑA: CART --- */}
         {activeTab === 'cart' && (
-          <motion.div key="cart" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} style={{ padding: padTab }}>
+          <motion.div key="cart" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} className="cafe-tab" style={{ padding: padTab }}>
             {encabezado(<h2 style={tituloTab}>Tu carrito</h2>)}
             <CafeCartSheet onVerMenu={() => setActiveTab('order')} cart={cart} products={available} onUpdateQty={updateQty} onRemove={removeItem} onOpenProduct={(p) => { setActiveTab('order'); setSelectedProduct(p); }} onCheckout={startCheckout} />
           </motion.div>

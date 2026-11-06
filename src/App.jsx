@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import BarraClienta from './components/BarraClienta';
+import TransicionesWeb from './components/TransicionesWeb';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
@@ -221,9 +222,13 @@ function App() {
       <Router>
         <ScrollToTop />
         <AuthDeepLinkHandler />
+        <TransicionesWeb />
         <Suspense fallback={
-          <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FDFBF7' }}>
-            <div className="loader">Cargando...</div>
+          <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F6EFE8' }}>
+            {/* .loader lo usa TransicionesWeb para saber que la pantalla aún no llega. */}
+            <div className="loader" role="status" aria-label="Cargando">
+              <img className="carga-respira" src="/favicon_peach.png" alt="" width="56" height="56" />
+            </div>
           </div>
         }>
         <Routes>

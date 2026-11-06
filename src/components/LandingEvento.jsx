@@ -35,7 +35,7 @@ export default function LandingEvento() {
   const agotado = libres === 0;
 
   return (
-    <section id="eventos" style={{ padding: '8rem 5%', background: '#FFF8F4', position: 'relative', overflow: 'hidden' }}>
+    <section id="eventos" style={{ padding: 'var(--esp-seccion) 5%', background: '#FFF8F4', position: 'relative', overflow: 'hidden' }}>
       {/* Esferas de la marca */}
       <BrandSpheres />
 

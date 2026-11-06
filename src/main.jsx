@@ -29,6 +29,10 @@ if (Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
 const raiz = createRoot(document.getElementById('root'));
 
 if (import.meta.env.VITE_DEMOS === 'true') {
+  // index.html pinta la pantalla de entrada del sitio; las demos no montan quien la
+  // quita (TransicionesWeb), así que se retira aquí. Codex 6-nov.
+  document.getElementById('arranque')?.remove();
+  document.documentElement.classList.remove('con-arranque');
   const { default: AppDemos } = await import('./AppDemos.jsx');
   raiz.render(<StrictMode><AppDemos /></StrictMode>);
 } else {

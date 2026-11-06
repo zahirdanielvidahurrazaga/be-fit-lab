@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
   deslizan en direcciones opuestas (sin secuestrar el scroll). Las fotos son las
   protagonistas: se elevan al pasar el cursor (solo desktop) y al hacer clic se
   abren en grande (lightbox); clic de nuevo o fuera para cerrar y el carrusel
-  sigue girando. Secciones: Estudio · Cumpleaños · Eventos.
+  sigue girando. Versión calmada (nov-2026): fotos derechas, sin etiquetas de
+  colores (peleaban con la paleta) y un poco más lento.
 
   Para cambiar/añadir fotos: edita PHOTOS (src en /public/galeria).
 */
@@ -37,7 +38,6 @@ function Card({ photo, tilt, onOpen }) {
     <div className="bfl-gcard" style={{ '--tilt': `${tilt}deg` }} onClick={() => onOpen(photo)}>
       <img src={photo.src} alt={cat.label} loading="lazy" decoding="async" />
       <div className="bfl-gcard__shade" />
-      <span className="bfl-gcard__tag" style={{ background: cat.tag }}>{cat.label}</span>
       <span className="bfl-gcard__cap">{photo.cap}</span>
     </div>
   );
@@ -49,7 +49,7 @@ function Row({ photos, dir, duration, onOpen }) {
     <div className="bfl-grow">
       <div className="bfl-gtrack" style={{ animationName: dir === 'left' ? 'bflScrollL' : 'bflScrollR', animationDuration: `${duration}s` }}>
         {loop.map((p, i) => (
-          <Card key={i} photo={p} tilt={i % 2 === 0 ? -1.5 : 2} onOpen={onOpen} />
+          <Card key={i} photo={p} tilt={0} onOpen={onOpen} />
         ))}
       </div>
     </div>
@@ -68,7 +68,7 @@ export default function PolaroidGallery() {
   }, [active]);
 
   return (
-    <section id="estudio" style={{ position: 'relative', padding: '7rem 0 8rem', background: 'var(--surface-lowest)', overflow: 'hidden' }}>
+    <section id="estudio" style={{ position: 'relative', padding: 'var(--esp-seccion) 0', background: 'var(--surface-lowest)', overflow: 'hidden' }}>
       <style>{GALLERY_CSS}</style>
 
       {/* Encabezado */}
@@ -86,11 +86,6 @@ export default function PolaroidGallery() {
         <p style={{ fontSize: '1.05rem', color: 'var(--on-surface-variant)', maxWidth: '520px', margin: '0 auto 1.2rem', lineHeight: 1.6 }}>
           Entrenar, celebrar y crear comunidad. Así se vive dentro del estudio.
         </p>
-        <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          {Object.values(CAT).map(c => (
-            <span key={c.label} style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: c.tag, background: 'var(--surface)', border: `1.5px solid ${c.tag}`, padding: '0.34rem 0.85rem', borderRadius: 999 }}>{c.label}</span>
-          ))}
-        </div>
       </motion.div>
 
       {/* Carrusel de dos filas */}
@@ -101,8 +96,8 @@ export default function PolaroidGallery() {
         transition={{ duration: 0.9 }}
         className="bfl-gallery"
       >
-        <Row photos={ROW_A} dir="left" duration={46} onOpen={setActive} />
-        <Row photos={ROW_B} dir="right" duration={56} onOpen={setActive} />
+        <Row photos={ROW_A} dir="left" duration={64} onOpen={setActive} />
+        <Row photos={ROW_B} dir="right" duration={76} onOpen={setActive} />
       </motion.div>
 
       {/* Lightbox */}
@@ -124,7 +119,6 @@ export default function PolaroidGallery() {
               onClick={() => setActive(null)}
             >
               <img src={active.src} alt={CAT[active.cat].label} />
-              <span className="bfl-gcard__tag" style={{ background: CAT[active.cat].tag, top: 16, left: 16 }}>{CAT[active.cat].label}</span>
               <div className="bfl-lb__cap">{active.cap}</div>
             </motion.div>
             <button className="bfl-lb__x" aria-label="Cerrar" onClick={() => setActive(null)}>✕</button>

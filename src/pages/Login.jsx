@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { irConTransicion } from '../components/TransicionesWeb';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Lock, Mail, ArrowRight, ChevronLeft, CheckCircle2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
@@ -7,6 +8,7 @@ import { Capacitor } from '@capacitor/core';
 import { motion } from 'framer-motion';
 import { recoveryRedirect } from '../lib/authRedirect';
 import { ESTUDIO } from '../config/estudio';
+import AuthLayout from '../components/AuthLayout';
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutos
@@ -150,18 +152,7 @@ function Login() {
   // ==============================
   if (showForgotPassword) {
     return (
-      <div style={{ display: 'flex', minHeight: '100vh', background: 'url("/hero_bg.png")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)', zIndex: 0 }}></div>
-
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', zIndex: 1 }}>
-          <div style={{ 
-            width: '100%', maxWidth: '450px', 
-            background: 'rgba(255, 255, 255, 0.65)', 
-            backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)',
-            padding: '3rem', borderRadius: '30px',
-            border: '1px solid rgba(255,255,255,0.5)',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
-          }}>
+      <AuthLayout onVolver={() => { setShowForgotPassword(false); setResetError(null); }} textoVolver="Volver">
 
             {resetSuccess ? (
               <div style={{ textAlign: 'center' }}>
@@ -209,8 +200,8 @@ function Login() {
               </div>
             ) : (
               <>
-                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                  <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: '#1A1C1E', marginBottom: '0.5rem' }}>Recuperar contraseña</h1>
+                <div className="auth-encabezado">
+                  <h1 className="auth-titulo">Recupera tu <span>contraseña.</span></h1>
                   <p style={{ color: '#4B5563', fontWeight: 500, fontSize: '0.9rem' }}>Ingresa tu correo y te enviaremos un enlace de recuperación.</p>
                 </div>
 
@@ -246,9 +237,7 @@ function Login() {
                 </div>
               </>
             )}
-          </div>
-        </div>
-      </div>
+      </AuthLayout>
     );
   }
 
@@ -256,43 +245,10 @@ function Login() {
   // UI: LOGIN PRINCIPAL
   // ==============================
   return (
-    <div style={{ position: 'relative', width: '100%', overflowX: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'url("/fotos-hero/_DSC0444.jpg")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-      
-      {/* Overlay */}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.25) 35%, rgba(0,0,0,0.55) 65%, rgba(0,0,0,0.85) 100%)', backdropFilter: 'blur(8px)', zIndex: 0 }}></div>
-
-      {/* BOTÓN VOLVER */}
-      <div 
-        onClick={() => navigate('/')} 
-        style={{ 
-          position: 'absolute', top: 'calc(env(safe-area-inset-top, 20px) + 15px)', left: '20px', zIndex: 10,
-          display: 'flex', alignItems: 'center', gap: '6px',
-          padding: '10px 18px', borderRadius: '50px',
-          background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(20px)',
-          color: 'white', fontSize: '0.85rem', fontWeight: 600,
-          cursor: 'pointer', border: '1px solid rgba(255,255,255,0.2)',
-          transition: 'all 0.3s ease'
-        }}>
-        <ChevronLeft size={18} />
-        {isNative ? 'Atrás' : 'Volver al sitio'}
-      </div>
-
-      <motion.div initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }} animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }} transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isNative ? '20px 16px' : '40px 20px', zIndex: 1 }}>
-        <div style={{ 
-          width: '100%', 
-          maxWidth: '380px', 
-          background: 'rgba(255, 255, 255, 0.65)', 
-          backdropFilter: 'blur(30px)', 
-          WebkitBackdropFilter: 'blur(30px)',
-          padding: isNative ? '1.8rem 1.2rem' : '2.2rem 1.8rem', 
-          borderRadius: '28px',
-          border: '1px solid rgba(255,255,255,0.5)',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-          boxSizing: 'border-box'
-        }}>
+    <AuthLayout onVolver={(e) => irConTransicion('/', e)} textoVolver={isNative ? 'Atrás' : 'Volver al sitio'}>
           
-          <div style={{ textAlign: 'center', marginBottom: '1.8rem' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.2rem', color: '#1A1C1E', marginBottom: '0.5rem' }}>Bienvenida de nuevo</h1>
+          <div className="auth-encabezado">
+            <h1 className="auth-titulo">Bienvenida <span>de nuevo.</span></h1>
             <p style={{ color: '#4B5563', fontWeight: 500 }}>Ingresa tus credenciales para acceder a tu portal.</p>
           </div>
 
@@ -378,7 +334,7 @@ function Login() {
           </form>
 
           <div style={{ textAlign: 'center', marginTop: '2rem', color: '#4B5563', fontSize: '0.9rem' }}>
-            ¿No tienes una cuenta? <span onClick={() => navigate('/registro')} style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }}>Regístrate aquí</span>
+            ¿No tienes una cuenta? <span onClick={(e) => irConTransicion('/registro', e)} style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }}>Regístrate aquí</span>
           </div>
           
           {!isNative && (
@@ -417,9 +373,7 @@ function Login() {
             </div>
           )}
 
-        </div>
-      </motion.div>
-    </div>
+    </AuthLayout>
   );
 }
 

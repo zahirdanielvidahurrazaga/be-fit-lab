@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useSpring, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { DEFAULT_PLANS } from '../lib/plans';
@@ -46,6 +46,22 @@ export function PricingCarousel({ onSelectPlan, conClaseSuelta = false }) {
   const basePlans = (ctxPlans && ctxPlans.length) ? ctxPlans : DEFAULT_PLANS;
   const claseSuelta = useClaseSuelta(conClaseSuelta);
   const PLANS = claseSuelta ? [...basePlans, claseSuelta] : basePlans;
+  // Plan destacado: el ilimitado (o el más caro si no hay). Lleva humo y "Recomendado".
+  const destacado = (basePlans.find(p => p.unlimited) || [...basePlans].sort((a, b) => (b.amount || 0) - (a.amount || 0))[0])?.title;
+
+  // Inclinación 3D de la tarjeta activa siguiendo el mouse (solo computadora).
+  const reduce = useReducedMotion();
+  const [conMouse] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches);
+  const rx = useSpring(useMotionValue(0), { stiffness: 180, damping: 18 });
+  const ry = useSpring(useMotionValue(0), { stiffness: 180, damping: 18 });
+  const inclinar = (e) => {
+    if (reduce || !conMouse) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width - 0.5;
+    const py = (e.clientY - r.top) / r.height - 0.5;
+    ry.set(px * 10); rx.set(-py * 8);
+  };
+  const enderezar = () => { rx.set(0); ry.set(0); };
 
   React.useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -77,6 +93,7 @@ export function PricingCarousel({ onSelectPlan, conClaseSuelta = false }) {
           if (Math.abs(offset) > 1) return null;
 
           const isActive = offset === 0;
+          const esDestacado = plan.title === destacado && !plan.esClaseSuelta;
           const x = offset * (isMobile ? 350 : 220); 
           const scale = isActive ? 1 : (isMobile ? 0.95 : 0.85);
           const zIndex = isActive ? 10 : 5;
@@ -87,13 +104,16 @@ export function PricingCarousel({ onSelectPlan, conClaseSuelta = false }) {
               key={plan.title}
               animate={{ x, scale, zIndex, opacity }}
               transition={{ duration: 0.35, ease: 'easeOut' }}
+              onMouseMove={isActive ? inclinar : undefined}
+              onMouseLeave={isActive ? enderezar : undefined}
               style={{
+                ...(isActive ? { rotateX: rx, rotateY: ry, transformPerspective: 1100 } : null),
                 position: 'absolute',
                 width: '100%',
                 height: '560px',
                 background: isActive ? 'var(--app-surface-solid)' : 'var(--surface-low)',
                 borderRadius: '32px',
-                boxShadow: isActive ? '0 40px 80px rgba(255, 122, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.8)' : '0 10px 30px rgba(0,0,0,0.05)',
+                boxShadow: isActive ? (esDestacado ? '0 40px 90px rgba(255, 122, 0, 0.32), 0 0 0 2px rgba(255,145,77,0.45)' : '0 40px 80px rgba(255, 122, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.8)') : '0 10px 30px rgba(0,0,0,0.05)',
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
@@ -120,7 +140,13 @@ export function PricingCarousel({ onSelectPlan, conClaseSuelta = false }) {
                 {isActive && <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, background:'url(/assets/noise.png)', opacity:0.2, mixBlendMode:'overlay' }} />}
                 
                 <h3 style={{ color: isActive ? 'white' : 'var(--black)', fontSize: '1.8rem', margin: 0, fontWeight: 800, position:'relative', zIndex:2 }}>{plan.esClaseSuelta ? plan.title : `Plan ${plan.title}`}</h3>
-                <span style={{ color: isActive ? 'rgba(255,255,255,0.7)' : 'var(--on-surface-variant)', fontSize: '0.9rem', position:'relative', zIndex:2 }}>{plan.subtitle}</span>
+                <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap', position:'relative', zIndex:2 }}>
+                  <span style={{ color: isActive ? 'rgba(255,255,255,0.75)' : 'var(--on-surface-variant)', fontSize: '0.9rem' }}>{plan.subtitle}</span>
+                  {/* Etiqueta DEBAJO del nombre (arriba a la derecha tapaba "Plan Premium" en celular). */}
+                  {esDestacado && (
+                    <span style={{ background: isActive ? 'rgba(255,255,255,0.95)' : 'var(--primary)', color: isActive ? '#C2410C' : '#fff', fontSize:'0.62rem', fontWeight:800, letterSpacing:'0.06em', textTransform:'uppercase', padding:'4px 9px', borderRadius:'999px', boxShadow:'0 4px 12px rgba(0,0,0,0.10)' }}>★ Recomendado</span>
+                  )}
+                </div>
               </div>
 
               {/* Contenido Principal (Caja Blanca Solapada) */}
@@ -138,6 +164,7 @@ export function PricingCarousel({ onSelectPlan, conClaseSuelta = false }) {
               }}>
                 {/* Caja de Precio */}
                 <div style={{ 
+                  position: 'relative', overflow: 'hidden',
                   background: isActive ? 'var(--surface-low)' : 'transparent',
                   borderRadius: '16px',
                   padding: '20px',
@@ -145,7 +172,15 @@ export function PricingCarousel({ onSelectPlan, conClaseSuelta = false }) {
                   border: isActive ? '1px solid var(--border-subtle, rgba(0,0,0,0.05))' : '1px solid transparent',
                   marginBottom: '20px' 
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '16px' }}>
+                  {/* Humo naranja en movimiento (mismo de las clases especiales) en el plan destacado. */}
+                  {esDestacado && isActive && (
+                    <div aria-hidden="true" className="special-smoke-wrap">
+                      <div className="special-smoke special-smoke-a" />
+                      <div className="special-smoke special-smoke-b" />
+                      <div className="special-smoke special-smoke-c" />
+                    </div>
+                  )}
+                  <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '16px' }}>
                     <span style={{ fontSize: '2.8rem', fontWeight: 800, color: 'var(--black)', letterSpacing: '-0.04em', lineHeight: 1 }}>{plan.price}</span>
                     <span style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{plan.unidad || '/ mes'}</span>
                   </div>
@@ -165,12 +200,13 @@ export function PricingCarousel({ onSelectPlan, conClaseSuelta = false }) {
                       }
                     }}
                     style={{
+                      position: 'relative', zIndex: 1,
                       width: '100%', padding: '14px', borderRadius: '100px', border: 'none',
                       background: isActive ? 'var(--primary)' : '#e5e5e5',
                       color: isActive ? 'white' : 'var(--on-surface-variant)',
                       fontWeight: 800, fontSize: '0.95rem', cursor: isActive ? 'pointer' : 'default', transition: 'all 0.2s'
                     }}>
-                    {isActive ? (plan.esClaseSuelta ? 'Comprar clase' : 'Elegir Plan') : 'Plan Actual'}
+                    {isActive ? (plan.esClaseSuelta ? 'Comprar clase' : 'Elegir Plan') : 'Ver plan'}
                   </motion.button>
                 </div>
 

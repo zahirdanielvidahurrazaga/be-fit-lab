@@ -81,8 +81,40 @@
       ]
     }
     </script>
+    <!-- Pantalla de entrada del SITIO (solo web, 1 vez por sesión). Se pinta antes de
+         que cargue JS; TransicionesWeb.jsx la toma y la cierra en círculo hacia el durazno.
+         En la app nativa no se muestra (allá está el splash de /welcome). -->
+    <style>
+      #arranque { position: fixed; inset: 0; z-index: 9000; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: #F6EFE8; }
+      html.con-arranque #arranque { display: flex; }
+      html.con-arranque body { overflow: hidden; }
+      #arranque .ar-logo { width: 76px; height: 76px; animation: arPop .7s cubic-bezier(.34,1.56,.64,1) both, arRespira 2.4s ease-in-out .8s infinite; }
+      #arranque .ar-nombre { font-family: Inter, system-ui, sans-serif; font-weight: 700; font-size: 12px; letter-spacing: .34em; color: #5E5343; animation: arNombre .8s ease-out .25s both; }
+      #arranque .ar-linea { width: 120px; height: 2px; border-radius: 2px; background: rgba(94,83,67,.14); overflow: hidden; animation: arAparece .5s ease-out .5s both; }
+      #arranque .ar-linea::after { content: ''; display: block; width: 40%; height: 100%; border-radius: 2px; background: #FF914D; animation: arCorre 1.1s cubic-bezier(.65,0,.35,1) infinite; }
+      @keyframes arPop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+      @keyframes arRespira { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+      @keyframes arNombre { from { opacity: 0; letter-spacing: .7em; } to { opacity: 1; letter-spacing: .34em; } }
+      @keyframes arAparece { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes arCorre { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+      @media (prefers-reduced-motion: reduce) { #arranque * { animation: none !important; } }
+    </style>
+    <script>
+      (function () {
+        try {
+          var nativo = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+          var publica = /^\/(|login|registro|planes|terminos|privacidad|evento\/.*)$/.test(location.pathname);
+          if (!nativo && publica && !sessionStorage.getItem('befit_entrada')) document.documentElement.classList.add('con-arranque');
+        } catch (e) { /* sin storage: sin pantalla de entrada */ }
+      })();
+    </script>
   </head>
   <body>
+    <div id="arranque" aria-hidden="true">
+      <img class="ar-logo" src="/favicon_peach.png" alt="" width="76" height="76" />
+      <div class="ar-nombre">BE FIT LAB</div>
+      <div class="ar-linea"></div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

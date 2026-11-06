@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, LayoutGroup, useMotionValue, useTransform, animate } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
-import { mapaRefraccion } from '../lib/lente';
+import { mapaRefraccion, mapaLupa } from '../lib/lente';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BARRA "LIQUID GLASS" genérica (iOS 26, como Instagram/WhatsApp). La usan la
@@ -25,33 +25,7 @@ const soportaRefraccion = () => {
   return /Chrome|Chromium|CriOS|EdgA|Edg\//.test(ua) && !/iPhone|iPad|iPod/.test(ua);
 };
 
-// Mapa de LUPA para la burbuja: campo continuo (sin saltos) que toma la imagen de
-// más cerca del centro → agranda, y dobla más hacia las orillas. El de orillas
-// (mapaRefraccion) tiene un corte a la mitad que en una burbuja tan chica rasgaba
-// los íconos.
-function mapaLupa(w, h) {
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  const ctx = c.getContext('2d');
-  const img = ctx.createImageData(w, h);
-  const cx = w / 2, cy = h / 2;
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const nx = (x - cx) / cx, ny = (y - cy) / cy;           // -1..1
-      const r = Math.min(1, Math.sqrt(nx * nx + ny * ny));
-      // Centro intacto (el ícono activo se queda nítido); solo dobla hacia la orilla.
-      const t = Math.max(0, (r - 0.55) / 0.45);
-      const f = t * t * (3 - 2 * t);                           // suave (smoothstep)
-      const i = (y * w + x) * 4;
-      img.data[i] = 128 - nx * f * 127;                        // toma de más adentro (agranda)
-      img.data[i + 1] = 128 - ny * f * 127;
-      img.data[i + 2] = 128;
-      img.data[i + 3] = 255;
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-  return c.toDataURL();
-}
+// mapaLupa (la lupa de la burbuja) vive en lib/lente.js: la comparte el botón deslizable del sitio.
 
 export default function BarraGlass({ items = [], centro = null, grupo = 'barra', className = '' }) {
   const [compacta, setCompacta] = useState(false);

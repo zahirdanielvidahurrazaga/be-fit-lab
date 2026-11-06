@@ -41,7 +41,7 @@ function CategoryLegendBar({ globalClasses }) {
   );
 }
 
-export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReservations, onReserve, ventanaDias }) {
+export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReservations, onReserve, ventanaDias, abrirEnDia = false, marcarEnVivo = false }) {
   // Último día que ya se puede reservar (la BD solo abre N días antes). Los
   // posteriores se atenúan: antes se veían igual y al tocarlos decía "se abre el…".
   const ultimoReservable = (() => {
@@ -55,7 +55,7 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
   const currentMonth = currentMonthDate.getMonth();
   const currentYear = currentMonthDate.getFullYear();
-  const [calendarView, setCalendarView] = useState('month'); // 'month' | 'day'
+  const [calendarView, setCalendarView] = useState(abrirEnDia ? 'day' : 'month'); // 'month' | 'day'
   const [selectedDateStr, setSelectedDateStr] = useState(todayStr);
   const temporada = useTemporada();
   // Icono del día festivo dentro de la temporada: calabaza el 31, flor el 1 y 2.
@@ -110,6 +110,21 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
       .filter(c => c.date === dateStr || (c.date === null && c.day === dayOfWeek))
       .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
   };
+
+  // abrirEnDia (sitio): abre directo en la lista del día con clases por venir —
+  // hoy si aún quedan, si no el siguiente día con clases (busca 7 días).
+  const diaInicialRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!abrirEnDia || diaInicialRef.current || !globalClasses?.length) return;
+    diaInicialRef.current = true;
+    const ahora = new Date();
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(); d.setDate(d.getDate() + i);
+      const ds = toLocalDateStr(d);
+      const quedan = getClassesForDate(ds).some(c => { const dt = classDateTime(ds, c.time); return !dt || dt > ahora; });
+      if (quedan) { setSelectedDateStr(ds); return; }
+    }
+  }, [abrirEnDia, globalClasses]); // eslint-disable-line
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', width: '100%' }}>
@@ -197,7 +212,7 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
             <button onClick={() => setCalendarView('month')} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: 'var(--primary)', fontWeight: 700, fontSize: '1.1rem', cursor: 'pointer', padding: 0 }}>
               <ChevronRight size={22} style={{ transform: 'rotate(180deg)' }} /> 
-              {monthNames[new Date(selectedDateStr + "T12:00:00").getMonth()]}
+              {abrirEnDia ? 'Ver mes completo' : monthNames[new Date(selectedDateStr + "T12:00:00").getMonth()]}
             </button>
           </div>
           
@@ -232,21 +247,25 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
             })}
           </div>
 
-          <h4 style={{ fontSize: '1.1rem', margin: '0 0 15px 0', color: 'var(--black)', fontFamily: 'var(--font-display)', textTransform: 'capitalize' }}>
-            {new Date(selectedDateStr + "T12:00:00").toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
+          <h4 style={{ fontSize: '1.1rem', margin: '0 0 15px 0', color: 'var(--black)', fontFamily: 'var(--font-display)' }}>
+            {/* Solo la primera letra en mayúscula ("Viernes, 6 de noviembre", no "6 De Noviembre"). */}
+            {(() => { const t = new Date(selectedDateStr + "T12:00:00").toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' }); return t.charAt(0).toUpperCase() + t.slice(1); })()}
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             {(() => {
               const classesToday = getClassesForDate(selectedDateStr);
               const now = new Date();
               return classesToday.length > 0 ? (
-                classesToday.map(c => {
+                classesToday.map((c, idx) => {
                   const dt = classDateTime(selectedDateStr, c.time);
-                  const isPast = dt ? dt < now : false;
-                  return (
+                  // En el sitio: la clase que se está dando AHORA (50 min) se marca "En clase ahora".
+                  const enVivo = marcarEnVivo && dt ? (dt <= now && now - dt < 50 * 60 * 1000) : false;
+                  const isPast = dt ? dt < now && !enVivo : false;
+                  const item = (
                   <ClassItem
                     key={c.id}
                     classData={c}
+                    enVivo={enVivo}
                     full={(c.spots ?? 0) <= 0}
                     isPast={isPast}
                     isReserved={reservedIds.has(c.id)}
@@ -256,6 +275,13 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
                     badgeConfigs={badgeConfigs}
                   />
                   );
+                  // En el sitio las clases entran una por una (se repite al cambiar de día).
+                  return marcarEnVivo ? (
+                    <motion.div key={`${selectedDateStr}-${c.id}`} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1], delay: Math.min(idx, 6) * 0.06 }}>
+                      {item}
+                    </motion.div>
+                  ) : item;
                 })
               ) : (
                 <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--on-surface-variant)', fontSize: '0.9rem', fontStyle: 'italic', background: 'var(--surface-low)', borderRadius: '16px', border: '1px solid var(--border-subtle)' }}>
@@ -272,7 +298,7 @@ export function ScheduleCalendar({ globalClasses, coaches, badgeConfigs, myReser
   );
 }
 
-export function ClassItem({ classData, full, isPast, isReserved, isWaitlisted, onReserve, coaches, badgeConfigs }) {
+export function ClassItem({ classData, full, isPast, isReserved, isWaitlisted, onReserve, coaches, badgeConfigs, enVivo = false }) {
   const { time, title, instructor, spots, category, category_color, coach_id, is_special, special_label, special_color } = classData;
   const temporada = useTemporada();
   const temporadaClase = is_special && temporada && classData.date && enTemporada(classData.date, temporada) ? temporada : null;
@@ -304,6 +330,11 @@ export function ClassItem({ classData, full, isPast, isReserved, isWaitlisted, o
         <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--black)', fontFamily: 'var(--font-display)' }}>{time}</span>
         <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'rgba(0,0,0,0.1)' }}></div>
         <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase' }}>50 min</span>
+        {enVivo && (
+          <span className="en-vivo" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#C2410C', background: 'rgba(255,145,77,0.14)', padding: '4px 10px', borderRadius: '999px' }}>
+            <span className="en-vivo-punto" /> En clase ahora
+          </span>
+        )}
       </div>
 
       <div style={{
