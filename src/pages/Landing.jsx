@@ -855,7 +855,13 @@ export default function Landing() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem', alignItems: 'center' }}>
             
             {/* Carrusel 3D de Planes */}
-            <PricingCarousel onSelectPlan={(plan) => navigate(user ? '/planes' : '/login', { state: { selectedPlan: { title: `Plan ${plan.title}`, price: plan.price.replace('$','') } } })} />
+            <PricingCarousel conClaseSuelta onSelectPlan={(plan) => plan.esClaseSuelta
+              // La clase suelta abre el pago directo al llegar a Mi Membresía
+              // (?comprar=clase_suelta). Sin sesión: tras el login regresa ahí.
+              ? (user
+                  ? navigate('/planes?comprar=clase_suelta')
+                  : (localStorage.setItem('befit_redirect_after_auth', '/planes?comprar=clase_suelta'), navigate('/login')))
+              : navigate(user ? '/planes' : '/login', { state: { selectedPlan: { title: `Plan ${plan.title}`, price: plan.price.replace('$','') } } })} />
 
             {/* Panel de Beneficios y Costos Adicionales */}
             <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once:true, margin:"-50px" }}

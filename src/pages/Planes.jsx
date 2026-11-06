@@ -41,6 +41,16 @@ function Planes() {
       setSueltaPagando(false);
     }
   };
+  // Desde el sitio ("Comprar clase" en el carrusel) llega con ?comprar=clase_suelta:
+  // se abre el pago de inmediato, sin que tenga que volver a tocar el botón.
+  const compraAutoRef = useRef(false);
+  useEffect(() => {
+    if (!user?.id || compraAutoRef.current) return;
+    if (new URLSearchParams(location.search).get('comprar') !== 'clase_suelta') return;
+    compraAutoRef.current = true;
+    window.history.replaceState({}, '', window.location.pathname);
+    comprarSuelta();
+  }, [user?.id]); // eslint-disable-line
   // Al volver del Checkout web de la clase suelta (?pago_unico=ok&session_id=…)
   useEffect(() => {
     if (!user?.id || !window.location.search.includes('pago_unico=')) return;

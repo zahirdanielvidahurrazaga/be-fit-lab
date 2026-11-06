@@ -4,14 +4,48 @@ import { ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { DEFAULT_PLANS } from '../lib/plans';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
-export function PricingCarousel({ onSelectPlan }) {
+// Tarjeta "Clase suelta" para el carrusel del sitio. Precio y vigencia salen de
+// app_config (lectura pública), los mismos que cobra el servidor.
+function useClaseSuelta(activo) {
+  const [cfg, setCfg] = useState(null);
+  React.useEffect(() => {
+    if (!activo) return;
+    let vivo = true;
+    supabase.from('app_config')
+      .select('clase_suelta_monto, clase_suelta_dias, inscripcion_activa, inscripcion_exenta_clase_suelta')
+      .eq('id', 1).single()
+      .then(({ data }) => { if (vivo && data && Number(data.clase_suelta_monto) > 0) setCfg(data); });
+    return () => { vivo = false; };
+  }, [activo]);
+  if (!cfg) return null;
+  const dias = cfg.clase_suelta_dias || 30;
+  return {
+    title: 'Clase suelta',
+    subtitle: 'Sin plan mensual',
+    price: `$${Number(cfg.clase_suelta_monto).toLocaleString('es-MX')}`,
+    unidad: '/ clase',
+    esClaseSuelta: true,
+    features: [
+      '1 clase de la disciplina que elijas',
+      `Úsala en los próximos ${dias} días`,
+      'Si ya tienes plan, se suma a tu saldo',
+      'Paga con tarjeta en la app o en el estudio',
+      ...(cfg.inscripcion_activa && cfg.inscripcion_exenta_clase_suelta ? ['No requiere inscripción anual'] : []),
+    ],
+  };
+}
+
+export function PricingCarousel({ onSelectPlan, conClaseSuelta = false }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const navigate = useNavigate();
   // Planes editables desde admin (BD). Fallback a los defaults para no quedar vacío.
   const { plans: ctxPlans } = useAuth();
-  const PLANS = (ctxPlans && ctxPlans.length) ? ctxPlans : DEFAULT_PLANS;
+  const basePlans = (ctxPlans && ctxPlans.length) ? ctxPlans : DEFAULT_PLANS;
+  const claseSuelta = useClaseSuelta(conClaseSuelta);
+  const PLANS = claseSuelta ? [...basePlans, claseSuelta] : basePlans;
 
   React.useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -85,7 +119,7 @@ export function PricingCarousel({ onSelectPlan }) {
                 {/* Opcional: fondo estrellado o decorativo para el activo */}
                 {isActive && <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, background:'url(/assets/noise.png)', opacity:0.2, mixBlendMode:'overlay' }} />}
                 
-                <h3 style={{ color: isActive ? 'white' : 'var(--black)', fontSize: '1.8rem', margin: 0, fontWeight: 800, position:'relative', zIndex:2 }}>Plan {plan.title}</h3>
+                <h3 style={{ color: isActive ? 'white' : 'var(--black)', fontSize: '1.8rem', margin: 0, fontWeight: 800, position:'relative', zIndex:2 }}>{plan.esClaseSuelta ? plan.title : `Plan ${plan.title}`}</h3>
                 <span style={{ color: isActive ? 'rgba(255,255,255,0.7)' : 'var(--on-surface-variant)', fontSize: '0.9rem', position:'relative', zIndex:2 }}>{plan.subtitle}</span>
               </div>
 
@@ -113,7 +147,7 @@ export function PricingCarousel({ onSelectPlan }) {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '16px' }}>
                     <span style={{ fontSize: '2.8rem', fontWeight: 800, color: 'var(--black)', letterSpacing: '-0.04em', lineHeight: 1 }}>{plan.price}</span>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>/ mes</span>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--on-surface-variant)', fontWeight: 600 }}>{plan.unidad || '/ mes'}</span>
                   </div>
                   <motion.button 
                     whileHover={isActive ? { scale: 1.02 } : {}} 
@@ -136,7 +170,7 @@ export function PricingCarousel({ onSelectPlan }) {
                       color: isActive ? 'white' : 'var(--on-surface-variant)',
                       fontWeight: 800, fontSize: '0.95rem', cursor: isActive ? 'pointer' : 'default', transition: 'all 0.2s'
                     }}>
-                    {isActive ? 'Elegir Plan' : 'Plan Actual'}
+                    {isActive ? (plan.esClaseSuelta ? 'Comprar clase' : 'Elegir Plan') : 'Plan Actual'}
                   </motion.button>
                 </div>
 
