@@ -23,7 +23,7 @@ import ClassmatesList from '../components/ClassmatesList';
 import { ESTUDIO } from '../config/estudio';
 import { crearIrA } from '../demo/navegacionDemo';
 import { registrarIntentoBloqueado } from '../lib/telemetria';
-import { bloqueoParaReservar } from '../lib/membership';
+import { bloqueoParaReservar, formatPlanDate } from '../lib/membership';
 import { VentanaInscripcion } from '../components/AvisoInscripcion';
 
 function Agenda() {
@@ -156,6 +156,9 @@ function Agenda() {
       } else if (result === 'inscripcion_pendiente') {
         setShowModal(false);
         setFaltaInscripcion(true);
+      } else if (result === 'plan_vence_antes') {
+        setShowModal(false);
+        alert(`Esta clase es después de que vence tu plan (${formatPlanDate(planExpiresAt)}). Renuévalo para reservar clases después de esa fecha.`);
       } else if (result === 'fuera_de_ventana') {
         setShowModal(false);
         alert(`Puedes reservar con máximo ${bookingWindowDays || 7} días de anticipación. Esta clase todavía no abre.`);

@@ -88,6 +88,7 @@ export default function WaitlistOfferGate() {
     if (res?.reason === 'expired') setError('La oferta venció justo ahora. El lugar pasó a la siguiente persona.');
     else if (res?.reason === 'no_credits') setError('No te quedan clases en tu paquete para tomar este lugar.');
     else if (res?.reason === 'membership') setError('Tu membresía venció. Renuévala para tomar el lugar.');
+    else if (res?.reason === 'plan_ends') setError('Esta clase es después de que vence tu plan. Renuévalo para tomar el lugar.');
     else if (res?.reason === 'gone') setError('Esta oferta ya no está disponible.');
     else setError('No se pudo confirmar. Intenta de nuevo.');
   };

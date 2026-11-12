@@ -7,6 +7,14 @@ cada push a `main`. Repo: `github.com/zahirdanielvidahurrazaga/be-fit-lab`.
 > Desarrollado por: **Zahir Daniel Vidahurrazaga Marin**.
 
 > 🧪 **Demos de venta de KaiZen** (`/demo/alma`, `/pedidos/hoja`, índice): viven aquí de forma temporal y se van a mudar a un repo propio. **Todo su estado y lo que sigue está en [`DEMOS.md`](DEMOS.md)** — leerlo antes de tocar demos.
+## 🟢 Sesión 2026-11-11 — NO RESERVAR CLASES POSTERIORES AL VENCIMIENTO (pedido de Brenda; BD VIVA + front)
+
+**Pedido (WhatsApp 11-nov):** "a mi clienta ya se le venció su plan hoy, pero pudo reservar mañana". `book_class_secure` solo exigía plan vigente HOY (la "decisión de negocio" pendiente desde el 23-sep).
+- **BD — `supabase/sql/reservar_dentro_de_vigencia.sql` (APLICADO a prod 11-nov; prueba `reservar_dentro_de_vigencia_PRUEBA.sql` 7/7 OK, se deshace sola):** función `plan_cubre_clase(user, class)` = la clase empieza antes de `plan_expires_at`, o no hay vencimiento, o **cobro automático ACTIVO** (`stripe_subscription_id` + `membership_renewal='active'`, su vencimiento se mueve solo; pausadas/canceling NO se exceptúan). Parcheadas EN VIVO (texto exacto, idempotente): `book_class_secure` (también cubre entrar a espera) y `accept_waitlist_offer` → `PLAN_VENCE_ANTES|<fecha>`; `fill_waitlist_for_class` salta a quien no le alcanza la vigencia. Staff (`admin_book_class`) sin cambio. ⚠️ Si se reaplica un SQL viejo de esas funciones, el candado se cae → reaplicar este.
+- **Front:** `bookClass` devuelve `'plan_vence_antes'` → Agenda: "Esta clase es después de que vence tu plan (fecha)…"; `acceptOffer` reason `plan_ends` → WaitlistOfferGate. Apps viejas: bloqueadas igual, con el "No se pudo reservar" genérico. Codex review: sin hallazgos.
+- **Reservas que ya existían fuera de vigencia (no se tocaron, decide Brenda):** Miri (venció 10-nov: 12 y 14-nov), Aranzazu Molina (venció 10-nov: 13 y 14), Andrea Paredes (vence 12-nov: 13 y 14), lily mercado (vence 16-nov: 17 y 18).
+- Inscripción anual: sigue construida y APAGADA (`inscripcion_activa=false`); la prende Brenda en Membresías. 7 inscripciones ya cobradas en mostrador.
+
 ## 🎨 Sesión 2026-11-05/06 — REDISEÑO DEL SITIO (landing, login/registro, cafetería en compu)
 
 Solo web/front (la app nativa NO muestra el landing; el login sí se comparte → llega a la app con su próxima versión). Iterado con Zahir viendo referencias de awwwards (A24, Dhun Wellness, Calmlyss, Trevor Blount, Fit and You, ViV).

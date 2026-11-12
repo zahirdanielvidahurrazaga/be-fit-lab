@@ -1384,6 +1384,8 @@ export const AuthProvider = ({ children }) => {
       if (String(err?.message || '').includes('FUERA_DE_VENTANA')) return 'fuera_de_ventana';
       // Falta la inscripción anual: la Agenda ofrece pagarla ahí mismo.
       if (String(err?.message || '').includes('INSCRIPCION_PENDIENTE')) { fetchInscripcion(); return 'inscripcion_pendiente'; }
+      // La clase es después de que vence su plan (Brenda, 11-nov-2026).
+      if (String(err?.message || '').includes('PLAN_VENCE_ANTES')) return 'plan_vence_antes';
       return false;
     }
   };
@@ -1581,6 +1583,7 @@ export const AuthProvider = ({ children }) => {
       if (/SIN_OFERTA/.test(msg)) return { success: false, reason: 'gone' };
       if (/SIN_CLASES/.test(msg)) return { success: false, reason: 'no_credits' };
       if (/MEMBRESIA_VENCIDA/.test(msg)) return { success: false, reason: 'membership' };
+      if (/PLAN_VENCE_ANTES/.test(msg)) return { success: false, reason: 'plan_ends' };
       console.error('Error aceptando oferta:', err);
       return { success: false, reason: 'error' };
     }
