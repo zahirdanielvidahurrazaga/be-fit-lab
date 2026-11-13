@@ -20,6 +20,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 import PolaroidGallery from '../components/PolaroidGallery';
 import LandingEvento from '../components/LandingEvento';
 import { ESTUDIO } from '../config/estudio';
+import KaizenCredito from '../components/KaizenCredito';
 
 // Link de react-router con animaciones de framer-motion (hover naranja + desplazamiento)
 const MotionLink = motion(Link);
@@ -1140,7 +1141,7 @@ export default function Landing() {
           </div>
           <div style={{ borderTop:'1px solid rgba(0,0,0,0.08)', paddingTop:'2.2rem', display:'flex', flexWrap:'wrap', justifyContent:'space-between', alignItems:'center', gap:'1rem' }}>
             <p style={{ color:'var(--on-surface-variant)', fontSize:'0.88rem', margin:0 }}>© {new Date().getFullYear()} {ESTUDIO.nombre}. Todos los derechos reservados.</p>
-            <p style={{ color:'var(--on-surface-variant)', fontSize:'0.88rem', margin:0 }}>Desarrollado por <motion.a href="https://zahirportafolio.pages.dev" target="_blank" rel="noopener noreferrer" whileHover={{ color:'#E68245' }} style={{ color:'var(--primary)', fontWeight:700, textDecoration:'none', transition:'color 0.2s' }}>Zahir Daniel Vidahurrazaga Marín</motion.a></p>
+            <KaizenCredito style={{ color:'var(--on-surface-variant)' }} />
           </div>
         </div>
       </footer>
